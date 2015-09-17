@@ -1,0 +1,17 @@
+{
+	"name": "afrostream/billings",
+	"description": "add recurly api support",
+	"require": {
+		"recurly/recurly-client": "^2.4",
+		"monolog/monolog": "^1.17"
+	},
+	"autoload": {
+		"psr-0": {"afrostreambillings" : "src/"}
+	},
+	"authors": [
+		{
+			"name": "nelsounet",
+			"email": "nelsounet@afrostream.tv"
+		}
+	]
+}
