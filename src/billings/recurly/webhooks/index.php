@@ -7,7 +7,7 @@ use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 
 $log = new Logger('afrostream-billings');
-$log->pushHandler(new StreamHandler('php://stderr', Logger::WARNING));
+$log->pushHandler(new StreamHandler('php://stderr', Logger::INFO));
 
 $log->addInfo('Processing recurly webhook...');
 
