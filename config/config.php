@@ -28,6 +28,17 @@ class config {
 		}
 		return(self::$logger);
 	}
+	
+	private static $db_conn;
+	
+	public static function getDbConn() {
+		if(self::$db_conn == null) {
+			$connection_string = 'host='.DBHOST.' port='.DBPORT.' dbname='.DBNAME.' user='.DBUSER.' password='.DBPASSWORD;
+			self::$db_conn = pg_connect($connection_string)
+				or die('connection to database impossible : '.pg_last_error());
+		}
+		return(self::$db_conn);
+	}
 }
 
 ?>

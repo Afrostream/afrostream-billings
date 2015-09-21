@@ -2,57 +2,32 @@
 
 require_once __DIR__ . '/../../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../../config/config.php';
+require_once __DIR__ . '/../../../../libs/recurly/webhooks/WebHooksHandler.php';
+require_once __DIR__ . '/../../../../libs/recurly/db/dbRecurly.php';
+
+config::getLogger()->addInfo('Receiving Recurly webhook...');
+
+$webHooksHander = new WebHooksHander();
+
+$post_data = file_get_contents('php://input');
+
+config::getLogger()->addInfo('Saving recurly webhook...');
+
+$billingRecurlyWebHook = $webHooksHander->doSaveWebHook($post_data);
+
+config::getLogger()->addInfo('Saving recurly webhook done successfully');
 
 config::getLogger()->addInfo('Processing recurly webhook...');
 
-$post_xml = file_get_contents('php://input');
+//For tests purpose Only
+$billingRecurlyWebHook->setId(6);
+//
 
-$notification = new Recurly_PushNotification($post_xml);
-
-config::getLogger()->addInfo('Processing notification type : '. $notification->type);
-
-//each webhook is defined by a type
-switch ($notification->type) {
-	case "successful_payment_notification":
-		/* process notification here */
-		break;
-	case "failed_payment_notification":
-		/* process notification here */
-		break;
-		/* add more notifications to process */
-	default :
-		config::getLogger()->addInfo('notification type : '. $notification->type. ' is not yet ');
-		break;
-}
-
-/*
-$connection_string = 'host='.DBHOST.' port='.DBPORT.' dbname='.DBNAME.' user='.DBUSER.' password='.DBPASSWORD;
-
-$db_conn = pg_connect($connection_string)
-	or die('connexion to db impossible : '.pg_last_error());
-
-$query = 'SELECT * FROM "Users"';
-$result = pg_query($query) or die('Échec de la requête : ' . pg_last_error());
-
-// Affichage des résultats en HTML
-echo "<table>\n";
-while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-	echo "\t<tr>\n";
-	foreach ($line as $col_value) {
-		echo "\t\t<td>$col_value</td>\n";
-	}
-	echo "\t</tr>\n";
-}
-echo "</table>\n";
-
-// free result
-pg_free_result($result);
-
-// close db connexion
-pg_close($db_conn);
-*/
+$webHooksHander->doProcessWebHook($billingRecurlyWebHook->getId());
 
 config::getLogger()->addInfo('Processing recurly webhook done successfully');
+
+config::getLogger()->addInfo('Receiving recurly webhook done successfully');
 
 function logToFile($msg)
 {

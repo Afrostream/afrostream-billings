@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../../../config/config.php';
+require_once __DIR__ . '/../../../libs/recurly/db/dbRecurly.php';
+require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 
 class WebHooksHander {
 	
@@ -8,25 +10,47 @@ class WebHooksHander {
 	public function __construct() {
 	}
 	
-	public function doProcessWebHook(Recurly_PushNotification $ioRecurly_PushNotification) {
+	public function doSaveWebHook($post_data) {
+		try {
+			$billingRecurlyWebHook = BillingRecurlyWebHookDAO::addBillingRecurlyWebHook($post_data);
+			config::getLogger()->addInfo("post_data saved successfully, id=".$billingRecurlyWebHook->getId());
+			return($billingRecurlyWebHook);
+		} catch (Exception $e) {
+			config::getLogger()->addError("an error occurred while saving post_data, message=" . $e->getMessage());
+		}
+	}
+	
+	public function doProcessWebHook($id) {
+		try {
+			$billingRecurlyWebHook = BillingRecurlyWebHookDAO::getBillingRecurlyWebHookById($id);
+			BillingRecurlyWebHookDAO::updateProcessingStatusById($id, 'running');
+			$notification = new Recurly_PushNotification($billingRecurlyWebHook->getPostData());
+			$this->doProcessNotification($notification);
+			BillingRecurlyWebHookDAO::updateProcessingStatusById($id, 'done');
+		} catch(Exception $e) {
+			BillingRecurlyWebHookDAO::updateProcessingStatusById($id, 'error');
+		}
+	}
+	
+	private function doProcessNotification(Recurly_PushNotification $notification) {
 		switch ($notification->type) {
 			case "new_subscription_notification" :
-				doProcessNewSubscription($ioRecurly_PushNotification);
+				$this->doProcessNewSubscription($notification);
 				break;
 			case "updated_subscription_notification" :
-				doProcesssUpdatedSubscription($ioRecurly_PushNotification);
+				$this->doProcesssUpdatedSubscription($notification);
 				break;
 			case "canceled_subscription_notification":
-				doProcessCanceledSubscription($ioRecurly_PushNotification);
+				$this->doProcessCanceledSubscription($notification);
 				break;
 			case "expired_subscription_notification":
-				doProcessExpiredSubscription($ioRecurly_PushNotification);
+				$this->doProcessExpiredSubscription($notification);
 				break;
 			case "renewed_subscription_notification":
-				doProcessRenewedSubscription($ioRecurly_PushNotification);
+				$this->doProcessRenewedSubscription($notification);
 				break;
 			case "reactivated_account_notification":
-				doProcessReactivatedAccount($ioRecurly_PushNotification);
+				$this->doProcessReactivatedAccount($notification);
 				break;
 			default :
 				config::getLogger()->addWarning('notification type : '. $notification->type. ' is not yet implemented.');
@@ -34,39 +58,83 @@ class WebHooksHander {
 		}
 	}
 	
-	private function doProcessNewSubscription(Recurly_PushNotification $ioRecurly_PushNotification) {
-		config::getLogger()->addInfo('Processing notification type '.$ioRecurly_PushNotification->type.'...');
+	private function doProcessNewSubscription(Recurly_PushNotification $notification) {
+
+		config::getLogger()->addInfo('Processing notification type '.$notification->type.'...');
 		
-		config::getLogger()->addInfo('Processing notification type ended successfully');
+		$account_code = NULL;
+		
+		foreach ($notification->account->children() as $children) {
+			if($children->getName() == 'account_code') {
+				$account_code = $children;
+				break;
+			}
+		}
+		
+		if($account_code == NULL) {
+			//todo
+		}
+		
+		config::getLogger()->addError('Searching user with account_code='.$account_code.'...');
+		$user = UserDAO::getUserByAccountCode($account_code);
+		if($user == NULL) {
+			config::getLogger()->addError('Searching user with account_code='.$account_code.' failed, no user found');
+		} else {
+			config::getLogger()->addInfo('Searching user with account_code='.$account_code.' ended successfully. user_id='.$user->getId());
+		}
+		//
+		
+		//
+		config::getLogger()->addInfo('Processing notification type '.$notification->type.' ended successfully');
 	}
 	
-	private function doProcesssUpdatedSubscription($ioRecurly_PushNotification) {
-		config::getLogger()->addInfo('Processing notification type '.$ioRecurly_PushNotification->type.'...');
+	private function doProcesssUpdatedSubscription(Recurly_PushNotification $notification) {
+		config::getLogger()->addInfo('Processing notification type '.$notification->type.'...');
 		
-		config::getLogger()->addInfo('Processing notification type ended successfully');
+		config::getLogger()->addInfo('Processing notification type '.$notification->type.' ended successfully');
 	}
-	private function doProcessCanceledSubscription($ioRecurly_PushNotification) {
-		config::getLogger()->addInfo('Processing notification type '.$ioRecurly_PushNotification->type.'...');
+	private function doProcessCanceledSubscription(Recurly_PushNotification $notification) {
+		config::getLogger()->addInfo('Processing notification type '.$notification->type.'...');
 		
-		config::getLogger()->addInfo('Processing notification type ended successfully');
-	}
-	
-	private function doProcessExpiredSubscription($ioRecurly_PushNotification) {
-		config::getLogger()->addInfo('Processing notification type '.$ioRecurly_PushNotification->type.'...');
-		
-		config::getLogger()->addInfo('Processing notification type ended successfully');
+		config::getLogger()->addInfo('Processing notification type '.$notification->type.' ended successfully');
 	}
 	
-	private function doProcessRenewedSubscription($ioRecurly_PushNotification) {
-		config::getLogger()->addInfo('Processing notification type '.$ioRecurly_PushNotification->type.'...');
+	private function doProcessExpiredSubscription(Recurly_PushNotification $notification) {
+		config::getLogger()->addInfo('Processing notification type '.$notification->type.'...');
 		
-		config::getLogger()->addInfo('Processing notification type ended successfully');
+		$account_code = NULL;
+		
+		foreach ($notification->account->children() as $children) {
+			if($children->getName() == 'account_code') {
+				$account_code = $children;
+				break;
+			}
+		}
+		
+		if($account_code == NULL) {
+			//todo
+		}
+		
+		config::getLogger()->addError('Searching user with account_code='.$account_code.'...');
+		$user = UserDAO::getUserByAccountCode($account_code);
+		if($user == NULL) {
+			config::getLogger()->addError('Searching user with account_code='.$account_code.' failed, no user found');
+		} else {
+			config::getLogger()->addInfo('Searching user with account_code='.$account_code.' ended successfully. user_id='.$user->getId());
+		}
+		config::getLogger()->addInfo('Processing notification type '.$notification->type.' ended successfully');
 	}
 	
-	private function	doProcessReactivatedAccount($ioRecurly_PushNotification) {
-		config::getLogger()->addInfo('Processing notification type '.$ioRecurly_PushNotification->type.'...');
+	private function doProcessRenewedSubscription(Recurly_PushNotification $notification) {
+		config::getLogger()->addInfo('Processing notification type '.$notification->type.'...');
 		
-		config::getLogger()->addInfo('Processing notification type ended successfully');
+		config::getLogger()->addInfo('Processing notification type '.$notification->type.' ended successfully');
+	}
+	
+	private function	doProcessReactivatedAccount(Recurly_PushNotification $notification) {
+		config::getLogger()->addInfo('Processing notification type '.$notification->type.'...');
+		
+		config::getLogger()->addInfo('Processing notification type '.$notification->type.' ended successfully');
 	}
 	
 }
