@@ -11,8 +11,12 @@ define('DBNAME', 'afrostream');
 define('DBUSER', 'neo');
 define('DBPASSWORD', 'toto');
 
-#WebHooks
-#
+#Recurly API
+define('RECURLY_API_SUBDOMAIN','johnarch');
+define('RECURLY_API_KEY', '67dbb29f0dbe4e219bc247a3b5387652');
+#Recurly WebHooks
+define('RECURLY_WH_HTTP_AUTH_USER', 'admin');
+define('RECURLY_WH_HTTP_AUTH_PWD', 'pwd');
 
 #Logs
 #
