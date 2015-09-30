@@ -42,24 +42,14 @@ config::getLogger()->addInfo('Saving recurly webhook done successfully');
 
 config::getLogger()->addInfo('Processing recurly webhook...');
 
-//For tests purpose Only
-$billingRecurlyWebHook->setId(106);
-//
+//--> For tests purpose Only
+//$billingRecurlyWebHook->setId(106);
+//<-- For tests purpose Only
 
 $webHooksHander->doProcessWebHook($billingRecurlyWebHook->getId());
 
 config::getLogger()->addInfo('Processing recurly webhook done successfully');
 
 config::getLogger()->addInfo('Receiving recurly webhook done successfully');
-
-function logToFile($msg)
-{
-	// open file
-	$fd = fopen("afrostream-billings.log", "a");
-	// write string
-	fwrite($fd, $msg . "\n");
-	// close file
-	fclose($fd);
-}
 
 ?>

@@ -22,9 +22,9 @@ class BillingRecurlyWebHookDAO {
 		return($out);
 	}
 	
-	public static function addBillingRecurlyWebHook($post_data) {
-		$query = "INSERT INTO billing_recurly_webhooks (post_data) VALUES ($1) RETURNING _id";
-		$result = pg_query_params(config::getDbConn(), $query, array($post_data));
+	public static function addBillingRecurlyWebHook($notification_type, $post_data) {
+		$query = "INSERT INTO billing_recurly_webhooks (notification_type, post_data) VALUES ($1, $2) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query, array($notification_type, $post_data));
 		$row = pg_fetch_row($result);
 		return(self::getBillingRecurlyWebHookById($row[0]));
 	}
@@ -39,6 +39,7 @@ class BillingRecurlyWebHookDAO {
 class BillingRecurlyWebHook {
 	
 	private $_id;
+	private $notification_type;
 	private $post_data;
 	private $processing_status;
 	private $creation_date;
@@ -49,6 +50,14 @@ class BillingRecurlyWebHook {
 	
 	public function setId($id) {
 		$this->_id = $id;
+	}
+	
+	public function getNotificationType() {
+		return($this->notification_type);
+	}
+	
+	public function setNotificationType($str) {
+		$this->notification_type = $str;
 	}
 	
 	public function getPostData() {

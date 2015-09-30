@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../../libs/recurly/db/dbRecurly.php';
 require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/recurly/subscriptions/RecurlySubscriptionsHandler.php';
 
 class WebHooksHander {
 	
@@ -11,7 +12,8 @@ class WebHooksHander {
 	
 	public function doSaveWebHook($post_data) {
 		try {
-			$billingRecurlyWebHook = BillingRecurlyWebHookDAO::addBillingRecurlyWebHook($post_data);
+			$notification = new Recurly_PushNotification($post_data);
+			$billingRecurlyWebHook = BillingRecurlyWebHookDAO::addBillingRecurlyWebHook($notification->type, $post_data);
 			config::getLogger()->addInfo("post_data saved successfully, id=".$billingRecurlyWebHook->getId());
 			return($billingRecurlyWebHook);
 		} catch (Exception $e) {
@@ -82,8 +84,11 @@ class WebHooksHander {
 			//
 			$api_subscription = Recurly_Subscription::get($subscription_uuid);
 			//
+		} catch (Recurly_NotFoundError $e) {
+			config::getLogger()->addError("a not found exception occurred while getting subscription with uuid=".$subscription_uuid." from api, message=".$e->getMessage());
+			throw $e;
 		} catch (Exception $e) {
-			config::getLogger()->addError("an error occurred while getting subscription with uuid=".$subscription_uuid." from api, message=".$e->getMessage());
+			config::getLogger()->addError("an unknown exception occurred while getting subscription with uuid=".$subscription_uuid." from api, message=".$e->getMessage());
 			throw $e;
 		}
 		//provider
@@ -121,102 +126,14 @@ class WebHooksHander {
 			throw new Exception($msg);
 		}
 		//
-		$subscription = SubscriptionDAO::getSubscriptionBySubUuid($provider->getId(), $account_code);
+		$subscription = SubscriptionDAO::getSubscriptionBySubUuid($provider->getId(), $subscription_uuid);
+		$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
 		if($subscription == NULL) {
 			//CREATE
-			$subscription = new Subscription();
-			$subscription->setProviderId($provider->getId());
-			$subscription->setUserId($user->getId());
-			$subscription->setPlanId($plan->getId());
-			$subscription->setSubUid($account_code);
-			switch ($api_subscription->state) {
-				case active :
-					$subscription->setSubStatus('active');
-					break;
-				case canceled :
-					$subscription->setSubStatus('canceled');
-					break;
-				case future :
-					$subscription->setSubStatus('future');
-					break;
-				case expired :
-					$subscription->setSubStatus('expired');
-					break;
-				default :
-					$msg = "unknown subscription state : ".$api_subscription->state;
-					config::getLogger()->addError($msg);
-					throw new Exception($msg);
-					//break;
-			}
-			$subscription->setSubActivatedDate($api_subscription->activated_at);
-			$subscription->setSubCanceledDate($api_subscription->canceled_at);
-			$subscription->setSubExpiresDate($api_subscription->expires_at);
-			$subscription->setSubPeriodStartedDate($api_subscription->current_period_started_at);
-			$subscription->setSubPeriodEndsDate($api_subscription->current_period_ends_at);
-			switch ($api_subscription->collection_mode) {
-				case 'automatic' :
-					$subscription->setSubCollectionMode('automatic');
-					break;
-				case 'manual' :
-					$subscription->setSubCollectionMode('manual');
-					break;
-				default :
-					$subscription->setSubCollectionMode('manual');//it is the default says recurly
-					break;
-			}
-			$subscription->setUpdateType($update_type);
-			//
-			$subscription->setUpdateId($updateId);
-			$subscription->setDeleted('false');
-			//
-			$subscription = SubscriptionDAO::addSubscription($subscription);
+			$subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $provider, $plan, $api_subscription, $update_type, $updateId);
 		} else {
 			//UPDATE
-			//$subscription->setProviderId($provider->getId());
-			//$subscription->setUserId($user->getId());
-			$subscription->setPlanId($plan->getId());
-			//$subscription->setSubUid($account_code);
-			switch ($api_subscription->state) {
-				case 'active' :
-					$subscription->setSubStatus('active');
-					break;
-				case 'canceled' :
-					$subscription->setSubStatus('canceled');
-					break;
-				case 'future' :
-					$subscription->setSubStatus('future');
-					break;
-				case 'expired' :
-					$subscription->setSubStatus('expired');
-					break;
-				default :
-					$msg = "unknown subscription state : ".$api_subscription->state;
-					config::getLogger()->addError($msg);
-					throw new Exception($msg);
-					//break;
-			}
-			$subscription->setSubActivatedDate($api_subscription->activated_at);
-			$subscription->setSubCanceledDate($api_subscription->canceled_at);
-			$subscription->setSubExpiresDate($api_subscription->expires_at);
-			$subscription->setSubPeriodStartedDate($api_subscription->current_period_started_at);
-			$subscription->setSubPeriodEndsDate($api_subscription->current_period_ends_at);
-			switch ($api_subscription->collection_mode) {
-				case 'automatic' :
-					$subscription->setSubCollectionMode('automatic');
-					break;
-				case 'manual' :
-					$subscription->setSubCollectionMode('manual');
-					break;
-				default :
-					$subscription->setSubCollectionMode('manual');//it is the default says recurly
-					break;
-			}
-			$subscription->setUpdateType($update_type);
-			//
-			$subscription->setUpdateId($updateId);
-			//$subscription->setDeleted('false');
-			//
-			$subscription = SubscriptionDAO::updateSubscription($subscription);
+			$subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $provider, $plan, $api_subscription, $subscription, $update_type, $updateId);
 		}
 		//
 		config::getLogger()->addInfo('Processing notification type '.$notification->type.' ended successfully');

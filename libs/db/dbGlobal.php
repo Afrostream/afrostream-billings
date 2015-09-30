@@ -349,7 +349,7 @@ class SubscriptionDAO {
 		
 		$out = array();
 		
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$val = new Subscription();
 			$val->setId($line["_id"]);
 			$val->setProviderId($line["providerid"]);
