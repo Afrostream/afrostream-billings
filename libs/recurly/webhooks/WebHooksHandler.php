@@ -75,8 +75,8 @@ class WebHooksHander {
 	private function doProcessSubscription(Recurly_PushNotification $notification, $update_type, $updateId) {
 		config::getLogger()->addInfo('Processing notification type '.$notification->type.'...');
 		//
-		Recurly_Client::$subdomain = RECURLY_API_SUBDOMAIN;
-		Recurly_Client::$apiKey = RECURLY_API_KEY;
+		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
+		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 		//
 		$subscription_uuid = self::getNodeByName($notification->subscription, 'uuid');
 		//

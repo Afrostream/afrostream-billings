@@ -11,7 +11,7 @@ class RecurlySubscriptionsHandler {
 	
 	public function doUpdateUserSubscriptions(User $user) {
 		//
-		Recurly_Client::$subdomain = RECURLY_API_SUBDOMAIN;
+		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 		Recurly_Client::$apiKey = RECURLY_API_KEY;
 		//
 		//provider
@@ -24,11 +24,16 @@ class RecurlySubscriptionsHandler {
 		try {
 			$api_subscriptions = Recurly_SubscriptionList::getForAccount($user->getAccountCode());
 		} catch (Recurly_NotFoundError $e) {
-			print "Account Not Found while getting subscriptions for Account : $e";
+			$msg = "an account not found exception occurred while getting subscriptions for account_code=".$user->getAccountCode().", message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			throw new Exception($msg);
 		} catch(Exception $e) {
-			print "Unknown Exception while getting subscriptions for Account : $e";
+			$msg = "an unknown exception occurred while getting subscriptions for account_code=".$user->getAccountCode().", message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			throw new Exception($msg);
 		}
 		$db_subscriptions = SubscriptionDAO::getSubscriptionByUserId($provider->getId(), $user->getId());
+		//ADD OR UPDATE
 		foreach ($api_subscriptions as $api_subscription) {
 			//plan
 			$plan_uuid = $api_subscription->plan->plan_code;
@@ -50,6 +55,13 @@ class RecurlySubscriptionsHandler {
 			} else {
 				//UPDATE
 				$db_subscription = self::updateDbSubscriptionFromApiSubscription($user, $provider, $plan, $api_subscription, $db_subscription, 'api', 0);
+			}
+		}
+		//DELETE UNUSED SUBSCRIPTIONS (DELETED FROM THIRD PARTY)
+		foreach ($db_subscriptions as $db_subscription) {
+			$api_subscription = self::getApiSubscriptionByUuid($api_subscriptions, $db_subscription->getSubUid());
+			if($api_subscription == NULL) {
+				SubscriptionDAO::deleteSubscriptionById($db_subscription->getId());
 			}
 		}
 	}
@@ -159,6 +171,14 @@ class RecurlySubscriptionsHandler {
 		foreach ($db_subscriptions as $db_subscription) {
 			if($db_subscription->getSubUid() == $subUuid) {
 				return($db_subscription);
+			}
+		}
+	}
+	
+	private function getApiSubscriptionByUuid(Recurly_SubscriptionList $api_subscriptions, $subUuid) {
+		foreach ($api_subscriptions as $api_subscription) {
+			if($api_subscription->uuid == $subUuid) {
+				return($api_subscription);
 			}
 		}
 	}

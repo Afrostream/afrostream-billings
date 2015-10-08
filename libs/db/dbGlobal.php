@@ -375,6 +375,14 @@ class SubscriptionDAO {
 		
 		return($out);
 	}
+	
+	public static function deleteSubscriptionById($id) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, deleted = true WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($id));
+		$row = pg_fetch_row($result);
+		return(self::getSubscriptionById($row[0]));
+	}
 }
 
 class Subscription {
