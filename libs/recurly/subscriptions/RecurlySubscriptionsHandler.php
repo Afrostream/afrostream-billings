@@ -12,7 +12,7 @@ class RecurlySubscriptionsHandler {
 	public function doUpdateUserSubscriptions(User $user) {
 		//
 		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-		Recurly_Client::$apiKey = RECURLY_API_KEY;
+		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 		//
 		//provider
 		$provider = ProviderDAO::getProviderByName('recurly');
