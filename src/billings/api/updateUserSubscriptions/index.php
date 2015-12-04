@@ -3,6 +3,8 @@
 require_once __DIR__ . '/../../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php';
 
+//TODO : REQUEST
+
 $userid = NULL;
 if(isset($_GET['userid'])) {
 	$userid = $_GET['userid'];
@@ -10,13 +12,9 @@ if(isset($_GET['userid'])) {
 	echo 'userid is missing';
 }
 
-$user = UserDAO::getUserById($userid);
-if($user == NULL) {
-	//todo
-}
-
 $subscriptionsHandler = new SubscriptionsHandler();
-$subscriptionsHandler->doUpdateUserSubscriptions($user);
+$subscriptionsHandler->doUpdateUserSubscriptions($userid);
 
+//TODO : RESPONSE
 
 ?>

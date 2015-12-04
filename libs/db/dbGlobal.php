@@ -14,8 +14,19 @@ class dbGlobal {
 
 class UserDAO {
 	
+	public static function addUser(User $user) {
+		$query = "INSERT INTO billing_users (providerid, user_reference_uuid, user_provider_uuid)";
+		$query.= " VALUES ($1, $2, $3) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query, 
+				array($user->getProviderId(),
+					$user->getUserReferenceUuid(),
+					$user->getUserProviderUuid()));
+		$row = pg_fetch_row($result);
+		return(self::getUserById($row[0]));
+	}
+	
 	public static function getUserById($id) {
-		$query = "SELECT _id, email, billing_provider, account_code, active FROM \"Users\" WHERE _id = $1";
+		$query = "SELECT _id, providerid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE _id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
 		
 		$out = null;
@@ -23,30 +34,9 @@ class UserDAO {
 		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out = new User();
 			$out->setId($line["_id"]);
-			$out->setEmail($line["email"]);
-			$out->setBillingProvider($line["billing_provider"]);
-			$out->setAccountCode($line["account_code"]);
-			$out->setActive($line["active"]);
-		}
-		// free result
-		pg_free_result($result);
-		
-		return($out);
-	}
-	
-	public static function getUserByAccountCode($account_code) {
-		$query = "SELECT _id, email, billing_provider, account_code, active FROM \"Users\" WHERE account_code = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($account_code));
-		
-		$out = null;
-		
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new User();
-			$out->setId($line["_id"]);
-			$out->setEmail($line["email"]);
-			$out->setBillingProvider($line["billing_provider"]);
-			$out->setAccountCode($line["account_code"]);
-			$out->setActive($line["active"]);
+			$out->setProviderId($line["providerid"]);
+			$out->setUserReferenceUuid($line["user_reference_uuid"]);
+			$out->setUserProviderUuid($line["user_provider_uuid"]);
 		}
 		// free result
 		pg_free_result($result);
@@ -59,10 +49,9 @@ class UserDAO {
 class User {
 	
 	private $_id;
-	private $email;
-	private $billing_provider;
-	private $account_code;
-	private $active;
+	private $providerid;
+	private $user_reference_uuid;
+	private $user_provider_uuid;
 	
 	public function getId() {
 		return($this->_id);
@@ -72,36 +61,214 @@ class User {
 		$this->_id = $id;
 	}
 	
-	public function getEmail() {
-		return($this->email);
+	public function getProviderId() {
+		return($this->providerid);
 	}
 	
-	public function setEmail($email) {
-		$this->email = $email;
+	public function setProviderId($providerid) {
+		$this->providerid = $providerid;
 	}
 	
-	public function getBillingProvider() {
-		return($this->billing_provider);
+	public function setUserReferenceUuid($uuid) {
+		$this->user_reference_uuid = $uuid;
 	}
 	
-	public function setBillingProvider($billing_provider) {
-		$this->billing_provider = $billing_provider;
+	public function getUserReferenceUuid() {
+		return($this->user_reference_uuid);	
 	}
 	
-	public function getAccountCode() {
-		return($this->account_code);
+	public function setUserProviderUuid($uuid) {
+		$this->user_provider_uuid = $uuid;
 	}
 	
-	public function setAccountCode($account_code) {
-		$this->account_code = $account_code;
+	public function getUserProviderUuid() {
+		return($this->user_provider_uuid);
 	}
 	
-	public function getActive() {
-		return($this->active);
+}
+
+class UserOpts {
+
+	private $userid;
+	private $opts = array();
+	
+	public function setUserId($userid) {
+		$this->userid = $userid;
 	}
 	
-	public function setActive($active) {
-		$this->$active = $active;
+	public function getUserId() {
+		return($this->userid);
+	}
+	
+	public function setOpt($key, $value) {
+		$this->opts[$key] = $value;
+	}
+	
+	public function setOpts($opts) {
+		$this->opts = $opts;
+	}
+	
+	public function getOpts() {
+		return($this->opts);
+	}
+	
+}
+
+class UserOptsDAO {
+	
+	public static function getUserOptsByUserid($userid) {
+		$query = "SELECT _id, userid, key, value FROM billing_users_opts WHERE userid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($userid));
+		
+		$out = new UserOpts();
+		$out->setUserId($userid);
+		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out->setOpt($line["key"], $line["value"]);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function addUserOpts($user_opts) {
+		foreach ($user_opts->getOpts() as $k => $v) {
+			$query = "INSERT INTO billing_users_opts (userid, key, value)";
+			$query.= " VALUES ($1, $2, $3) RETURNING _id";
+			$result = pg_query_params(config::getDbConn(), $query,
+					array($user_opts->getUserId(),
+							$k,
+							$v));
+		}
+		return(self::getUserOptsByUserid($user_opts->getUserId()));
+	}
+}
+
+class InternalPlanDAO {
+	
+	public static function getInternalPlanByUuid($internal_plan_uuid) {
+		$query = "SELECT _id, internal_plan_uuid, name, description FROM billing_internal_plans WHERE internal_plan_uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($internal_plan_uuid));
+	
+		$out = null;
+	
+		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = new InternalPlan();
+			$out->setId($line["_id"]);
+			$out->setInternalPlanUid($line["internal_plan_uuid"]);
+			$out->setName($line["name"]);
+			$out->setDescription($line["description"]);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}	
+}
+
+class InternalPlan {
+
+	private $_id;
+	private $internal_plan_uuid;
+	private $name;
+	private $description;
+
+	public function getId() {
+		return($this->_id);
+	}
+
+	public function setId($id) {
+		$this->_id = $id;
+	}
+
+	public function getInternalPlanUuid() {
+		return($this->internal_plan_uuid);
+	}
+
+	public function setInternalPlanUid($internal_plan_uuid) {
+		$this->internal_plan_uuid = $internal_plan_uuid;
+	}
+
+	public function getName() {
+		return($this->name);
+	}
+
+	public function setName($name) {
+		$this->name = $name;
+	}
+
+	public function getDescription() {
+		return($this->description);
+	}
+
+	public function setDescription($description) {
+		$this->description = $description;
+	}
+
+}
+
+class InternalPlanOpts {
+
+	private $internalplanid;
+	private $opts = array();
+
+	public function setInternalPlanId($internalplanid) {
+		$this->internalplanid = $internalplanid;
+	}
+
+	public function getInternalPlanId() {
+		return($this->internalplanid);
+	}
+
+	public function setOpt($key, $value) {
+		$this->opts[$key] = $value;
+	}
+
+	public function setOpts($opts) {
+		$this->opts = $opts;
+	}
+
+	public function getOpts() {
+		return($this->opts);
+	}
+
+}
+
+class InternalPlanOptsDAO {
+
+	public static function getInternalPlanOptsByInternalPlanId($internalplanid) {
+		$query = "SELECT _id, internalplanid, key, value FROM billing_internal_plans_opts WHERE $internalplanid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalplanid));
+
+		$out = new InternalPlanOpts();
+		$out->setInternalPlanId($internalplanid);
+		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out->setOpt($line["key"], $line["value"]);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+	
+}
+
+class InternalPlanLinksDAO {
+	
+	public static function getInternalPlanLink($internalplanid, $providerid) {
+		$query = "SELECT BP._id as billing_plan_id FROM billing_plans BP INNER JOIN billing_internal_plans_links BPL ON (BP._id = BPL.provider_plan_id)";
+		$query.= "WHERE BPL.internal_plan_id = $1 AND BP.providerid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalplanid, $providerid));
+		
+		$out = null;
+		
+		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = $line["billing_plan_id"];
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
 	}
 	
 }
@@ -128,6 +295,25 @@ class PlanDAO {
 		return($out);
 	}
 	
+	public static function getPlanById($plan_id) {
+		$query = "SELECT _id, providerid, plan_uuid, name, description FROM billing_plans WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($plan_id));
+	
+		$out = null;
+	
+		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = new Plan();
+			$out->setId($line["_id"]);
+			$out->setProviderId($line["providerid"]);
+			$out->setPlanUid($line["plan_uuid"]);
+			$out->setName($line["name"]);
+			$out->setDescription($line["description"]);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
 }
 
 class Plan {
@@ -188,6 +374,23 @@ class ProviderDAO {
 		
 		$out = null;
 		
+		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = new Provider();
+			$out->setId($line["_id"]);
+			$out->setName($line["name"]);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getProviderById($providerid) {
+		$query = "SELECT _id, name FROM billing_providers WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($providerid));
+	
+		$out = null;
+	
 		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out = new Provider();
 			$out->setId($line["_id"]);

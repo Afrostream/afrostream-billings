@@ -1,5 +1,7 @@
 <?php
 
+date_default_timezone_set("Europe/Paris");
+
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 
@@ -14,15 +16,15 @@ if(getEnv('DBPORT') == false) {
 }
 
 if((getEnv('DBNAME') === false)) {
-	putEnv('DBNAME=afrostream');
+	putEnv('DBNAME=afr-billings-local');
 }
 
 if((getEnv('DBUSER') === false)) {
-	putEnv('DBUSER=neo');
+	putEnv('DBUSER=postgres');
 }
 
 if((getEnv('DBPASSWORD') === false)) {
-	putEnv('DBPASSWORD=toto');
+	putEnv('DBPASSWORD=password');
 }
 
 #Recurly API
