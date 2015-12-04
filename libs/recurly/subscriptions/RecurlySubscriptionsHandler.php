@@ -9,6 +9,50 @@ class RecurlySubscriptionsHandler {
 	public function __construct() {
 	}
 	
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Plan $plan, BillingInfoOpts $billingInfoOpts) {
+		//
+		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
+		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+		//
+		$subscription = NULL;
+		try {
+			$subscription = new Recurly_Subscription();
+			$subscription->plan_code = $plan->getPlanUuid();
+			$subscription->currency = 'EUR';//TODO
+		
+			$account = new Recurly_Account();
+			$account->account_code = $user->getUserProviderUuid();
+			$account->email = $userOpts->getOpts()['email'];
+			$account->first_name = $userOpts->getOpts()['first_name'];
+			$account->last_name = $userOpts->getOpts()['last_name'];
+		
+			$billing_info = new Recurly_BillingInfo();
+			$billing_info->number = $billingInfoOpts->getOpts()['number'];
+			$billing_info->month = $billingInfoOpts->getOpts()['month'];
+			$billing_info->year = $billingInfoOpts->getOpts()['year'];
+			$billing_info->verification_value = $billingInfoOpts->getOpts()['verification_value'];
+			$billing_info->address1 = $billingInfoOpts->getOpts()['address1'];
+			$billing_info->city = $billingInfoOpts->getOpts()['city'];
+			$billing_info->state = $billingInfoOpts->getOpts()['state'];
+			$billing_info->country = $billingInfoOpts->getOpts()['country'];
+			$billing_info->zip = $billingInfoOpts->getOpts()['zip'];
+		
+			$account->billing_info = $billing_info;
+			$subscription->account = $account;
+		
+			$subscription->create();
+		} catch (Recurly_ValidationError $e) {
+			$msg = "a validation error exception occurred while creating a subscription for user_reference_uuid=".$user->getUserReferenceUuid().", message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			throw new Exception($msg);
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while creating an account for user_reference_uuid=".$user->getUserReferenceUuid().", message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			throw new Exception($msg);
+		}
+		return($subscription);
+	}
+	
 	public function doUpdateUserSubscriptions(User $user) {
 		//
 		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
@@ -66,7 +110,7 @@ class RecurlySubscriptionsHandler {
 		}
 	}
 	
-	public function createDbSubscriptionFromApiSubscription($user, $provider, $plan, $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, Provider $provider, Plan $plan, Recurly_Subscription $api_subscription, $update_type, $updateId) {
 		//CREATE
 		$db_subscription = new Subscription();
 		$db_subscription->setProviderId($provider->getId());
@@ -117,7 +161,7 @@ class RecurlySubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	public function updateDbSubscriptionFromApiSubscription($user, $provider, $plan, $api_subscription, $db_subscription, $update_type, $updateId) {
+	public function updateDbSubscriptionFromApiSubscription($user, $provider, $plan, Recurly_Subscription $api_subscription, Subscription $db_subscription, $update_type, $updateId) {
 		//UPDATE
 		//$db_subscription->setProviderId($provider->getId());//STATIC
 		//$db_subscription->setUserId($user->getId());//STATIC

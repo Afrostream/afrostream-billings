@@ -17,11 +17,13 @@ class UsersHandler {
 			config::getLogger()->addError($msg);
 			throw new Exception($msg);
 		}
+		//user creation provider side
 		$user_provider_uuid = NULL;
 		switch($provider->getName()) {
 			case 'recurly':
 				$recurlyUsersHandler = new RecurlyUsersHandler();
-				$user_provider_uuid = $recurlyUsersHandler->doCreateUser($user_reference_uuid, $user_opts_array);
+				$recurly_user = $recurlyUsersHandler->doCreateUser($user_reference_uuid, $user_opts_array);
+				$user_provider_uuid = $recurly_user->account_code;
 				break;
 			case 'celery' :
 				$msg = "unsupported feature for provider named : ".$provider_name;
@@ -34,23 +36,24 @@ class UsersHandler {
 				throw new Exception($msg);
 				break;
 		}
-		//user created recurly side, save it in billings database
+		//user created provider side, save it in billings database
 		//START TRANSACTION
+		$db_user = NULL;
 		pg_query("BEGIN");
 		//USER
-		$user = new User();
-		$user->setProviderId($provider->getId());
-		$user->setUserReferenceUuid($user_reference_uuid);
-		$user->setUserProviderUuid($user_provider_uuid);
-		$user = UserDAO::addUser($user);
+		$db_user = new User();
+		$db_user->setProviderId($provider->getId());
+		$db_user->setUserReferenceUuid($user_reference_uuid);
+		$db_user->setUserProviderUuid($user_provider_uuid);
+		$db_user = UserDAO::addUser($db_user);
 		//USER_OPTS
 		$user_opts = new UserOpts();
-		$user_opts->setUserId($user->getId());
+		$user_opts->setUserId($db_user->getId());
 		$user_opts->setOpts($user_opts_array);
 		$user_opts = UserOptsDAO::addUserOpts($user_opts);
 		//COMMIT
 		pg_query("COMMIT");
-		return($user);
+		return($db_user);
 	}
 }
 

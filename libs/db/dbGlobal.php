@@ -745,4 +745,22 @@ class Subscription {
 	
 }
 
+class BillingInfoOpts {
+
+	private $opts = array();
+
+	public function setOpt($key, $value) {
+		$this->opts[$key] = $value;
+	}
+
+	public function setOpts($opts) {
+		$this->opts = $opts;
+	}
+
+	public function getOpts() {
+		return($this->opts);
+	}
+
+}
+
 ?>
