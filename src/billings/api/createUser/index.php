@@ -12,9 +12,25 @@ $user_opts = array (
 "first_name" => "first_name_value",
 "last_name" => "last_name_value");
 
-$usersHandler = new UsersHandler();
-$user = $usersHandler->doCreateUser($provider_name, $user_reference_uuid, $user_opts);
+try {
 
+	$usersHandler = new UsersHandler();
+	$user = $usersHandler->doCreateUser($provider_name, $user_reference_uuid, $user_opts);
+
+} catch(BillingsException $e) {
+	$msg = "an exception occurred while creating an user, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+	config::getLogger()->addError($msg);
+	//
+	echo $msg;
+	//
+} catch(Exception $e) {
+	$msg = "an unknown exception occurred while creating an user, error_code=".$e->getCode().", error_message=".$e->getMessage();
+	config::getLogger()->addError($msg);
+	//
+	echo $msg;
+	//
+}
+	
 //TODO : RESPONSE
 
 ?>

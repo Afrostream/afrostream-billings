@@ -1,7 +1,6 @@
 <?php
 
 require_once __DIR__ . '/../../config/config.php';
-//require_once __DIR__ . '/../../libs/recurly/db/dbRecurly.php';
 require_once __DIR__ . '/../../libs/recurly/subscriptions/RecurlySubscriptionsHandler.php';
 require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 
@@ -16,7 +15,7 @@ class SubscriptionsHandler {
 		if($user == NULL) {
 			$msg = "unknown userid : ".$userid;
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		
 		$userOpts = UserOptsDAO::getUserOptsByUserid($userid);
@@ -25,28 +24,28 @@ class SubscriptionsHandler {
 		if($internal_plan == NULL) {
 			$msg = "unknown internal_plan_uuid : ".$internal_plan_uuid;
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 
 		$provider = ProviderDAO::getProviderById($user->getProviderId());
 		if($provider == NULL) {
 			$msg = "unknown provider with id : ".$user->getProviderId();
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		
 		$provider_plan_id = InternalPlanLinksDAO::getInternalPlanLink($internal_plan->getId(), $provider->getId());
 		if($provider_plan_id == NULL) {
 			$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$provider->getName();
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		
 		$provider_plan = PlanDAO::getPlanById($provider_plan_id);
 		if($provider_plan == NULL) {
 			$msg = "unknown plan with id : ".$provider_plan_id;
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		
 		//subscription creation provider side
@@ -58,12 +57,12 @@ class SubscriptionsHandler {
 			case 'celery' :
 				$msg = "unsupported feature for provider named : ".$provider_name;
 				config::getLogger()->addError($msg);
-				throw new Exception($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider_name;
 				config::getLogger()->addError($msg);
-				throw new Exception($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 		}
 		//subscription created provider side, save it in billings database
@@ -79,12 +78,12 @@ class SubscriptionsHandler {
 			case 'celery' :
 				$msg = "unsupported feature for provider named : ".$provider_name;
 				config::getLogger()->addError($msg);
-				throw new Exception($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider_name;
 				config::getLogger()->addError($msg);
-				throw new Exception($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 		}
 		//COMMIT
@@ -98,7 +97,7 @@ class SubscriptionsHandler {
 		if($user == NULL) {
 			$msg = "unknown userid : ".$userid;
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		
 		$provider = ProviderDAO::getProviderByName($user->getBillingProvider());

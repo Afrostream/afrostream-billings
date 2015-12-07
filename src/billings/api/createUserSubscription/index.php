@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
 
 //TODO : REQUEST
 
@@ -33,10 +34,18 @@ if(isset($_GET['plan_internal_uuid'])) {
 }*/
 
 try {
+	
 	$subscriptionsHandler = new SubscriptionsHandler();
 	$subscription = $subscriptionsHandler->doCreateUserSubscription($userid, $plan_internal_uuid, $billingInfoOpts);
+	
+} catch(BillingsException $e) {
+	$msg = "an exception occurred while creating an user subscription, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+	config::getLogger()->addError($msg);
+	//
+	echo $msg;
+	//
 } catch(Exception $e) {
-	$msg = "an exception occurred while creating an user, error_code=".$e->getCode().", error_message=".$e->getMessage();
+	$msg = "an unknown exception occurred while creating an user subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
 	config::getLogger()->addError($msg);
 	//
 	echo $msg;

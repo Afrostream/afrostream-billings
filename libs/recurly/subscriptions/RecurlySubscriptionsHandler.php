@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../../libs/recurly/db/dbRecurly.php';
 require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/utils/BillingsException.php';
 
 class RecurlySubscriptionsHandler {
 	
@@ -10,12 +11,13 @@ class RecurlySubscriptionsHandler {
 	}
 	
 	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Plan $plan, BillingInfoOpts $billingInfoOpts) {
-		//
-		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
-		//
 		$subscription = NULL;
 		try {
+			config::getLogger()->addInfo("recurly subscription creation...");
+			//
+			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
+			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			//
 			$subscription = new Recurly_Subscription();
 			$subscription->plan_code = $plan->getPlanUuid();
 			$subscription->currency = 'EUR';//TODO
@@ -41,14 +43,19 @@ class RecurlySubscriptionsHandler {
 			$subscription->account = $account;
 		
 			$subscription->create();
+			config::getLogger()->addInfo("recurly subscription creation done successfully, sub_uuid=".$subscription->uuid);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while creating a recurly subscription for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription creation failed : ".$msg);
+			throw $e;
 		} catch (Recurly_ValidationError $e) {
-			$msg = "a validation error exception occurred while creating a subscription for user_reference_uuid=".$user->getUserReferenceUuid().", message=".$e->getMessage();
-			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			$msg = "a validation error exception occurred while creating a recurly subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription creation failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while creating an account for user_reference_uuid=".$user->getUserReferenceUuid().", message=".$e->getMessage();
-			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			$msg = "an unknown exception occurred while creating a recurly subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription creation failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($subscription);
 	}
@@ -68,11 +75,11 @@ class RecurlySubscriptionsHandler {
 		try {
 			$api_subscriptions = Recurly_SubscriptionList::getForAccount($user->getAccountCode());
 		} catch (Recurly_NotFoundError $e) {
-			$msg = "an account not found exception occurred while getting subscriptions for account_code=".$user->getAccountCode().", message=".$e->getMessage();
+			$msg = "an account not found exception occurred while getting subscriptions for account_code=".$user->getAccountCode().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while getting subscriptions for account_code=".$user->getAccountCode().", message=".$e->getMessage();
+			$msg = "an unknown exception occurred while getting subscriptions for account_code=".$user->getAccountCode().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			throw new Exception($msg);
 		}
