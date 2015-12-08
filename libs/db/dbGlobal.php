@@ -237,7 +237,7 @@ class InternalPlanOpts {
 class InternalPlanOptsDAO {
 
 	public static function getInternalPlanOptsByInternalPlanId($internalplanid) {
-		$query = "SELECT _id, internalplanid, key, value FROM billing_internal_plans_opts WHERE $internalplanid = $1";
+		$query = "SELECT _id, internalplanid, key, value FROM billing_internal_plans_opts WHERE internalplanid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($internalplanid));
 
 		$out = new InternalPlanOpts();
@@ -366,6 +366,52 @@ class Plan {
 	
 }
 
+class PlanOpts {
+
+	private $planid;
+	private $opts = array();
+
+	public function setPlanId($planid) {
+		$this->planid = $planid;
+	}
+
+	public function getPlanId() {
+		return($this->planid);
+	}
+
+	public function setOpt($key, $value) {
+		$this->opts[$key] = $value;
+	}
+
+	public function setOpts($opts) {
+		$this->opts = $opts;
+	}
+
+	public function getOpts() {
+		return($this->opts);
+	}
+
+}
+
+class PlanOptsDAO {
+
+	public static function getPlanOptsByPlanId($planid) {
+		$query = "SELECT _id, planid, key, value FROM billing_plans_opts WHERE planid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($planid));
+
+		$out = new PlanOpts();
+		$out->setPlanId($planid);
+		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out->setOpt($line["key"], $line["value"]);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+
+}
+
 class ProviderDAO {
 	
 	public static function getProviderByName($name) {
@@ -427,9 +473,9 @@ class Provider {
 	
 }
 
-class SubscriptionDAO {
+class BillingsSubscriptionDAO {
 	
-	public static function getSubscriptionById($id) {
+	public static function getBillingsSubscriptionById($id) {
 		$query = "SELECT _id, providerid, userid, planid, creation_date, updated_date, sub_uuid, sub_status,";
 		$query.= " sub_activated_date, sub_canceled_date, sub_expires_date, sub_period_started_date, sub_period_ends_date,";
 		$query.= " sub_collection_mode, update_type, updateid, deleted";
@@ -439,7 +485,7 @@ class SubscriptionDAO {
 		$out = null;
 	
 		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new Subscription();
+			$out = new BillingsSubscription();
 			$out->setId($line["_id"]);
 			$out->setProviderId($line["providerid"]);
 			$out->setUserId($line["userid"]);
@@ -464,7 +510,7 @@ class SubscriptionDAO {
 		return($out);
 	}
 	
-	public static function getSubscriptionBySubUuid($providerId, $sub_uuid) {
+	public static function getBillingsSubscriptionBySubUuid($providerId, $sub_uuid) {
 		$query = "SELECT _id, providerid, userid, planid, creation_date, updated_date, sub_uuid, sub_status,";
 		$query.= " sub_activated_date, sub_canceled_date, sub_expires_date, sub_period_started_date, sub_period_ends_date,";
 		$query.= " sub_collection_mode, update_type, updateid, deleted";
@@ -474,7 +520,7 @@ class SubscriptionDAO {
 		$out = null;
 		
 		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new Subscription();
+			$out = new BillingsSubscription();
 			$out->setId($line["_id"]);
 			$out->setProviderId($line["providerid"]);
 			$out->setUserId($line["userid"]);
@@ -499,7 +545,7 @@ class SubscriptionDAO {
 		return($out);
 	}
 	
-	public static function addSubscription(Subscription $subscription) {
+	public static function addBillingsSubscription(BillingsSubscription $subscription) {
 		$query = "INSERT INTO billing_subscriptions (providerid, userid, planid, creation_date,";
 		$query.= " updated_date, sub_uuid, sub_status, sub_activated_date, sub_canceled_date, sub_expires_date,";
 		$query.= " sub_period_started_date, sub_period_ends_date, sub_collection_mode, update_type, updateid, deleted)";
@@ -520,10 +566,10 @@ class SubscriptionDAO {
 						$subscription->getUpdateId(),
 						$subscription->getDeleted()));
 		$row = pg_fetch_row($result);
-		return(self::getSubscriptionById($row[0]));
+		return(self::getBillingsSubscriptionById($row[0]));
 	}
 	
-	public static function updateSubscription(Subscription $subscription) {
+	public static function updateBillingsSubscription(Subscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, planid = $1, sub_status = $2, sub_activated_date = $3, sub_canceled_date = $4,";
 		$query.= " sub_expires_date = $5, sub_period_started_date = $6, sub_period_ends_date = $7, sub_collection_mode = $8, update_type = $9, updateid = $10";
 		$query.= " WHERE _id = $11";
@@ -540,10 +586,10 @@ class SubscriptionDAO {
 						$subscription->getUpdateId(),
 						$subscription->getId()));
 		$row = pg_fetch_row($result);
-		return(self::getSubscriptionById($row[0]));
+		return(self::getBillingsSubscriptionById($row[0]));
 	}
 	
-	public static function getSubscriptionByUserId($providerId, $userId) {
+	public static function getBillingsSubscriptionByUserId($providerId, $userId) {
 		$query = "SELECT _id, providerid, userid, planid, creation_date, updated_date, sub_uuid, sub_status,";
 		$query.= " sub_activated_date, sub_canceled_date, sub_expires_date, sub_period_started_date, sub_period_ends_date,";
 		$query.= " sub_collection_mode, update_type, updateid, deleted";
@@ -553,7 +599,7 @@ class SubscriptionDAO {
 		$out = array();
 		
 		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$val = new Subscription();
+			$val = new BillingsSubscription();
 			$val->setId($line["_id"]);
 			$val->setProviderId($line["providerid"]);
 			$val->setUserId($line["userid"]);
@@ -579,16 +625,16 @@ class SubscriptionDAO {
 		return($out);
 	}
 	
-	public static function deleteSubscriptionById($id) {
+	public static function deleteBillingsSubscriptionById($id) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, deleted = true WHERE _id = $1";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array($id));
 		$row = pg_fetch_row($result);
-		return(self::getSubscriptionById($row[0]));
+		return(self::getBillingsSubscriptionById($row[0]));
 	}
 }
 
-class Subscription {
+class BillingsSubscription {
 	
 	private $_id;
 	private $providerId;

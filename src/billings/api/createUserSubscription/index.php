@@ -6,7 +6,8 @@ require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
 
 //TODO : REQUEST
 
-$userid = 13;
+//$userid = 13;//RECURLY
+$userid = 16;//GOCARDLESS
 $plan_internal_uuid = 'afrostream_monthly';
 
 $billingInfoOpts = new BillingInfoOpts();

@@ -1,7 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../libs/recurly/users/RecurlyUsersHandler.php';
+require_once __DIR__ . '/../../libs/providers/recurly/users/RecurlyUsersHandler.php';
+require_once __DIR__ . '/../../libs/providers/gocardless/users/GocardlessUsersHandler.php';
 require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 
 class UsersHandler {
@@ -26,8 +27,11 @@ class UsersHandler {
 			switch($provider->getName()) {
 				case 'recurly':
 					$recurlyUsersHandler = new RecurlyUsersHandler();
-					$recurly_user = $recurlyUsersHandler->doCreateUser($user_reference_uuid, $user_opts_array);
-					$user_provider_uuid = $recurly_user->account_code;
+					$user_provider_uuid = $recurlyUsersHandler->doCreateUser($user_reference_uuid, $user_opts_array);
+					break;
+				case 'gocardless' :
+					$gocardlessUsersHandler = new GocardlessUsersHandler();
+					$user_provider_uuid = $gocardlessUsersHandler->doCreateUser($user_reference_uuid, $user_opts_array);
 					break;
 				case 'celery' :
 					$msg = "unsupported feature for provider named : ".$provider_name;

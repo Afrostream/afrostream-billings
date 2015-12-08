@@ -44,6 +44,15 @@ if((getEnv('RECURLY_WH_HTTP_AUTH_PWD') === false)) {
 	putEnv('RECURLY_WH_HTTP_AUTH_PWD=pwd');
 }
 
+#Gocardless API
+if((getEnv('GOCARDLESS_API_ENV') === false)) {
+	putEnv('GOCARDLESS_API_ENV=sandbox');
+}
+
+if((getEnv('GOCARDLESS_API_KEY') === false)) {
+	putEnv('GOCARDLESS_API_KEY=YXwxcLeTGwGv3sPd1-CpmNh3nAsqtDfzGuV8_Vji');
+}
+
 #Logs
 #
 

@@ -1,9 +1,10 @@
 {
 	"name": "afrostream/billings",
-	"description": "add recurly api support",
+	"description": "add providers api support",
 	"require": {
 		"recurly/recurly-client": "^2.4",
-		"monolog/monolog": "^1.17"
+		"monolog/monolog": "^1.17",
+		"gocardless/gocardless-pro": "^0.9.2"
 	},
 	"autoload": {
 		"psr-0": {"afrostreambillings" : "src/"}

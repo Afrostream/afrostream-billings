@@ -1,7 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../libs/recurly/subscriptions/RecurlySubscriptionsHandler.php';
+require_once __DIR__ . '/../../libs/providers/recurly/subscriptions/RecurlySubscriptionsHandler.php';
+require_once __DIR__ . '/../../libs/providers/gocardless/subscriptions/GocardlessSubscriptionsHandler.php';
 require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 
 class SubscriptionsHandler {
@@ -10,7 +11,7 @@ class SubscriptionsHandler {
 	}
 	
 	public function doCreateUserSubscription($userid, $internal_plan_uuid, BillingInfoOpts $billingInfoOpts) {
-		
+		config::getLogger()->addInfo("subscription creation...");
 		$user = UserDAO::getUserById($userid);
 		if($user == NULL) {
 			$msg = "unknown userid : ".$userid;
@@ -47,12 +48,18 @@ class SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		$provider_plan_opts = PlanOptsDAO::getPlanOptsByPlanId($provider_plan->getId());
 		
 		//subscription creation provider side
+		config::getLogger()->addInfo("subscription creation...provider creation...");
 		switch($provider->getName()) {
 			case 'recurly':
 				$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-				$recurly_subscription = $recurlySubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider_plan, $billingInfoOpts);
+				$sub_uuid = $recurlySubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider_plan, $provider_plan_opts, $billingInfoOpts);
+				break;
+			case 'gocardless':
+				$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
+				$sub_uuid = $gocardlessSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider_plan, $provider_plan_opts, $billingInfoOpts);
 				break;
 			case 'celery' :
 				$msg = "unsupported feature for provider named : ".$provider_name;
@@ -65,7 +72,9 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 		}
+		config::getLogger()->addInfo("subscription creation...provider creation done successfully, provider_subscription_uuid=".$sub_uuid);
 		//subscription created provider side, save it in billings database
+		config::getLogger()->addInfo("subscription creation...database savings...");
 		//TODO : should not have yet a switch here (later)
 		//START TRANSACTION
 		$db_subscription = NULL;
@@ -73,7 +82,11 @@ class SubscriptionsHandler {
 		switch($provider->getName()) {
 			case 'recurly':
 				$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-				$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $provider, $provider_plan, $recurly_subscription, 'api', 0);
+				$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $provider, $provider_plan, $provider_plan_opts, $sub_uuid, 'api', 0);
+				break;
+			case 'gocardless':
+				$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
+				$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $provider, $provider_plan, $provider_plan_opts, $sub_uuid, 'api', 0);
 				break;
 			case 'celery' :
 				$msg = "unsupported feature for provider named : ".$provider_name;
@@ -88,6 +101,8 @@ class SubscriptionsHandler {
 		}
 		//COMMIT
 		pg_query("COMMIT");
+		config::getLogger()->addInfo("subscription creation...database savings done successfully");
+		config::getLogger()->addInfo("subscription creation done successfully, db_subscription_id=".$db_subscription->getId());
 		return($db_subscription);
 	}
 	

@@ -5,12 +5,15 @@ require_once __DIR__ . '/../../../../libs/users/UsersHandler.php';
 
 //TODO : REQUEST
 
-$provider_name = 'recurly';
+$provider_name = 'gocardless';
 $user_reference_uuid = '1234';
-$user_opts = array (
-"email" => "emaildomain.com",
+$user_opts_array = array (
+"email" => "email@domain.com",
 "first_name" => "first_name_value",
 "last_name" => "last_name_value");
+
+$user_opts = new UserOpts();
+$user_opts->setOpts($user_opts_array);
 
 try {
 
