@@ -2,6 +2,7 @@
 
 use GoCardlessPro\Client;
 use GoCardlessPro\Resources\Subscription;
+use GoCardlessPro\Core\Exception\GoCardlessProException;
 
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
@@ -12,10 +13,19 @@ class GocardlessSubscriptionsHandler {
 	public function __construct() {
 	}
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Plan $plan, PlanOpts $planOpts, BillingInfoOpts $billingInfoOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, BillingInfoOpts $billingInfoOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("gocardless subscription creation...");
+			/** in gocardless : user subscription is pre-created **/
+			//pre-requisite
+			if(!isset($billingInfoOpts->getOpts()['subscription_uuid'])) {
+				$msg = "field 'subscription_uuid' was not provided";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			/** LATER **/
+			/**
 			//<-- FOR TESTING PURPOSE
 			$planOpts->setOpt('gocardless_amount', 10);
 			//FOR TESTING PURPOSE -->
@@ -52,30 +62,6 @@ class GocardlessSubscriptionsHandler {
 					]);
 			config::getLogger()->addInfo("gocardless subscription creation... mandate creation done successfully, mandate_id=".$mandate->id);
 			//Create a Subscription
-			/*$subscription = new Recurly_Subscription();
-			$subscription->plan_code = $plan->getPlanUuid();
-			$subscription->currency = 'EUR';//TODO
-		
-			$account = new Recurly_Account();
-			$account->account_code = $user->getUserProviderUuid();
-			$account->email = $userOpts->getOpts()['email'];
-			$account->first_name = $userOpts->getOpts()['first_name'];
-			$account->last_name = $userOpts->getOpts()['last_name'];
-		
-			$billing_info = new Recurly_BillingInfo();
-			$billing_info->number = $billingInfoOpts->getOpts()['number'];
-			$billing_info->month = $billingInfoOpts->getOpts()['month'];
-			$billing_info->year = $billingInfoOpts->getOpts()['year'];
-			$billing_info->verification_value = $billingInfoOpts->getOpts()['verification_value'];
-			$billing_info->address1 = $billingInfoOpts->getOpts()['address1'];
-			$billing_info->city = $billingInfoOpts->getOpts()['city'];
-			$billing_info->state = $billingInfoOpts->getOpts()['state'];
-			$billing_info->country = $billingInfoOpts->getOpts()['country'];
-			$billing_info->zip = $billingInfoOpts->getOpts()['zip'];
-		
-			$account->billing_info = $billing_info;
-			$subscription->account = $account;
-			*/
 			config::getLogger()->addInfo("gocardless subscription creation... subscription creation...");
 			$subscription = $client->subscriptions()->create(
 					['params' => 
@@ -90,13 +76,41 @@ class GocardlessSubscriptionsHandler {
 					]);
 			config::getLogger()->addInfo("gocardless subscription creation... subscription creation done successfully, subscription_id=".$subscription->id);
 			$sub_uuid = $subscription->id;
+			**/
+			//Verify that subscription belongs to the current customer
+			//
+			$client = new Client(array(
+					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'environment' => getEnv('GOCARDLESS_API_ENV')
+			));
+			//
+			$paginator = $client->subscriptions()->all(
+					['params' =>
+						[
+						'customer' => $user->getUserProviderUuid()
+						]
+					]);
+			//
+			$found = false;
+			foreach($paginator as $sub_entry) {
+				if($sub_entry->id == $billingInfoOpts->getOpts()['subscription_uuid']) {
+					$found = true; 
+					break;
+				}
+			}
+			if(!$found) {
+				$msg = "subscription not found for the current customer";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$sub_uuid = $billingInfoOpts->getOpts()['subscription_uuid'];
 			config::getLogger()->addInfo("gocardless subscription creation done successfully, gocardless_subscription_uuid=".$sub_uuid);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while creating a gocardless subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless subscription creation failed : ".$msg);
 			throw $e;
-		} catch (Recurly_ValidationError $e) {
-			$msg = "a validation error exception occurred while creating a gocardless subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+		} catch (GoCardlessProException $e) {
+			$msg = "a GoCardlessProException occurred while creating a gocardless subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless subscription creation failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
@@ -130,7 +144,7 @@ class GocardlessSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new Exception($msg);
 		}
-		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionByUserId($provider->getId(), $user->getId());
+		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionByUserId($user->getId());
 		//ADD OR UPDATE
 		foreach ($api_subscriptions as $api_subscription) {
 			//plan
@@ -164,7 +178,7 @@ class GocardlessSubscriptionsHandler {
 		}
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, Provider $provider, Plan $plan, PlanOpts $planOpts, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, $sub_uuid, $update_type, $updateId) {
 		//
 		$client = new Client(array(
 			'access_token' => getEnv('GOCARDLESS_API_KEY'),
@@ -173,10 +187,12 @@ class GocardlessSubscriptionsHandler {
 		//
 		$api_subscription = $client->subscriptions()->get($sub_uuid);
 		//
-		return($this->createDbSubscriptionFromApiSubscription($user, $provider, $plan, $planOpts, $api_subscription, $update_type, $updateId));
+		echo $api_subscription;
+		//
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $plan, $planOpts, $api_subscription, $update_type, $updateId));
 	}
 	
-	private function createDbSubscriptionFromApiSubscription(User $user, Provider $provider, Plan $plan, PlanOpts $planOpts, Subscription $api_subscription, $update_type, $updateId) {
+	private function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, Subscription $api_subscription, $update_type, $updateId) {
 		//CREATE
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setProviderId($provider->getId());
@@ -205,14 +221,15 @@ class GocardlessSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				//break;
 		}
-		/*
 		
-		$db_subscription->setSubActivatedDate($api_subscription->activated_at);
-		$db_subscription->setSubCanceledDate($api_subscription->canceled_at);
-		$db_subscription->setSubExpiresDate($api_subscription->expires_at);
-		$db_subscription->setSubPeriodStartedDate($api_subscription->current_period_started_at);
-		$db_subscription->setSubPeriodEndsDate($api_subscription->current_period_ends_at);
-		*/
+		$db_subscription->setSubActivatedDate(new DateTime($api_subscription->created_at));
+		//
+		$db_subscription->setSubCanceledDate(NULL);//TODO
+		$db_subscription->setSubExpiresDate(NULL);//TODO
+		//To be calculated from billings api
+		$db_subscription->setSubPeriodStartedDate(NULL);
+		//To be calculated from billings api
+		$db_subscription->setSubPeriodEndsDate(NULL);
 		//The information is in the PLAN
 		/*switch ($api_subscription->collection_mode) {
 			case 'automatic' :
@@ -298,6 +315,17 @@ class GocardlessSubscriptionsHandler {
 				return($api_subscription);
 			}
 		}
+	}
+	
+	public function doFillSubscription(BillingsSubscription $subscription) {
+		//find period : monthly / yearly / what about : one shot ?
+		$activated_date = $subscription->getSubActivatedDate();
+		$activated_day_of_month = $activated_date->format('w');
+		echo "day=".$activated_day_of_month;
+		//To be calculated from billings api
+		$db_subscription->setSubPeriodStartedDate(NULL);
+		//To be calculated from billings api
+		$db_subscription->setSubPeriodEndsDate(NULL);
 	}
 }
 

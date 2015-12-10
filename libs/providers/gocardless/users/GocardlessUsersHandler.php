@@ -1,6 +1,7 @@
 <?php
 
 use GoCardlessPro\Client;
+use GoCardlessPro\Core\Exception\GoCardlessProException;
 
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../../libs/utils/utils.php';

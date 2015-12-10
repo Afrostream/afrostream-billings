@@ -9,7 +9,7 @@ class RecurlySubscriptionsHandler {
 	public function __construct() {
 	}
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Plan $plan, PlanOpts $planOpts, BillingInfoOpts $billingInfoOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, BillingInfoOpts $billingInfoOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("recurly subscription creation...");
@@ -84,7 +84,7 @@ class RecurlySubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new Exception($msg);
 		}
-		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionByUserId($provider->getId(), $user->getId());
+		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionByUserId($user->getId());
 		//ADD OR UPDATE
 		foreach ($api_subscriptions as $api_subscription) {
 			//plan
@@ -119,17 +119,17 @@ class RecurlySubscriptionsHandler {
 		}
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, Provider $provider, Plan $plan, PlanOpts $planOpts, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, $sub_uuid, $update_type, $updateId) {
 		//
 		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 		//
 		$api_subscription = Recurly_Subscription::get($sub_uuid);
 		//
-		return($this->createDbSubscriptionFromApiSubscription($user, $provider, $plan, $planOpts, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $plan, $planOpts, $api_subscription, $update_type, $updateId));
 	}
 	
-	private function createDbSubscriptionFromApiSubscription(User $user, Provider $provider, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, $update_type, $updateId) {
+	private function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, $update_type, $updateId) {
 		//CREATE
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setProviderId($provider->getId());
@@ -245,6 +245,11 @@ class RecurlySubscriptionsHandler {
 			}
 		}
 	}
+	
+	public function doFillSubscription(BillingsSubscription $subscription) {
+		//nothing to do specific to Recurly
+	}
+	
 }
 
 ?>

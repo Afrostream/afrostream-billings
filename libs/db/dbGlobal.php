@@ -44,6 +44,25 @@ class UserDAO {
 		return($out);
 	}
 	
+	public static function getUsersByUserReferenceId($user_reference_uuid) {
+		$query = "SELECT _id, providerid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE user_reference_uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($user_reference_uuid));
+	
+		$array = array();
+	
+		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = new User();
+			$out->setId($line["_id"]);
+			$out->setProviderId($line["providerid"]);
+			$out->setUserReferenceUuid($line["user_reference_uuid"]);
+			$out->setUserProviderUuid($line["user_provider_uuid"]);
+			array_push($array, $out);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($array);
+	}
 }
 
 class User {
@@ -589,12 +608,12 @@ class BillingsSubscriptionDAO {
 		return(self::getBillingsSubscriptionById($row[0]));
 	}
 	
-	public static function getBillingsSubscriptionByUserId($providerId, $userId) {
+	public static function getBillingsSubscriptionByUserId($userId) {
 		$query = "SELECT _id, providerid, userid, planid, creation_date, updated_date, sub_uuid, sub_status,";
 		$query.= " sub_activated_date, sub_canceled_date, sub_expires_date, sub_period_started_date, sub_period_ends_date,";
 		$query.= " sub_collection_mode, update_type, updateid, deleted";
-		$query.= " FROM billing_subscriptions WHERE providerid = $1 AND userid = $2";
-		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $userId));
+		$query.= " FROM billing_subscriptions WHERE userid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($userId));
 		
 		$out = array();
 		

@@ -8,9 +8,12 @@ require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
 
 //$userid = 13;//RECURLY
 $userid = 16;//GOCARDLESS
+
 $plan_internal_uuid = 'afrostream_monthly';
 
 $billingInfoOpts = new BillingInfoOpts();
+
+$billingInfoOpts->setOpt('subscription_uuid', 'SB00001WPVRWE4');
 
 $billingInfoOpts->setOpt('number', '4111-1111-1111-1111');
 $billingInfoOpts->setOpt('month', 12);
