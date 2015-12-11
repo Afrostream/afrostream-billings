@@ -9,8 +9,8 @@ require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
 //$userid = 1;
 $user_reference_uuid = '1234';
 
-/*if(isset($_GET['user_reference_uuid'])) {
-	$userid = $_GET['user_reference_uuid'];
+/*if(isset($_GET['userid'])) {
+	$userid = $_GET['userid'];
 } else {
 	die('userid is missing');
 }*/

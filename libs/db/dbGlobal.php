@@ -588,7 +588,7 @@ class BillingsSubscriptionDAO {
 		return(self::getBillingsSubscriptionById($row[0]));
 	}
 	
-	public static function updateBillingsSubscription(Subscription $subscription) {
+	public static function updateBillingsSubscription(BillingsSubscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, planid = $1, sub_status = $2, sub_activated_date = $3, sub_canceled_date = $4,";
 		$query.= " sub_expires_date = $5, sub_period_started_date = $6, sub_period_ends_date = $7, sub_collection_mode = $8, update_type = $9, updateid = $10";
 		$query.= " WHERE _id = $11";
@@ -605,7 +605,7 @@ class BillingsSubscriptionDAO {
 						$subscription->getUpdateId(),
 						$subscription->getId()));
 		$row = pg_fetch_row($result);
-		return(self::getBillingsSubscriptionById($row[0]));
+		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
 	
 	public static function getBillingsSubscriptionByUserId($userId) {

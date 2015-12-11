@@ -6,14 +6,15 @@ require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
 
 //TODO : REQUEST
 
-//$userid = 13;//RECURLY
-$userid = 16;//GOCARDLESS
+$userid = 13;//RECURLY
+//$userid = 16;//GOCARDLESS
 
 $plan_internal_uuid = 'afrostream_monthly';
 
 $billingInfoOpts = new BillingInfoOpts();
 
-$billingInfoOpts->setOpt('subscription_uuid', 'SB00001WPVRWE4');
+$billingInfoOpts->setOpt('subscription_uuid', '32eaefbe04664fc59fbf8644dfb98a3c');//RECURLY
+///$billingInfoOpts->setOpt('subscription_uuid', 'SB00001WPVRWE4');//GOCARLESS
 
 $billingInfoOpts->setOpt('number', '4111-1111-1111-1111');
 $billingInfoOpts->setOpt('month', 12);

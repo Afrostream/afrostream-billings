@@ -1,9 +1,10 @@
 <?php
 
-require_once __DIR__ . '/../../../../vendor/autoload.php';
-require_once __DIR__ . '/../../../../config/config.php';
-require_once __DIR__ . '/../../../../libs/providers/recurly/webhooks/WebHooksHandler.php';
-require_once __DIR__ . '/../../../../libs/providers/recurly/db/dbRecurly.php';
+require_once __DIR__ . '/../../../../../vendor/autoload.php';
+require_once __DIR__ . '/../../../../../config/config.php';
+require_once __DIR__ . '/../../../../../libs/providers/recurly/webhooks/WebHooksHandler.php';
+
+config::getLogger()->addInfo('Receiving recurly webhook...');
 
 $valid_passwords = array (getEnv('RECURLY_WH_HTTP_AUTH_USER') => getEnv('RECURLY_WH_HTTP_AUTH_PWD'));
 $valid_users = array_keys($valid_passwords);
@@ -27,8 +28,6 @@ if (!$validated) {
 	header('HTTP/1.0 401 Unauthorized');
 	die ("Not authorized");
 }
-
-config::getLogger()->addInfo('Receiving Recurly webhook...');
 
 $webHooksHander = new WebHooksHander();
 

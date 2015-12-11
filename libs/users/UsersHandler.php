@@ -25,7 +25,7 @@ class UsersHandler {
 			//user creation provider side
 			$user_provider_uuid = NULL;
 			switch($provider->getName()) {
-				case 'recurly':
+				case 'recurly' :
 					$recurlyUsersHandler = new RecurlyUsersHandler();
 					$user_provider_uuid = $recurlyUsersHandler->doCreateUser($user_reference_uuid, $user_opts_array);
 					break;

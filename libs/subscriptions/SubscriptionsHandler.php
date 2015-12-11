@@ -54,11 +54,11 @@ class SubscriptionsHandler {
 		config::getLogger()->addInfo("subscription creation...provider creation...");
 		$sub_uuid = NULL;
 		switch($provider->getName()) {
-			case 'recurly':
+			case 'recurly' :
 				$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
 				$sub_uuid = $recurlySubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $provider_plan, $provider_plan_opts, $billingInfoOpts);
 				break;
-			case 'gocardless':
+			case 'gocardless' :
 				$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
 				$sub_uuid = $gocardlessSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $provider_plan, $provider_plan_opts, $billingInfoOpts);
 				break;
@@ -81,11 +81,11 @@ class SubscriptionsHandler {
 		$db_subscription = NULL;
 		pg_query("BEGIN");
 		switch($provider->getName()) {
-			case 'recurly':
+			case 'recurly' :
 				$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
 				$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $provider_plan, $provider_plan_opts, $sub_uuid, 'api', 0);
 				break;
-			case 'gocardless':
+			case 'gocardless' :
 				$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
 				$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $provider_plan, $provider_plan_opts, $sub_uuid, 'api', 0);
 				break;
@@ -111,7 +111,8 @@ class SubscriptionsHandler {
 		$subscriptions = array();
 		$users = UserDAO::getUsersByUserReferenceId($user_reference_uuid);
 		foreach($users as $user) {
-			$subscriptions += BillingsSubscriptionDAO::getBillingsSubscriptionByUserId($user->getId());
+ 			$current_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionByUserId($user->getId());
+ 			$subscriptions = array_merge($subscriptions, $current_subscriptions);
 		}
 		$this->doFillSubscriptions($subscriptions);
 		return($subscriptions);
@@ -129,8 +130,18 @@ class SubscriptionsHandler {
 		return($subscriptions);
 	}
 	
-	public function doUpdateUserSubscriptions($userid) {
-		
+	public function doUpdateUserSubscriptionsByUserReferenceId($user_reference_uuid) {
+		config::getLogger()->addInfo("dbsubscriptions update for user_reference_uuid=".$user_reference_uuid."...");
+		$subscriptions = array();
+		$users = UserDAO::getUsersByUserReferenceId($user_reference_uuid);
+		foreach($users as $user) {
+			$this->doUpdateUserSubscriptionsByUserId($user->getId());
+		}
+		config::getLogger()->addInfo("dbsubscriptions update for user_reference_uuid=".$user_reference_uuid." done successfully");
+	}
+	
+	public function doUpdateUserSubscriptionsByUserId($userid) {
+		config::getLogger()->addInfo("dbsubscriptions update for userid=".$userid."...");
 		$user = UserDAO::getUserById($userid);
 		if($user == NULL) {
 			$msg = "unknown userid : ".$userid;
@@ -138,21 +149,31 @@ class SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		
-		$provider = ProviderDAO::getProviderByName($user->getBillingProvider());
+		$provider = ProviderDAO::getProviderById($user->getProviderId());
 		
 		if($provider == NULL) {
-			//todo
+			$msg = "unknown provider id : ".$user->getProviderId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		
 		switch($provider->getName()) {
-			case 'recurly':
+			case 'recurly' :
 				$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
 				$recurlySubscriptionsHandler->doUpdateUserSubscriptions($user);
 				break;
+			case 'gocardless' :
+				$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
+				$gocardlessSubscriptionsHandler->doUpdateUserSubscriptions($user);
+				break;
+			case 'celery' :
+				//nothing to do (owned)
+				break;
 			default:
-				//todo
+				//nothing to do (unknown)
 				break;
 		}
+		config::getLogger()->addInfo("dbsubscriptions update for userid=".$userid." done successfully");
 	}
 	
 	private function doFillSubscriptions($subscriptions) {
@@ -169,16 +190,16 @@ class SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		switch($provider->getName()) {
-			case 'recurly':
+			case 'recurly' :
 				$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
 				$recurlySubscriptionsHandler->doFillSubscription($subscription);
 				break;
-			case 'gocardless':
+			case 'gocardless' :
 				$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
 				$gocardlessSubscriptionsHandler->doFillSubscription($subscription);
 				break;
 			case 'celery' :
-				/** nothing to do **/
+				///nothing to do
 				/*$msg = "unsupported feature for provider named : ".$provider_name;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);*/
