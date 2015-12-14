@@ -53,6 +53,10 @@ if((getEnv('GOCARDLESS_API_KEY') === false)) {
 	putEnv('GOCARDLESS_API_KEY=YXwxcLeTGwGv3sPd1-CpmNh3nAsqtDfzGuV8_Vji');
 }
 
+if((getEnv('GOCARDLESS_WH_SECRET') === false)) {
+	putEnv('GOCARDLESS_WH_SECRET=nelsounet');
+}
+
 #Logs
 #
 

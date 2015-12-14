@@ -828,4 +828,188 @@ class BillingInfoOpts {
 
 }
 
+class BillingsWebHookDAO {
+
+	public static function getBillingsWebHookById($id) {
+		$query = "SELECT _id, providerid, post_data, processing_status, creation_date FROM billing_webhooks WHERE _id = $1";
+
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+
+		$out = null;
+
+		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = new BillingsWebHook();
+			$out->setId($line["_id"]);
+			$out->setProviderId($line["providerid"]);
+			$out->setPostData($line["post_data"]);
+			$out->setProcessingStatus($line["processing_status"]);
+			$out->setCreationDate($line["creation_date"]);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+
+	public static function addBillingsWebHook($providerid, $post_data) {
+		$query = "INSERT INTO billing_webhooks (providerid, post_data) VALUES ($1, $2) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $post_data));
+		$row = pg_fetch_row($result);
+		return(self::getBillingsWebHookById($row[0]));
+	}
+
+	public static function updateProcessingStatusById($id, $status) {
+		$query = "UPDATE billing_webhooks SET processing_status = $1 WHERE _id = $2";
+		pg_query_params(config::getDbConn(), $query, array($status ,$id));
+	}
+}
+
+class BillingsWebHook {
+
+	private $_id;
+	private $providerid;
+	private $post_data;
+	private $processing_status;
+	private $creation_date;
+
+	public function getId() {
+		return($this->_id);
+	}
+
+	public function setId($id) {
+		$this->_id = $id;
+	}
+
+	public function getProviderId() {
+		return($this->providerid);
+	}
+
+	public function setProviderId($providerid) {
+		$this->providerid = $providerid;
+	}
+
+	public function getPostData() {
+		return($this->post_data);
+	}
+
+	public function setPostData($post_data) {
+		$this->post_data = $post_data;
+	}
+
+	public function getProcessingStatus() {
+		return($this->processing_status);
+	}
+
+	public function setProcessingStatus($status) {
+		$this->processing_status = $status;
+	}
+
+	public function getCreationDate() {
+		return($this->creation_date);
+	}
+
+	public function setCreationDate($date) {
+		$this->creation_date = $date;
+	}
+
+}
+
+class BillingsWebHookLogDAO {
+
+	public static function addBillingsWebHookLog($webhook_id) {
+		$query = "INSERT INTO billing_webhook_logs (webhookid) VALUES ($1) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query, array($webhook_id));
+		$row = pg_fetch_row($result);
+		return(self::getBillingsWebHookLogById($row[0]));
+	}
+
+	public static function updateBillingsWebHookLogProcessingStatus(BillingsWebHookLog $billingsWebHookLog) {
+		$query = "UPDATE billing_webhook_logs SET processing_status = $1, ended_date = CURRENT_TIMESTAMP, message = $2 WHERE _id = $3";
+		$result = pg_query_params(config::getDbConn(), $query, array($billingsWebHookLog->getProcessingStatus(), $billingsWebHookLog->getMessage(), $billingsWebHookLog->getId()));
+		$row = pg_fetch_row($result);
+		return(self::getBillingsWebHookLogById($row[0]));
+	}
+
+	public static function getBillingsWebHookLogById($id) {
+		$query = "SELECT _id, webhookid, processing_status, started_date, ended_date, message FROM billing_webhook_logs WHERE _id = $1";
+
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+
+		$out = null;
+
+		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = new BillingsWebHookLog();
+			$out->setId($line["_id"]);
+			$out->setWebHookId($line["webhookid"]);
+			$out->setProcessingStatus($line["processing_status"]);
+			$out->setStartedDate($line["started_date"]);
+			$out->setEndedDate($line["ended_date"]);
+			$out->setMessage($line["message"]);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+}
+
+class BillingsWebHookLog {
+
+	private $_id;
+	private $webhookid;
+	private $processing_status;
+	private $started_date;
+	private $ended_date;
+	private $message;
+
+	public function getId() {
+		return($this->_id);
+	}
+
+	public function setId($id) {
+		$this->_id = $id;
+	}
+
+	public function setWebHookId($id) {
+		$this->webhookid = $id;
+	}
+
+	public function getWebHookId() {
+		return($this->webhookid);
+	}
+
+	public function getProcessingStatus() {
+		return($this->processing_status);
+	}
+
+	public function setProcessingStatus($status) {
+		$this->processing_status = $status;
+	}
+
+	public function getStartedDate() {
+		return($this->started_date);
+	}
+
+	public function setStartedDate($date) {
+		$this->started_date = $date;
+	}
+
+	public function getEndedDate() {
+		return($this->ended_date);
+	}
+
+	public function setEndedDate($date) {
+		$this->ended_date = $date;
+	}
+
+	public function getMessage() {
+		return($this->message);
+	}
+
+	public function setMessage($msg) {
+		$this->message = $msg;
+	}
+
+}
+
 ?>

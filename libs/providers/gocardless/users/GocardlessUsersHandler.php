@@ -51,10 +51,10 @@ class GocardlessUsersHandler {
 			$msg = "a billings exception occurred while creating a gocardless user for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless user creation failed : ".$msg);
 			throw $e;
-		/*} catch (Recurly_ValidationError $e) {
-			$msg = "a validation error exception occurred while creating a gocardless user for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+		} catch (GoCardlessProException $e) {
+			$msg = "a GoCardlessProException occurred while getting gocardless subscriptions for user_provider_uuid=".$user->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless user creation failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);*/
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while creating a gocardless user for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless user creation failed : ".$msg);

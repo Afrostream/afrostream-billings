@@ -1,52 +1,29 @@
 <?php
 
 require_once __DIR__ . '/../../../../config/config.php';
-require_once __DIR__ . '/../../../../libs/providers/recurly/db/dbRecurly.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/providers/recurly/subscriptions/RecurlySubscriptionsHandler.php';
 
-class WebHooksHander {
+class RecurlyWebHooksHandler {
 	
 	public function __construct() {
 	}
-	
-	public function doSaveWebHook($post_data) {
+		
+	public function doProcessWebHook(BillingsWebHook $billingsWebHook, $update_type = 'hook') {
 		try {
-			$notification = new Recurly_PushNotification($post_data);
-			$billingRecurlyWebHook = BillingRecurlyWebHookDAO::addBillingRecurlyWebHook($notification->type, $post_data);
-			config::getLogger()->addInfo("post_data saved successfully, id=".$billingRecurlyWebHook->getId());
-			return($billingRecurlyWebHook);
-		} catch (Exception $e) {
-			config::getLogger()->addError("an error occurred while saving post_data, message=" . $e->getMessage());
-		}
-	}
-	
-	public function doProcessWebHook($id, $update_type = 'hook') {
-		try {
-			config::getLogger()->addInfo("processing WebHook with id=".$id."...");
-			$billingRecurlyWebHook = BillingRecurlyWebHookDAO::getBillingRecurlyWebHookById($id);
-			BillingRecurlyWebHookDAO::updateProcessingStatusById($id, 'running');
-			$billingRecurlyWebHookLog = BillingRecurlyWebHookLogDAO::addBillingRecurlyWebHookLog($id);
-			$notification = new Recurly_PushNotification($billingRecurlyWebHook->getPostData());
-			$this->doProcessNotification($notification, $update_type, $id);
-			//
-			BillingRecurlyWebHookDAO::updateProcessingStatusById($id, 'done');
-			//
-			$billingRecurlyWebHookLog->setProcessingStatus('done');
-			$billingRecurlyWebHookLog->setMessage('');
-			$billingRecurlyWebHookLog = BillingRecurlyWebHookLogDAO::updateBillingRecurlyWebHookLogProcessingStatus($billingRecurlyWebHookLog);
-			//
-			config::getLogger()->addInfo("processing WebHook with id=".$id." ended successully");
+			config::getLogger()->addInfo("processing recurly webHook with id=".$billingsWebHook->getId()."...");
+			$notification = new Recurly_PushNotification($billingsWebHook->getPostData());
+			$this->doProcessNotification($notification, $update_type, $billingsWebHook->getId());
+			config::getLogger()->addInfo("processing recurly webHook with id=".$billingsWebHook->getId()." done successully");
 		} catch(Exception $e) {
-			config::getLogger()->addError("an exception occurred while processing WebHook with id=".$id.", message=".$e->getMessage());
-			BillingRecurlyWebHookDAO::updateProcessingStatusById($id, 'error');
-			$billingRecurlyWebHookLog->setProcessingStatus('error');
-			$billingRecurlyWebHookLog->setMessage($e->getMessage());
-			$billingRecurlyWebHookLog = BillingRecurlyWebHookLogDAO::updateBillingRecurlyWebHookLogProcessingStatus($billingRecurlyWebHookLog);
+			$msg = "an unknown exception occurred while processing recurly webHook with id=".$billingsWebHook->getId().", message=".$e->getMessage();
+			config::getLogger()->addError("processing recurly webHook with id=".$billingsWebHook->getId()." failed : ". $msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 	}
 	
 	private function doProcessNotification(Recurly_PushNotification $notification, $update_type, $updateId) {
+		config::getLogger()->addInfo('Processing recurly hook notification...');
 		switch ($notification->type) {
 			case "new_subscription_notification" :
 				$this->doProcessSubscription($notification, $update_type, $updateId);
@@ -67,13 +44,14 @@ class WebHooksHander {
 				$this->doProcessSubscription($notification, $update_type, $updateId);
 				break;
 			default :
-				config::getLogger()->addWarning('notification type : '. $notification->type. ' is not yet implemented.');
+				config::getLogger()->addWarning('notification type : '. $notification->type. ' is not yet implemented');
 				break;
 		}
+		config::getLogger()->addInfo('Processing recurly hook notification done successfully');
 	}
 	
 	private function doProcessSubscription(Recurly_PushNotification $notification, $update_type, $updateId) {
-		config::getLogger()->addInfo('Processing notification type '.$notification->type.'...');
+		config::getLogger()->addInfo('Processing recurly hook subscription, update_type='.$notification->type.'...');
 		//
 		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
@@ -85,10 +63,10 @@ class WebHooksHander {
 			$api_subscription = Recurly_Subscription::get($subscription_uuid);
 			//
 		} catch (Recurly_NotFoundError $e) {
-			config::getLogger()->addError("a not found exception occurred while getting subscription with uuid=".$subscription_uuid." from api, message=".$e->getMessage());
+			config::getLogger()->addError("a not found exception occurred while getting recurly subscription with uuid=".$subscription_uuid." from api, message=".$e->getMessage());
 			throw $e;
 		} catch (Exception $e) {
-			config::getLogger()->addError("an unknown exception occurred while getting subscription with uuid=".$subscription_uuid." from api, message=".$e->getMessage());
+			config::getLogger()->addError("an unknown exception occurred while getting recurly subscription with uuid=".$subscription_uuid." from api, message=".$e->getMessage());
 			throw $e;
 		}
 		//provider
@@ -136,7 +114,7 @@ class WebHooksHander {
 			$subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $provider, $plan, $api_subscription, $subscription, $update_type, $updateId);
 		}
 		//
-		config::getLogger()->addInfo('Processing notification type '.$notification->type.' ended successfully');
+		config::getLogger()->addInfo('Processing recurly hook subscription, update_type='.$notification->type.' done successfully');
 	}
 	
 	private static function getNodeByName(SimpleXMLElement $node, $name) {
