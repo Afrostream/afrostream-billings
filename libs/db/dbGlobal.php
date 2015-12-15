@@ -44,7 +44,7 @@ class UserDAO {
 		return($out);
 	}
 	
-	public static function getUsersByUserReferenceId($user_reference_uuid) {
+	public static function getUsersByUserReferenceUuid($user_reference_uuid) {
 		$query = "SELECT _id, providerid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE user_reference_uuid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($user_reference_uuid));
 	
@@ -63,6 +63,26 @@ class UserDAO {
 	
 		return($array);
 	}
+	
+	public static function getUserByUserProviderUuid($providerid, $user_provider_uuid) {
+		$query = "SELECT _id, providerid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE providerid = $1 AND user_provider_uuid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $user_provider_uuid));
+		
+		$out = null;
+		
+		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = new User();
+			$out->setId($line["_id"]);
+			$out->setProviderId($line["providerid"]);
+			$out->setUserReferenceUuid($line["user_reference_uuid"]);
+			$out->setUserProviderUuid($line["user_provider_uuid"]);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
 }
 
 class User {
@@ -530,33 +550,13 @@ class BillingsSubscriptionDAO {
 	}
 	
 	public static function getBillingsSubscriptionBySubUuid($providerId, $sub_uuid) {
-		$query = "SELECT _id, providerid, userid, planid, creation_date, updated_date, sub_uuid, sub_status,";
-		$query.= " sub_activated_date, sub_canceled_date, sub_expires_date, sub_period_started_date, sub_period_ends_date,";
-		$query.= " sub_collection_mode, update_type, updateid, deleted";
-		$query.= " FROM billing_subscriptions WHERE providerid = $1 AND sub_uuid = $2";
+		$query = "SELECT _id FROM billing_subscriptions WHERE providerid = $1 AND sub_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $sub_uuid));
 		
 		$out = null;
 		
 		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new BillingsSubscription();
-			$out->setId($line["_id"]);
-			$out->setProviderId($line["providerid"]);
-			$out->setUserId($line["userid"]);
-			$out->setPlanId($line["planid"]);
-			$out->setCreationDate($line["creation_date"]);
-			$out->setUpdatedDate($line["updated_date"]);
-			$out->setSubUid($line["sub_uuid"]);
-			$out->setSubStatus($line["sub_status"]);
-			$out->setSubActivatedDate($line["sub_activated_date"]);
-			$out->setSubCanceledDate($line["sub_canceled_date"]);
-			$out->setSubExpiresDate($line["sub_expires_date"]);
-			$out->setSubCollectionMode($line["sub_collection_mode"]);
-			$out->setSubPeriodStartedDate($line["sub_period_started_date"]);
-			$out->setSubPeriodEndsDate($line["sub_period_ends_date"]);
-			$out->setUpdateType($line["update_type"]);
-			$out->setUpdateId($line["updateid"]);
-			$out->setDeleted($line["deleted"]);
+			$out = self::getBillingsSubscriptionById($line['_id']);
 		}
 		// free result
 		pg_free_result($result);
@@ -588,12 +588,12 @@ class BillingsSubscriptionDAO {
 		return(self::getBillingsSubscriptionById($row[0]));
 	}
 	
-	public static function updateBillingsSubscription(BillingsSubscription $subscription) {
+	/*public static function updateBillingsSubscription(BillingsSubscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, planid = $1, sub_status = $2, sub_activated_date = $3, sub_canceled_date = $4,";
 		$query.= " sub_expires_date = $5, sub_period_started_date = $6, sub_period_ends_date = $7, sub_collection_mode = $8, update_type = $9, updateid = $10";
 		$query.= " WHERE _id = $11";
 		$result = pg_query_params(config::getDbConn(), $query,
-				array($subscription->getPlanId(),
+				array(	$subscription->getPlanId(),
 						$subscription->getSubStatus(),
 						dbGlobal::toISODate($subscription->getSubActivatedDate()),
 						dbGlobal::toISODate($subscription->getSubCanceledDate()),
@@ -606,37 +606,106 @@ class BillingsSubscriptionDAO {
 						$subscription->getId()));
 		$row = pg_fetch_row($result);
 		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}*/
+	
+	//planid
+	public static function updatePlanId(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, planid = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getPlanId(),
+						$subscription->getId()));
+		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
 	
-	public static function getBillingsSubscriptionByUserId($userId) {
-		$query = "SELECT _id, providerid, userid, planid, creation_date, updated_date, sub_uuid, sub_status,";
-		$query.= " sub_activated_date, sub_canceled_date, sub_expires_date, sub_period_started_date, sub_period_ends_date,";
-		$query.= " sub_collection_mode, update_type, updateid, deleted";
-		$query.= " FROM billing_subscriptions WHERE userid = $1";
+	//subStatus
+	public static function updateSubStatus(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, sub_status = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getSubStatus(),
+						$subscription->getId()));
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//subActivatedDate
+	public static function updateSubActivatedDate(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, sub_activated_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($subscription->getSubActivatedDate()),
+						$subscription->getId()));
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//subCanceledDate
+	public static function updateSubCanceledDate(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, sub_canceled_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(dbGlobal::toISODate($subscription->getSubCanceledDate()),
+						$subscription->getId()));
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//subExpiresDate
+	public static function updateSubExpiresDate(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, sub_expires_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($subscription->getSubExpiresDate()),
+						$subscription->getId()));
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//subPeriodStardedDate
+	public static function updateSubStartedDate(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, sub_period_started_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($subscription->getSubPeriodStartedDate()),
+						$subscription->getId()));
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//subPeriodEndsDate
+	public static function updateSubEndsDate(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, sub_period_ends_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($subscription->getSubPeriodEndsDate()),
+						$subscription->getId()));
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//subCollectionMode
+	public static function updateSubCollectionMode(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, sub_collection_mode = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getSubCollectionMode(),
+						$subscription->getId()));
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//UpdateType
+	public static function updateUpdateType(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, update_type = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getUpdateType(),
+						$subscription->getId()));
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//UpdateId
+	public static function updateUpdateId(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, updateid = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getUpdateId(),
+						$subscription->getId()));
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	public static function getBillingsSubscriptionsByUserId($userId) {
+		$query = "SELECT _id FROM billing_subscriptions WHERE userid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($userId));
 		
 		$out = array();
 		
 		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$val = new BillingsSubscription();
-			$val->setId($line["_id"]);
-			$val->setProviderId($line["providerid"]);
-			$val->setUserId($line["userid"]);
-			$val->setPlanId($line["planid"]);
-			$val->setCreationDate($line["creation_date"]);
-			$val->setUpdatedDate($line["updated_date"]);
-			$val->setSubUid($line["sub_uuid"]);
-			$val->setSubStatus($line["sub_status"]);
-			$val->setSubActivatedDate($line["sub_activated_date"]);
-			$val->setSubCanceledDate($line["sub_canceled_date"]);
-			$val->setSubExpiresDate($line["sub_expires_date"]);
-			$val->setSubCollectionMode($line["sub_collection_mode"]);
-			$val->setSubPeriodStartedDate($line["sub_period_started_date"]);
-			$val->setSubPeriodEndsDate($line["sub_period_ends_date"]);
-			$val->setUpdateType($line["update_type"]);
-			$val->setUpdateId($line["updateid"]);
-			$val->setDeleted($line["deleted"]);
-			array_push($out, $val);
+			array_push($out, self::getBillingsSubscriptionById($line['_id']));
 		}
 		// free result
 		pg_free_result($result);

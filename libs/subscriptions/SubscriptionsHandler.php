@@ -107,11 +107,11 @@ class SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	public function doGetUserSubscriptionsByUserReferenceId($user_reference_uuid) {
+	public function doGetUserSubscriptionsByUserReferenceUuid($user_reference_uuid) {
 		$subscriptions = array();
-		$users = UserDAO::getUsersByUserReferenceId($user_reference_uuid);
+		$users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid);
 		foreach($users as $user) {
- 			$current_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionByUserId($user->getId());
+ 			$current_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
  			$subscriptions = array_merge($subscriptions, $current_subscriptions);
 		}
 		$this->doFillSubscriptions($subscriptions);
@@ -125,15 +125,15 @@ class SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionByUserId($user->getId());
+		$subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		$this->doFillSubscriptions($subscriptions);
 		return($subscriptions);
 	}
 	
-	public function doUpdateUserSubscriptionsByUserReferenceId($user_reference_uuid) {
+	public function doUpdateUserSubscriptionsByUserReferenceUuId($user_reference_uuid) {
 		config::getLogger()->addInfo("dbsubscriptions update for user_reference_uuid=".$user_reference_uuid."...");
 		$subscriptions = array();
-		$users = UserDAO::getUsersByUserReferenceId($user_reference_uuid);
+		$users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid);
 		foreach($users as $user) {
 			$this->doUpdateUserSubscriptionsByUserId($user->getId());
 		}

@@ -106,7 +106,7 @@ class RecurlySubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new Exception($msg);
 		}
-		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionByUserId($user->getId());
+		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		//ADD OR UPDATE
 		foreach ($api_subscriptions as $api_subscription) {
 			//plan
@@ -147,7 +147,7 @@ class RecurlySubscriptionsHandler {
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $plan, $planOpts, $api_subscription, $update_type, $updateId));
 	}
 	
-	private function createDbSubscriptionFromApiSubscription(User $user, Provider $provider, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, Provider $provider, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("recurly dbsubscription creation for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid."...");
 		//CREATE
 		$db_subscription = new BillingsSubscription();
@@ -200,12 +200,13 @@ class RecurlySubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	private function updateDbSubscriptionFromApiSubscription(User $user, Provider $provider, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
+	public function updateDbSubscriptionFromApiSubscription(User $user, Provider $provider, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("recurly dbsubscription update for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()."...");
 		//UPDATE
 		//$db_subscription->setProviderId($provider->getId());//STATIC
 		//$db_subscription->setUserId($user->getId());//STATIC
 		$db_subscription->setPlanId($plan->getId());
+		$db_subscription = BillingsSubscriptionDAO::updatePlanId($db_subscription);
 		//$db_subscription->setSubUid($subscription_uuid);//STATIC
 		switch ($api_subscription->state) {
 			case 'active' :
@@ -226,11 +227,23 @@ class RecurlySubscriptionsHandler {
 				throw new Exception($msg);
 				//break;
 		}
+		$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
+		//
 		$db_subscription->setSubActivatedDate($api_subscription->activated_at);
+		$db_subscription = BillingsSubscriptionDAO::updateSubActivatedDate($db_subscription);
+		//
 		$db_subscription->setSubCanceledDate($api_subscription->canceled_at);
+		$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
+		//
 		$db_subscription->setSubExpiresDate($api_subscription->expires_at);
+		$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+		//
 		$db_subscription->setSubPeriodStartedDate($api_subscription->current_period_started_at);
+		$db_subscription = BillingsSubscriptionDAO::updateSubStartedDate($db_subscription);
+		//
 		$db_subscription->setSubPeriodEndsDate($api_subscription->current_period_ends_at);
+		$db_subscription = BillingsSubscriptionDAO::updateSubEndsDate($db_subscription);
+		//
 		switch ($api_subscription->collection_mode) {
 			case 'automatic' :
 				$db_subscription->setSubCollectionMode('automatic');
@@ -242,12 +255,16 @@ class RecurlySubscriptionsHandler {
 				$db_subscription->setSubCollectionMode('manual');//it is the default says recurly
 				break;
 		}
+		$db_subscription = BillingsSubscriptionDAO::updateSubCollectionMode($db_subscription);
+		//
 		$db_subscription->setUpdateType($update_type);
+		$db_subscription = BillingsSubscriptionDAO::updateUpdateType($db_subscription);
 		//
 		$db_subscription->setUpdateId($updateId);
+		$db_subscription = BillingsSubscriptionDAO::updateUpdateId($db_subscription);
 		//$db_subscription->setDeleted('false');//STATIC
 		//
-		$db_subscription = BillingsSubscriptionDAO::updateBillingsSubscription($db_subscription);
+		//$db_subscription = BillingsSubscriptionDAO::updateBillingsSubscription($db_subscription);
 		config::getLogger()->addInfo("recurly dbsubscription update for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()." done successfully");
 		return($db_subscription);
 	}

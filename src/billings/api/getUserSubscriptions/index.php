@@ -18,7 +18,7 @@ $user_reference_uuid = '1234';
 try {
 	$subscriptionsHandler = new SubscriptionsHandler();
 	if(isset($user_reference_uuid)) {
-		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceId($user_reference_uuid);
+		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user_reference_uuid);
 	} else if(isset($userid)) {
 		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserId($userid);
 	} else {

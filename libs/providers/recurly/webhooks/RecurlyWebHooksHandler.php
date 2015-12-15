@@ -51,12 +51,13 @@ class RecurlyWebHooksHandler {
 	}
 	
 	private function doProcessSubscription(Recurly_PushNotification $notification, $update_type, $updateId) {
-		config::getLogger()->addInfo('Processing recurly hook subscription, update_type='.$notification->type.'...');
+		config::getLogger()->addInfo('Processing recurly hook subscription, notification_type='.$notification->type.'...');
 		//
 		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 		//
 		$subscription_uuid = self::getNodeByName($notification->subscription, 'uuid');
+		config::getLogger()->addInfo('Processing recurly hook subscription, sub_uuid='.$subscription_uuid);
 		//
 		try {
 			//
@@ -89,6 +90,7 @@ class RecurlyWebHooksHandler {
 			config::getLogger()->addError($msg);
 			throw new Exception($msg);
 		}
+		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 		//$account_code
 		$account_code = $api_subscription->account->get()->account_code;
 		if($account_code == NULL) {
@@ -97,24 +99,33 @@ class RecurlyWebHooksHandler {
 			throw new Exception($msg);
 		}
 		config::getLogger()->addInfo('searching user with account_code='.$account_code.'...');
-		$user = UserDAO::getUserByAccountCode($account_code);
+		$user = UserDAO::getUserByByUserProviderUuid($provider->getId(), $account_code);
 		if($user == NULL) {
 			$msg = 'searching user with account_code='.$account_code.' failed, no user found';
 			config::getLogger()->addError($msg);
 			throw new Exception($msg);
 		}
-		//
-		$subscription = SubscriptionDAO::getSubscriptionBySubUuid($provider->getId(), $subscription_uuid);
+		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
+		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_uuid);
 		$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-		if($subscription == NULL) {
+		//ADD OR UPDATE
+		if($db_subscription == NULL) {
 			//CREATE
-			$subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $provider, $plan, $api_subscription, $update_type, $updateId);
+			$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $provider, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 		} else {
 			//UPDATE
-			$subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $provider, $plan, $api_subscription, $subscription, $update_type, $updateId);
+			$db_subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $provider, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
 		}
 		//
-		config::getLogger()->addInfo('Processing recurly hook subscription, update_type='.$notification->type.' done successfully');
+		config::getLogger()->addInfo('Processing recurly hook subscription, notification_type='.$notification->type.' done successfully');
+	}
+	
+	private function getDbSubscriptionByUuid(array $db_subscriptions, $subUuid) {
+		foreach ($db_subscriptions as $db_subscription) {
+			if($db_subscription->getSubUid() == $subUuid) {
+				return($db_subscription);
+			}
+		}
 	}
 	
 	private static function getNodeByName(SimpleXMLElement $node, $name) {
