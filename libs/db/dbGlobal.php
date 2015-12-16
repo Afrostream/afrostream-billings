@@ -92,13 +92,13 @@ class UserDAO {
 	
 }
 
-class User {
+class User implements JsonSerializable {
 	
 	private $_id;
 	private $providerid;
 	private $user_reference_uuid;
 	private $user_provider_uuid;
-	
+
 	public function getId() {
 		return($this->_id);
 	}
@@ -129,6 +129,15 @@ class User {
 	
 	public function getUserProviderUuid() {
 		return($this->user_provider_uuid);
+	}
+	
+	public function jsonSerialize() {
+		return [
+			'userid' => $this->_id,
+			'user_reference_uuid' => $this->user_reference_uuid,
+			'user_provider_uuid' => $this->user_provider_uuid,
+			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize()))
+		];
 	}
 	
 }
@@ -503,7 +512,7 @@ class ProviderDAO {
 	
 }
 
-class Provider {
+class Provider implements JsonSerializable {
 	
 	private $_id;
 	private $name;
@@ -524,6 +533,11 @@ class Provider {
 		$this->name = $name;
 	}
 	
+	public function jsonSerialize() {
+		return[
+			'provider_name' => $this->name	
+		];
+	}
 }
 
 class BillingsSubscriptionDAO {

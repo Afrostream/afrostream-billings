@@ -14,6 +14,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting/creating...");
+			$this->checkUserOptsArray($user_opts_array);
 			$provider = ProviderDAO::getProviderByName($provider_name);
 				
 			if($provider == NULL) {
@@ -22,8 +23,13 @@ class UsersHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$db_users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid, $provider->getId());
-			if(count($db_users) == 1) {
+			$count_users = count($db_users);
+			if($count_users == 1) {
 				$db_user = $db_users[0];
+			} else if($count_users > 1) {
+				$msg = "users with user_reference_id=".$user_reference_uuid." already exist for provider : ".$provider->getName();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			if($db_user == NULL) {
 				$db_user = $this->doCreateUser($provider_name, $user_reference_uuid, $user_opts_array);
@@ -54,11 +60,11 @@ class UsersHandler {
 		return($db_user);
 	}
 	
-	public function doCreateUser($provider_name, $user_reference_uuid, $user_opts_array) {
+	public function doCreateUser($provider_name, $user_reference_uuid, array $user_opts_array) {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user creating...");
-			
+			$this->checkUserOptsArray($user_opts_array);
 			$provider = ProviderDAO::getProviderByName($provider_name);
 			
 			if($provider == NULL) {
@@ -115,6 +121,27 @@ class UsersHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_user);
+	}
+	
+	private function checkUserOptsArray($user_opts_as_array) {
+		if(!isset($user_opts_as_array['email'])) {
+			//exception
+			$msg = "userOpts field 'email' is missing";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if(!isset($user_opts_as_array['first_name'])) {
+			//exception
+			$msg = "userOpts field 'first_name' is missing";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if(!isset($user_opts_as_array['last_name'])) {
+			//exception
+			$msg = "userOpts field 'last_name' is missing";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
 	}
 }
 
