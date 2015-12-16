@@ -19,7 +19,7 @@ class SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		
-		$userOpts = UserOptsDAO::getUserOptsByUserid($userid);
+		$userOpts = UserOptsDAO::getUserOptsByUserId($userid);
 		
 		$internal_plan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid);
 		if($internal_plan == NULL) {

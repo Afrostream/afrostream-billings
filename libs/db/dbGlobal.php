@@ -44,9 +44,16 @@ class UserDAO {
 		return($out);
 	}
 	
-	public static function getUsersByUserReferenceUuid($user_reference_uuid) {
-		$query = "SELECT _id, providerid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE user_reference_uuid = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($user_reference_uuid));
+	public static function getUsersByUserReferenceUuid($user_reference_uuid, $providerid = NULL) {
+		$query = "SELECT _id, providerid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE deleted = false AND user_reference_uuid = $1";
+		if(isset($providerid)) {
+			$query.= " AND providerid = $2";
+		}
+		$query_params = array($user_reference_uuid);
+		if(isset($providerid)) {
+			array_push($query_params, $providerid);
+		}
+		$result = pg_query_params(config::getDbConn(), $query, $query_params);
 	
 		$array = array();
 	
@@ -65,7 +72,7 @@ class UserDAO {
 	}
 	
 	public static function getUserByUserProviderUuid($providerid, $user_provider_uuid) {
-		$query = "SELECT _id, providerid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE providerid = $1 AND user_provider_uuid = $2";
+		$query = "SELECT _id, providerid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE deleted = false AND providerid = $1 AND user_provider_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $user_provider_uuid));
 		
 		$out = null;
@@ -155,8 +162,8 @@ class UserOpts {
 
 class UserOptsDAO {
 	
-	public static function getUserOptsByUserid($userid) {
-		$query = "SELECT _id, userid, key, value FROM billing_users_opts WHERE userid = $1";
+	public static function getUserOptsByUserId($userid) {
+		$query = "SELECT _id, userid, key, value FROM billing_users_opts WHERE deleted = false AND userid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($userid));
 		
 		$out = new UserOpts();
@@ -170,7 +177,7 @@ class UserOptsDAO {
 		return($out);
 	}
 	
-	public static function addUserOpts($user_opts) {
+	public static function addUserOpts(UserOpts $user_opts) {
 		foreach ($user_opts->getOpts() as $k => $v) {
 			$query = "INSERT INTO billing_users_opts (userid, key, value)";
 			$query.= " VALUES ($1, $2, $3) RETURNING _id";
@@ -179,7 +186,14 @@ class UserOptsDAO {
 							$k,
 							$v));
 		}
-		return(self::getUserOptsByUserid($user_opts->getUserId()));
+		return(self::getUserOptsByUserId($user_opts->getUserId()));
+	}
+	
+	public static function deleteUserOptsByUserId($userid) {
+		$query = "UPDATE billing_users_opts SET deleted = true WHERE userid = $1";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($userid));
+		return($result);
 	}
 }
 
@@ -276,7 +290,7 @@ class InternalPlanOpts {
 class InternalPlanOptsDAO {
 
 	public static function getInternalPlanOptsByInternalPlanId($internalplanid) {
-		$query = "SELECT _id, internalplanid, key, value FROM billing_internal_plans_opts WHERE internalplanid = $1";
+		$query = "SELECT _id, internalplanid, key, value FROM billing_internal_plans_opts WHERE deleted = false AND internalplanid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($internalplanid));
 
 		$out = new InternalPlanOpts();
@@ -435,7 +449,7 @@ class PlanOpts {
 class PlanOptsDAO {
 
 	public static function getPlanOptsByPlanId($planid) {
-		$query = "SELECT _id, planid, key, value FROM billing_plans_opts WHERE planid = $1";
+		$query = "SELECT _id, planid, key, value FROM billing_plans_opts WHERE deleted = false AND planid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($planid));
 
 		$out = new PlanOpts();
@@ -717,8 +731,7 @@ class BillingsSubscriptionDAO {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, deleted = true WHERE _id = $1";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array($id));
-		$row = pg_fetch_row($result);
-		return(self::getBillingsSubscriptionById($row[0]));
+		return($result);
 	}
 }
 
