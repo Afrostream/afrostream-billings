@@ -15,10 +15,11 @@ class dbGlobal {
 class UserDAO {
 	
 	public static function addUser(User $user) {
-		$query = "INSERT INTO billing_users (providerid, user_reference_uuid, user_provider_uuid)";
-		$query.= " VALUES ($1, $2, $3) RETURNING _id";
+		$query = "INSERT INTO billing_users (providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid)";
+		$query.= " VALUES ($1, $2, $3, $4) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query, 
 				array($user->getProviderId(),
+					$user->getUserBillingUuid(),
 					$user->getUserReferenceUuid(),
 					$user->getUserProviderUuid()));
 		$row = pg_fetch_row($result);
@@ -26,7 +27,7 @@ class UserDAO {
 	}
 	
 	public static function getUserById($id) {
-		$query = "SELECT _id, providerid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE _id = $1";
+		$query = "SELECT _id, providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE _id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
 		
 		$out = null;
@@ -35,6 +36,7 @@ class UserDAO {
 			$out = new User();
 			$out->setId($line["_id"]);
 			$out->setProviderId($line["providerid"]);
+			$out->setUserBillingUuid($line["user_billing_uuid"]);
 			$out->setUserReferenceUuid($line["user_reference_uuid"]);
 			$out->setUserProviderUuid($line["user_provider_uuid"]);
 		}
@@ -45,7 +47,7 @@ class UserDAO {
 	}
 	
 	public static function getUsersByUserReferenceUuid($user_reference_uuid, $providerid = NULL) {
-		$query = "SELECT _id, providerid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE deleted = false AND user_reference_uuid = $1";
+		$query = "SELECT _id, providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE deleted = false AND user_reference_uuid = $1";
 		if(isset($providerid)) {
 			$query.= " AND providerid = $2";
 		}
@@ -61,6 +63,7 @@ class UserDAO {
 			$out = new User();
 			$out->setId($line["_id"]);
 			$out->setProviderId($line["providerid"]);
+			$out->setUserBillingUuid($line["user_billing_uuid"]);
 			$out->setUserReferenceUuid($line["user_reference_uuid"]);
 			$out->setUserProviderUuid($line["user_provider_uuid"]);
 			array_push($array, $out);
@@ -72,7 +75,7 @@ class UserDAO {
 	}
 	
 	public static function getUserByUserProviderUuid($providerid, $user_provider_uuid) {
-		$query = "SELECT _id, providerid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE deleted = false AND providerid = $1 AND user_provider_uuid = $2";
+		$query = "SELECT _id, providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE deleted = false AND providerid = $1 AND user_provider_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $user_provider_uuid));
 		
 		$out = null;
@@ -81,6 +84,7 @@ class UserDAO {
 			$out = new User();
 			$out->setId($line["_id"]);
 			$out->setProviderId($line["providerid"]);
+			$out->setUserBillingUuid($line["user_billing_uuid"]);
 			$out->setUserReferenceUuid($line["user_reference_uuid"]);
 			$out->setUserProviderUuid($line["user_provider_uuid"]);
 		}
@@ -96,6 +100,7 @@ class User implements JsonSerializable {
 	
 	private $_id;
 	private $providerid;
+	private $user_billing_uuid;
 	private $user_reference_uuid;
 	private $user_provider_uuid;
 
@@ -113,6 +118,14 @@ class User implements JsonSerializable {
 	
 	public function setProviderId($providerid) {
 		$this->providerid = $providerid;
+	}
+	
+	public function setUserBillingUuid($uuid) {
+		$this->user_billing_uuid = $uuid;
+	}
+	
+	public function getUserBillingUuid() {
+		return($this->user_billing_uuid);
 	}
 	
 	public function setUserReferenceUuid($uuid) {
@@ -133,10 +146,11 @@ class User implements JsonSerializable {
 	
 	public function jsonSerialize() {
 		return [
-			'userid' => $this->_id,
-			'user_reference_uuid' => $this->user_reference_uuid,
-			'user_provider_uuid' => $this->user_provider_uuid,
-			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize()))
+			'userBillingUuid' => $this->user_billing_uuid,
+			'userReferenceUuid' => $this->user_reference_uuid,
+			'userProviderUuid' => $this->user_provider_uuid,
+			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
+			'userOpts' => ((UserOptsDAO::getUserOptsByUserId($this->_id)->jsonSerialize()))
 		];
 	}
 	
@@ -167,6 +181,9 @@ class UserOpts {
 		return($this->opts);
 	}
 	
+	public function jsonSerialize() {
+		return $this->opts;
+	}
 }
 
 class UserOptsDAO {
@@ -535,7 +552,7 @@ class Provider implements JsonSerializable {
 	
 	public function jsonSerialize() {
 		return[
-			'provider_name' => $this->name	
+			'providerName' => $this->name	
 		];
 	}
 }

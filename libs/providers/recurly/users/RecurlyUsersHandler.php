@@ -19,24 +19,24 @@ class RecurlyUsersHandler {
 			//
 			$account = new Recurly_Account(guid());
 			if(!isset($user_opts_array['email'])) {
-				$msg = "field 'email' was not provided";
+				$msg = "userOpts field 'email' was not provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(!isset($user_opts_array['first_name'])) {
-				$msg = "field 'first_name' was not provided";
+			if(!isset($user_opts_array['firstName'])) {
+				$msg = "userOpts field 'firstName' was not provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(!isset($user_opts_array['last_name'])) {
-				$msg = "field 'last_name' was not provided";
+			if(!isset($user_opts_array['lastName'])) {
+				$msg = "userOpts field 'lastName' was not provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//
 			$account->email = $user_opts_array['email'];
-			$account->first_name = $user_opts_array['first_name'];
-			$account->last_name = $user_opts_array['last_name'];
+			$account->first_name = $user_opts_array['firstName'];
+			$account->last_name = $user_opts_array['lastName'];
 			//
 			$account->create();
 			//

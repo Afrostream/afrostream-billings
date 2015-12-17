@@ -4,13 +4,14 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../libs/providers/recurly/users/RecurlyUsersHandler.php';
 require_once __DIR__ . '/../../libs/providers/gocardless/users/GocardlessUsersHandler.php';
 require_once __DIR__ . '/../../libs/db/dbGlobal.php';
+require_once __DIR__ . '/../../libs/utils/utils.php';
 
 class UsersHandler {
 	
 	public function __construct() {
 	}
 	
-	public function doGetOrCreateUser($provider_name, $user_reference_uuid, $user_opts_array) {
+	public function doGetOrCreateUser($provider_name, $user_reference_uuid, /*$user_provider_uuid,*/ $user_opts_array) {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting/creating...");
@@ -99,6 +100,7 @@ class UsersHandler {
 			pg_query("BEGIN");
 			//USER
 			$db_user = new User();
+			$db_user->setUserBillingUuid(guid());
 			$db_user->setProviderId($provider->getId());
 			$db_user->setUserReferenceUuid($user_reference_uuid);
 			$db_user->setUserProviderUuid($user_provider_uuid);
@@ -130,15 +132,15 @@ class UsersHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		if(!isset($user_opts_as_array['first_name'])) {
+		if(!isset($user_opts_as_array['firstName'])) {
 			//exception
-			$msg = "userOpts field 'first_name' is missing";
+			$msg = "userOpts field 'firstName' is missing";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		if(!isset($user_opts_as_array['last_name'])) {
+		if(!isset($user_opts_as_array['lastName'])) {
 			//exception
-			$msg = "userOpts field 'last_name' is missing";
+			$msg = "userOpts field 'lastName' is missing";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}

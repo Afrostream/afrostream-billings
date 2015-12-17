@@ -23,17 +23,17 @@ class GocardlessUsersHandler {
 			));
 			//
 			if(!isset($user_opts_array['email'])) {
-				$msg = "field 'email' was not provided";
+				$msg = "userOpts field 'email' was not provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(!isset($user_opts_array['first_name'])) {
-				$msg = "field 'first_name' was not provided";
+			if(!isset($user_opts_array['firstName'])) {
+				$msg = "userOpts field 'firstName' was not provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(!isset($user_opts_array['last_name'])) {
-				$msg = "field 'last_name' was not provided";
+			if(!isset($user_opts_array['lastName'])) {
+				$msg = "userOpts field 'lastName' was not provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -41,8 +41,8 @@ class GocardlessUsersHandler {
 					['params' => 
 							[
 							'email' => $user_opts_array['email'],
-							'given_name' => $user_opts_array['first_name'], 
-							'family_name' => $user_opts_array['last_name']
+							'given_name' => $user_opts_array['firstName'], 
+							'family_name' => $user_opts_array['lastName']
 							]
 					]);
 			$user_provider_uuid = $customer->id;

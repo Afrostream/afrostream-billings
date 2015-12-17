@@ -3,28 +3,13 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../libs/site/UsersController.php';
 
-header("Content-Type: text/html");
+$app = new \Slim\App();
 
-$router = new AltoRouter();
-$router->setBasePath('');
-
-
-$router->map('POST', '/billings/api/users/', function() {
+$app->post("/billings/api/users/", function ($request, $response, $args) {
 	$usersController = new UsersController();
-	$usersController->create();
+	return($usersController->create($request, $response, $args));
 });
 
-// Match the current request 
-$match = $router->match();
-if( $match && is_callable( $match['target'] ) ) {
-	call_user_func_array( $match['target'], $match['params'] );
-} else {
-	header("HTTP/1.0 404 Not Found");
-	//require '404.html';
-}
-
-
-
-
+$app->run();
 
 ?>
