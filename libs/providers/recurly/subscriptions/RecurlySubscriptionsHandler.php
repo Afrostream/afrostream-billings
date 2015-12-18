@@ -3,17 +3,18 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
+require_once __DIR__ . '/../../../../libs/utils/utils.php';
 
 class RecurlySubscriptionsHandler {
 	
 	public function __construct() {
 	}
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, BillingInfoOpts $billingInfoOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("recurly subscription creation...");
-			if(isset($billingInfoOpts->getOpts()['subscription_uuid'])) {
+			if(isset($subscription_provider_uuid)) {
 				//** in recurly : user subscription is pre-created **/
 				//
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
@@ -22,13 +23,13 @@ class RecurlySubscriptionsHandler {
 				$subscriptions = Recurly_SubscriptionList::getForAccount($user->getUserProviderUuid());
 				$found = false;
 				foreach ($subscriptions as $subscription) {
-					if($subscription->uuid == $billingInfoOpts->getOpts()['subscription_uuid']) {
+					if($subscription->uuid == $subscription_provider_uuid) {
 						$found = true;
 						break;
 					}
 				}
 				if(!$found) {
-					$msg = "subscription not found for the current customer";
+					$msg = "subscription not found for the current user";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
@@ -147,10 +148,11 @@ class RecurlySubscriptionsHandler {
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $plan, $planOpts, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, Provider $provider, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("recurly dbsubscription creation for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid."...");
 		//CREATE
 		$db_subscription = new BillingsSubscription();
+		$db_subscription->setSubscriptionBillingUuid(guid());
 		$db_subscription->setProviderId($provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());

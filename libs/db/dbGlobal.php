@@ -27,7 +27,7 @@ class UserDAO {
 	}
 	
 	public static function getUserById($id) {
-		$query = "SELECT _id, providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE _id = $1";
+		$query = "SELECT _id, creation_date, providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE _id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
 		
 		$out = null;
@@ -35,8 +35,9 @@ class UserDAO {
 		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out = new User();
 			$out->setId($line["_id"]);
-			$out->setProviderId($line["providerid"]);
 			$out->setUserBillingUuid($line["user_billing_uuid"]);
+			$out->setCreationDate($line["creation_date"]);
+			$out->setProviderId($line["providerid"]);
 			$out->setUserReferenceUuid($line["user_reference_uuid"]);
 			$out->setUserProviderUuid($line["user_provider_uuid"]);
 		}
@@ -47,7 +48,7 @@ class UserDAO {
 	}
 	
 	public static function getUsersByUserReferenceUuid($user_reference_uuid, $providerid = NULL) {
-		$query = "SELECT _id, providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE deleted = false AND user_reference_uuid = $1";
+		$query = "SELECT _id FROM billing_users WHERE deleted = false AND user_reference_uuid = $1";
 		if(isset($providerid)) {
 			$query.= " AND providerid = $2";
 		}
@@ -56,17 +57,11 @@ class UserDAO {
 			array_push($query_params, $providerid);
 		}
 		$result = pg_query_params(config::getDbConn(), $query, $query_params);
-	
-		$array = array();
-	
+		
+		$array = array();	
+		
 		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new User();
-			$out->setId($line["_id"]);
-			$out->setProviderId($line["providerid"]);
-			$out->setUserBillingUuid($line["user_billing_uuid"]);
-			$out->setUserReferenceUuid($line["user_reference_uuid"]);
-			$out->setUserProviderUuid($line["user_provider_uuid"]);
-			array_push($array, $out);
+			array_push($array, self::getUserById($line['_id']));
 		}
 		// free result
 		pg_free_result($result);
@@ -75,22 +70,32 @@ class UserDAO {
 	}
 	
 	public static function getUserByUserProviderUuid($providerid, $user_provider_uuid) {
-		$query = "SELECT _id, providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE deleted = false AND providerid = $1 AND user_provider_uuid = $2";
+		$query = "SELECT _id FROM billing_users WHERE deleted = false AND providerid = $1 AND user_provider_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $user_provider_uuid));
 		
 		$out = null;
 		
 		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new User();
-			$out->setId($line["_id"]);
-			$out->setProviderId($line["providerid"]);
-			$out->setUserBillingUuid($line["user_billing_uuid"]);
-			$out->setUserReferenceUuid($line["user_reference_uuid"]);
-			$out->setUserProviderUuid($line["user_provider_uuid"]);
+			$out = self::getUserById($line['_id']);
 		}
 		// free result
 		pg_free_result($result);
 		
+		return($out);
+	}
+	
+	public static function getUserByUserBillingUuid($user_billing_uuid) {
+		$query = "SELECT _id FROM billing_users WHERE deleted = false AND user_billing_uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($user_billing_uuid));
+	
+		$out = null;
+	
+		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getUserById($line['_id']);
+		}
+		// free result
+		pg_free_result($result);
+	
 		return($out);
 	}
 	
@@ -99,8 +104,9 @@ class UserDAO {
 class User implements JsonSerializable {
 	
 	private $_id;
-	private $providerid;
 	private $user_billing_uuid;
+	private $creation_date;
+	private $providerid;
 	private $user_reference_uuid;
 	private $user_provider_uuid;
 
@@ -112,20 +118,28 @@ class User implements JsonSerializable {
 		$this->_id = $id;
 	}
 	
-	public function getProviderId() {
-		return($this->providerid);
-	}
-	
-	public function setProviderId($providerid) {
-		$this->providerid = $providerid;
-	}
-	
 	public function setUserBillingUuid($uuid) {
 		$this->user_billing_uuid = $uuid;
 	}
 	
 	public function getUserBillingUuid() {
 		return($this->user_billing_uuid);
+	}
+	
+	public function getCreationDate() {
+		return($this->creation_date);
+	}
+	
+	public function setCreationDate($date) {
+		$this->creation_date = $date;
+	}
+	
+	public function getProviderId() {
+		return($this->providerid);
+	}
+	
+	public function setProviderId($providerid) {
+		$this->providerid = $providerid;
 	}
 	
 	public function setUserReferenceUuid($uuid) {
@@ -225,9 +239,9 @@ class UserOptsDAO {
 
 class InternalPlanDAO {
 	
-	public static function getInternalPlanByUuid($internal_plan_uuid) {
-		$query = "SELECT _id, internal_plan_uuid, name, description FROM billing_internal_plans WHERE internal_plan_uuid = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($internal_plan_uuid));
+	public static function getInternalPlanById($planid) {
+		$query = "SELECT _id, internal_plan_uuid, name, description FROM billing_internal_plans WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($planid));
 	
 		$out = null;
 	
@@ -243,9 +257,25 @@ class InternalPlanDAO {
 	
 		return($out);
 	}	
+	
+	public static function getInternalPlanByUuid($internal_plan_uuid) {
+		$query = "SELECT _id FROM billing_internal_plans WHERE internal_plan_uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($internal_plan_uuid));
+	
+		$out = null;
+	
+		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getInternalPlanById($line['_id']);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 }
 
-class InternalPlan {
+class InternalPlan implements JsonSerializable {
 
 	private $_id;
 	private $internal_plan_uuid;
@@ -283,10 +313,19 @@ class InternalPlan {
 	public function setDescription($description) {
 		$this->description = $description;
 	}
+	
+	public function jsonSerialize() {
+		return [
+				'internalPlanUuid' => $this->internal_plan_uuid,
+				'name' => $this->name,
+				'description' => $this->description,
+				'internalPlanOpts' => (InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($this->_id)->jsonSerialize())
+		];
+	}
 
 }
 
-class InternalPlanOpts {
+class InternalPlanOpts implements JsonSerializable {
 
 	private $internalplanid;
 	private $opts = array();
@@ -308,6 +347,10 @@ class InternalPlanOpts {
 	}
 
 	public function getOpts() {
+		return($this->opts);
+	}
+	
+	public function jsonSerialize() {
 		return($this->opts);
 	}
 
@@ -334,15 +377,30 @@ class InternalPlanOptsDAO {
 
 class InternalPlanLinksDAO {
 	
-	public static function getInternalPlanLink($internalplanid, $providerid) {
-		$query = "SELECT BP._id as billing_plan_id FROM billing_plans BP INNER JOIN billing_internal_plans_links BPL ON (BP._id = BPL.provider_plan_id)";
-		$query.= "WHERE BPL.internal_plan_id = $1 AND BP.providerid = $2";
+	public static function getProviderPlanIdFromInternalPlan($internalplanid, $providerid) {
+		$query = "SELECT BP._id as billing_plan_id FROM billing_plans BP INNER JOIN billing_internal_plans_links BIPL ON (BP._id = BIPL.provider_plan_id)";
+		$query.= "WHERE BIPL.internal_plan_id = $1 AND BP.providerid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($internalplanid, $providerid));
 		
 		$out = null;
 		
 		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out = $line["billing_plan_id"];
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function getInternalPlanIdFromProviderPlan($planid) {
+		$query = "SELECT internal_plan_id as billing_internal_plan_id FROM billing_internal_plans_links BIPL WHERE BIPL.provider_plan_id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($planid));
+		
+		$out = null;
+		
+		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = $line["billing_internal_plan_id"];
 		}
 		// free result
 		pg_free_result($result);
@@ -401,7 +459,7 @@ class Plan {
 	private $plan_uuid;
 	private $name;
 	private $description;
-	private $providerId;
+	private $providerid;
 	
 	public function getId() {
 		return($this->_id);
@@ -436,11 +494,11 @@ class Plan {
 	}
 	
 	public function getProviderId() {
-		return($this->providerId);
+		return($this->providerid);
 	}
 	
-	public function setProviderId($providerId) {
-		$this->providerId = $providerId;
+	public function setProviderId($providerid) {
+		$this->providerid = $providerid;
 	}
 	
 }
@@ -560,7 +618,7 @@ class Provider implements JsonSerializable {
 class BillingsSubscriptionDAO {
 	
 	public static function getBillingsSubscriptionById($id) {
-		$query = "SELECT _id, providerid, userid, planid, creation_date, updated_date, sub_uuid, sub_status,";
+		$query = "SELECT _id, subscription_billing_uuid, providerid, userid, planid, creation_date, updated_date, sub_uuid, sub_status,";
 		$query.= " sub_activated_date, sub_canceled_date, sub_expires_date, sub_period_started_date, sub_period_ends_date,";
 		$query.= " sub_collection_mode, update_type, updateid, deleted";
 		$query.= " FROM billing_subscriptions WHERE _id = $1";
@@ -571,6 +629,7 @@ class BillingsSubscriptionDAO {
 		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out = new BillingsSubscription();
 			$out->setId($line["_id"]);
+			$out->setSubscriptionBillingUuid($line["subscription_billing_uuid"]);
 			$out->setProviderId($line["providerid"]);
 			$out->setUserId($line["userid"]);
 			$out->setPlanId($line["planid"]);
@@ -610,12 +669,13 @@ class BillingsSubscriptionDAO {
 	}
 	
 	public static function addBillingsSubscription(BillingsSubscription $subscription) {
-		$query = "INSERT INTO billing_subscriptions (providerid, userid, planid, creation_date,";
-		$query.= " updated_date, sub_uuid, sub_status, sub_activated_date, sub_canceled_date, sub_expires_date,";
+		$query = "INSERT INTO billing_subscriptions (subscription_billing_uuid, providerid, userid, planid,";
+		$query.= " sub_uuid, sub_status, sub_activated_date, sub_canceled_date, sub_expires_date,";
 		$query.= " sub_period_started_date, sub_period_ends_date, sub_collection_mode, update_type, updateid, deleted)";
-		$query.= " VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING _id";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
-				array($subscription->getProviderId(),
+				array(	$subscription->getSubscriptionBillingUuid(),
+						$subscription->getProviderId(),
 						$subscription->getUserId(),
 						$subscription->getPlanId(),
 						$subscription->getSubUid(),
@@ -684,7 +744,7 @@ class BillingsSubscriptionDAO {
 	public static function updateSubCanceledDate(BillingsSubscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, sub_canceled_date = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
-				array(dbGlobal::toISODate($subscription->getSubCanceledDate()),
+				array(	dbGlobal::toISODate($subscription->getSubCanceledDate()),
 						$subscription->getId()));
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
@@ -766,12 +826,13 @@ class BillingsSubscriptionDAO {
 	}
 }
 
-class BillingsSubscription {
+class BillingsSubscription implements JsonSerializable {
 	
 	private $_id;
-	private $providerId;
-	private $userId;
-	private $planId;
+	private $subscription_billing_uuid;
+	private $providerid;
+	private $userid;
+	private $planid;
 	private $creation_date;
 	private $updated_date;
 	private $sub_uuid;
@@ -794,28 +855,36 @@ class BillingsSubscription {
 		$this->_id = $id;
 	}
 	
-	public function getProviderId() {
-		return($this->providerId);
+	public function setSubscriptionBillingUuid($uuid) {
+		$this->subscription_billing_uuid = $uuid;
 	}
 	
-	public function setProviderId($providerId) {
-		$this->providerId = $providerId;
+	public function getSubscriptionBillingUuid() {
+		return($this->subscription_billing_uuid);
+	}
+	
+	public function getProviderId() {
+		return($this->providerid);
+	}
+	
+	public function setProviderId($providerid) {
+		$this->providerid = $providerid;
 	}
 	
 	public function getUserId() {
-		return($this->userId);
+		return($this->userid);
 	}
 	
-	public function setUserId($userId) {
-		$this->userId = $userId;
+	public function setUserId($userid) {
+		$this->userid = $userid;
 	}
 	
 	public function getPlanId() {
-		return($this->planId);
+		return($this->planid);
 	}
 	
-	public function setPlanId($planId) {
-		$this->planId = $planId;
+	public function setPlanId($planid) {
+		$this->planid = $planid;
 	}
 	
 	public function getCreationDate() {
@@ -906,11 +975,11 @@ class BillingsSubscription {
 	}
 	
 	public function getUpdateId() {
-		return($this->updateId);
+		return($this->updateid);
 	}
 	
 	public function setUpdateId($id) {
-		$this->updateId = $id;
+		$this->updateid = $id;
 	}
 	
 	public function getDeleted() {
@@ -919,6 +988,27 @@ class BillingsSubscription {
 	
 	public function setDeleted($bool) {
 		$this->deleted = $bool;
+	}
+	
+	public function jsonSerialize() {
+		return [
+			'subscriptionBillingUuid' => $this->subscription_billing_uuid,
+			'subscriptionProviderUuid' => $this->sub_uuid,
+			'isActive' => 'todo',
+			'user' =>	((UserDAO::getUserById($this->userid)->jsonSerialize())),
+			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
+			'internalPlan' => ((InternalPlanDAO::getInternalPlanById(
+					InternalPlanLinksDAO::getInternalPlanIdFromProviderPlan($this->planid))->JsonSerialize())
+			),
+			'creationDate' => $this->creation_date,
+			'updatedDate' => $this->updated_date,
+			'subStatus' => $this->sub_status,
+			'subActivatedDate' => $this->sub_activated_date,
+			'subCanceledDate' => $this->sub_canceled_date,
+			'subExpiresDate' => $this->sub_expires_date,
+			'subPeriodStartedDate' => $this->sub_period_started_date,
+			'subPeriodEndsDate' => $this->sub_period_ends_date
+		];
 	}
 	
 }

@@ -9,20 +9,21 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
 require_once __DIR__ . '/../../../../libs/utils/DateRange.php';
+require_once __DIR__ . '/../../../../libs/utils/utils.php';
 		
 class GocardlessSubscriptionsHandler {
 	
 	public function __construct() {
 	}
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, BillingInfoOpts $billingInfoOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("gocardless subscription creation...");
 			/** in gocardless : user subscription is pre-created **/
 			//pre-requisite
-			if(!isset($billingInfoOpts->getOpts()['subscription_uuid'])) {
-				$msg = "field 'subscription_uuid' was not provided";
+			if(!isset($subscription_provider_uuid)) {
+				$msg = "field 'subscription_provider_uuid' was not provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -101,7 +102,7 @@ class GocardlessSubscriptionsHandler {
 				}
 			}
 			if(!$found) {
-				$msg = "subscription not found for the current customer";
+				$msg = "subscription not found for the current user";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -224,7 +225,7 @@ class GocardlessSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
-			$plan_id = InternalPlanLinksDAO::getInternalPlanLink($internal_plan->getId(), $provider->getId());
+			$plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlan($internal_plan->getId(), $provider->getId());
 			if($plan_id == NULL) {
 				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$provider->getName();
 				config::getLogger()->addError($msg);
@@ -243,6 +244,7 @@ class GocardlessSubscriptionsHandler {
 		}
 		//CREATE
 		$db_subscription = new BillingsSubscription();
+		$db_subscription->setSubscriptionBillingUuid(guid());
 		$db_subscription->setProviderId($provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
@@ -318,7 +320,7 @@ class GocardlessSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
-			$plan_id = InternalPlanLinksDAO::getInternalPlanLink($internal_plan->getId(), $provider->getId());
+			$plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlan($internal_plan->getId(), $provider->getId());
 			if($plan_id == NULL) {
 				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$provider->getName();
 				config::getLogger()->addError($msg);

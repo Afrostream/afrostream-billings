@@ -11,7 +11,7 @@ class UsersHandler {
 	public function __construct() {
 	}
 	
-	public function doGetOrCreateUser($provider_name, $user_reference_uuid, /*$user_provider_uuid,*/ $user_opts_array) {
+	public function doGetOrCreateUser($provider_name, $user_reference_uuid, $user_provider_uuid, array $user_opts_array) {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting/creating...");
@@ -23,14 +23,32 @@ class UsersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid, $provider->getId());
-			$count_users = count($db_users);
-			if($count_users == 1) {
-				$db_user = $db_users[0];
-			} else if($count_users > 1) {
-				$msg = "users with user_reference_id=".$user_reference_uuid." already exist for provider : ".$provider->getName();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			if($user_provider_uuid == NULL) {
+				//as usual
+				$db_users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid, $provider->getId());
+				$count_users = count($db_users);
+				if($count_users == 1) {
+					$db_user = $db_users[0];
+				} else if($count_users > 1) {
+					$msg = "users with user_reference_id=".$user_reference_uuid." already exist for provider : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			} else {
+				//check : Does this user_provider_uuid already exist in the Database ?
+				$db_tmp_user = UserDAO::getUserByUserProviderUuid($provider->getId(), $user_provider_uuid);
+				if($db_tmp_user == NULL) {
+					//nothing to do
+				} else {
+					if($db_tmp_user->getUserReferenceUuid() != $user_reference_uuid) {
+						//Exception
+						$msg = "user_provider_uuid=".$user_provider_uuid." is already linked to another user_reference_uuid";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					//done
+					$db_user = $db_tmp_user;
+				}
 			}
 			if($db_user == NULL) {
 				$db_user = $this->doCreateUser($provider_name, $user_reference_uuid, $user_opts_array);
@@ -61,7 +79,7 @@ class UsersHandler {
 		return($db_user);
 	}
 	
-	public function doCreateUser($provider_name, $user_reference_uuid, array $user_opts_array) {
+	private function doCreateUser($provider_name, $user_reference_uuid, array $user_opts_array) {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user creating...");
@@ -73,8 +91,8 @@ class UsersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			//user creation provider side
 			$user_provider_uuid = NULL;
+			//user creation provider side
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlyUsersHandler = new RecurlyUsersHandler();
