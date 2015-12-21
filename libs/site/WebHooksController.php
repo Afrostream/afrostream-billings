@@ -8,9 +8,9 @@ require_once __DIR__ . '/../../libs/webhooks/WebHooksHandler.php';
 use \Slim\Http\Request;
 use \Slim\Http\Response;
 
-class WebhooksController extends BillingsController {
+class WebHooksController extends BillingsController {
 	
-	public function recurlyWebhooksPosting(Request $request, Response $response, array $args) {
+	public function recurlyWebHooksPosting(Request $request, Response $response, array $args) {
 		config::getLogger()->addInfo('Receiving recurly webhook...');
 		
 		$valid_passwords = array (getEnv('RECURLY_WH_HTTP_AUTH_USER') => getEnv('RECURLY_WH_HTTP_AUTH_PWD'));
