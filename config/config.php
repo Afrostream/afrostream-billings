@@ -7,6 +7,8 @@ use Monolog\Handler\StreamHandler;
 
 #Database
 
+#DATABASE_URL is filled in by heroku
+
 if(getEnv('DB_HOST') === false) {
 	putEnv('DB_HOST=localhost');
 }
@@ -75,7 +77,12 @@ class config {
 	
 	public static function getDbConn() {
 		if(self::$db_conn == null) {
-			$connection_string = 'host='.getEnv('DBHOST').' port='.getEnv('DBPORT').' dbname='.getEnv('DBNAME').' user='.getEnv('DBUSER').' password='.getEnv('DBPASSWORD');
+			$connection_string = NULL;
+			if(getEnv('DATABASE_URL') === false) {
+				$connection_string = 'host='.getEnv('DB_HOST').' port='.getEnv('DB_PORT').' dbname='.getEnv('DB_NAME').' user='.getEnv('DB_USER').' password='.getEnv('DB_PASSWORD');
+			} else {
+				$connection_string = getEnv('DATABASE_URL');
+			}
 			self::$db_conn = pg_connect($connection_string)
 				or die('connection to database impossible : '.pg_last_error());
 		}
