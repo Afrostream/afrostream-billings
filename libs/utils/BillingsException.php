@@ -1,6 +1,8 @@
 <?php
 
- class ExceptionType extends SplEnum {
+use MyClabs\Enum\Enum;
+
+ class ExceptionType extends Enum {
  	
  	const __default = self::internal;
  	
