@@ -7,24 +7,24 @@ use Monolog\Handler\StreamHandler;
 
 #Database
 
-if(getEnv('DBHOST') === false) {
-	putEnv('DBHOST=localhost');
+if(getEnv('DB_HOST') === false) {
+	putEnv('DB_HOST=localhost');
 }
 
-if(getEnv('DBPORT') == false) {
-	putEnv('DBPORT=5432');
+if(getEnv('DB_PORT') == false) {
+	putEnv('DB_PORT=5432');
 }
 
-if((getEnv('DBNAME') === false)) {
-	putEnv('DBNAME=afr-billings-local');
+if((getEnv('DB_NAME') === false)) {
+	putEnv('DB_NAME=afr-billings-local');
 }
 
-if((getEnv('DBUSER') === false)) {
-	putEnv('DBUSER=postgres');
+if((getEnv('DB_USER') === false)) {
+	putEnv('DB_USER=postgres');
 }
 
-if((getEnv('DBPASSWORD') === false)) {
-	putEnv('DBPASSWORD=password');
+if((getEnv('DB_PASSWORD') === false)) {
+	putEnv('DB_PASSWORD=password');
 }
 
 #Recurly API
@@ -58,7 +58,6 @@ if((getEnv('GOCARDLESS_WH_SECRET') === false)) {
 }
 
 #Logs
-#
 
 class config {
 	
