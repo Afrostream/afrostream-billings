@@ -1,1 +1,1 @@
-web: vendor/bin/heroku-php-nginx -F fpm_custom.conf src/
+web: vendor/bin/heroku-php-nginx -C nginx_app.conf -F fpm_custom.conf src/
