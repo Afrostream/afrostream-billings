@@ -46,12 +46,13 @@ class UsersHandler {
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
+					//
 					//done
 					$db_user = $db_tmp_user;
 				}
 			}
 			if($db_user == NULL) {
-				$db_user = $this->doCreateUser($provider_name, $user_reference_uuid, $user_opts_array);
+				$db_user = $this->doCreateUser($provider_name, $user_reference_uuid, $user_provider_uuid, $user_opts_array);
 			} else {
 				//update user_opts
 				//START TRANSACTION
@@ -79,7 +80,7 @@ class UsersHandler {
 		return($db_user);
 	}
 	
-	private function doCreateUser($provider_name, $user_reference_uuid, array $user_opts_array) {
+	private function doCreateUser($provider_name, $user_reference_uuid, $user_provider_uuid, array $user_opts_array) {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user creating...");
@@ -91,16 +92,15 @@ class UsersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$user_provider_uuid = NULL;
 			//user creation provider side
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlyUsersHandler = new RecurlyUsersHandler();
-					$user_provider_uuid = $recurlyUsersHandler->doCreateUser($user_reference_uuid, $user_opts_array);
+					$user_provider_uuid = $recurlyUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'gocardless' :
 					$gocardlessUsersHandler = new GocardlessUsersHandler();
-					$user_provider_uuid = $gocardlessUsersHandler->doCreateUser($user_reference_uuid, $user_opts_array);
+					$user_provider_uuid = $gocardlessUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'celery' :
 					$msg = "unsupported feature for provider named : ".$provider_name;

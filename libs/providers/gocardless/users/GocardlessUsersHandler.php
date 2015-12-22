@@ -12,39 +12,48 @@ class GocardlessUsersHandler {
 	public function __construct() {
 	}
 	
-	public function doCreateUser($user_reference_uuid, array $user_opts_array) {
-		$user_provider_uuid = NULL;
+	public function doCreateUser($user_reference_uuid, $user_provider_uuid, array $user_opts_array) {
 		try {
 			config::getLogger()->addInfo("gocardeless user creation...");
-			//
-			$client = new Client(array(
-				'access_token' => getEnv('GOCARDLESS_API_KEY'),
-				'environment' => getEnv('GOCARDLESS_API_ENV')
-			));
-			//
-			if(!isset($user_opts_array['email'])) {
-				$msg = "userOpts field 'email' was not provided";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			if(isset($user_provider_uuid)) {
+				//
+				$client = new Client(array(
+						'access_token' => getEnv('GOCARDLESS_API_KEY'),
+						'environment' => getEnv('GOCARDLESS_API_ENV')
+				));
+				//
+				$customer = $client->customers()->get($user_provider_uuid);
+			} else {
+				//
+				$client = new Client(array(
+					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'environment' => getEnv('GOCARDLESS_API_ENV')
+				));
+				//
+				if(!isset($user_opts_array['email'])) {
+					$msg = "userOpts field 'email' was not provided";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if(!isset($user_opts_array['firstName'])) {
+					$msg = "userOpts field 'firstName' was not provided";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if(!isset($user_opts_array['lastName'])) {
+					$msg = "userOpts field 'lastName' was not provided";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$customer = $client->customers()->create(
+						['params' => 
+								[
+								'email' => $user_opts_array['email'],
+								'given_name' => $user_opts_array['firstName'], 
+								'family_name' => $user_opts_array['lastName']
+								]
+						]);
 			}
-			if(!isset($user_opts_array['firstName'])) {
-				$msg = "userOpts field 'firstName' was not provided";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			if(!isset($user_opts_array['lastName'])) {
-				$msg = "userOpts field 'lastName' was not provided";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			$customer = $client->customers()->create(
-					['params' => 
-							[
-							'email' => $user_opts_array['email'],
-							'given_name' => $user_opts_array['firstName'], 
-							'family_name' => $user_opts_array['lastName']
-							]
-					]);
 			$user_provider_uuid = $customer->id;
 			config::getLogger()->addInfo("gocardless user creation done successfully, user_provider_uuid=".$user_provider_uuid);
 		} catch(BillingsException $e) {
