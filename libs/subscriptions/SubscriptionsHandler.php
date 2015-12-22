@@ -187,6 +187,7 @@ class SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		
 		$provider = ProviderDAO::getProviderById($user->getProviderId());
 		
@@ -199,11 +200,11 @@ class SubscriptionsHandler {
 		switch($provider->getName()) {
 			case 'recurly' :
 				$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-				$recurlySubscriptionsHandler->doUpdateUserSubscriptions($user);
+				$recurlySubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
 				break;
 			case 'gocardless' :
 				$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
-				$gocardlessSubscriptionsHandler->doUpdateUserSubscriptions($user);
+				$gocardlessSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
 				break;
 			case 'celery' :
 				//nothing to do (owned)

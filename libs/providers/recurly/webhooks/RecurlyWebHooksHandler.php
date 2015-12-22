@@ -105,16 +105,17 @@ class RecurlyWebHooksHandler {
 			config::getLogger()->addError($msg);
 			throw new Exception($msg);
 		}
+		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_uuid);
 		$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
 		//ADD OR UPDATE
 		if($db_subscription == NULL) {
 			//CREATE
-			$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $provider, $plan, $planOpts, $api_subscription, $update_type, $updateId);
+			$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 		} else {
 			//UPDATE
-			$db_subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $provider, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
+			$db_subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
 		}
 		//
 		config::getLogger()->addInfo('Processing recurly hook subscription, notification_type='.$notification->type.' done successfully');

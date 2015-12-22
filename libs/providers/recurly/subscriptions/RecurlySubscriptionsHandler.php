@@ -83,7 +83,7 @@ class RecurlySubscriptionsHandler {
 		return($sub_uuid);
 	}
 	
-	public function doUpdateUserSubscriptions(User $user) {
+	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
 		config::getLogger()->addInfo("recurly dbsubscriptions update for userid=".$user->getId()."...");
 		//
 		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
@@ -122,10 +122,10 @@ class RecurlySubscriptionsHandler {
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->uuid);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $provider, $plan, $planOpts, $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $plan, $planOpts, $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
-				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $provider, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
+				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
 			}
 		}
 		//DELETE UNUSED SUBSCRIPTIONS (DELETED FROM THIRD PARTY)
@@ -202,7 +202,7 @@ class RecurlySubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	public function updateDbSubscriptionFromApiSubscription(User $user, Provider $provider, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
+	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("recurly dbsubscription update for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()."...");
 		//UPDATE
 		//$db_subscription->setProviderId($provider->getId());//STATIC

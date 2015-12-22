@@ -112,16 +112,17 @@ class GocardlessWebHooksHandler {
 			config::getLogger()->addError($msg);
 			throw new Exception($msg);
 		}
+		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_uuid);
 		$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
 		//ADD OR UPDATE
 		if($db_subscription == NULL) {
 			//CREATE
-			$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $provider, NULL, NULL, $api_subscription, 'api', 0);
+			$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, 'api', 0);
 		} else {
 			//UPDATE
-			$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $provider, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
+			$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
 		}
 		//WHEN ? (not given by the gocardless API)
 		switch($notification_as_array['action']) {

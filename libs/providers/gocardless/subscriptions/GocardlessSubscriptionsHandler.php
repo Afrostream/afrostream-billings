@@ -124,7 +124,7 @@ class GocardlessSubscriptionsHandler {
 		return($sub_uuid);
 	}
 	
-	public function doUpdateUserSubscriptions(User $user) {
+	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
 		config::getLogger()->addInfo("gocardless dbsubscriptions update for userid=".$user->getId()."...");
 		//
 		$client = new Client(array(
@@ -179,10 +179,10 @@ class GocardlessSubscriptionsHandler {
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->id);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $provider, NULL, NULL, $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
-				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $provider, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
+				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
 			}
 		}
 		//DELETE UNUSED SUBSCRIPTIONS (DELETED FROM THIRD PARTY)
@@ -206,7 +206,7 @@ class GocardlessSubscriptionsHandler {
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $plan, $planOpts, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, Provider $provider, Plan $plan = NULL, PlanOpts $planOpts = NULL, Subscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan = NULL, PlanOpts $planOpts = NULL, Subscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("gocardless dbsubscription creation for userid=".$user->getId().", gocardless_subscription_uuid=".$api_subscription->id."...");
 		if($plan == NULL) {
 			if(!isset($api_subscription->metadata->internal_plan_uuid)) {
@@ -301,7 +301,7 @@ class GocardlessSubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	public function updateDbSubscriptionFromApiSubscription(User $user, Provider $provider, Plan $plan = NULL, PlanOpts $planOpts = NULL, Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
+	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan = NULL, PlanOpts $planOpts = NULL, Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("gocardless dbsubscription update for userid=".$user->getId().", gocardless_subscription_uuid=".$api_subscription->id.", id=".$db_subscription->getId()."...");
 		if($plan == NULL) {
 			if(!isset($api_subscription->metadata->internal_plan_uuid)) {
