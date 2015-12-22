@@ -309,6 +309,7 @@ class RecurlySubscriptionsHandler {
 				break;		
 		}
 		$subscription->setIsActive($is_active);
+		return($subscription);
 	}
 	
 }
