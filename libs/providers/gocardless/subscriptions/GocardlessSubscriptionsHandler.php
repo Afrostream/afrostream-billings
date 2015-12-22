@@ -446,7 +446,6 @@ class GocardlessSubscriptionsHandler {
 		//To be calculated from billings api
 		$db_subscription->setSubPeriodEndsDate(NULL);
 		*/
-		return($subscription);
 	}
 }
 
