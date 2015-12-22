@@ -27,7 +27,7 @@ class UserDAO {
 	}
 	
 	public static function getUserById($id) {
-		$query = "SELECT _id, creation_date, providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid FROM billing_users WHERE _id = $1";
+		$query = "SELECT _id, creation_date, providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid, deleted FROM billing_users WHERE _id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
 		
 		$out = null;
@@ -40,6 +40,7 @@ class UserDAO {
 			$out->setProviderId($line["providerid"]);
 			$out->setUserReferenceUuid($line["user_reference_uuid"]);
 			$out->setUserProviderUuid($line["user_provider_uuid"]);
+			$out->setDeleted($line["deleted"]);
 		}
 		// free result
 		pg_free_result($result);
@@ -109,6 +110,7 @@ class User implements JsonSerializable {
 	private $providerid;
 	private $user_reference_uuid;
 	private $user_provider_uuid;
+	private $deleted;
 
 	public function getId() {
 		return($this->_id);
@@ -156,6 +158,14 @@ class User implements JsonSerializable {
 	
 	public function getUserProviderUuid() {
 		return($this->user_provider_uuid);
+	}
+	
+	public function getDeleted() {
+		return($this->deleted);
+	}
+	
+	public function setDeleted($bool) {
+		$this->deleted = $bool;
 	}
 	
 	public function jsonSerialize() {
@@ -654,7 +664,7 @@ class BillingsSubscriptionDAO {
 	}
 	
 	public static function getBillingsSubscriptionBySubUuid($providerId, $sub_uuid) {
-		$query = "SELECT _id FROM billing_subscriptions WHERE providerid = $1 AND sub_uuid = $2";
+		$query = "SELECT _id FROM billing_subscriptions WHERE deleted = false AND providerid = $1 AND sub_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $sub_uuid));
 		
 		$out = null;
@@ -804,7 +814,7 @@ class BillingsSubscriptionDAO {
 	}
 	
 	public static function getBillingsSubscriptionsByUserId($userId) {
-		$query = "SELECT _id FROM billing_subscriptions WHERE userid = $1";
+		$query = "SELECT _id FROM billing_subscriptions WHERE deleted = false AND userid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($userId));
 		
 		$out = array();
