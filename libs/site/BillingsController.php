@@ -7,7 +7,7 @@ use \Slim\Http\Response;
 class BillingsController {
 	
 
-	protected function returnBillingsExceptionAsJson(Response $response, BillingsException $e) {
+	protected function returnBillingsExceptionAsJson(Response $response, BillingsException $e, $statusCode = 200) {
 		$json_as_array = array();
 		$json_as_array['status'] = 'error';
 		$json_as_array['statusMessage'] = $e->getMessage();
@@ -23,12 +23,13 @@ class BillingsController {
 		);
 		$json_as_array['errors'][] = $json_error_as_array;
 		$json = json_encode($json_as_array);
+		$response = $response->withStatus(statusCode);
 		$response = $response->withHeader('Content-Type', 'application/json');
 		$response->getBody()->write($json);
 		return($response);
 	}
 	
-	protected function returnExceptionAsJson(Response $response, Exception $e) {
+	protected function returnExceptionAsJson(Response $response, Exception $e, $statusCode = 200) {
 		$json_as_array = array();
 		$json_as_array['status'] = 'error';
 		$json_as_array['statusMessage'] = $e->getMessage();
@@ -44,12 +45,13 @@ class BillingsController {
 		);
 		$json_as_array['errors'][] = $json_error_as_array;
 		$json = json_encode($json_as_array);
+		$response = $response->withStatus(statusCode);
 		$response = $response->withHeader('Content-Type', 'application/json');
 		$response->getBody()->write($json);
 		return($response);
 	}
 	
-	protected function returnObjectAsJson(Response $response, $response_name, $object) {
+	protected function returnObjectAsJson(Response $response, $response_name, $object, $statusCode = 200) {
 		//
 		$json_as_array = array();
 		$json_as_array['status'] = 'done';
@@ -59,6 +61,7 @@ class BillingsController {
 		$json_as_array['response'][$response_name] = json_decode($json_object, true);
 		//
 		$json = json_encode($json_as_array);
+		$response = $response->withStatus(statusCode);
 		$response = $response->withHeader('Content-Type', 'application/json');
 		$response->getBody()->write($json);
 		return($response);
