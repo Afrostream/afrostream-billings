@@ -99,7 +99,7 @@ class RecurlyWebHooksHandler {
 			throw new Exception($msg);
 		}
 		config::getLogger()->addInfo('searching user with account_code='.$account_code.'...');
-		$user = UserDAO::getUserByByUserProviderUuid($provider->getId(), $account_code);
+		$user = UserDAO::getUserByUserProviderUuid($provider->getId(), $account_code);
 		if($user == NULL) {
 			$msg = 'searching user with account_code='.$account_code.' failed, no user found';
 			config::getLogger()->addError($msg);
