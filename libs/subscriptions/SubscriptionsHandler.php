@@ -144,7 +144,7 @@ class SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$this->doFillSubscription($db_subscription);
-		return($this->$db_subscription);
+		return($db_subscription);
 	}
 	
 	public function doGetUserSubscriptionsByUserReferenceUuid($user_reference_uuid) {
