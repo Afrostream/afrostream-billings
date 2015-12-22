@@ -28,7 +28,7 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
  * 	{
     	"providerName" : "recurly",
     	"userReferenceUuid" : "afrostreamUUID",	//our own UUID (database ID)
-    	"userProviderUuid" : "ProviderUUID",	//given by the provider when user is created from provider side
+    	"userProviderUuid" : "UserProviderUUID",	//given by the provider when user is created from provider side
     	"userOpts" : {
         	"email" : "email@domain.com",
         	"firstName" : "myFirstName",
@@ -44,9 +44,9 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
   		"statusCode": 0,
   		"response": {
     		"user": {
-      			"userBillingUuid": "BillingsUUID",	//Billings UUID (to be used in other calls)
+      			"userBillingUuid": "UserBillingUUID",	//User Billings UUID (to be used in other calls)
       			"userReferenceUuid": "afrostreamUUID",
-      			"userProviderUuid": "ProviderUUID",
+      			"userProviderUuid": "UserProviderUUID",
       			"provider": {
         			"providerName": "recurly"
       			},
@@ -70,6 +70,65 @@ $app->post("/billings/api/users/", function ($request, $response, $args) {
 //Subscriptions
 
 //create
+
+/*
+ * 
+ * sample call :
+ * 
+ *	{
+    	"userBillingUuid" : "UserBillingUUID",				//given when creating a user
+    	"internalPlanUuid" : "InternalPlanUuid",			//Plan (internal name)	 
+    	"subscriptionProviderUuid" : "SubscriptionProviderUUID",//given by the provider when subscription is created from provider side
+    	"billingInfoOpts" : {								//nothing for now
+    	}
+	}
+ 
+ 	sample answer :
+ 	
+	{
+  		"status": "done",
+  		"statusMessage": "success",
+  		"statusCode": 0,
+  		"response": {
+    		"subscription": {
+      			"subscriptionBillingUuid": "SubscriptionBillingUUID",
+      			"subscriptionProviderUuid": "SubscriptionProviderUUID",
+      			"isActive": "yes",
+      			"user": {
+        			"userBillingUuid": "UserBillingUUID",
+        			"userReferenceUuid": "afrostreamUUID",
+        			"userProviderUuid": "UserProviderUUID",
+        			"provider": {
+          				"providerName": "recurly"
+        			},
+        			"userOpts": {
+          				"email": "email@domain.com",
+          				"firstName": "myFirstName",
+          				"lastName": "myLastName"
+        			}
+      			},
+      			"provider": {
+        			"providerName": "recurly"
+      			},
+      			"internalPlan": {
+        			"internalPlanUuid": "InternalPlanUuid",
+        			"name": "InternalPlanName",
+        			"description": "InternalPlanDescription",
+        			"internalPlanOpts": []
+      			},
+      			"creationDate": "2015-12-25 12:00:00+00",
+      			"updatedDate": "2015-12-25 12:00:00+00",
+      			"subStatus": "active",
+      			"subActivatedDate": "2015-12-25 12:00:00+00",
+      			"subCanceledDate": null,
+      			"subExpiresDate": null,
+      			"subPeriodStartedDate": "2015-12-25 12:00:00+00",
+      			"subPeriodEndsDate": "2016-01-25 12:00:00+00"
+    		}
+  		}
+	}
+ 
+ */
 
 $app->post("/billings/api/subscriptions/", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
