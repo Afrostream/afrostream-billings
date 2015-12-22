@@ -23,7 +23,7 @@ class BillingsController {
 		);
 		$json_as_array['errors'][] = $json_error_as_array;
 		$json = json_encode($json_as_array);
-		$response = $response->withStatus(statusCode);
+		$response = $response->withStatus($statusCode);
 		$response = $response->withHeader('Content-Type', 'application/json');
 		$response->getBody()->write($json);
 		return($response);
@@ -45,7 +45,7 @@ class BillingsController {
 		);
 		$json_as_array['errors'][] = $json_error_as_array;
 		$json = json_encode($json_as_array);
-		$response = $response->withStatus(statusCode);
+		$response = $response->withStatus($statusCode);
 		$response = $response->withHeader('Content-Type', 'application/json');
 		$response->getBody()->write($json);
 		return($response);
@@ -61,7 +61,7 @@ class BillingsController {
 		$json_as_array['response'][$response_name] = json_decode($json_object, true);
 		//
 		$json = json_encode($json_as_array);
-		$response = $response->withStatus(statusCode);
+		$response = $response->withStatus($statusCode);
 		$response = $response->withHeader('Content-Type', 'application/json');
 		$response->getBody()->write($json);
 		return($response);
