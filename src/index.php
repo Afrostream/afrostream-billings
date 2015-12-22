@@ -7,8 +7,20 @@ require_once __DIR__ . '/../libs/site/WebHooksController.php';
 
 $app = new \Slim\App();
 
+//API BASIC AUTH ACTIVATION
+
+$app->add(new \Slim\Middleware\HttpBasicAuthentication([
+		"path" => "/billings/api",
+		"secure" => true,
+		"relaxed" => ["localhost"],
+		"users" => [
+				getEnv('API_HTTP_AUTH_USER') => getEnv('API_HTTP_AUTH_PWD')
+		]
+]));
 
 //Users
+
+//create
 
 $app->post("/billings/api/users/", function ($request, $response, $args) {
 	$usersController = new UsersController();
@@ -18,10 +30,14 @@ $app->post("/billings/api/users/", function ($request, $response, $args) {
 
 //Subscriptions
 
+//create
+
 $app->post("/billings/api/subscriptions/", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->create($request, $response, $args));
 });
+
+
 
 //WebHooks
 

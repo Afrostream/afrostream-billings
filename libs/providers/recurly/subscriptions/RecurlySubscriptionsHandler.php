@@ -288,7 +288,27 @@ class RecurlySubscriptionsHandler {
 	}
 	
 	public function doFillSubscription(BillingsSubscription $subscription) {
-		//nothing to do specific to Recurly
+		//TODO : later, is_active will be changed when a subscription is postponed
+		$is_active = NULL;
+		switch($subscription->getSubStatus()) {
+			case 'active' :
+				$is_active = 'yes';
+				break;
+			case 'canceled' :
+				$is_active = 'yes';
+				break;
+			case 'future' :
+				$is_active = 'no';
+				break;
+			case 'expired' :
+				$is_active = 'no';
+				break;
+			default :
+				$is_active = 'no';
+				config::getLogger()->addWarning("recurly dbsubscription unknown subStatus=".$subscription->getSubStatus().", recurly_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
+				break;		
+		}
+		$subscription->setIsActive($is_active);
 	}
 	
 }

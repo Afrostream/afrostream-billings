@@ -31,6 +31,14 @@ if((getEnv('DB_PASSWORD') === false)) {
 	putEnv('DB_PASSWORD=password');
 }
 
+#Billings API
+if((getEnv('API_HTTP_AUTH_USER') === false)) {
+	putEnv('API_HTTP_AUTH_USER=admin');
+}
+if((getEnv('API_HTTP_AUTH_PWD') === false)) {
+	putEnv('API_HTTP_AUTH_PWD=pwd');
+}
+
 #Recurly API
 if((getEnv('RECURLY_API_SUBDOMAIN') === false)) {
 	putEnv('RECURLY_API_SUBDOMAIN=johnarch');
@@ -61,7 +69,7 @@ if((getEnv('GOCARDLESS_WH_SECRET') === false)) {
 	putEnv('GOCARDLESS_WH_SECRET=nelsounet');
 }
 
-#Logs
+#logger, #db_conn, ...
 
 class config {
 	

@@ -418,7 +418,8 @@ class GocardlessSubscriptionsHandler {
 	}
 	
 	public function doFillSubscription(BillingsSubscription $subscription) {
-		//TODO
+		//TODO : later, is_active will be changed when a subscription is postponed
+		//TODO :
 		/*$oRange = new DateRange(new DateTime(), new DateTime($subscription->getSubActivatedDate()), DateInterval::createFromDateString("-1 month") );
 		foreach ($oRange as $oDate)
 		{

@@ -856,6 +856,8 @@ class BillingsSubscription implements JsonSerializable {
 	private $update_type;
 	private $updateId;
 	private $deleted;
+	//
+	private $is_active;
 	
 	public function getId() {
 		return($this->_id);
@@ -1000,11 +1002,19 @@ class BillingsSubscription implements JsonSerializable {
 		$this->deleted = $bool;
 	}
 	
+	public function setIsActive($bool) {
+		$this->is_active = $bool;
+	}
+	
+	public function getIsActive() {
+		return($this->is_active);
+	}
+	
 	public function jsonSerialize() {
 		return [
 			'subscriptionBillingUuid' => $this->subscription_billing_uuid,
 			'subscriptionProviderUuid' => $this->sub_uuid,
-			'isActive' => 'todo',
+			'isActive' => $this->is_active,
 			'user' =>	((UserDAO::getUserById($this->userid)->jsonSerialize())),
 			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
 			'internalPlan' => ((InternalPlanDAO::getInternalPlanById(

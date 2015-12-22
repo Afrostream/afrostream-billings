@@ -143,7 +143,7 @@ class SubscriptionsHandler {
 			config::getLogger()->addError("subscription creating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
 	public function doGetUserSubscriptionsByUserReferenceUuid($user_reference_uuid) {
@@ -153,8 +153,7 @@ class SubscriptionsHandler {
  			$current_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
  			$subscriptions = array_merge($subscriptions, $current_subscriptions);
 		}
-		$this->doFillSubscriptions($subscriptions);
-		return($subscriptions);
+		return($this->doFillSubscriptions($subscriptions));
 	}
 	
 	public function doGetUserSubscriptionsByUserId($userid) {
@@ -165,8 +164,7 @@ class SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
-		$this->doFillSubscriptions($subscriptions);
-		return($subscriptions);
+		return($this->doFillSubscriptions($subscriptions));
 	}
 	
 	public function doUpdateUserSubscriptionsByUserReferenceUuId($user_reference_uuid) {
