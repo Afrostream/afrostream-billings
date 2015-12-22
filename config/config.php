@@ -35,8 +35,13 @@ if((getEnv('DB_PASSWORD') === false)) {
 if((getEnv('API_HTTP_AUTH_USER') === false)) {
 	putEnv('API_HTTP_AUTH_USER=admin');
 }
+
 if((getEnv('API_HTTP_AUTH_PWD') === false)) {
 	putEnv('API_HTTP_AUTH_PWD=pwd');
+}
+
+if((getEnv('API_HTTP_SECURE') === false)) {
+	putEnv('API_HTTP_SECURE=true');
 }
 
 #Recurly API
