@@ -11,6 +11,39 @@ class UsersHandler {
 	public function __construct() {
 	}
 	
+	public function doGetUser($provider_name, $user_reference_uuid) {
+		$db_user = NULL;
+		try {
+			config::getLogger()->addInfo("user getting...");
+			$provider = ProviderDAO::getProviderByName($provider_name);
+			
+			if($provider == NULL) {
+				$msg = "unknown provider named : ".$provider_name;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//
+			$db_users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid, $provider->getId());
+			$count_users = count($db_users);
+			if($count_users == 1) {
+				$db_user = $db_users[0];
+			} else if($count_users > 1) {
+				$msg = "multiple users with userReferenceUuid=".$user_reference_uuid." exist for provider : ".$provider->getName();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while getting an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("user getting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("user getting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_user);
+	}
+	
 	public function doGetOrCreateUser($provider_name, $user_reference_uuid, $user_provider_uuid, array $user_opts_array) {
 		$db_user = NULL;
 		try {
@@ -30,7 +63,7 @@ class UsersHandler {
 				if($count_users == 1) {
 					$db_user = $db_users[0];
 				} else if($count_users > 1) {
-					$msg = "users with user_reference_id=".$user_reference_uuid." already exist for provider : ".$provider->getName();
+					$msg = "multiple users with userReferenceUuid=".$user_reference_uuid." exist for provider : ".$provider->getName();
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
@@ -42,7 +75,7 @@ class UsersHandler {
 				} else {
 					if($db_tmp_user->getUserReferenceUuid() != $user_reference_uuid) {
 						//Exception
-						$msg = "user_provider_uuid=".$user_provider_uuid." is already linked to another user_reference_uuid";
+						$msg = "userProviderUuid=".$user_provider_uuid." is already linked to another userReferenceUuid";
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
@@ -69,11 +102,11 @@ class UsersHandler {
 			}
 			config::getLogger()->addInfo("user getting/creating done successfully, userid=".$db_user->getId());
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while getting/creating an user for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while getting/creating an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user creation failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while getting/creating a user for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while getting/creating an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user creation failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -132,11 +165,11 @@ class UsersHandler {
 			pg_query("COMMIT");
 			config::getLogger()->addInfo("user creating done successfully, userid=".$db_user->getId());
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while creating an user for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while creating an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user creation failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while creating a user for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while creating an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user creating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}

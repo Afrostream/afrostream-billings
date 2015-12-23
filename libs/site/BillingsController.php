@@ -52,7 +52,6 @@ class BillingsController {
 	}
 	
 	protected function returnObjectAsJson(Response $response, $response_name, $object, $statusCode = 200) {
-		//
 		$json_as_array = array();
 		$json_as_array['status'] = 'done';
 		$json_as_array['statusMessage'] = 'success';
@@ -65,6 +64,11 @@ class BillingsController {
 		$response = $response->withHeader('Content-Type', 'application/json');
 		$response->getBody()->write($json);
 		return($response);
+	}
+					   
+	protected function returnNotFoundAsJson(Response $response) {
+		$e = new BillingsException(new ExceptionType(ExceptionType::internal), 'NOT FOUND');
+		return($this->returnBillingsExceptionAsJson($response, $e, 404));
 	}
 	
 }

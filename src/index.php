@@ -35,6 +35,46 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
 
 //Users
 
+//get
+
+/*
+ * sample call :
+ * 
+ * ?providerName=recurly&userReferenceUuid=afrostreamUUID
+    	
+    "providerName" : "recurly"
+    "userReferenceUuid" : "afrostreamUUID"	//our own UUID (database ID)
+
+    sample answer :
+    
+    {
+  		"status": "done",
+  		"statusMessage": "success",
+  		"statusCode": 0,
+  		"response": {
+    		"user": {
+      			"userBillingUuid": "UserBillingUUID",	//User Billings UUID (to be used in other calls)
+      			"userReferenceUuid": "afrostreamUUID",
+      			"userProviderUuid": "UserProviderUUID",
+      			"provider": {
+        			"providerName": "recurly"
+      			},
+      			"userOpts": {
+        			"email": "email@domain.com",
+        			"firstName": "myFirstName",
+        			"lastName": "myLastName"
+      			}
+    		}
+  		}
+  	}
+
+ */
+
+$app->get("/billings/api/users/", function ($request, $response, $args) {
+	$usersController = new UsersController();
+	return($usersController->get($request, $response, $args));
+});
+
 //create
 
 /*
@@ -42,7 +82,7 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
  * 
  * 	{
     	"providerName" : "recurly",
-    	"userReferenceUuid" : "afrostreamUUID",	//our own UUID (database ID)
+    	"userReferenceUuid" : "afrostreamUUID",		//our own UUID (database ID)
     	"userProviderUuid" : "UserProviderUUID",	//given by the provider when user is created from provider side
     	"userOpts" : {
         	"email" : "email@domain.com",
@@ -150,7 +190,33 @@ $app->post("/billings/api/subscriptions/", function ($request, $response, $args)
 	return($subscriptionsController->create($request, $response, $args));
 });
 
+//update
 
+/*
+*
+* sample call :
+* 
+* 
+* 
+* 	{
+	 	"userReferenceUuid": "afrostreamUUID"	//our own UUID (database ID)
+	}
+	
+	or :
+	
+	{
+		"userBillingUuid" : "UserBillingUUID"	//given when creating a user
+	}
+	
+	sample answer :
+	
+	//TODO
+*/
+
+$app->put("/billings/api/subscriptions/", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->update($request, $response, $args));
+});
 
 //WebHooks
 

@@ -62,6 +62,51 @@ class SubscriptionsController extends BillingsController {
 		}
 	}
 	
-	
+	public function update(Request $request, Response $response, array $args) {
+		try {
+			$data = json_decode($request->getBody(), true);
+			$requestIsOk = false;
+			$userReferenceUuid = NULL;
+			if(isset($data['userReferenceUuid'])) {
+				$requestIsOk = true;
+				$userReferenceUuid = $data['userReferenceUuid'];
+			}
+			$userBillingUuid = NULL;
+			if(isset($data['userBillingUuid'])) {
+				$requestIsOk = true;
+				$userBillingUuid = $data['userBillingUuid'];
+			}
+			if(!$requestIsOk) {
+				//exception
+				$msg = "field 'userReferenceUuid' or field 'userBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$subscriptionsHandler = new SubscriptionsHandler();
+			if(isset($userReferenceUuid)) {
+				$subscriptionsHandler->doUpdateUserSubscriptionsByUserReferenceUuId($user_reference_uuid);
+			} else if(isset($userBillingUuid)) {
+				$subscriptionsHandler->doUpdateUserSubscriptionsByUserReferenceUuId($user_reference_uuid);
+			} else {
+				//exception
+				$msg = "";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//return($this->returnObjectAsJson($response, 'subscription', $subscription));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while updating subscriptions, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while updating subscriptions, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
 	
 }
