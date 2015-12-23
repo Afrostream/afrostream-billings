@@ -10,9 +10,6 @@
 		"myclabs/php-enum": "^1.4",
 		"tuupola/slim-basic-auth": "^2.0"
 	},
-	"autoload": {
-		"psr-0": {"afrostreambillings" : "src/"}
-	},
 	"authors": [
 		{
 			"name": "nelsounet",
