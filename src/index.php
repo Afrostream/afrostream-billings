@@ -12,7 +12,6 @@ $app = new \Slim\App();
 $app->add(new \Slim\Middleware\HttpBasicAuthentication([
 		"path" => "/billings/api",
 		"secure" => getEnv('API_HTTP_SECURE'),
-		"relaxed" => [""],
 		"users" => [
 				getEnv('API_HTTP_AUTH_USER') => getEnv('API_HTTP_AUTH_PWD')
 		]
