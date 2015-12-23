@@ -10,7 +10,7 @@ $app = new \Slim\App();
 //API BASIC AUTH ACTIVATION
 
 $app->add(new \Slim\Middleware\HttpBasicAuthentication([
-		"path" => "/billings/api",
+		"path" => "/billings/api/",
 		"secure" => getEnv('API_HTTP_SECURE'),
 		"users" => [
 				getEnv('API_HTTP_AUTH_USER') => getEnv('API_HTTP_AUTH_PWD')
