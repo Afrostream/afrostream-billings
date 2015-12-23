@@ -13,7 +13,13 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
 		"path" => "/billings/api",
 		"users" => [
 				getEnv('API_HTTP_AUTH_USER') => getEnv('API_HTTP_AUTH_PWD')
-		]
+		],
+		"error" => function ($request, $response, $arguments) use ($app) {
+			$data = [];
+			$data["status"] = "error";
+			$data["message"] = $arguments["message"];
+			return $response->write(json_encode($response, JSON_UNESCAPED_SLASHES));
+		}
 ]));
 
 //Users
