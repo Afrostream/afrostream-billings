@@ -5,13 +5,21 @@ require_once __DIR__ . '/../libs/site/UsersController.php';
 require_once __DIR__ . '/../libs/site/SubscriptionsController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
 
-$configuration = [
-		'settings' => [
-				'displayErrorDetails' => true,
-		],
-];
+use \Slim\Http\Request;
+use \Slim\Http\Response;
 
-$c = new \Slim\Container($configuration);
+$c = new \Slim\Container();
+$c['errorHandler'] = function ($c) {
+    return function (Request $request, Response $response, Exception $exception) use ($c) {
+    	config::getLogger()->addCritical("HTTP 500, ".$request->getMethod().
+    			", error_code=".$exception->getCode().
+    			", error_message=".$exception->getMessage().
+    			", params=".print_r($request->getParams(), true));
+		return $c['response']->withStatus(500)
+                             ->withHeader('Content-Type', 'text/html')
+                             ->write('Something went wrong!');
+    };
+};
 
 $app = new \Slim\App($c);
 
