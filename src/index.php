@@ -5,7 +5,15 @@ require_once __DIR__ . '/../libs/site/UsersController.php';
 require_once __DIR__ . '/../libs/site/SubscriptionsController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
 
-$app = new \Slim\App();
+$configuration = [
+		'settings' => [
+				'displayErrorDetails' => true,
+		],
+];
+
+$c = new \Slim\Container($configuration);
+
+$app = new \Slim\App($c);
 
 //API BASIC AUTH ACTIVATION
 
@@ -13,13 +21,7 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
 		"path" => "/billings/api",
 		"users" => [
 				getEnv('API_HTTP_AUTH_USER') => getEnv('API_HTTP_AUTH_PWD')
-		],
-		"error" => function ($request, $response, $arguments) use ($app) {
-			$data = [];
-			$data["status"] = "error";
-			$data["message"] = $arguments["message"];
-			return $response->write(json_encode($response, JSON_UNESCAPED_SLASHES));
-		}
+		]
 ]));
 
 //Users
