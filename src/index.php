@@ -13,10 +13,7 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
 		"path" => "/billings/api",
 		"users" => [
 				getEnv('API_HTTP_AUTH_USER') => getEnv('API_HTTP_AUTH_PWD')
-		],
-		"callback" => function ($request, $response, $arguments) use ($app) {
-			print_r($arguments);
-		}
+		]
 ]));
 
 //Users
