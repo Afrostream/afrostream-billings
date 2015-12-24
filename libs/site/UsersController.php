@@ -11,38 +11,49 @@ class UsersController extends BillingsController {
 	
 	public function get(Request $request, Response $response, array $args) {
 		try {
+			config::getLogger()->addError(print_r($args, true));
 			$data = $request->getQueryParams();
-			if(!isset($data['providerName'])) {
-				//exception
-				$msg = "field 'providerName' is missing";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			$userBillingUuid = NULL;
+			$provider_name = NULL;
+			$user_reference_uuid = NULL;
+			if(isset($args['userBillingUuid'])) {
+				$userBillingUuid = $args['userBillingUuid'];
+			} else {
+				if(!isset($data['providerName'])) {
+					//exception
+					$msg = "field 'providerName' is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if(!isset($data['userReferenceUuid'])) {
+					//exception
+					$msg = "field 'userReferenceUuid' is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$provider_name = $data['providerName'];
+				$user_reference_uuid = $data['userReferenceUuid'];
 			}
-			if(!isset($data['userReferenceUuid'])) {
-				//exception
-				$msg = "field 'userReferenceUuid' is missing";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			//
-			$provider_name = $data['providerName'];
-			$user_reference_uuid = $data['userReferenceUuid'];
 			//
 			$usersHandler = new UsersHandler();
-			$user = $usersHandler->doGetUser($provider_name, $user_reference_uuid);
+			if(isset($userBillingUuid)) {
+				$user = $usersHandler->doGetUserByUserBillingUuid($userBillingUuid);
+			} else {
+				$user = $usersHandler->doGetUser($provider_name, $user_reference_uuid);
+			}
 			if($user == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {
 				return($this->returnObjectAsJson($response, 'user', $user));
 			}
 		} catch(BillingsException $e) {
-			$msg = "an exception occurred while creating an user, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an exception occurred while getting an user, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnBillingsExceptionAsJson($response, $e));
 			//
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while creating an user, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while getting an user, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));

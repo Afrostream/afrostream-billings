@@ -663,6 +663,21 @@ class BillingsSubscriptionDAO {
 		return($out);
 	}
 	
+	public static function getBillingsSubscriptionBySubscriptionBillingUuid($subscription_billing_uuid) {
+		$query = "SELECT _id FROM billing_subscriptions WHERE deleted = false AND subscription_billing_uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($subscription_billing_uuid));
+	
+		$out = null;
+	
+		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingsSubscriptionById($line['_id']);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 	public static function getBillingsSubscriptionBySubUuid($providerId, $sub_uuid) {
 		$query = "SELECT _id FROM billing_subscriptions WHERE deleted = false AND providerid = $1 AND sub_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $sub_uuid));

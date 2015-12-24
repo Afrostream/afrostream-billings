@@ -38,9 +38,13 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
 //get
 
 /*
- * sample call :
- * 
- * ?providerName=recurly&userReferenceUuid=afrostreamUUID
+	sample call :
+	
+	GET /billings/api/users/userBillingUuid
+	
+	or
+	
+	GET /billings/api/users/?providerName=recurly&userReferenceUuid=afrostreamUUID
     	
     "providerName" : "recurly"
     "userReferenceUuid" : "afrostreamUUID"	//our own UUID (database ID)
@@ -70,6 +74,11 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
 
  */
 
+$app->get("/billings/api/users/{userBillingUuid}", function ($request, $response, $args) {
+	$usersController = new UsersController();
+	return($usersController->get($request, $response, $args));
+});
+
 $app->get("/billings/api/users/", function ($request, $response, $args) {
 	$usersController = new UsersController();
 	return($usersController->get($request, $response, $args));
@@ -78,9 +87,13 @@ $app->get("/billings/api/users/", function ($request, $response, $args) {
 //create
 
 /*
- * 	sample call :
- * 
- * 	{
+	sample call :
+	
+	POST GET /billings/api/users/
+	
+	BODY :
+	
+	{
     	"providerName" : "recurly",
     	"userReferenceUuid" : "afrostreamUUID",		//our own UUID (database ID)
     	"userProviderUuid" : "UserProviderUUID",	//given by the provider when user is created from provider side
@@ -89,7 +102,7 @@ $app->get("/billings/api/users/", function ($request, $response, $args) {
         	"firstName" : "myFirstName",
         	"lastName" : "myLastName"
     	}
-    }
+   }
     
     sample answer :
     
@@ -124,13 +137,71 @@ $app->post("/billings/api/users/", function ($request, $response, $args) {
 
 //Subscriptions
 
+//get one subscription
+
+/*
+	sample call :
+	
+	GET /billings/api/subscriptions/subscriptionBillingUuid
+
+ 	sample answer :
+ 	
+	{
+  		"status": "done",
+  		"statusMessage": "success",
+  		"statusCode": 0,
+  		"response": {
+    		"subscription": {
+      			"subscriptionBillingUuid": "SubscriptionBillingUUID",
+      			"subscriptionProviderUuid": "SubscriptionProviderUUID",
+      			"isActive": "yes",
+      			"user": {
+        			"userBillingUuid": "UserBillingUUID",
+        			"userReferenceUuid": "afrostreamUUID",
+        			"userProviderUuid": "UserProviderUUID",
+        			"provider": {
+          				"providerName": "recurly"
+        			},
+        			"userOpts": {
+          				"email": "email@domain.com",
+          				"firstName": "myFirstName",
+          				"lastName": "myLastName"
+        			}
+      			},
+      			"provider": {
+        			"providerName": "recurly"
+      			},
+      			"internalPlan": {
+        			"internalPlanUuid": "InternalPlanUuid",
+        			"name": "InternalPlanName",
+        			"description": "InternalPlanDescription",
+        			"internalPlanOpts": []
+      			},
+      			"creationDate": "2015-12-25 12:00:00+00",
+      			"updatedDate": "2015-12-25 12:00:00+00",
+      			"subStatus": "active",
+      			"subActivatedDate": "2015-12-25 12:00:00+00",
+      			"subCanceledDate": null,
+      			"subExpiresDate": null,
+      			"subPeriodStartedDate": "2015-12-25 12:00:00+00",
+      			"subPeriodEndsDate": "2016-01-25 12:00:00+00"
+    		}
+  		}
+	}
+	
+ */
+
+$app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->get($request, $response, $args));
+});
+
 //create
 
 /*
- * 
- * sample call :
- * 
- *	{
+	sample call :
+ 
+ 	{
     	"userBillingUuid" : "UserBillingUUID",				//given when creating a user
     	"internalPlanUuid" : "InternalPlanUuid",			//Plan (internal name)	 
     	"subscriptionProviderUuid" : "SubscriptionProviderUUID",//given by the provider when subscription is created from provider side
@@ -217,6 +288,12 @@ $app->put("/billings/api/subscriptions/", function ($request, $response, $args) 
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->update($request, $response, $args));
 });
+
+//get subscriptions
+
+/*
+ //TODO
+ */
 
 //WebHooks
 

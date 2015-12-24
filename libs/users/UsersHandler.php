@@ -11,6 +11,24 @@ class UsersHandler {
 	public function __construct() {
 	}
 	
+	public function doGetUserByUserBillingUuid($userBillingUuid) {
+		$db_user = NULL;
+		try {
+			config::getLogger()->addInfo("user getting...");
+			//
+			$db_user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while getting an user for userBillingUuid=".$userBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("user getting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting an user for userBillingUuid=".$userBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("user getting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_user);
+	}
+	
 	public function doGetUser($provider_name, $user_reference_uuid) {
 		$db_user = NULL;
 		try {
@@ -42,6 +60,22 @@ class UsersHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_user);
+	}
+	
+	public function doGetUsers($user_reference_uuid) {
+		$db_users = NULL;
+		try {
+			$db_users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while getting users for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("user getting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting users for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("user getting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_users);		
 	}
 	
 	public function doGetOrCreateUser($provider_name, $user_reference_uuid, $user_provider_uuid, array $user_opts_array) {

@@ -10,6 +10,25 @@ class SubscriptionsHandler {
 	public function __construct() {
 	}
 	
+	public function doGetSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid) {
+		$db_subscription = NULL;
+		try {
+			config::getLogger()->addInfo("subscription getting...");
+			//
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while getting a subscription for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("subscription getting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting a subscription for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("subscription getting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$this->doFillSubscription($db_subscription);
+		return($db_subscription);
+	}
+	
 	public function doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, array $billing_info_opts_array) {
 		$db_subscription = NULL;
 		try {
@@ -158,36 +177,14 @@ class SubscriptionsHandler {
 		return($subscriptions);
 	}
 	
-	public function doGetUserSubscriptionsByUserId($userid) {
-		$user = UserDAO::getUserById($userid);
-		if($user == NULL) {
-			$msg = "unknown userid : ".$userid;
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
+	public function doGetUserSubscriptionsByUser(User $user) {
 		$subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		$this->doFillSubscriptions($subscriptions);
 		return($subscriptions);
 	}
 	
-	public function doUpdateUserSubscriptionsByUserReferenceUuId($user_reference_uuid) {
-		config::getLogger()->addInfo("dbsubscriptions update for user_reference_uuid=".$user_reference_uuid."...");
-		$subscriptions = array();
-		$users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid);
-		foreach($users as $user) {
-			$this->doUpdateUserSubscriptionsByUserId($user->getId());
-		}
-		config::getLogger()->addInfo("dbsubscriptions update for user_reference_uuid=".$user_reference_uuid." done successfully");
-	}
-	
-	public function doUpdateUserSubscriptionsByUserId($userid) {
-		config::getLogger()->addInfo("dbsubscriptions update for userid=".$userid."...");
-		$user = UserDAO::getUserById($userid);
-		if($user == NULL) {
-			$msg = "unknown userid : ".$userid;
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
+	public function doUpdateUserSubscriptionsByUser(User $user) {
+		config::getLogger()->addInfo("dbsubscriptions update for userid=".$user->getId()."...");
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		
 		$provider = ProviderDAO::getProviderById($user->getProviderId());
@@ -214,7 +211,7 @@ class SubscriptionsHandler {
 				//nothing to do (unknown)
 				break;
 		}
-		config::getLogger()->addInfo("dbsubscriptions update for userid=".$userid." done successfully");
+		config::getLogger()->addInfo("dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
 	
 	private function doFillSubscriptions($subscriptions) {
@@ -223,7 +220,10 @@ class SubscriptionsHandler {
 		}
 	}
 
-	private function doFillSubscription(BillingsSubscription $subscription) {
+	private function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		if($subscription == NULL) {
+			return;
+		}
 		$provider = ProviderDAO::getProviderById($subscription->getProviderId());
 		if($provider == NULL) {
 			$msg = "unknown provider with id : ".$user->getProviderId();

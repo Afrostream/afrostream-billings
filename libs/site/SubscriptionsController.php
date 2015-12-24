@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../users/UsersHandler.php';
 require_once __DIR__ . '/../subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ .'/BillingsController.php';
 
@@ -8,6 +9,41 @@ use \Slim\Http\Request;
 use \Slim\Http\Response;
 
 class SubscriptionsController extends BillingsController {
+	
+	public function get(Request $request, Response $response, array $args) {
+		try {
+			config::getLogger()->addError(print_r($args, true));
+			$data = $request->getQueryParams();
+			$subscriptionBillingUuid = NULL;
+			if(!isset($args['subscriptionBillingUuid'])) {
+				//exception
+				$msg = "field 'subscriptionBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
+			//
+			$subscriptionsHandler = new SubscriptionsHandler();
+			$subscription = $subscriptionsHandler->doGetSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			if($subscription == NULL) {
+				return($this->returnNotFoundAsJson($response));
+			} else {
+				return($this->returnObjectAsJson($response, 'subscription', $subscription));
+			}
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while getting a subscription, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting a subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
 	
 	public function create(Request $request, Response $response, array $args) {
 		try {
@@ -78,22 +114,39 @@ class SubscriptionsController extends BillingsController {
 			}
 			if(!$requestIsOk) {
 				//exception
-				$msg = "field 'userReferenceUuid' or field 'userBillingUuid' is missing";
+				$msg = "field 'userReferenceUuid' or field 'userBillingUuid' are missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$subscriptions = array();
+			$usersHandler = new UsersHandler();
 			$subscriptionsHandler = new SubscriptionsHandler();
 			if(isset($userReferenceUuid)) {
-				$subscriptionsHandler->doUpdateUserSubscriptionsByUserReferenceUuId($user_reference_uuid);
+				$users = $usersHandler->doGetUsers($userReferenceUuid);
+				if(count($users) == 0) {
+					return($this->returnNotFoundAsJson($response));
+				}
+				foreach($users as $user) {
+					$subscriptionsHandler->doUpdateUserSubscriptionsByUser($user);
+				}
+				foreach($users as $user) {
+					$current_subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($user);
+					$subscriptions = array_merge($subscriptions, $current_subscriptions);
+				}
 			} else if(isset($userBillingUuid)) {
-				$subscriptionsHandler->doUpdateUserSubscriptionsByUserReferenceUuId($user_reference_uuid);
+				$user = $usersHandler->doGetUserByUserBillingUuid($userBillingUuid);
+				if($user == NULL) {
+					return($this->returnNotFoundAsJson($response));
+				}
+				$subscriptionsHandler->doUpdateUserSubscriptionsByUser($user);
+				$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($user);
 			} else {
-				//exception
-				$msg = "";
+				//exception (should not happen)
+				$msg = "field 'userReferenceUuid' or field 'userBillingUuid' are missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			//return($this->returnObjectAsJson($response, 'subscription', $subscription));
+			return($this->returnObjectAsJson($response, 'subscriptions', $subscriptions));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while updating subscriptions, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
