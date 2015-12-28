@@ -14,9 +14,11 @@ class UsersHandler {
 	public function doGetUserByUserBillingUuid($userBillingUuid) {
 		$db_user = NULL;
 		try {
-			config::getLogger()->addInfo("user getting...");
+			config::getLogger()->addInfo("user getting, userBillingUuid=".$userBillingUuid."....");
 			//
 			$db_user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
+			//
+			config::getLogger()->addInfo("user getting, userBillingUuid=".$userBillingUuid." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting an user for userBillingUuid=".$userBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user getting failed : ".$msg);
@@ -50,6 +52,7 @@ class UsersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			config::getLogger()->addInfo("user getting done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user getting failed : ".$msg);
@@ -65,7 +68,9 @@ class UsersHandler {
 	public function doGetUsers($user_reference_uuid) {
 		$db_users = NULL;
 		try {
+			config::getLogger()->addInfo("users getting for userReferenceUuid=".$user_reference_uuid."...");
 			$db_users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid);
+			config::getLogger()->addInfo("users getting for userReferenceUuid=".$user_reference_uuid." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting users for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user getting failed : ".$msg);

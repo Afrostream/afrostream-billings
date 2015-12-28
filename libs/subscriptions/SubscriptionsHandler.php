@@ -14,9 +14,13 @@ class SubscriptionsHandler {
 	public function doGetSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid) {
 		$db_subscription = NULL;
 		try {
-			config::getLogger()->addInfo("subscription getting...");
+			config::getLogger()->addInfo("subscription getting for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
 			//
 			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			//
+			$this->doFillSubscription($db_subscription);
+			//
+			config::getLogger()->addInfo("subscription getting for subscriptionBillingUuid=".$subscriptionBillingUuid." successfully done");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting a subscription for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("subscription getting failed : ".$msg);
@@ -26,7 +30,6 @@ class SubscriptionsHandler {
 			config::getLogger()->addError("subscription getting failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$this->doFillSubscription($db_subscription);
 		return($db_subscription);
 	}
 	
@@ -153,6 +156,9 @@ class SubscriptionsHandler {
 				pg_query("COMMIT");
 			}
 			config::getLogger()->addInfo("subscription creating...database savings done successfully");
+			//
+			$this->doFillSubscription($db_subscription);
+			//
 			config::getLogger()->addInfo("subscription creating done successfully, db_subscription_id=".$db_subscription->getId());
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while creating a subscription user for user_billing_uuid=".$user_billing_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -163,56 +169,66 @@ class SubscriptionsHandler {
 			config::getLogger()->addError("subscription creating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$this->doFillSubscription($db_subscription);
 		return($db_subscription);
 	}
 	
-	public function doGetUserSubscriptionsByUserReferenceUuid($user_reference_uuid) {
-		$subscriptions = array();
-		$users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid);
-		foreach($users as $user) {
- 			$current_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
- 			$subscriptions = array_merge($subscriptions, $current_subscriptions);
-		}
-		$this->doFillSubscriptions($subscriptions);
-		return($subscriptions);
-	}
-	
 	public function doGetUserSubscriptionsByUser(User $user) {
-		$subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
-		$this->doFillSubscriptions($subscriptions);
+		try {
+			config::getLogger()->addInfo("subscriptions getting for userid=".$user->getId()."...");
+			$subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
+			$this->doFillSubscriptions($subscriptions);
+			config::getLogger()->addInfo("subscriptions getting for userid=".$user->getId()." done sucessfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while getting subscriptions for userid=".$user->getId().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("subscriptions getting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting subscriptions for userid=".$user->getId().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("subscriptions getting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
 		return($subscriptions);
 	}
 	
 	public function doUpdateUserSubscriptionsByUser(User $user) {
-		config::getLogger()->addInfo("dbsubscriptions update for userid=".$user->getId()."...");
-		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		
-		$provider = ProviderDAO::getProviderById($user->getProviderId());
-		
-		if($provider == NULL) {
-			$msg = "unknown provider id : ".$user->getProviderId();
-			config::getLogger()->addError($msg);
+		try {
+			config::getLogger()->addInfo("dbsubscriptions updating for userid=".$user->getId()."...");
+			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+			
+			$provider = ProviderDAO::getProviderById($user->getProviderId());
+			
+			if($provider == NULL) {
+				$msg = "unknown provider id : ".$user->getProviderId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			
+			switch($provider->getName()) {
+				case 'recurly' :
+					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
+					$recurlySubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
+					break;
+				case 'gocardless' :
+					$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
+					$gocardlessSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
+					break;
+				case 'celery' :
+					//nothing to do (owned)
+					break;
+				default:
+					//nothing to do (unknown)
+					break;
+			}
+			config::getLogger()->addInfo("dbsubscriptions update for userid=".$user->getId()." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while dbsubscriptions updating for userid=".$user->getId().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscriptions updating failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while dbsubscriptions updating for userid=".$user->getId().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscriptions updating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		
-		switch($provider->getName()) {
-			case 'recurly' :
-				$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-				$recurlySubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
-				break;
-			case 'gocardless' :
-				$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
-				$gocardlessSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
-				break;
-			case 'celery' :
-				//nothing to do (owned)
-				break;
-			default:
-				//nothing to do (unknown)
-				break;
-		}
-		config::getLogger()->addInfo("dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
 	
 	private function doFillSubscriptions($subscriptions) {
