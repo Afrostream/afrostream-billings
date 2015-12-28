@@ -10,9 +10,8 @@ use \Slim\Http\Response;
 
 class SubscriptionsController extends BillingsController {
 	
-	public function get(Request $request, Response $response, array $args) {
+	public function getOne(Request $request, Response $response, array $args) {
 		try {
-			config::getLogger()->addError(print_r($args, true));
 			$data = $request->getQueryParams();
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
@@ -38,6 +37,67 @@ class SubscriptionsController extends BillingsController {
 			//
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while getting a subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function getMulti(Request $request, Response $response, array $args) {
+		try {
+			$data = $request->getQueryParams();
+			$requestIsOk = false;
+			$userReferenceUuid = NULL;
+			if(isset($data['userReferenceUuid'])) {
+				$requestIsOk = true;
+				$userReferenceUuid = $data['userReferenceUuid'];
+			}
+			$userBillingUuid = NULL;
+			if(isset($data['userBillingUuid'])) {
+				$requestIsOk = true;
+				$userBillingUuid = $data['userBillingUuid'];
+			}
+			if(!$requestIsOk) {
+				//exception
+				$msg = "field 'userReferenceUuid' or field 'userBillingUuid' are missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$subscriptions = array();
+			$usersHandler = new UsersHandler();
+			$subscriptionsHandler = new SubscriptionsHandler();
+			if(isset($userReferenceUuid)) {
+				$users = $usersHandler->doGetUsers($userReferenceUuid);
+				if(count($users) == 0) {
+					return($this->returnNotFoundAsJson($response));
+				}
+				foreach($users as $user) {
+					$current_subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($user);
+					$subscriptions = array_merge($subscriptions, $current_subscriptions);
+				}
+			} else if(isset($userBillingUuid)) {
+				$user = $usersHandler->doGetUserByUserBillingUuid($userBillingUuid);
+				if($user == NULL) {
+					return($this->returnNotFoundAsJson($response));
+				}
+				$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($user);
+			} else {
+				//exception (should not happen)
+				$msg = "field 'userReferenceUuid' or field 'userBillingUuid' are missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$this->doSortSubscriptions($subscriptions);
+			return($this->returnObjectAsJson($response, 'subscriptions', $subscriptions));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while getting subscriptions, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting subscriptions, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));
@@ -160,6 +220,16 @@ class SubscriptionsController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e));
 			//
 		}
+	}
+	
+	//passage par référence !!!
+	private function doSortSubscriptions(&$subscriptions) {
+		//more recent firt
+		usort($subscriptions, 
+				function(BillingsSubscription $a, BillingsSubscription $b) {
+					return(strcmp($b->getSubActivatedDate(), $a->getSubActivatedDate()));
+				}
+		);
 	}
 	
 }

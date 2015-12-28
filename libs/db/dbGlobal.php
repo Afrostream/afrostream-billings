@@ -829,7 +829,7 @@ class BillingsSubscriptionDAO {
 	}
 	
 	public static function getBillingsSubscriptionsByUserId($userId) {
-		$query = "SELECT _id FROM billing_subscriptions WHERE deleted = false AND userid = $1";
+		$query = "SELECT _id FROM billing_subscriptions WHERE deleted = false AND userid = $1 ORDER BY sub_activated_date DESC";
 		$result = pg_query_params(config::getDbConn(), $query, array($userId));
 		
 		$out = array();

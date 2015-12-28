@@ -71,7 +71,7 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
     		}
   		}
   	}
-
+	
  */
 
 $app->get("/billings/api/users/{userBillingUuid}", function ($request, $response, $args) {
@@ -126,7 +126,7 @@ $app->get("/billings/api/users/", function ($request, $response, $args) {
     		}
   		}
   	}
-
+	
  */
 
 $app->post("/billings/api/users/", function ($request, $response, $args) {
@@ -189,11 +189,11 @@ $app->post("/billings/api/users/", function ($request, $response, $args) {
   		}
 	}
 	
- */
+*/
 
 $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
-	return($subscriptionsController->get($request, $response, $args));
+	return($subscriptionsController->getOne($request, $response, $args));
 });
 
 //create
@@ -253,8 +253,8 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
     		}
   		}
 	}
- 
- */
+	 
+*/
 
 $app->post("/billings/api/subscriptions/", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
@@ -264,12 +264,35 @@ $app->post("/billings/api/subscriptions/", function ($request, $response, $args)
 //update
 
 /*
-*
-* sample call :
-* 
-* 
-* 
-* 	{
+	sample call :
+	 
+ 	{
+	 	"userReferenceUuid": "afrostreamUUID"	//our own UUID (database ID)
+	}
+	
+	or :
+	
+	{
+		"userBillingUuid" : "UserBillingUUID"	//given when creating a user
+	}
+	
+	sample answer :
+	
+	//TODO
+	
+*/
+
+$app->put("/billings/api/subscriptions/", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->update($request, $response, $args));
+});
+
+//get subscriptions
+
+/*
+	sample call :
+	 
+ 	{
 	 	"userReferenceUuid": "afrostreamUUID"	//our own UUID (database ID)
 	}
 	
@@ -284,16 +307,10 @@ $app->post("/billings/api/subscriptions/", function ($request, $response, $args)
 	//TODO
 */
 
-$app->put("/billings/api/subscriptions/", function ($request, $response, $args) {
+$app->get("/billings/api/subscriptions/", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
-	return($subscriptionsController->update($request, $response, $args));
+	return($subscriptionsController->getMulti($request, $response, $args));
 });
-
-//get subscriptions
-
-/*
- //TODO
- */
 
 //WebHooks
 

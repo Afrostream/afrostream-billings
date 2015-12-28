@@ -11,7 +11,6 @@ class UsersController extends BillingsController {
 	
 	public function get(Request $request, Response $response, array $args) {
 		try {
-			config::getLogger()->addError(print_r($args, true));
 			$data = $request->getQueryParams();
 			$userBillingUuid = NULL;
 			$provider_name = NULL;
