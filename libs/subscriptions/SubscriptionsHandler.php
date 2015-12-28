@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../libs/providers/celery/subscriptions/CelerySubscriptionsHandler.php';
 require_once __DIR__ . '/../../libs/providers/recurly/subscriptions/RecurlySubscriptionsHandler.php';
 require_once __DIR__ . '/../../libs/providers/gocardless/subscriptions/GocardlessSubscriptionsHandler.php';
 require_once __DIR__ . '/../../libs/db/dbGlobal.php';
@@ -240,10 +241,8 @@ class SubscriptionsHandler {
 				$gocardlessSubscriptionsHandler->doFillSubscription($subscription);
 				break;
 			case 'celery' :
-				///nothing to do
-				/*$msg = "unsupported feature for provider named : ".$provider_name;
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);*/
+				$celerySubscriptionsHandler = new CelerySubscriptionsHandler();
+				$celerySubscriptionsHandler->doFillSubscription($subscription);
 				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider_name;

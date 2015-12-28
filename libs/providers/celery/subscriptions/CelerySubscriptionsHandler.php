@@ -45,7 +45,19 @@ class CelerySubscriptionsHandler {
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
 			case 'active' :
-				$is_active = 'yes';
+				$now = new DateTime();
+				//check dates
+				if(
+						($now < (new DateTime($subscription->getSubPeriodEndsDate())))
+								&&
+						($now > (new DateTime($subscription->getSubPeriodStartedDate())))
+				) {
+					//inside the period
+					$is_active = 'yes';
+				} else {
+					//outside the period
+					$is_active = 'no';
+				}
 				break;
 			case 'canceled' :
 				$is_active = 'yes';
@@ -61,8 +73,7 @@ class CelerySubscriptionsHandler {
 				config::getLogger()->addWarning("celery dbsubscription unknown subStatus=".$subscription->getSubStatus().", celery_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;		
 		}
-		//check dates
-		//
+		//done
 		$subscription->setIsActive($is_active);
 	}
 	
