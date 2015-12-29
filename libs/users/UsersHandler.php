@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../libs/providers/celery/users/CeleryUsersHandler.php';
 require_once __DIR__ . '/../../libs/providers/recurly/users/RecurlyUsersHandler.php';
 require_once __DIR__ . '/../../libs/providers/gocardless/users/GocardlessUsersHandler.php';
 require_once __DIR__ . '/../../libs/db/dbGlobal.php';
@@ -175,9 +176,8 @@ class UsersHandler {
 					$user_provider_uuid = $gocardlessUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'celery' :
-					$msg = "unsupported feature for provider named : ".$provider_name;
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					$celeryUsersHandler = new CeleryUsersHandler();
+					$user_provider_uuid = $gocardlessUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider_name;
