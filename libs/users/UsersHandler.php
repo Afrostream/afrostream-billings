@@ -177,7 +177,7 @@ class UsersHandler {
 					break;
 				case 'celery' :
 					$celeryUsersHandler = new CeleryUsersHandler();
-					$user_provider_uuid = $gocardlessUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $celeryUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider_name;
