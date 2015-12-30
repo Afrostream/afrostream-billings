@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/BillingsApiResponse.php';
 
-class BillingsApiUser {
+class BillingsApiUsers {
 	
 	private $billingsApiClient = NULL;
 	
@@ -92,6 +92,7 @@ class BillingsApiUser {
 			BillingsApiClientConfig::getLogger()->addInfo("API CALL : creating user, code=".$httpCode);
 			throw new Exception("API CALL : creating user, code=".$httpCode." is unexpected...");
 		}
+		return($apiUser);
 	}
 	
 }

@@ -4,16 +4,24 @@ require_once __DIR__ . '/config/config.php';
 
 class BillingsApiClient {
 	
-	private $billingsApiUser = NULL;
+	private $billingsApiUsers = NULL;
+	private $billingsApiSubscriptions = NULL;
 	
 	public function __construct() {
 	}
 	
-	public function getBillingsApiUser() {
-		if($this->billingsApiUser == NULL) {
-			$this->billingsApiUser = new BillingsApiUser($this);
+	public function getBillingsApiUsers() {
+		if($this->billingsApiUsers == NULL) {
+			$this->billingsApiUsers = new BillingsApiUsers($this);
 		}
-		return($this->billingsApiUser);
+		return($this->billingsApiUsers);
+	}
+	
+	public function getBillingsApiSubscriptions() {
+		if($this->billingsApiSubscriptions == NULL) {
+			$this->billingsApiSubscriptions = new BillingsApiSubscriptions($this);
+		}
+		return($this->billingsApiSubscriptions);
 	}
 	
 }
