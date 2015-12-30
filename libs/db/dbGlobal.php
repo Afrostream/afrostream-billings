@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../config/config.php';
+
 class dbGlobal {
 	
 	public static function toISODate(DateTime $str = NULL)

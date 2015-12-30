@@ -4,7 +4,8 @@ require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/db/dbGlobal.php';
 require_once __DIR__ . '/../client/BillingsApiClient.php';
 require_once __DIR__ . '/../client/BillingsApiUsers.php';
-
+require_once __DIR__ . '/../libs/db/dbGlobal.php';
+require_once __DIR__ . '/../libs/utils/utils.php';
 /*
  * Tool to import users from Afrostream DB
  */
@@ -103,27 +104,40 @@ class BillingsImportUsers {
 		ScriptsConfig::getLogger()->addError("userBillingUuid=".$apiUser['userBillingUuid']);
 		
 		//Directly in database
+		$dbProvider = ProviderDAO::getProviderByName('celery');
+		if($dbProvider == NULL) {
+			throw new Exception("Provider named 'celery' not found");
+		}
+		$providerPlanUuid = 'afrostreamambassadeurs';
+		$dbProviderPlan = PlanDAO::getPlanByUuid($dbProvider->getId(), $providerPlanUuid);
+		if($dbProviderPlan == NULL) {
+			throw new Exception("ProviderPlan named ".$providerPlanUuid." not found");
+		}
 		$dbUser = UserDAO::getUserByUserBillingUuid($apiUser['userBillingUuid']);
+		if($dbUser == NULL) {
+			throw new Exception("User userBillingUuid=".$apiUser['userBillingUuid']." not found");
+		}
 		$billingsSubscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($dbUser->getId());
 		$numberOfSusbscriptions = count($billingsSubscriptions); 
 		if($numberOfSusbscriptions == 0) {
 			ScriptsConfig::getLogger()->addError("no subscription found, will create one");
 			$dbSubscription = new BillingsSubscription();
-			//TODO :
-			/*$db_subscription->setSubscriptionBillingUuid(guid());
-			$db_subscription->setProviderId();
-			$db_subscription->setUserId($dbUser->getId());
-			$db_subscription->setPlanId();
-			$db_subscription->setSubUid(guid());//random
-			$db_subscription->setSubStatus('active');
-			$db_subscription->setSubActivatedDate();
-			$db_subscription->setSubPeriodStartedDate();
-			$db_subscription->setSubPeriodEndsDate();
-			$db_subscription->setUpdateType();
-			$db_subscription->setUpdateId(0);
-			$db_subscription->setDeleted('false');*/
+			$dbSubscription->setSubscriptionBillingUuid(guid());
+			$dbSubscription->setProviderId($dbProvider->getId());
+			$dbSubscription->setUserId($dbUser->getId());
+			$dbSubscription->setPlanId($dbProviderPlan->getId());
+			$dbSubscription->setSubUid(guid());
+			$dbSubscription->setSubStatus('active');
+			$dbSubscription->setSubActivatedDate(DateTime::createFromFormat(DateTime::ISO8601, '2015-09-01T00:00:00+0100'));
+			$dbSubscription->setSubPeriodStartedDate(DateTime::createFromFormat(DateTime::ISO8601, '2015-09-01T00:00:00+0100'));
+			$dbSubscription->setSubPeriodEndsDate(DateTime::createFromFormat(DateTime::ISO8601, '2016-09-01T00:00:00+0100'));
+			$dbSubscription->setSubCollectionMode('manual');
+			$dbSubscription->setUpdateType('import');
+			$dbSubscription->setUpdateId(0);
+			$dbSubscription->setDeleted('false');
 			//
-			BillingsSubscriptionDAO::addBillingsSubscription($subscription);
+			$dbSubscription = BillingsSubscriptionDAO::addBillingsSubscription($dbSubscription);
+			ScriptsConfig::getLogger()->addError("subscription created, SubscriptionBillingUuid=".$dbSubscription->getSubscriptionBillingUuid());
 		} else if($numberOfSusbscriptions == 1) {
 			ScriptsConfig::getLogger()->addError("nothing to do, already have a subscription");
 		} else {
