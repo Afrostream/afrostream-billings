@@ -43,8 +43,9 @@ class AfrUser {
 
 class AfrUserDAO {
 
-	public static function getAfrUsers($limit = 0, $offset = 0) {
+	public static function getAfrUsers($id = NULL, $limit = 0, $offset = 0) {
 		$query = "SELECT _id, email, billing_provider, account_code FROM \"Users\"";
+		if(isset($id)) { $query.= " WHERE _id <= ".$id; }
 		$query.= " ORDER BY _id DESC";//LAST USERS FIRST
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }

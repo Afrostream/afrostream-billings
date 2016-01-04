@@ -51,6 +51,14 @@ if($providerName == 'all') {
 
 print_r("using providerName=".$providerName."\n");
 
+$firstId = NULL;
+
+if(isset($_GET["-firstId"])) {
+	$firstId = $_GET["-firstId"];
+}
+
+print_r("using firstId=".$firstId."\n");
+
 $offset = 0;
 
 if(isset($_GET["-offset"])) {
@@ -79,12 +87,15 @@ $recurly_todo_count = 0;
 $recurly_done_count = 0;
 $recurly_error_count = 0;
 
+$last_id = NULL;
+
 try {
-	while(count($afrUsers = AfrUserDAO::getAfrUsers($limit, $offset)) > 0) {
+	while(count($afrUsers = AfrUserDAO::getAfrUsers($firstId, $limit, $offset)) > 0) {
 		print_r("processing...current offset=".$offset." \n");
 		$offset = $offset + $limit;
 		//
 		foreach ($afrUsers as $afrUser) {
+			$last_id = $afrUser->getId();
 			$accountCode = $afrUser->getAccountCode();
 			switch($afrUser->getBillingProvider()) {
 				case 'celery' :
@@ -140,7 +151,7 @@ try {
 	ScriptsConfig::getLogger()->addError("unexpected exception, continuing anyway, message=".$e->getMessage());
 }
 
-print_r("processing done	:	last offset=".$offset." \n"
+print_r("processing done	:	last_id=".$firstId.", last offset=".$offset." \n"
 		."celery	:	(".$celery_done_count."/".$celery_todo_count.")	(".$celery_error_count." errors) \n"
 		."recurly	:	(".$recurly_done_count."/".$recurly_todo_count.")	(".$recurly_error_count." errors) \n");
 
