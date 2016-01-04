@@ -2,14 +2,13 @@
 
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/db/dbGlobal.php';
-require_once __DIR__ . '/../client/BillingsApiClient.php';
-require_once __DIR__ . '/../client/BillingsApiUsers.php';
-require_once __DIR__ . '/../client/BillingsApiSubscriptions.php';
-require_once __DIR__ . '/../libs/db/dbGlobal.php';
-require_once __DIR__ . '/../libs/utils/utils.php';
+require_once __DIR__ . '/libs/BillingsImportUsers.php';
+
 /*
  * Tool to import users from Afrostream DB
  */
+
+print_r("starting import users tool from Afrostream DB to Billings DB\n");
 
 foreach ($argv as $arg) {
 	$e=explode("=",$arg);
@@ -19,194 +18,130 @@ foreach ($argv as $arg) {
 			$_GET[$e[0]]=0;
 }
 
-$providers = array('all', 'celery', 'recurly');
+$possible_providers = array('all', 'celery', 'recurly');
+
+$current_providers = NULL;
 
 $providerName = 'all';
 
 if(isset($_GET["-providerName"])) {
 	$providerName = $_GET["-providerName"];
-	if(!in_array($providerName, $providers)) {
-		die("-providerName must be one of follows : ".print_r($providers, true));
+	if(!in_array($providerName, $possible_providers)) {
+		$msg = "-providerName must be one of follows : ";
+		$firstLoop = true;
+		foreach ($possible_providers as $val) {
+			if($firstLoop) {
+				$firstLoop = false;
+				$msg.= $val;
+			}
+			else {
+				$msg.= ", ".$val;
+			}
+		}
+		die($msg."\n");
 	}
 }
+
+if($providerName == 'all') {
+	$current_providers = $possible_providers;	
+} else {
+	$current_providers = array();
+	$current_providers[] = $providerName;
+}
+
+print_r("using providerName=".$providerName."\n");
+
+$offset = 0;
+
+if(isset($_GET["-offset"])) {
+	$offset = $_GET["-offset"];
+}
+
+print_r("using offset=".$offset."\n");
+
+$limit = 100;
+
+if(isset($_GET["-limit"])) {
+	$limit = $_GET["-limit"];
+}
+
+print_r("using limit=".$limit."\n");
+
+print_r("processing...\n");
 
 $billingsImportUsers = new BillingsImportUsers();
 
-$limit = 1000;
-$offset = 0;
+$celery_todo_count = 0;
+$celery_done_count = 0;
+$celery_error_count = 0;
 
-$celery_count = 0;
-$recurly_count = 0;
+$recurly_todo_count = 0;
+$recurly_done_count = 0;
+$recurly_error_count = 0;
 
-$running = true;
-
-while($running) {
-	try {
-		while(count($afrUsers = AfrUserDAO::getAfrUsers($limit, $offset)) > 0) {
-			$offset = $offset + $limit;
-			//
-			foreach ($afrUsers as $afrUser) {
-				$accountCode = $afrUser->getAccountCode();
-				switch($afrUser->getBillingProvider()) {
-					case 'celery' :
+try {
+	while(count($afrUsers = AfrUserDAO::getAfrUsers($limit, $offset)) > 0) {
+		print_r("processing...current offset=".$offset." \n");
+		$offset = $offset + $limit;
+		//
+		foreach ($afrUsers as $afrUser) {
+			$accountCode = $afrUser->getAccountCode();
+			switch($afrUser->getBillingProvider()) {
+				case 'celery' :
+					if(in_array('celery', $current_providers)) {
 						if(isset($accountCode)) { 
-							$celery_count++;
-							//$billingsImportUsers->doImportCeleryUser($afrUser);
+							try {
+								$celery_todo_count++;
+								$billingsImportUsers->doImportCeleryUser($afrUser);
+								$celery_done_count++;
+							} catch(Exception $e) {
+								$celery_error_count++;
+								ScriptsConfig::getLogger()->addError("an error occurred while importing a celery user, message=".$e->getMessage());
+							}
 						}
-						break;
-					case 'recurly' :
+					}
+					break;
+				case 'recurly' :
+					if(in_array('recurly', $current_providers)) {
 						if(isset($accountCode)) {
-							$recurly_count++;
-							$billingsImportUsers->doImportRecurlyUser($afrUser);
+							try {
+								$recurly_todo_count++;
+								$billingsImportUsers->doImportRecurlyUser($afrUser);
+								$recurly_done_count++;
+							} catch(Exception $e) {
+								$recurly_error_count++;
+								ScriptsConfig::getLogger()->addError("an error occurred while importing a recurly user, message=".$e->getMessage());
+							}
 						}
-						break;
-					case '' :
-						//same as recurly
+					}
+					break;
+				case '' :
+					//same as recurly
+					if(in_array('recurly', $current_providers)) {
 						if(isset($accountCode)) {
-							$recurly_count++;
-							$billingsImportUsers->doImportRecurlyUser($afrUser);
+							try {
+								$recurly_todo_count++;
+								$billingsImportUsers->doImportRecurlyUser($afrUser);
+								$recurly_done_count++;
+							} catch(Exception $e) {
+								$recurly_error_count++;
+								ScriptsConfig::getLogger()->addError("an error occurred while importing a recurly user, message=".$e->getMessage());
+							}
 						}
-						break;
-					default :
-						throw new Exception("unknown BillingProvider : ".$afrUser->getBillingProvider());
-						break;
-				}
+					}
+					break;
+				default :
+					throw new Exception("unknown BillingProvider : ".$afrUser->getBillingProvider());
+					break;
 			}
 		}
-		$running = false;
-	} catch(Exception $e) {
-		ScriptsConfig::getLogger()->addError("unexpected exception, continuing, message=".$e->getMessage());
 	}
+} catch(Exception $e) {
+	ScriptsConfig::getLogger()->addError("unexpected exception, continuing anyway, message=".$e->getMessage());
 }
 
-class BillingsImportUsers {
-	
-	private $billingsApiClient = NULL;
-	
-	public function __construct() {
-		$this->billingsApiClient = new BillingsApiClient();
-	}
-	
-	public function doImportCeleryUser(AfrUser $afrUser) {
-		ScriptsConfig::getLogger()->addError("importing a celery user...");
-		//check if user exists
-		$apiGetUserRequest = new ApiGetUserRequest();
-		$apiGetUserRequest->setProviderName("celery");
-		$apiGetUserRequest->setUserReferenceUuid($afrUser->getId());
-		ScriptsConfig::getLogger()->addError("checking if user exist");
-		$apiUser = $this->billingsApiClient->getBillingsApiUsers()->getUser($apiGetUserRequest);
-		if($apiUser == NULL) {
-			ScriptsConfig::getLogger()->addError("user does not exist, creating it...");
-			$apiCreateUserRequest = new ApiCreateUserRequest();
-			$apiCreateUserRequest->setProviderName("celery");
-			$apiCreateUserRequest->setUserReferenceUuid($afrUser->getId());
-			$apiCreateUserRequest->setUserProviderUuid($afrUser->getAccountCode());
-			$apiCreateUserRequest->setUserOpts("email", $afrUser->getEmail());
-			$apiCreateUserRequest->setUserOpts("firstName", "firstNameValue");
-			$apiCreateUserRequest->setUserOpts("lastName", "lastNameValue");
-			$apiUser = $this->billingsApiClient->getBillingsApiUsers()->createUser($apiCreateUserRequest);
-			//user does now exist
-			//check
-			$apiUser = $this->billingsApiClient->getBillingsApiUsers()->getUser($apiGetUserRequest);
-			if($apiUser == NULL) {
-				throw new Exception("User should now exist !");
-			}
-		} else {
-			ScriptsConfig::getLogger()->addError("user does already exist");
-		}
-		ScriptsConfig::getLogger()->addError("userBillingUuid=".$apiUser['userBillingUuid']);
-		
-		//Directly in database
-		$dbProvider = ProviderDAO::getProviderByName('celery');
-		if($dbProvider == NULL) {
-			throw new Exception("Provider named 'celery' not found");
-		}
-		$providerPlanUuid = 'afrostreamambassadeurs';
-		$dbProviderPlan = PlanDAO::getPlanByUuid($dbProvider->getId(), $providerPlanUuid);
-		if($dbProviderPlan == NULL) {
-			throw new Exception("ProviderPlan named ".$providerPlanUuid." not found");
-		}
-		$dbUser = UserDAO::getUserByUserBillingUuid($apiUser['userBillingUuid']);
-		if($dbUser == NULL) {
-			throw new Exception("User userBillingUuid=".$apiUser['userBillingUuid']." not found");
-		}
-		$billingsSubscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($dbUser->getId());
-		$numberOfSusbscriptions = count($billingsSubscriptions); 
-		if($numberOfSusbscriptions == 0) {
-			ScriptsConfig::getLogger()->addError("no subscription found, will create one");
-			$dbSubscription = new BillingsSubscription();
-			$dbSubscription->setSubscriptionBillingUuid(guid());
-			$dbSubscription->setProviderId($dbProvider->getId());
-			$dbSubscription->setUserId($dbUser->getId());
-			$dbSubscription->setPlanId($dbProviderPlan->getId());
-			$dbSubscription->setSubUid(guid());
-			$dbSubscription->setSubStatus('active');
-			$dbSubscription->setSubActivatedDate(DateTime::createFromFormat(DateTime::ISO8601, '2015-09-01T00:00:00+0100'));
-			$dbSubscription->setSubPeriodStartedDate(DateTime::createFromFormat(DateTime::ISO8601, '2015-09-01T00:00:00+0100'));
-			$dbSubscription->setSubPeriodEndsDate(DateTime::createFromFormat(DateTime::ISO8601, '2016-09-01T00:00:00+0100'));
-			$dbSubscription->setSubCollectionMode('manual');
-			$dbSubscription->setUpdateType('import');
-			$dbSubscription->setUpdateId(0);
-			$dbSubscription->setDeleted('false');
-			//
-			$dbSubscription = BillingsSubscriptionDAO::addBillingsSubscription($dbSubscription);
-			ScriptsConfig::getLogger()->addError("subscription created, SubscriptionBillingUuid=".$dbSubscription->getSubscriptionBillingUuid());
-		} else if($numberOfSusbscriptions == 1) {
-			ScriptsConfig::getLogger()->addError("nothing to do, already have a subscription");
-		} else {
-			ScriptsConfig::getLogger()->addError("nothing to do, already have subscriptions (".$numberOfSusbscriptions." in total");
-		}
-		//done
-		ScriptsConfig::getLogger()->addError("importing a celery user done successfully");
-	}
-	
-	public function doImportRecurlyUser(AfrUser $afrUser) {
-
-		ScriptsConfig::getLogger()->addError("importing a recurly user...");
-		//check if user exists
-		$apiGetUserRequest = new ApiGetUserRequest();
-		$apiGetUserRequest->setProviderName("recurly");
-		$apiGetUserRequest->setUserReferenceUuid($afrUser->getId());
-		ScriptsConfig::getLogger()->addError("checking if user exist");
-		$apiUser = $this->billingsApiClient->getBillingsApiUsers()->getUser($apiGetUserRequest);
-		if($apiUser == NULL) {
-			ScriptsConfig::getLogger()->addError("user does not exist, creating it...");
-			$apiCreateUserRequest = new ApiCreateUserRequest();
-			$apiCreateUserRequest->setProviderName("recurly");
-			$apiCreateUserRequest->setUserReferenceUuid($afrUser->getId());
-			$apiCreateUserRequest->setUserProviderUuid($afrUser->getAccountCode());
-			$apiCreateUserRequest->setUserOpts("email", $afrUser->getEmail());
-			$apiCreateUserRequest->setUserOpts("firstName", "firstNameValue");
-			$apiCreateUserRequest->setUserOpts("lastName", "lastNameValue");
-			try {
-				$apiUser = $this->billingsApiClient->getBillingsApiUsers()->createUser($apiCreateUserRequest);
-			} catch(Exception $e) {
-				ScriptsConfig::getLogger()->addError("could not create user, message=".$e->getMessage());
-				ScriptsConfig::getLogger()->addError("importing a recurly user bypassed");
-				return;
-			}
-			//user does now exist
-			//check
-			$apiUser = $this->billingsApiClient->getBillingsApiUsers()->getUser($apiGetUserRequest);
-			if($apiUser == NULL) {
-				throw new Exception("User should now exist !");
-			}
-		} else {
-			ScriptsConfig::getLogger()->addError("user does already exist");
-		}
-		ScriptsConfig::getLogger()->addError("userBillingUuid=".$apiUser['userBillingUuid']);
-		//update subscriptions
-		$apiUpdateSubscriptionsRequest = new ApiUpdateSubscriptionsRequest();
-		$apiUpdateSubscriptionsRequest->setUserBillingUuid($apiUser['userBillingUuid']);
-		$apiSubscriptions = $this->billingsApiClient->getBillingsApiSubscriptions()->update($apiUpdateSubscriptionsRequest);
-		if($apiSubscriptions == NULL) {
-			ScriptsConfig::getLogger()->addError("userBillingUuid=".$apiUser['userBillingUuid'].", updated subscriptions found : 0");
-		} else {
-			ScriptsConfig::getLogger()->addError("userBillingUuid=".$apiUser['userBillingUuid'].", updated subscriptions found : ".count($apiSubscriptions));
-		}
-		//done
-		ScriptsConfig::getLogger()->addError("importing a recurly user done successfully");
-	}
-}
+print_r("processing done	:	last offset=".$offset." \n"
+		."celery	:	(".$celery_done_count."/".$celery_todo_count.")	(".$celery_error_count." errors) \n"
+		."recurly	:	(".$recurly_done_count."/".$recurly_todo_count.")	(".$recurly_error_count." errors) \n");
 
 ?>

@@ -45,10 +45,10 @@ class AfrUserDAO {
 
 	public static function getAfrUsers($limit = 0, $offset = 0) {
 		$query = "SELECT _id, email, billing_provider, account_code FROM \"Users\"";
+		$query.= " ORDER BY _id DESC";//LAST USERS FIRST
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(ScriptsConfig::getDbConn(), $query, array());
-
 		$out = array();
 
 		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
