@@ -61,15 +61,15 @@ class UserDAO {
 		}
 		$result = pg_query_params(config::getDbConn(), $query, $query_params);
 		
-		$array = array();	
+		$out = array();	
 		
 		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($array, self::getUserById($line['_id']));
+			array_push($out, self::getUserById($line['_id']));
 		}
 		// free result
 		pg_free_result($result);
 	
-		return($array);
+		return($out);
 	}
 	
 	public static function getUserByUserProviderUuid($providerid, $user_provider_uuid) {
@@ -95,6 +95,24 @@ class UserDAO {
 	
 		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out = self::getUserById($line['_id']);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getUsers($id = NULL, $limit = 0, $offset = 0) {
+		$query = "SELECT _id FROM billing_users WHERE deleted = false";
+		if(isset($id)) { $query.= " AND _id <= ".$id; }
+		$query.= " ORDER BY _id DESC";//LAST USERS FIRST
+		if($limit > 0) { $query.= " LIMIT ".$limit; }
+		if($offset > 0) { $query.= " OFFSET ".$offset; }
+		$result = pg_query_params(config::getDbConn(), $query, array());
+		$out = array();
+	
+		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getUserById($line['_id']));
 		}
 		// free result
 		pg_free_result($result);

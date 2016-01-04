@@ -77,8 +77,6 @@ print_r("using limit=".$limit."\n");
 
 print_r("processing...\n");
 
-$billingsImportUsers = new BillingsImportUsers();
-
 $celery_todo_count = 0;
 $celery_done_count = 0;
 $celery_error_count = 0;
@@ -90,6 +88,7 @@ $recurly_error_count = 0;
 $last_id = NULL;
 
 try {
+	$billingsImportUsers = new BillingsImportUsers();
 	while(count($afrUsers = AfrUserDAO::getAfrUsers($firstId, $limit, $offset)) > 0) {
 		print_r("processing...current offset=".$offset." \n");
 		$offset = $offset + $limit;
@@ -148,10 +147,10 @@ try {
 		}
 	}
 } catch(Exception $e) {
-	ScriptsConfig::getLogger()->addError("unexpected exception, continuing anyway, message=".$e->getMessage());
+	ScriptsConfig::getLogger()->addError("unexpected exception, message=".$e->getMessage());
 }
 
-print_r("processing done	:	last_id=".$firstId.", last offset=".$offset." \n"
+print_r("processing done	:	last_id=".$last_id.", last offset=".$offset." \n"
 		."celery	:	(".$celery_done_count."/".$celery_todo_count.")	(".$celery_error_count." errors) \n"
 		."recurly	:	(".$recurly_done_count."/".$recurly_todo_count.")	(".$recurly_error_count." errors) \n");
 
