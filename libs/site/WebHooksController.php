@@ -39,11 +39,42 @@ class WebHooksController extends BillingsController {
 		
 		try {
 			config::getLogger()->addInfo('Treating recurly webhook...');
-		
+			
 			$post_data = file_get_contents('php://input');
-		
+			
+			//Have to send it to other services (exception has to be catched)
+			try {
+				$urls = getenv('RECURLY_WH_REPOST_URLS');
+				$tok = strtok($urls, ";");
+				while($tok !== false) {
+					//
+					$url = $tok;
+					config::getLogger()->addInfo('Reposting the webhook to url='.$url.'...');
+					$curl_options = array(
+							CURLOPT_URL => $url,
+							CURLOPT_CUSTOMREQUEST => 'POST',
+							CURLOPT_POSTFIELDS => $post_data,
+							CURLOPT_HTTPHEADER => array(
+									'Content-Length: ' . strlen($post_data)
+							),
+							CURLOPT_RETURNTRANSFER => true,
+							CURLOPT_HEADER  => false
+					);
+					$CURL = curl_init();
+					curl_setopt_array($CURL, $curl_options);
+					$content = curl_exec($CURL);
+					$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
+					curl_close($CURL);
+					config::getLogger()->addInfo('Reposting the webhook to url='.$url.' done, httpCode='.$httpCode);
+					//done
+					$tok = strtok(";");
+				}
+			} catch(Exception $e) {
+				config::getLogger()->addError('Reposting the webhook to url='.$url.' failed, but continuing anyway, message='.$e->getMessage());
+			}
+			
 			$webHooksHander = new WebHooksHander();
-		
+			
 			config::getLogger()->addInfo('Saving recurly webhook...');
 			$billingsWebHook = $webHooksHander->doSaveWebHook('recurly', $post_data);
 			config::getLogger()->addInfo('Saving recurly webhook done successfully');
