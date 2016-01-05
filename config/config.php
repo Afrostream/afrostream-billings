@@ -40,6 +40,10 @@ if((getEnv('API_HTTP_AUTH_PWD') === false)) {
 	putEnv('API_HTTP_AUTH_PWD=pwd');
 }
 
+if((getEnv('RECURLY_WH_REPOST_URLS') === false)) {
+	putEnv('RECURLY_WH_REPOST_URLS=');
+}
+
 if((getEnv('API_HTTP_SECURE') === false)) {
 	putEnv('API_HTTP_SECURE=false');// /!\ true do not seem to work on heroku (https already 'on')
 }
