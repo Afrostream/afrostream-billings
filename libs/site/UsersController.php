@@ -46,7 +46,7 @@ class UsersController extends BillingsController {
 				return($this->returnObjectAsJson($response, 'user', $user));
 			}
 		} catch(BillingsException $e) {
-			$msg = "an exception occurred while getting an user, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an exception occurred while getting an user, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnBillingsExceptionAsJson($response, $e));
@@ -101,7 +101,7 @@ class UsersController extends BillingsController {
 			$user = $usersHandler->doGetOrCreateUser($provider_name, $user_reference_uuid, $user_provider_uuid, $user_opts_array);
 			return($this->returnObjectAsJson($response, 'user', $user));
 		} catch(BillingsException $e) {
-			$msg = "an exception occurred while creating an user, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an exception occurred while creating an user, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnBillingsExceptionAsJson($response, $e));

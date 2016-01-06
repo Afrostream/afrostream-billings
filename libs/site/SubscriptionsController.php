@@ -30,7 +30,7 @@ class SubscriptionsController extends BillingsController {
 				return($this->returnObjectAsJson($response, 'subscription', $subscription));
 			}
 		} catch(BillingsException $e) {
-			$msg = "an exception occurred while getting a subscription, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an exception occurred while getting a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnBillingsExceptionAsJson($response, $e));
@@ -91,7 +91,7 @@ class SubscriptionsController extends BillingsController {
 			$this->doSortSubscriptions($subscriptions);
 			return($this->returnObjectAsJson($response, 'subscriptions', $subscriptions));
 		} catch(BillingsException $e) {
-			$msg = "an exception occurred while getting subscriptions, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an exception occurred while getting subscriptions, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnBillingsExceptionAsJson($response, $e));
@@ -144,7 +144,7 @@ class SubscriptionsController extends BillingsController {
 			$subscription = $subscriptionsHandler->doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, $billing_info_opts);
 			return($this->returnObjectAsJson($response, 'subscription', $subscription));
 		} catch(BillingsException $e) {
-			$msg = "an exception occurred while creating a subscription, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an exception occurred while creating a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnBillingsExceptionAsJson($response, $e));
@@ -208,7 +208,7 @@ class SubscriptionsController extends BillingsController {
 			}
 			return($this->returnObjectAsJson($response, 'subscriptions', $subscriptions));
 		} catch(BillingsException $e) {
-			$msg = "an exception occurred while updating subscriptions, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an exception occurred while updating subscriptions, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnBillingsExceptionAsJson($response, $e));

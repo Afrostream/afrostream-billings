@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../libs/site/UsersController.php';
 require_once __DIR__ . '/../libs/site/SubscriptionsController.php';
+require_once __DIR__ . '/../libs/site/InternalPlansController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
 
 use \Slim\Http\Request;
@@ -35,7 +36,7 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
 
 //Users
 
-//get
+//get a user
 
 /*
 	sample call :
@@ -84,7 +85,7 @@ $app->get("/billings/api/users/", function ($request, $response, $args) {
 	return($usersController->get($request, $response, $args));
 });
 
-//create
+//create a user
 
 /*
 	sample call :
@@ -175,7 +176,8 @@ $app->post("/billings/api/users/", function ($request, $response, $args) {
         			"internalPlanUuid": "InternalPlanUuid",
         			"name": "InternalPlanName",
         			"description": "InternalPlanDescription",
-        			"internalPlanOpts": []
+        			"internalPlanOpts": {
+        			}
       			},
       			"creationDate": "2015-12-25 12:00:00+00",
       			"updatedDate": "2015-12-25 12:00:00+00",
@@ -196,7 +198,7 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
 	return($subscriptionsController->getOne($request, $response, $args));
 });
 
-//create
+//create a subscription
 
 /*
 	sample call :
@@ -240,7 +242,8 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
         			"internalPlanUuid": "InternalPlanUuid",
         			"name": "InternalPlanName",
         			"description": "InternalPlanDescription",
-        			"internalPlanOpts": []
+        			"internalPlanOpts": {
+        			}
       			},
       			"creationDate": "2015-12-25 12:00:00+00",
       			"updatedDate": "2015-12-25 12:00:00+00",
@@ -261,7 +264,7 @@ $app->post("/billings/api/subscriptions/", function ($request, $response, $args)
 	return($subscriptionsController->create($request, $response, $args));
 });
 
-//update
+//update subscriptions
 
 /*
 	sample call :
@@ -278,8 +281,18 @@ $app->post("/billings/api/subscriptions/", function ($request, $response, $args)
 	
 	sample answer :
 	
-	//TODO
-	
+	{
+  		"status": "done",
+  		"statusMessage": "success",
+  		"statusCode": 0,
+  		"response": {
+    		"subscriptions": [
+      			{...},
+      			{...}
+    		]
+    	}
+    }
+    
 */
 
 $app->put("/billings/api/subscriptions/", function ($request, $response, $args) {
@@ -304,12 +317,88 @@ $app->put("/billings/api/subscriptions/", function ($request, $response, $args) 
 	
 	sample answer :
 	
-	//TODO
+	{
+  		"status": "done",
+  		"statusMessage": "success",
+  		"statusCode": 0,
+  		"response": {
+    		"subscriptions": [
+      			{...},
+      			{...}
+    		]
+    	}
+    }
+    
 */
 
 $app->get("/billings/api/subscriptions/", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->getMulti($request, $response, $args));
+});
+
+//InternalPlans
+
+//get one InternalPlan
+
+	/*
+	 
+	 sample call :
+	
+	 GET /billings/api/internalplans/internalPlanUuid
+	 
+	 sample answer :
+	 
+	{
+  		"status": "done",
+  		"statusMessage": "success",
+  		"statusCode": 0,
+  		"response": {
+      		"internalPlan": {
+        		"internalPlanUuid": "InternalPlanUuid",
+        		"name": "InternalPlanName",
+        		"description": "InternalPlanDescription",
+        		"internalPlanOpts": {
+        			"internalMaxScreens" : "2"
+        		}
+      		}		
+    	}
+    }
+	
+	*/
+
+$app->get("/billings/api/internalplans/{internalPlanUuid}", function ($request, $response, $args) {
+	$internalPlansController = new InternalPlansController();
+	return($internalPlansController->getOne($request, $response, $args));
+});
+
+//get InternalPlans
+
+/*
+	sample call :
+	
+	GET /billings/api/internalplans/?providerName=recurly
+	
+	"providerName" : "recurly" (optional) Retrieve internalplans available only to that provider
+	
+	sample answer :
+	
+	{
+  		"status": "done",
+  		"statusMessage": "success",
+  		"statusCode": 0,
+  		"response": {
+    		"internalPlans": [
+      			{...},
+      			{...}
+    		]
+    	}
+    }
+
+ */
+
+$app->get("/billings/api/internalplans/", function ($request, $response, $args) {
+	$internalPlansController = new InternalPlansController();
+	return($internalPlansController->getMulti($request, $response, $args));
 });
 
 //WebHooks

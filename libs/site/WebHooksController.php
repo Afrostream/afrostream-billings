@@ -85,7 +85,7 @@ class WebHooksController extends BillingsController {
 		
 			config::getLogger()->addInfo('Treating recurly webhook done successfully, id='.$billingsWebHook->getId().'...');
 		} catch(BillingsException $e) {
-			$msg = "an exception occurred while treating a recurly webhook, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an exception occurred while treating a recurly webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			return($this->returnBillingsExceptionAsJson($response, $e, 500));
 		} catch(Exception $e) {
@@ -132,7 +132,7 @@ class WebHooksController extends BillingsController {
 		
 			config::getLogger()->addInfo('Treating gocardless webhook done successfully, id='.$billingsWebHook->getId().'...');
 		} catch(BillingsException $e) {
-			$msg = "an exception occurred while treating a gocardless webhook, error_type=".$e->getExceptionType().",error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an exception occurred while treating a gocardless webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			return($this->returnBillingsExceptionAsJson($response, $e, 500));
 		} catch(Exception $e) {

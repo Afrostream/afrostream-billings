@@ -303,6 +303,29 @@ class InternalPlanDAO {
 		return($out);
 	}
 	
+	public static function getInternaPlans($providerId = NULL) {
+		$query = "SELECT BIP._id as _id FROM billing_internal_plans BIP";
+		$params = array();
+		
+		$out = array();
+		
+		if(isset($providerId)) {
+			$query.= " INNER JOIN billing_internal_plans_links BIPL ON (BIP._id = BIPL.internal_plan_id)";
+			$query.= " INNER JOIN billing_plans BP ON (BIPL.provider_plan_id = BP._id)";
+			$query.= " WHERE BP.providerid = $1";
+			$params[] = $providerId;
+		}
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		
+		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getInternalPlanById($line['_id']));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
 }
 
 class InternalPlan implements JsonSerializable {
