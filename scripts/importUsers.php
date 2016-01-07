@@ -141,7 +141,7 @@ try {
 					}
 					break;
 				default :
-					throw new Exception("unknown BillingProvider : ".$afrUser->getBillingProvider());
+					ScriptsConfig::getLogger()->addError("unknown BillingProvider : ".$afrUser->getBillingProvider()." for user which id=".$afrUser->getId());
 					break;
 			}
 		}
