@@ -401,6 +401,55 @@ $app->get("/billings/api/internalplans/", function ($request, $response, $args) 
 	return($internalPlansController->getMulti($request, $response, $args));
 });
 
+//create
+
+/*
+	sample call :
+	
+	{				
+		"internalPlanUuid" : "InternalPlanUuid",	//internal plan uuid (should not be changed)
+		"name" : "name",							//internal name (can be changed)
+		"description" : "description",				//internal description (can be changed)
+		"amount_in_cents" : "1000",					//10 Euros
+		"currency" : "EUR",							//ISO 4217
+		"cycle" : "once",							//	"once", "auto"
+		"period" : "monthly"						//	"monthly", "annual"
+	}
+	
+ 	sample answer :
+ 	
+	{
+  		"status": "done",
+  		"statusMessage": "success",
+  		"statusCode": 0,
+  		"response": {
+  		    "internalPlan": {
+      			"internalPlanUuid": "InternalPlanUuid",
+      			"name": "name",
+      			"description": "description",
+      			"amount_in_cents": "1000",
+      			"currency": "EUR",
+      			"cycle": "once",
+      			"period": "monthly",
+      			"internalPlanOpts": []
+    			}
+  		}
+  	}
+	
+*/
+
+$app->post("/billings/api/internalplans/", function ($request, $response, $args) {
+	$internalPlansController = new InternalPlansController();
+	return($internalPlansController->create($request, $response, $args));
+});
+
+//actions to internalPlan : addtoprovider
+
+$app->put("/billings/api/internalplans/{internalPlanUuid}/addtoprovider/{providerName}", function ($request, $response, $args) {
+	$internalPlansController = new InternalPlansController();
+	return($internalPlansController->addToProvider($request, $response, $args));
+});
+
 //WebHooks
 
 //WebHooks - Recurly

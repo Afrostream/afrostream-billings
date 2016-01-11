@@ -5,12 +5,11 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 use MyCLabs\Enum\Enum;
 
  class ExceptionType extends Enum {
- 	
- 	const __default = self::internal;
- 	
-	const internal = 'internal';
+	
+ 	const internal = 'internal';
 	const provider = 'provider';
-}
+	
+ }
 
 class BillingsException extends Exception {
 	
