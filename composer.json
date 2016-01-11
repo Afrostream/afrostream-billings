@@ -8,7 +8,8 @@
 		"Slim/Slim": "^3.0",
 		"php" :"^5.5.0",
 		"myclabs/php-enum": "^1.4",
-		"tuupola/slim-basic-auth": "^2.0"
+		"tuupola/slim-basic-auth": "^2.0",
+		"sebastian/money": "^1.6"
 	},
 	"authors": [
 		{

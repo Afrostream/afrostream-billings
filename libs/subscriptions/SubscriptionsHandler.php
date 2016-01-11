@@ -63,7 +63,7 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
-			$provider_plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlan($internal_plan->getId(), $provider->getId());
+			$provider_plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internal_plan->getId(), $provider->getId());
 			if($provider_plan_id == NULL) {
 				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$provider->getName();
 				config::getLogger()->addError($msg);
