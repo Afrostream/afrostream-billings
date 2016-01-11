@@ -46,7 +46,7 @@ class InternalPlansHandler {
 				}
 				$provider_id = $provider->getId();
 			}
-			$db_internal_plans = InternalPlanDAO::getInternaPlans($provider_id);
+			$db_internal_plans = InternalPlanDAO::getInternalPlans($provider_id);
 			config::getLogger()->addInfo("internal plans getting done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting internal plans, error_code=".$e->getCode().", error_message=".$e->getMessage();
