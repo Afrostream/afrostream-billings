@@ -495,7 +495,7 @@ class InternalPlan implements JsonSerializable {
 				'internalPlanOpts' => (InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($this->_id)->jsonSerialize())
 		];
 		if($this->showProviderPlans) {
-			$return['providerPlans'] = PlanDAO::getPlans(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id));
+			$return['providerPlans'] = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id));
 		}
 		return($return);
 	}
@@ -655,15 +655,58 @@ class PlanDAO {
 		return($out);
 	}
 	
-	public static function getPlans(array $list_of_billing_plan_ids) {
+	public static function getPlanByName($providerId, $name) {
+		$query = "SELECT _id, providerid, plan_uuid, name, description FROM billing_plans WHERE providerid = $1 AND name = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $name));
+	
+		$out = null;
+	
+		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = new Plan();
+			$out->setId($line["_id"]);
+			$out->setProviderId($line["providerid"]);
+			$out->setPlanUid($line["plan_uuid"]);
+			$out->setName($line["name"]);
+			$out->setDescription($line["description"]);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getPlans($providerId = NULL) {
 		if(count($list_of_billing_plan_ids) == 0) return(array());
 		$query = "SELECT BP._id as _id FROM billing_plans BP";
 		$params = array();
 	
 		$out = array();
 		
-		$firstLoop = true;
+		if(isset($providerId)) {
+			$query.= " WHERE BP.providerid = $1";
+			$params[] = $providerId;
+		}
 		
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		
+		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getPlanById($line['_id']));
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getPlansFromList(array $list_of_billing_plan_ids) {
+		if(count($list_of_billing_plan_ids) == 0) return(array());
+		$query = "SELECT BP._id as _id FROM billing_plans BP";
+		$params = array();
+	
+		$out = array();
+	
+		$firstLoop = true;
+	
 		$i = 1;
 		foreach ($list_of_billing_plan_ids as $billing_plan_id) {
 			if($firstLoop == true) {
@@ -677,9 +720,9 @@ class PlanDAO {
 			$i++;
 		}
 		$query.= ")";
-		
+	
 		$result = pg_query_params(config::getDbConn(), $query, $params);
-		
+	
 		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			array_push($out, self::getPlanById($line['_id']));
 		}

@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
-require_once __DIR__ . '/../../../../libs/providers/recurly/subscriptions/RecurlySubscriptionsHandler.php';
+require_once __DIR__ . '/../subscriptions/RecurlySubscriptionsHandler.php';
 
 class RecurlyWebHooksHandler {
 	

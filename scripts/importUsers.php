@@ -27,18 +27,8 @@ $providerName = 'all';
 if(isset($_GET["-providerName"])) {
 	$providerName = $_GET["-providerName"];
 	if(!in_array($providerName, $possible_providers)) {
-		$msg = "-providerName must be one of follows : ";
-		$firstLoop = true;
-		foreach ($possible_providers as $val) {
-			if($firstLoop) {
-				$firstLoop = false;
-				$msg.= $val;
-			}
-			else {
-				$msg.= ", ".$val;
-			}
-		}
-		die($msg."\n");
+		$msg = "-providerName must be one of follows : ".implode(', ', $possible_providers)."\n";
+		die($msg);
 	}
 }
 

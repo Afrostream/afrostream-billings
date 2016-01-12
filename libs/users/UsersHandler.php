@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../libs/providers/celery/users/CeleryUsersHandler.php';
 require_once __DIR__ . '/../../libs/providers/recurly/users/RecurlyUsersHandler.php';
 require_once __DIR__ . '/../../libs/providers/gocardless/users/GocardlessUsersHandler.php';
+require_once __DIR__ . '/../../libs/providers/bachat/users/BachatUsersHandler.php';
 require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/utils/utils.php';
 
@@ -96,32 +97,49 @@ class UsersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			//as usual
+			$db_tmp_user = NULL;
+			$db_users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid, $provider->getId());
+			$count_users = count($db_users);
+			if($count_users == 1) {
+				$db_tmp_user = $db_users[0];
+			} else if($count_users > 1) {
+				$msg = "multiple users with userReferenceUuid=".$user_reference_uuid." exist for provider : ".$provider->getName();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			if($user_provider_uuid == NULL) {
-				//as usual
-				$db_users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid, $provider->getId());
-				$count_users = count($db_users);
-				if($count_users == 1) {
-					$db_user = $db_users[0];
-				} else if($count_users > 1) {
-					$msg = "multiple users with userReferenceUuid=".$user_reference_uuid." exist for provider : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
+				$db_user = $db_tmp_user;
 			} else {
-				//check : Does this user_provider_uuid already exist in the Database ?
-				$db_tmp_user = UserDAO::getUserByUserProviderUuid($provider->getId(), $user_provider_uuid);
+				//check
 				if($db_tmp_user == NULL) {
 					//nothing to do
 				} else {
-					if($db_tmp_user->getUserReferenceUuid() != $user_reference_uuid) {
-						//Exception
-						$msg = "userProviderUuid=".$user_provider_uuid." is already linked to another userReferenceUuid";
+					if($db_tmp_user->getUserProviderUuid() == $user_provider_uuid) {
+						$db_user = $db_tmp_user;
+					} else {
+						$msg = "another user with userReferenceUuid=".$user_reference_uuid." exist for provider : ".$provider->getName();
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
-					//
-					//done
-					$db_user = $db_tmp_user;
+				}
+				//
+				if($db_user == NULL) {
+					//check : Does this user_provider_uuid already exist in the Database ?
+					$db_tmp_user = UserDAO::getUserByUserProviderUuid($provider->getId(), $user_provider_uuid);
+					if($db_tmp_user == NULL) {
+						//nothing to do
+					} else {
+						if($db_tmp_user->getUserReferenceUuid() != $user_reference_uuid) {
+							//Exception
+							$msg = "userProviderUuid=".$user_provider_uuid." is already linked to another userReferenceUuid";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						}
+						//
+						//done
+						$db_user = $db_tmp_user;
+					}
 				}
 			}
 			if($db_user == NULL) {
@@ -178,6 +196,10 @@ class UsersHandler {
 				case 'celery' :
 					$celeryUsersHandler = new CeleryUsersHandler();
 					$user_provider_uuid = $celeryUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					break;
+				case 'bachat' :
+					$bachatUsersHandler = new BachatUsersHandler();
+					$user_provider_uuid = $bachatUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider_name;

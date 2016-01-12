@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/providers/recurly/plans/RecurlyPlansHandler.php';
 require_once __DIR__ . '/../../libs/providers/gocardless/plans/GocardlessPlansHandler.php';
+require_once __DIR__ . '/../../libs/providers/bachat/plans/BachatPlansHandler.php';
 
 use SebastianBergmann\Money\Currency;
 
@@ -140,6 +141,13 @@ class InternalPlansHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			//already exist ?
+			$db_tmp_internal_plan = PlanDAO::getPlanByName($provider->getId(), $db_internal_plan->getName());
+			if(isset($db_tmp_internal_plan)) {
+				$msg = "a provider plan named ".$db_tmp_internal_plan->getName()." does already exist for provider : ".$provider->getName();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			//create provider side
 			$provider_plan_uuid = NULL;
 			switch($provider->getName()) {
@@ -155,6 +163,10 @@ class InternalPlansHandler {
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+				case 'bachat' :
+					$bachatPlansHandler = new BachatPlansHandler();
+					$provider_plan_uuid = $bachatPlansHandler->createProviderPlan($db_internal_plan);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();

@@ -5,7 +5,7 @@ use GoCardlessPro\Core\Exception\GoCardlessProException;
 
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
-require_once __DIR__ . '/../../../../libs/providers/gocardless/subscriptions/GocardlessSubscriptionsHandler.php';
+require_once __DIR__ . '/../subscriptions/GocardlessSubscriptionsHandler.php';
 
 class GocardlessWebHooksHandler {
 	
