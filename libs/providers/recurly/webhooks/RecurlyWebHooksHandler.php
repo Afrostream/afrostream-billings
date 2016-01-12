@@ -98,6 +98,8 @@ class RecurlyWebHooksHandler {
 			config::getLogger()->addError($msg);
 			throw new Exception($msg);
 		}
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+		$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 		config::getLogger()->addInfo('searching user with account_code='.$account_code.'...');
 		$user = UserDAO::getUserByUserProviderUuid($provider->getId(), $account_code);
 		if($user == NULL) {
@@ -112,10 +114,10 @@ class RecurlyWebHooksHandler {
 		//ADD OR UPDATE
 		if($db_subscription == NULL) {
 			//CREATE
-			$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $plan, $planOpts, $api_subscription, $update_type, $updateId);
+			$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 		} else {
 			//UPDATE
-			$db_subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
+			$db_subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
 		}
 		//
 		config::getLogger()->addInfo('Processing recurly hook subscription, notification_type='.$notification->type.' done successfully');
