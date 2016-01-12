@@ -10,7 +10,7 @@ class CelerySubscriptionsHandler {
 	public function __construct() {
 	}
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts) {
 		
 	}
 	
@@ -18,11 +18,11 @@ class CelerySubscriptionsHandler {
 		
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, $sub_uuid, $update_type, $updateId) {}
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, $internalPlan, $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $sub_uuid, $update_type, $updateId) {}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, $update_type, $updateId) {}
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, Celery_Subscription $api_subscription, $update_type, $updateId) {}
 	
-	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {}
+	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, Celery_Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {}
 	
 	private function getDbSubscriptionByUuid(array $db_subscriptions, $subUuid) {
 		/*foreach ($db_subscriptions as $db_subscription) {
