@@ -31,7 +31,7 @@ class WebHooksController extends BillingsController {
 		}
 		
 		if (!$validated) {
-			config::getLogger()->addError('Receiving gocardless webhook failed, Unauthorized access');
+			config::getLogger()->addError('Receiving recurly webhook failed, Unauthorized access');
 			header('WWW-Authenticate: Basic realm="My Realm"');
 			header('HTTP/1.0 401 Unauthorized');
 			die ("Not authorized");
@@ -141,6 +141,61 @@ class WebHooksController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e, 500));
 		}
 		config::getLogger()->addInfo('Receiving gocardless webhook done successfully');
+	}
+	
+	public function bachatWebHooksPosting(Request $request, Response $response, array $args) {
+		config::getLogger()->addInfo('Receiving bachat webhook...');
+	
+		$valid_passwords = array (getEnv('BACHAT_WH_HTTP_AUTH_USER') => getEnv('BACHAT_WH_HTTP_AUTH_PWD'));
+		$valid_users = array_keys($valid_passwords);
+	
+		$user = NULL;
+		if(isset($_SERVER['PHP_AUTH_USER'])) {
+			$user = $_SERVER['PHP_AUTH_USER'];
+		}
+		$pass = NULL;
+		if(isset($_SERVER['PHP_AUTH_PW'])) {
+			$pass = $_SERVER['PHP_AUTH_PW'];
+		}
+	
+		$validated = false;
+		if(isset($user) && isset($pass)) {
+			$validated = (in_array($user, $valid_users)) && ($pass == $valid_passwords[$user]);
+		}
+	
+		if (!$validated) {
+			config::getLogger()->addError('Receiving bachat webhook failed, Unauthorized access');
+			header('WWW-Authenticate: Basic realm="My Realm"');
+			header('HTTP/1.0 401 Unauthorized');
+			die ("Not authorized");
+		}
+	
+		try {
+			config::getLogger()->addInfo('Treating bachat webhook...');
+				
+			$post_data = file_get_contents('php://input');
+			
+			$webHooksHander = new WebHooksHander();
+				
+			config::getLogger()->addInfo('Saving bachat webhook...');
+			$billingsWebHook = $webHooksHander->doSaveWebHook('bachat', $post_data);
+			config::getLogger()->addInfo('Saving bachat webhook done successfully');
+	
+			config::getLogger()->addInfo('Processing bachat webhook, id='.$billingsWebHook->getId().'...');
+			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
+			config::getLogger()->addInfo('Processing bachat webhook done sucessfully, id='.$billingsWebHook->getId().'...');
+	
+			config::getLogger()->addInfo('Treating bachat webhook done successfully, id='.$billingsWebHook->getId().'...');
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while treating a bachat webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnBillingsExceptionAsJson($response, $e, 500));
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while treating a bachat webhook, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnExceptionAsJson($response, $e, 500));
+		}
+		config::getLogger()->addInfo('Receiving bachat webhook done successfully');
 	}
 	
 }

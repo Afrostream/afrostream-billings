@@ -466,6 +466,13 @@ $app->post("/billings/providers/gocardless/webhooks/", function ($request, $resp
 	return($webHooksController->gocardlessWebHooksPosting($request, $response, $args));
 });
 
+//WebHooks - Bachat
+
+$app->post("/billings/providers/bachat/webhooks/", function ($request, $response, $args) {
+	$webHooksController = new WebHooksController();
+	return($webHooksController->bachatWebHooksPosting($request, $response, $args));
+});
+
 $app->run();
 
 ?>
