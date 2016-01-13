@@ -237,26 +237,109 @@ class UsersHandler {
 		return($db_user);
 	}
 	
+	public function doUpdateUserPlanOpts($userBillingUuid, array $user_opts_array) {
+		$db_user = NULL;
+		try {
+			config::getLogger()->addInfo("user opts updating...");
+			$this->checkUserOptsValues($user_opts_array);
+			$db_user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
+			if($db_user == NULL) {
+				$msg = "unknown userBillingUuid : ".$userBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$db_user_opts = UserOptsDAO::getUserOptsByUserId($db_user->getId());
+			$current_user_opts_array = $db_user_opts->getOpts();
+			//START TRANSACTION
+			pg_query("BEGIN");
+			foreach ($user_opts_array as $key => $value) {
+				if(array_key_exists($key, $current_user_opts_array)) {
+					//UPDATE OR DELETE
+					if(isset($value)) {
+						UserOptsDAO::updateUserOptsKey($db_user->getId(), $key, $value);
+					} else {
+						UserOptsDAO::deleteUserOptsKey($db_user->getId(), $key);
+					}
+				} else {
+					//ADD
+					UserOptsDAO::addUserOptsKey($db_user->getId(), $key, $value);
+				}
+			}
+			//COMMIT
+			pg_query("COMMIT");
+			//done
+			$db_user = UserDAO::getUserById($db_user->getId());
+			config::getLogger()->addInfo("user opts updating done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while updating user Opts, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("updating user Opts failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while updating user Opts, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("updating user Opts failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_user);
+	}
+	
+	
 	private function checkUserOptsArray($user_opts_as_array) {
-		if(!isset($user_opts_as_array['email'])) {
+		$this->checkUserOptsKeys($user_opts_as_array);
+		$this->checkUserOptsValues($user_opts_as_array);
+	}
+	
+	private function checkUserOptsKeys($user_opts_as_array) {
+		if(!array_key_exists('email', $user_opts_as_array)) {
 			//exception
 			$msg = "userOpts field 'email' is missing";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		if(!isset($user_opts_as_array['firstName'])) {
+		if(!array_key_exists('firstName', $user_opts_as_array)) {
 			//exception
 			$msg = "userOpts field 'firstName' is missing";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		if(!isset($user_opts_as_array['lastName'])) {
+		if(!array_key_exists('lastName', $user_opts_as_array)) {
 			//exception
 			$msg = "userOpts field 'lastName' is missing";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 	}
+	
+	private function checkUserOptsValues($user_opts_as_array) {
+		config::getLogger()->addError("toto");
+		if(array_key_exists('email', $user_opts_as_array)) {
+			$email = $user_opts_as_array['email'];
+			if(strlen(trim($email)) == 0) {
+				//exception
+				$msg = "'email' value is empty";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
+			}
+		}
+		if(array_key_exists('firstName', $user_opts_as_array)) {
+			$firstName = $user_opts_as_array['firstName'];
+			if(strlen(trim($firstName)) == 0) {
+				//exception
+				$msg = "'firstName' value is empty";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
+			}
+		}
+		if(array_key_exists('lastName', $user_opts_as_array)) {
+			$lastName = $user_opts_as_array['lastName'];
+			if(strlen(trim($lastName)) == 0) {
+				//exception
+				$msg = "'lastName' value is empty";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+		}
+	}
+	
 }
 
 ?>

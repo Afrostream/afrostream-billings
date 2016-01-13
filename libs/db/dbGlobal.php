@@ -251,14 +251,40 @@ class UserOptsDAO {
 	
 	public static function addUserOpts(UserOpts $user_opts) {
 		foreach ($user_opts->getOpts() as $k => $v) {
-			$query = "INSERT INTO billing_users_opts (userid, key, value)";
-			$query.= " VALUES ($1, $2, $3) RETURNING _id";
-			$result = pg_query_params(config::getDbConn(), $query,
-					array($user_opts->getUserId(),
-							$k,
-							$v));
+			if(isset($v)) {
+				$query = "INSERT INTO billing_users_opts (userid, key, value)";
+				$query.= " VALUES ($1, $2, $3) RETURNING _id";
+				$result = pg_query_params(config::getDbConn(), $query,
+						array($user_opts->getUserId(),
+								$k,
+								$v));
+			}
 		}
 		return(self::getUserOptsByUserId($user_opts->getUserId()));
+	}
+	
+	public static function updateUserOptsKey($userid, $key, $value) {
+		$query = "UPDATE billing_users_opts SET value = $3 WHERE userid = $1 AND key = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($userid, $key, $value));
+		return($result);
+	}
+	
+	public static function deleteUserOptsKey($userid, $key) {
+		$query = "UPDATE billing_users_opts SET deleted = true WHERE userid = $1 AND key = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($userid, $key));
+		return($result);
+	}
+	
+	public static function addUserOptsKey($userid, $key, $value) {
+		$query = "INSERT INTO billing_users_opts (userid, key, value)";
+		$query.= " VALUES ($1, $2, $3) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($userid,
+						$key,
+						$value));
+		return($result);
 	}
 	
 	public static function deleteUserOptsByUserId($userid) {
@@ -350,8 +376,8 @@ class InternalPlanDAO {
 	}
 	
 	public static function addInternalPlan(InternalPlan $internalPlan) {
-		$query = "INSERT INTO billing_internal_plans (internal_plan_uuid, name, description, amount_in_cents, currency, cycle, period)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6,$7) RETURNING _id";
+		$query = "INSERT INTO billing_internal_plans (internal_plan_uuid, name, description, amount_in_cents, currency, cycle, period_unit, period_length)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query, 
 				array($internalPlan->getInternalPlanUuid(),
 					$internalPlan->getName(),
@@ -359,7 +385,9 @@ class InternalPlanDAO {
 					$internalPlan->getAmountInCents(),
 					$internalPlan->getCurrency(),
 					$internalPlan->getCycle(),
-					$internalPlan->getPeriod()));
+					$internalPlan->getPeriodUnit(),
+					$internalPlan->getPeriodLength()
+				));
 		$row = pg_fetch_row($result);
 		return(self::getInternalPlanById($row[0]));
 	}
@@ -548,6 +576,44 @@ class InternalPlanOptsDAO {
 		pg_free_result($result);
 
 		return($out);
+	}
+	
+	public static function addInternalPlanOpts(InternalPlanOpts $internalplan_opts) {
+		foreach ($internalplan_opts->getOpts() as $k => $v) {
+			if(isset($v)) {
+				$query = "INSERT INTO billing_internal_plans_opts (internalplanid, key, value)";
+				$query.= " VALUES ($1, $2, $3) RETURNING _id";
+				$result = pg_query_params(config::getDbConn(), $query,
+						array($internalplan_opts->getInternalPlanId(),
+								$k,
+								$v));
+			}
+		}
+		return(self::getInternalPlanOptsByInternalPlanId($internalplan_opts->getInternalPlanId()));
+	}
+	
+	public static function updateInternalPlanOptsKey($internalplanid, $key, $value) {
+		$query = "UPDATE billing_internal_plans_opts SET value = $3 WHERE internalplanid = $1 AND key = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+			array($internalplanid, $key, $value));
+		return($result);
+	}
+	
+	public static function deleteInternalPlanOptsKey($internalplanid, $key) {
+		$query = "UPDATE billing_internal_plans_opts SET deleted = true WHERE internalplanid = $1 AND key = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($internalplanid, $key));
+		return($result);
+	}
+	
+	public static function addInternalPlanOptsKey($internalplanid, $key, $value) {
+		$query = "INSERT INTO billing_internal_plans_opts (internalplanid, key, value)";
+		$query.= " VALUES ($1, $2, $3) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($internalplanid,
+						$key,
+						$value));
+		return($result);
 	}
 	
 }

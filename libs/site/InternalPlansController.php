@@ -127,6 +127,20 @@ class InternalPlansController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$periodLength = $data["periodLength"];
+			if(!isset($data['internalPlanOpts'])) {
+				//exception
+				$msg = "field 'internalPlanOpts' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			} else {
+				if(!is_array($data['internalPlanOpts'])) {
+					//exception
+					$msg = "field 'internalPlanOpts' must be an array";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
+			$internalplan_opts_array = $data['internalPlanOpts'];
 			$internalPlansHandler = new InternalPlansHandler();
 			$internalPlan = $internalPlansHandler->doCreate(
 					$internalPlanUuid,
@@ -136,7 +150,8 @@ class InternalPlansController extends BillingsController {
 					$currency,
 					$cycle,
 					$periodUnitStr,
-					$periodLength
+					$periodLength,
+					$internalplan_opts_array
 					);
 			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
 		} catch(BillingsException $e) {
@@ -181,6 +196,48 @@ class InternalPlansController extends BillingsController {
 			$internalPlan = $internalPlansHandler->doAddToProvider($internalPlanUuid, $provider);
 			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
 		} catch(BillingsException $e) {
+			$msg = "an exception occurred while linking an internal plan to a provider, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while linking an internal plan to a provider, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function update(Request $request, Response $response, array $args) {
+		try {
+			$data = json_decode($request->getBody(), true);
+			if(!isset($args['internalPlanUuid'])) {
+				//exception
+				$msg = "field 'internalPlanUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanUuid = $args['internalPlanUuid'];
+			$internalPlansHandler = new InternalPlansHandler();
+			$internalPlan = NULL;
+			if(isset($data['internalPlanOpts'])) {
+				if(!is_array($data['internalPlanOpts'])) {
+					//exception
+					$msg = "field 'internalPlanOpts' must be an array";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$internalplan_opts_array = $data['internalPlanOpts'];
+				$internalPlan = $internalPlansHandler->doUpdateInternalPlanOpts($internalPlanUuid, $internalplan_opts_array);
+			}
+			if($internalPlan == NULL) {
+				//NO UPDATE, JUST SEND BACK THE CURRENT INTERNAL_PLAN
+				$internalPlan = $internalPlansHandler->doGetInternalPlan($internalPlanUuid);
+			}
+			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
+		} catch(BillingsException $e) {
 			$msg = "an exception occurred while updating an internal plan, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
@@ -194,6 +251,5 @@ class InternalPlansController extends BillingsController {
 			//
 		}
 	}
-	
 	
 }
