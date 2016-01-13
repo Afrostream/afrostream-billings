@@ -115,6 +115,48 @@ class UsersController extends BillingsController {
 		}
 	}
 	
+	public function update(Request $request, Response $response, array $args) {
+		try {
+			$data = json_decode($request->getBody(), true);
+			if(!isset($args['userBillingUuid'])) {
+				//exception
+				$msg = "field 'userBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$userBillingUuid = $args['userBillingUuid'];
+			$usersHandler = new UsersHandler();
+			$user = NULL;
+			if(isset($data['userOpts'])) {
+				if(!is_array($data['userOpts'])) {
+					//exception
+					$msg = "field 'userOpts' must be an array";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$user_opts_array = $data['userOpts'];
+				$user = $usersHandler->doUpdateUserPlanOpts($userBillingUuid, $user_opts_array);
+			}
+			if($user == NULL) {
+				//NO UPDATE, JUST SEND BACK THE CURRENT USER
+				$user = $usersHandler->doGetUserByUserBillingUuid($userBillingUuid);
+			}
+			return($this->returnObjectAsJson($response, 'user', $user));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while updating an user, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while updating an user, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
 }
 
 ?>

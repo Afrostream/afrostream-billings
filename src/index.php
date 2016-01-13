@@ -135,6 +135,12 @@ $app->post("/billings/api/users/", function ($request, $response, $args) {
 	return($usersController->create($request, $response, $args));
 });
 
+//update
+	
+$app->put("/billings/api/users/{userBillingUuid}", function ($request, $response, $args) {
+	$usersController = new UsersController();
+	return($usersController->update($request, $response, $args));
+});
 
 //Subscriptions
 
@@ -413,7 +419,13 @@ $app->get("/billings/api/internalplans/", function ($request, $response, $args) 
 		"amount_in_cents" : "1000",					//10 Euros
 		"currency" : "EUR",							//ISO 4217
 		"cycle" : "once",							//	"once", "auto"
-		"period" : "monthly"						//	"monthly", "annual"
+		"periodUnit" : "month",						//	"day", "month", "year"
+		"periodLength" : "1",						//  number of days, months, years in the period
+		"internalPlanOpts": {
+        	"internalMaxScreens" : "2",				//  array of free key value pairs
+        	"key1" : "value1",
+        	"key2" : "value2"
+        }
 	}
 	
  	sample answer :
@@ -430,9 +442,14 @@ $app->get("/billings/api/internalplans/", function ($request, $response, $args) 
       			"amount_in_cents": "1000",
       			"currency": "EUR",
       			"cycle": "once",
-      			"period": "monthly",
-      			"internalPlanOpts": []
-    			}
+      			"periodUnit": "month",
+      			"periodLength" : "1",
+				"internalPlanOpts": {
+        			"internalMaxScreens" : "2",
+        			"key1" : "value1",
+        			"key2" : "value2"
+        		}
+    		}
   		}
   	}
 	
@@ -441,6 +458,13 @@ $app->get("/billings/api/internalplans/", function ($request, $response, $args) 
 $app->post("/billings/api/internalplans/", function ($request, $response, $args) {
 	$internalPlansController = new InternalPlansController();
 	return($internalPlansController->create($request, $response, $args));
+});
+
+//update
+
+$app->put("/billings/api/internalplans/{internalPlanUuid}", function ($request, $response, $args) {
+	$internalPlansController = new InternalPlansController();
+	return($internalPlansController->update($request, $response, $args));
 });
 
 //actions to internalPlan : addtoprovider
