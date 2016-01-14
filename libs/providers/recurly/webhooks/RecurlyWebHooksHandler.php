@@ -102,6 +102,11 @@ class RecurlyWebHooksHandler {
 			throw new Exception($msg);
 		}
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+		if($internalPlan == NULL) {
+			$msg = "plan with uuid=".$plan_uuid." for provider ".$provider->getName()." is not linked to an internal plan";
+			config::getLogger()->addError($msg);
+			throw new Exception($msg);
+		}
 		$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 		config::getLogger()->addInfo('searching user with account_code='.$account_code.'...');
 		$user = UserDAO::getUserByUserProviderUuid($provider->getId(), $account_code);
