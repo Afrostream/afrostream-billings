@@ -29,7 +29,7 @@ class RecurlySubscriptionsHandler {
 					}
 				}
 				if(!$found) {
-					$msg = "subscription not found for the current user";
+					$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found for user with provider_user_uuid=".$user->getUserProviderUuid();
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
@@ -40,7 +40,7 @@ class RecurlySubscriptionsHandler {
 				//
 				$subscription = new Recurly_Subscription();
 				$subscription->plan_code = $plan->getPlanUuid();
-				$subscription->currency = 'EUR';//TODO
+				$subscription->currency = $internalPlan->getCurrency();
 			
 				$account = new Recurly_Account();
 				$account->account_code = $user->getUserProviderUuid();

@@ -89,7 +89,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting/creating...");
-			$this->checkUserOptsArray($user_opts_array);
+			checkUserOptsArray($user_opts_array);
 			$provider = ProviderDAO::getProviderByName($provider_name);
 				
 			if($provider == NULL) {
@@ -175,7 +175,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user creating...");
-			$this->checkUserOptsArray($user_opts_array);
+			checkUserOptsArray($user_opts_array);
 			$provider = ProviderDAO::getProviderByName($provider_name);
 			
 			if($provider == NULL) {
@@ -241,7 +241,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user opts updating...");
-			$this->checkUserOptsValues($user_opts_array);
+			checkUserOptsValues($user_opts_array);
 			$db_user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
 			if($db_user == NULL) {
 				$msg = "unknown userBillingUuid : ".$userBillingUuid;
@@ -280,64 +280,6 @@ class UsersHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_user);
-	}
-	
-	
-	private function checkUserOptsArray($user_opts_as_array) {
-		$this->checkUserOptsKeys($user_opts_as_array);
-		$this->checkUserOptsValues($user_opts_as_array);
-	}
-	
-	private function checkUserOptsKeys($user_opts_as_array) {
-		if(!array_key_exists('email', $user_opts_as_array)) {
-			//exception
-			$msg = "userOpts field 'email' is missing";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		if(!array_key_exists('firstName', $user_opts_as_array)) {
-			//exception
-			$msg = "userOpts field 'firstName' is missing";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		if(!array_key_exists('lastName', $user_opts_as_array)) {
-			//exception
-			$msg = "userOpts field 'lastName' is missing";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-	}
-	
-	private function checkUserOptsValues($user_opts_as_array) {
-		config::getLogger()->addError("toto");
-		if(array_key_exists('email', $user_opts_as_array)) {
-			$email = $user_opts_as_array['email'];
-			if(strlen(trim($email)) == 0) {
-				//exception
-				$msg = "'email' value is empty";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
-			}
-		}
-		if(array_key_exists('firstName', $user_opts_as_array)) {
-			$firstName = $user_opts_as_array['firstName'];
-			if(strlen(trim($firstName)) == 0) {
-				//exception
-				$msg = "'firstName' value is empty";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
-			}
-		}
-		if(array_key_exists('lastName', $user_opts_as_array)) {
-			$lastName = $user_opts_as_array['lastName'];
-			if(strlen(trim($lastName)) == 0) {
-				//exception
-				$msg = "'lastName' value is empty";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-		}
 	}
 	
 }

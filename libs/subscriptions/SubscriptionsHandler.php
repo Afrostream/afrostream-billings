@@ -89,7 +89,7 @@ class SubscriptionsHandler {
 					//check if it is linked to the right user
 					if($db_tmp_subscription->getUserId() != $user->getId()) {
 						//Exception
-						$msg = "subscription_provider_uuid=".$subscription_provider_uuid." is already linked to another user_reference_uuid";
+						$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." is already linked to another user_reference_uuid";
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
@@ -287,24 +287,6 @@ class SubscriptionsHandler {
 	
 	private function checkBillingInfoOptsArray($billing_info_opts_as_array) {
 		//TODO
-		/*if(!isset($user_opts_as_array['email'])) {
-			//exception
-			$msg = "userOpts field 'email' is missing";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		if(!isset($user_opts_as_array['firstName'])) {
-			//exception
-			$msg = "userOpts field 'firstName' is missing";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		if(!isset($user_opts_as_array['lastName'])) {
-			//exception
-			$msg = "userOpts field 'lastName' is missing";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}*/
 	}
 	
 }
