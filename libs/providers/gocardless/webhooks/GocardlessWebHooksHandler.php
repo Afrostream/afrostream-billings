@@ -50,13 +50,13 @@ class GocardlessWebHooksHandler {
 				'environment' => getEnv('GOCARDLESS_API_ENV')
 		));
 		//
-		$subscription_uuid = $notification_as_array['links']['subscription'];
-		config::getLogger()->addInfo('Processing gocardless hook subscription, sub_uuid='.$subscription_uuid);
+		$subscription_provider_uuid = $notification_as_array['links']['subscription'];
+		config::getLogger()->addInfo('Processing gocardless hook subscription, sub_uuid='.$subscription_provider_uuid);
 		//
 		try {
 			//
 			config::getLogger()->addInfo('Processing gocardless hook subscription, getting api_subscription...');
-			$api_subscription = $client->subscriptions()->get($subscription_uuid);
+			$api_subscription = $client->subscriptions()->get($subscription_provider_uuid);
 			config::getLogger()->addInfo('Processing gocardless hook subscription, getting api_subscription done successfully');
 			config::getLogger()->addInfo('Processing gocardless hook subscription, getting api_mandate...');
 			$api_mandate = $client->mandates()->get($api_subscription->links->mandate);
@@ -69,11 +69,11 @@ class GocardlessWebHooksHandler {
 			config::getLogger()->addInfo('Processing gocardless hook subscription, getting api_customer done sucessfully');
 			//
 		} catch (GoCardlessProException $e) {
-			$msg = "a GoCardlessProException occurred while getting gocardless subscription with uuid=".$subscription_uuid." from api, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a GoCardlessProException occurred while getting gocardless subscription with subscription_provider_uuid=".$subscription_provider_uuid." from api, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("getting gocardless subscription failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch (Exception $e) {
-			$msg = "an unknown exception occurred while getting gocardless subscription with uuid=".$subscription_uuid." from api, message=".$e->getMessage();
+			$msg = "an unknown exception occurred while getting gocardless subscription with subscription_provider_uuid=".$subscription_provider_uuid." from api, message=".$e->getMessage();
 			config::getLogger()->addError("getting gocardless subscription failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 			
@@ -114,12 +114,17 @@ class GocardlessWebHooksHandler {
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
-		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_uuid);
+		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
 		//ADD OR UPDATE
 		if($db_subscription == NULL) {
+			$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found for user with provider_user_uuid=".$user->getUserProviderUuid();
+			config::getLogger()->addError($msg);
+			throw new Exception($msg);
+			//DO NOT CREATE ANYMORE : race condition when creating from API + from the webhook
+			//WAS :
 			//CREATE
-			$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, 'api', 0);
+			//$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, 'api', 0);
 		} else {
 			//UPDATE
 			$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);

@@ -21,21 +21,7 @@ class RecurlyUsersHandler {
 				$account = Recurly_Account::get($user_provider_uuid);
 			} else {
 				//
-				if(!isset($user_opts_array['email'])) {
-					$msg = "userOpts field 'email' was not provided";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				if(!isset($user_opts_array['firstName'])) {
-					$msg = "userOpts field 'firstName' was not provided";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				if(!isset($user_opts_array['lastName'])) {
-					$msg = "userOpts field 'lastName' was not provided";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
+				checkUserOptsArray($user_opts_array);
 				//
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');

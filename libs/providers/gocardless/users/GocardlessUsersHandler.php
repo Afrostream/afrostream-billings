@@ -30,21 +30,8 @@ class GocardlessUsersHandler {
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//
-				if(!isset($user_opts_array['email'])) {
-					$msg = "userOpts field 'email' was not provided";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				if(!isset($user_opts_array['firstName'])) {
-					$msg = "userOpts field 'firstName' was not provided";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				if(!isset($user_opts_array['lastName'])) {
-					$msg = "userOpts field 'lastName' was not provided";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
+				checkUserOptsArray($user_opts_array);
+				//
 				$customer = $client->customers()->create(
 						['params' => 
 								[

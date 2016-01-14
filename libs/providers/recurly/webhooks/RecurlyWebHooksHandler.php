@@ -56,18 +56,18 @@ class RecurlyWebHooksHandler {
 		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 		//
-		$subscription_uuid = self::getNodeByName($notification->subscription, 'uuid');
-		config::getLogger()->addInfo('Processing recurly hook subscription, sub_uuid='.$subscription_uuid);
+		$subscription_provider_uuid = self::getNodeByName($notification->subscription, 'uuid');
+		config::getLogger()->addInfo('Processing recurly hook subscription, subscription_provider_uuid='.$subscription_provider_uuid);
 		//
 		try {
 			//
-			$api_subscription = Recurly_Subscription::get($subscription_uuid);
+			$api_subscription = Recurly_Subscription::get($subscription_provider_uuid);
 			//
 		} catch (Recurly_NotFoundError $e) {
-			config::getLogger()->addError("a not found exception occurred while getting recurly subscription with uuid=".$subscription_uuid." from api, message=".$e->getMessage());
+			config::getLogger()->addError("a not found exception occurred while getting recurly subscription with subscription_provider_uuid=".$subscription_provider_uuid." from api, message=".$e->getMessage());
 			throw $e;
 		} catch (Exception $e) {
-			config::getLogger()->addError("an unknown exception occurred while getting recurly subscription with uuid=".$subscription_uuid." from api, message=".$e->getMessage());
+			config::getLogger()->addError("an unknown exception occurred while getting recurly subscription with subscription_provider_uuid=".$subscription_provider_uuid." from api, message=".$e->getMessage());
 			throw $e;
 		}
 		//provider
@@ -109,12 +109,17 @@ class RecurlyWebHooksHandler {
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
-		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_uuid);
+		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
 		//ADD OR UPDATE
 		if($db_subscription == NULL) {
+			$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found for user with provider_user_uuid=".$user->getUserProviderUuid();
+			config::getLogger()->addError($msg);
+			throw new Exception($msg);
+			//DO NOT CREATE ANYMORE : race condition when creating from API + from the webhook
+			//WAS :
 			//CREATE
-			$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
+			//$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 		} else {
 			//UPDATE
 			$db_subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
