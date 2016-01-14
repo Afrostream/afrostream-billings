@@ -26,7 +26,10 @@ class RecurlyWebHooksHandler {
 		config::getLogger()->addInfo('Processing recurly hook notification...');
 		switch ($notification->type) {
 			case "new_subscription_notification" :
-				$this->doProcessSubscription($notification, $update_type, $updateId);
+				//NOW IGNORED : since subscription is created through API, just log for information
+				config::getLogger()->addInfo('notification type : '. $notification->type. ' is ignored');
+				//WAS :
+				//$this->doProcessSubscription($notification, $update_type, $updateId);
 				break;
 			case "updated_subscription_notification" :
 				$this->doProcessSubscription($notification, $update_type, $updateId);

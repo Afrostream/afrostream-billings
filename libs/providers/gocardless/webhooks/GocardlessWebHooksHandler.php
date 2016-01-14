@@ -33,7 +33,16 @@ class GocardlessWebHooksHandler {
 		$resource_type = $notification_as_array['resource_type'];
 		switch($resource_type) {
 			case "subscriptions" :
-				$this->doProcessSubscription($notification_as_array, $update_type, $updateId);
+				$action = notification_as_array['action'];
+				switch($action) {
+					case 'created' :
+						//NOW IGNORED : since subscription is created through API, just log for information
+						config::getLogger()->addInfo('notification action : '. $action. ' is ignored');
+						break;
+					default :
+						$this->doProcessSubscription($notification_as_array, $update_type, $updateId);
+					break;
+				}
 				break;
 			default :
 				config::getLogger()->addWarning('resource type : '. $resource_type. ' is not yet implemented');
