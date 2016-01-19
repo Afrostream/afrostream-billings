@@ -18,6 +18,20 @@ class dbGlobal {
 
 class UserDAO {
 	
+	private static $sfields = "_id, creation_date, providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid, deleted";
+	
+	private static function getUserFromRow($row) {
+		$out = new User();
+		$out->setId($row["_id"]);
+		$out->setUserBillingUuid($row["user_billing_uuid"]);
+		$out->setCreationDate($row["creation_date"]);
+		$out->setProviderId($row["providerid"]);
+		$out->setUserReferenceUuid($row["user_reference_uuid"]);
+		$out->setUserProviderUuid($row["user_provider_uuid"]);
+		$out->setDeleted($row["deleted"]);
+		return($out);
+	}
+	
 	public static function addUser(User $user) {
 		$query = "INSERT INTO billing_users (providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid)";
 		$query.= " VALUES ($1, $2, $3, $4) RETURNING _id";
@@ -31,20 +45,13 @@ class UserDAO {
 	}
 	
 	public static function getUserById($id) {
-		$query = "SELECT _id, creation_date, providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid, deleted FROM billing_users WHERE _id = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_users WHERE _id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
 		
 		$out = null;
 		
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new User();
-			$out->setId($line["_id"]);
-			$out->setUserBillingUuid($line["user_billing_uuid"]);
-			$out->setCreationDate($line["creation_date"]);
-			$out->setProviderId($line["providerid"]);
-			$out->setUserReferenceUuid($line["user_reference_uuid"]);
-			$out->setUserProviderUuid($line["user_provider_uuid"]);
-			$out->setDeleted($line["deleted"]);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getUserFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -53,7 +60,7 @@ class UserDAO {
 	}
 	
 	public static function getUsersByUserReferenceUuid($user_reference_uuid, $providerid = NULL) {
-		$query = "SELECT _id FROM billing_users WHERE deleted = false AND user_reference_uuid = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_users WHERE deleted = false AND user_reference_uuid = $1";
 		if(isset($providerid)) {
 			$query.= " AND providerid = $2";
 		}
@@ -65,8 +72,8 @@ class UserDAO {
 		
 		$out = array();	
 		
-		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($out, self::getUserById($line['_id']));
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getUserFromRow($row));
 		}
 		// free result
 		pg_free_result($result);
@@ -75,13 +82,13 @@ class UserDAO {
 	}
 	
 	public static function getUserByUserProviderUuid($providerid, $user_provider_uuid) {
-		$query = "SELECT _id FROM billing_users WHERE deleted = false AND providerid = $1 AND user_provider_uuid = $2";
+		$query = "SELECT ".self::$sfields." FROM billing_users WHERE deleted = false AND providerid = $1 AND user_provider_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $user_provider_uuid));
 		
 		$out = null;
 		
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getUserById($line['_id']);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getUserFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -90,13 +97,13 @@ class UserDAO {
 	}
 	
 	public static function getUserByUserBillingUuid($user_billing_uuid) {
-		$query = "SELECT _id FROM billing_users WHERE deleted = false AND user_billing_uuid = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_users WHERE deleted = false AND user_billing_uuid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($user_billing_uuid));
 	
 		$out = null;
 	
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getUserById($line['_id']);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getUserFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -105,7 +112,7 @@ class UserDAO {
 	}
 	
 	public static function getUsers($id = NULL, $limit = 0, $offset = 0) {
-		$query = "SELECT _id FROM billing_users WHERE deleted = false";
+		$query = "SELECT ".self::$sfields." FROM billing_users WHERE deleted = false";
 		if(isset($id)) { $query.= " AND _id <= ".$id; }
 		$query.= " ORDER BY _id DESC";//LAST USERS FIRST
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
@@ -113,8 +120,8 @@ class UserDAO {
 		$result = pg_query_params(config::getDbConn(), $query, array());
 		$out = array();
 	
-		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($out, self::getUserById($line['_id']));
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getUserFromRow($row));
 		}
 		// free result
 		pg_free_result($result);
@@ -240,8 +247,8 @@ class UserOptsDAO {
 		
 		$out = new UserOpts();
 		$out->setUserId($userid);
-		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out->setOpt($line["key"], $line["value"]);
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out->setOpt($row["key"], $row["value"]);
 		}
 		// free result
 		pg_free_result($result);
@@ -297,24 +304,30 @@ class UserOptsDAO {
 
 class InternalPlanDAO {
 	
+	private static $sfields = "BIP._id, BIP.internal_plan_uuid, BIP.name, BIP.description, BIP.amount_in_cents, BIP.currency, BIP.cycle, BIP.period_unit, BIP.period_length";
+	
+	private static function getInternalPlanFromRow($row) {
+		$out = new InternalPlan();
+		$out->setId($row["_id"]);
+		$out->setInternalPlanUid($row["internal_plan_uuid"]);
+		$out->setName($row["name"]);
+		$out->setDescription($row["description"]);
+		$out->setAmoutInCents($row["amount_in_cents"]);
+		$out->setCurrency($row["currency"]);
+		$out->setCycle(new PlanCycle($row["cycle"]));
+		$out->setPeriodUnit(new PlanPeriodUnit($row["period_unit"]));
+		$out->setPeriodLength($row["period_length"]);
+		return($out);
+	}
+	
 	public static function getInternalPlanById($planid) {
-		$query = "SELECT _id, internal_plan_uuid, name, description, amount_in_cents, currency, cycle, period_unit, period_length";
-		$query.= " FROM billing_internal_plans WHERE _id = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans BIP WHERE BIP._id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($planid));
 	
 		$out = null;
 	
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new InternalPlan();
-			$out->setId($line["_id"]);
-			$out->setInternalPlanUid($line["internal_plan_uuid"]);
-			$out->setName($line["name"]);
-			$out->setDescription($line["description"]);
-			$out->setAmoutInCents($line["amount_in_cents"]);
-			$out->setCurrency($line["currency"]);
-			$out->setCycle(new PlanCycle($line["cycle"]));
-			$out->setPeriodUnit(new PlanPeriodUnit($line["period_unit"]));
-			$out->setPeriodLength($line["period_length"]);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getInternalPlanFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -323,13 +336,13 @@ class InternalPlanDAO {
 	}
 	
 	public static function getInternalPlanByUuid($internal_plan_uuid) {
-		$query = "SELECT _id FROM billing_internal_plans WHERE internal_plan_uuid = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans BIP WHERE BIP.internal_plan_uuid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($internal_plan_uuid));
 	
 		$out = null;
 	
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getInternalPlanById($line['_id']);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getInternalPlanFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -338,13 +351,13 @@ class InternalPlanDAO {
 	}
 	
 	public static function getInternalPlanByName($name) {
-		$query = "SELECT _id FROM billing_internal_plans WHERE name = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans BIP WHERE BIP.name = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($name));
 	
 		$out = null;
 	
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getInternalPlanById($line['_id']);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getInternalPlanFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -353,7 +366,7 @@ class InternalPlanDAO {
 	}
 	
 	public static function getInternalPlans($providerId = NULL) {
-		$query = "SELECT BIP._id as _id FROM billing_internal_plans BIP";
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans BIP";
 		$params = array();
 		
 		$out = array();
@@ -366,8 +379,8 @@ class InternalPlanDAO {
 		}
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
-		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($out, self::getInternalPlanById($line['_id']));
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getInternalPlanFromRow($row));
 		}
 		// free result
 		pg_free_result($result);
@@ -566,15 +579,15 @@ class InternalPlanOptsDAO {
 	public static function getInternalPlanOptsByInternalPlanId($internalplanid) {
 		$query = "SELECT _id, internalplanid, key, value FROM billing_internal_plans_opts WHERE deleted = false AND internalplanid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($internalplanid));
-
+		
 		$out = new InternalPlanOpts();
 		$out->setInternalPlanId($internalplanid);
-		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out->setOpt($line["key"], $line["value"]);
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out->setOpt($row["key"], $row["value"]);
 		}
 		// free result
 		pg_free_result($result);
-
+		
 		return($out);
 	}
 	
@@ -627,8 +640,8 @@ class InternalPlanLinksDAO {
 		
 		$out = null;
 		
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = $line["billing_plan_id"];
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = $row["billing_plan_id"];
 		}
 		// free result
 		pg_free_result($result);
@@ -642,8 +655,8 @@ class InternalPlanLinksDAO {
 		
 		$out = null;
 		
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = $line["billing_internal_plan_id"];
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = $row["billing_internal_plan_id"];
 		}
 		// free result
 		pg_free_result($result);
@@ -668,8 +681,8 @@ class InternalPlanLinksDAO {
 		
 		$out = array();
 		
-		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($out, $line["billing_plan_id"]);
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, $row["billing_plan_id"]);
 		}
 		// free result
 		pg_free_result($result);
@@ -681,39 +694,41 @@ class InternalPlanLinksDAO {
 
 class PlanDAO {
 	
+	private static $sfields = "_id, providerid, plan_uuid, name, description";
+	
+	private static function getPlanFromRow($row) {
+		$out = new Plan();
+		$out->setId($row["_id"]);
+		$out->setProviderId($row["providerid"]);
+		$out->setPlanUid($row["plan_uuid"]);
+		$out->setName($row["name"]);
+		$out->setDescription($row["description"]);
+		return($out);
+	}
+	
 	public static function getPlanByUuid($providerId, $plan_uuid) {
-		$query = "SELECT _id, providerid, plan_uuid, name, description FROM billing_plans WHERE providerid = $1 AND plan_uuid = $2";
+		$query = "SELECT ".self::$sfields." FROM billing_plans WHERE providerid = $1 AND plan_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $plan_uuid));
 		
 		$out = null;
 		
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new Plan();
-			$out->setId($line["_id"]);
-			$out->setProviderId($line["providerid"]);
-			$out->setPlanUid($line["plan_uuid"]);
-			$out->setName($line["name"]);
-			$out->setDescription($line["description"]);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getPlanFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
-	
+		
 		return($out);
 	}
 	
 	public static function getPlanById($plan_id) {
-		$query = "SELECT _id, providerid, plan_uuid, name, description FROM billing_plans WHERE _id = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_plans WHERE _id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($plan_id));
 	
 		$out = null;
 	
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new Plan();
-			$out->setId($line["_id"]);
-			$out->setProviderId($line["providerid"]);
-			$out->setPlanUid($line["plan_uuid"]);
-			$out->setName($line["name"]);
-			$out->setDescription($line["description"]);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getPlanFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -722,41 +737,35 @@ class PlanDAO {
 	}
 	
 	public static function getPlanByName($providerId, $name) {
-		$query = "SELECT _id, providerid, plan_uuid, name, description FROM billing_plans WHERE providerid = $1 AND name = $2";
+		$query = "SELECT ".self::$sfields." FROM billing_plans WHERE providerid = $1 AND name = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $name));
-	
+		
 		$out = null;
-	
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new Plan();
-			$out->setId($line["_id"]);
-			$out->setProviderId($line["providerid"]);
-			$out->setPlanUid($line["plan_uuid"]);
-			$out->setName($line["name"]);
-			$out->setDescription($line["description"]);
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getPlanFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
-	
+		
 		return($out);
 	}
 	
 	public static function getPlans($providerId = NULL) {
-		if(count($list_of_billing_plan_ids) == 0) return(array());
-		$query = "SELECT BP._id as _id FROM billing_plans BP";
+		$query = "SELECT ".self::$sfields." FROM billing_plans";
 		$params = array();
 	
 		$out = array();
 		
 		if(isset($providerId)) {
-			$query.= " WHERE BP.providerid = $1";
+			$query.= " WHERE providerid = $1";
 			$params[] = $providerId;
 		}
 		
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
-		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($out, self::getPlanById($line['_id']));
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getPlanFromRow($row));
 		}
 		// free result
 		pg_free_result($result);
@@ -766,7 +775,7 @@ class PlanDAO {
 	
 	public static function getPlansFromList(array $list_of_billing_plan_ids) {
 		if(count($list_of_billing_plan_ids) == 0) return(array());
-		$query = "SELECT BP._id as _id FROM billing_plans BP";
+		$query = "SELECT ".self::$sfields." FROM billing_plans";
 		$params = array();
 	
 		$out = array();
@@ -777,7 +786,7 @@ class PlanDAO {
 		foreach ($list_of_billing_plan_ids as $billing_plan_id) {
 			if($firstLoop == true) {
 				$firstLoop = false;
-				$query.= " WHERE BP._id in ($".$i;
+				$query.= " WHERE _id in ($".$i;
 			} else {
 				$query.= ", $".$i;
 			}
@@ -789,8 +798,8 @@ class PlanDAO {
 	
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 	
-		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($out, self::getPlanById($line['_id']));
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getPlanFromRow($row));
 		}
 		// free result
 		pg_free_result($result);
@@ -906,8 +915,8 @@ class PlanOptsDAO {
 
 		$out = new PlanOpts();
 		$out->setPlanId($planid);
-		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out->setOpt($line["key"], $line["value"]);
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out->setOpt($row["key"], $row["value"]);
 		}
 		// free result
 		pg_free_result($result);
@@ -919,16 +928,23 @@ class PlanOptsDAO {
 
 class ProviderDAO {
 	
+	private static $sfields = "_id, name";
+	
+	private static function getProviderFromRow($row) {
+		$out = new Provider();
+		$out->setId($row["_id"]);
+		$out->setName($row["name"]);
+		return($out);
+	}
+	
 	public static function getProviderByName($name) {
-		$query = "SELECT _id, name FROM billing_providers WHERE name = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE name = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($name));
 		
 		$out = null;
 		
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new Provider();
-			$out->setId($line["_id"]);
-			$out->setName($line["name"]);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getProviderFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -937,15 +953,13 @@ class ProviderDAO {
 	}
 	
 	public static function getProviderById($providerid) {
-		$query = "SELECT _id, name FROM billing_providers WHERE _id = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE _id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerid));
 	
 		$out = null;
 	
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new Provider();
-			$out->setId($line["_id"]);
-			$out->setName($line["name"]);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getProviderFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -985,35 +999,45 @@ class Provider implements JsonSerializable {
 
 class BillingsSubscriptionDAO {
 	
+	private static $sfields = NULL;
+
+	public static function init() {
+		BillingsSubscriptionDAO::$sfields = "BS._id, BS.subscription_billing_uuid, BS.providerid, BS.userid, BS.planid, BS.creation_date, BS.updated_date, BS.sub_uuid, BS.sub_status,".
+			" BS.sub_activated_date, BS.sub_canceled_date, BS.sub_expires_date, BS.sub_period_started_date, BS.sub_period_ends_date,".
+			" BS.sub_collection_mode, BS.update_type, BS.updateid, BS.deleted";		
+	}
+	
+	private static function getBillingsSubscriptionFromRow($row) {
+		$out = new BillingsSubscription();
+		$out->setId($row["_id"]);
+		$out->setSubscriptionBillingUuid($row["subscription_billing_uuid"]);
+		$out->setProviderId($row["providerid"]);
+		$out->setUserId($row["userid"]);
+		$out->setPlanId($row["planid"]);
+		$out->setCreationDate($row["creation_date"]);
+		$out->setUpdatedDate($row["updated_date"]);
+		$out->setSubUid($row["sub_uuid"]);
+		$out->setSubStatus($row["sub_status"]);
+		$out->setSubActivatedDate($row["sub_activated_date"]);
+		$out->setSubCanceledDate($row["sub_canceled_date"]);
+		$out->setSubExpiresDate($row["sub_expires_date"]);
+		$out->setSubCollectionMode($row["sub_collection_mode"]);
+		$out->setSubPeriodStartedDate($row["sub_period_started_date"]);
+		$out->setSubPeriodEndsDate($row["sub_period_ends_date"]);
+		$out->setUpdateType($row["update_type"]);
+		$out->setUpdateId($row["updateid"]);
+		$out->setDeleted($row["deleted"]);
+		return($out);
+	}
+	
 	public static function getBillingsSubscriptionById($id) {
-		$query = "SELECT _id, subscription_billing_uuid, providerid, userid, planid, creation_date, updated_date, sub_uuid, sub_status,";
-		$query.= " sub_activated_date, sub_canceled_date, sub_expires_date, sub_period_started_date, sub_period_ends_date,";
-		$query.= " sub_collection_mode, update_type, updateid, deleted";
-		$query.= " FROM billing_subscriptions WHERE _id = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS WHERE BS._id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
 	
 		$out = null;
 	
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new BillingsSubscription();
-			$out->setId($line["_id"]);
-			$out->setSubscriptionBillingUuid($line["subscription_billing_uuid"]);
-			$out->setProviderId($line["providerid"]);
-			$out->setUserId($line["userid"]);
-			$out->setPlanId($line["planid"]);
-			$out->setCreationDate($line["creation_date"]);
-			$out->setUpdatedDate($line["updated_date"]);
-			$out->setSubUid($line["sub_uuid"]);
-			$out->setSubStatus($line["sub_status"]);
-			$out->setSubActivatedDate($line["sub_activated_date"]);
-			$out->setSubCanceledDate($line["sub_canceled_date"]);
-			$out->setSubExpiresDate($line["sub_expires_date"]);
-			$out->setSubCollectionMode($line["sub_collection_mode"]);
-			$out->setSubPeriodStartedDate($line["sub_period_started_date"]);
-			$out->setSubPeriodEndsDate($line["sub_period_ends_date"]);
-			$out->setUpdateType($line["update_type"]);
-			$out->setUpdateId($line["updateid"]);
-			$out->setDeleted($line["deleted"]);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingsSubscriptionFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -1022,13 +1046,13 @@ class BillingsSubscriptionDAO {
 	}
 	
 	public static function getBillingsSubscriptionBySubscriptionBillingUuid($subscription_billing_uuid) {
-		$query = "SELECT _id FROM billing_subscriptions WHERE deleted = false AND subscription_billing_uuid = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS WHERE BS.deleted = false AND BS.subscription_billing_uuid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($subscription_billing_uuid));
 	
 		$out = null;
 	
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getBillingsSubscriptionById($line['_id']);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingsSubscriptionFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -1037,13 +1061,13 @@ class BillingsSubscriptionDAO {
 	}
 	
 	public static function getBillingsSubscriptionBySubUuid($providerId, $sub_uuid) {
-		$query = "SELECT _id FROM billing_subscriptions WHERE deleted = false AND providerid = $1 AND sub_uuid = $2";
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS WHERE BS.deleted = false AND BS.providerid = $1 AND BS.sub_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $sub_uuid));
 		
 		$out = null;
 		
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getBillingsSubscriptionById($line['_id']);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingsSubscriptionFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -1187,13 +1211,13 @@ class BillingsSubscriptionDAO {
 	}
 	
 	public static function getBillingsSubscriptionsByUserId($userId) {
-		$query = "SELECT _id FROM billing_subscriptions WHERE deleted = false AND userid = $1 ORDER BY sub_activated_date DESC";
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS WHERE BS.deleted = false AND BS.userid = $1 ORDER BY BS.sub_activated_date DESC";
 		$result = pg_query_params(config::getDbConn(), $query, array($userId));
 		
 		$out = array();
 		
-		while ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($out, self::getBillingsSubscriptionById($line['_id']));
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getBillingsSubscriptionFromRow($row));
 		}
 		// free result
 		pg_free_result($result);
@@ -1207,7 +1231,48 @@ class BillingsSubscriptionDAO {
 				array($id));
 		return($result);
 	}
+	
+	public static function getEndingBillingsSubscriptions($limit = 0, $offset = 0, $providerId = NULL, DateTime $sub_period_ends_date, $status_array = array('active')) {
+		$params = array();
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS";
+		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
+		$query.= " WHERE BU.deleted = false AND BS.deleted = false";
+		$query.= " AND BS.sub_status in (";
+		$firstLoop = true;
+		foreach($status_array as $status) {
+			$params[] = $status;
+			if($firstLoop) {
+				$firstLoop = false;
+				$query .= "$".(count($params));
+			} else {
+				$query .= ", $".(count($params));
+			}
+		}
+		$query.= ")";
+		if(isset($providerId)) {
+			$params[] = $providerId;
+			$query.= " AND BU.providerId = $".(count($params));
+		}
+		$params[] = dbGlobal::toISODate($sub_period_ends_date);
+		$query.= " AND BS.sub_period_ends_date <= $".(count($params));
+		$query.= " ORDER BY BU._id DESC";//LAST USERS FIRST
+		if($limit > 0) { $query.= " LIMIT ".$limit; }
+		if($offset > 0) { $query.= " OFFSET ".$offset; }
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		$out = array();
+	
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getBillingsSubscriptionFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 }
+
+BillingsSubscriptionDAO::init();
 
 class BillingsSubscription implements JsonSerializable {
 	
@@ -1426,25 +1491,32 @@ class BillingInfoOpts {
 }
 
 class BillingsWebHookDAO {
-
+	
+	private static $sfields = "_id, providerid, post_data, processing_status, creation_date";
+	
+	private static function getBillingsWebHookFromRow($row) {
+		$out = new BillingsWebHook();
+		$out->setId($row["_id"]);
+		$out->setProviderId($row["providerid"]);
+		$out->setPostData($row["post_data"]);
+		$out->setProcessingStatus($row["processing_status"]);
+		$out->setCreationDate($row["creation_date"]);
+		return($out);
+	}
+	
 	public static function getBillingsWebHookById($id) {
-		$query = "SELECT _id, providerid, post_data, processing_status, creation_date FROM billing_webhooks WHERE _id = $1";
-
+		$query = "SELECT ".self::$sfields." FROM billing_webhooks WHERE _id = $1";
+		
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
-
+		
 		$out = null;
-
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new BillingsWebHook();
-			$out->setId($line["_id"]);
-			$out->setProviderId($line["providerid"]);
-			$out->setPostData($line["post_data"]);
-			$out->setProcessingStatus($line["processing_status"]);
-			$out->setCreationDate($line["creation_date"]);
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingsWebHookFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
-
+		
 		return($out);
 	}
 
@@ -1512,6 +1584,19 @@ class BillingsWebHook {
 }
 
 class BillingsWebHookLogDAO {
+	
+	private static $sfields = "_id, webhookid, processing_status, started_date, ended_date, message";
+	
+	private static function getBillingsWebHookLogFromRow($row) {
+		$out = new BillingsWebHookLog();
+		$out->setId($row["_id"]);
+		$out->setWebHookId($row["webhookid"]);
+		$out->setProcessingStatus($row["processing_status"]);
+		$out->setStartedDate($row["started_date"]);
+		$out->setEndedDate($row["ended_date"]);
+		$out->setMessage($row["message"]);
+		return($out);
+	}
 
 	public static function addBillingsWebHookLog($webhook_id) {
 		$query = "INSERT INTO billing_webhook_logs (webhookid) VALUES ($1) RETURNING _id";
@@ -1528,24 +1613,18 @@ class BillingsWebHookLogDAO {
 	}
 
 	public static function getBillingsWebHookLogById($id) {
-		$query = "SELECT _id, webhookid, processing_status, started_date, ended_date, message FROM billing_webhook_logs WHERE _id = $1";
-
+		$query = "SELECT ".self::$sfields." FROM billing_webhook_logs WHERE _id = $1";
+		
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
-
+		
 		$out = null;
-
-		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new BillingsWebHookLog();
-			$out->setId($line["_id"]);
-			$out->setWebHookId($line["webhookid"]);
-			$out->setProcessingStatus($line["processing_status"]);
-			$out->setStartedDate($line["started_date"]);
-			$out->setEndedDate($line["ended_date"]);
-			$out->setMessage($line["message"]);
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingsWebHookLogFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
-
+		
 		return($out);
 	}
 }
@@ -1606,6 +1685,126 @@ class BillingsWebHookLog {
 	public function setMessage($msg) {
 		$this->message = $msg;
 	}
+	
+}
+
+class BillingsSubscriptionActionLog {
+	
+	private $_id;
+	private $subid;
+	private $processing_status;
+	private $action_type;
+	private $started_date;
+	private $ended_date;
+	private $message;
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function setSubId($id) {
+		$this->subid = $id;
+	}
+	
+	public function getSubId() {
+		return($this->subid);
+	}
+	
+	public function getProcessingStatus() {
+		return($this->processing_status);
+	}
+	
+	public function setProcessingStatus($status) {
+		$this->processing_status = $status;
+	}
+	
+	public function getActionType() {
+		return($this->action_type);
+	}
+	
+	public function setActionType($action_type) {
+		$this->action_type = $action_type;
+	}
+	
+	public function getStartedDate() {
+		return($this->started_date);
+	}
+	
+	public function setStartedDate($date) {
+		$this->started_date = $date;
+	}
+	
+	public function getEndedDate() {
+		return($this->ended_date);
+	}
+	
+	public function setEndedDate($date) {
+		$this->ended_date = $date;
+	}
+	
+	public function getMessage() {
+		return($this->message);
+	}
+	
+	public function setMessage($msg) {
+		$this->message = $msg;
+	}
+	
+}
+
+class BillingsSubscriptionActionLogDAO {
+
+	private static $sfields = "_id, subid, processing_status, action_type, started_date, ended_date, message";
+
+	private static function getBillingsSubscriptionActionLogFromRow($row) {
+		$out = new BillingsSubscriptionActionLog();
+		$out->setId($row["_id"]);
+		$out->setSubId($row["subid"]);
+		$out->setProcessingStatus($row["processing_status"]);
+		$out->setActionType($row["action_type"]);
+		$out->setStartedDate($row["started_date"]);
+		$out->setEndedDate($row["ended_date"]);
+		$out->setMessage($row["message"]);
+		return($out);
+	}
+
+	public static function addBillingsSubscriptionActionLog($subid, $action_type) {
+		$query = "INSERT INTO billing_subscriptions_action_logs (subid, action_type, processing_status) VALUES ($1, $2, $3) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query, array($subid, $action_type, "running"));
+		$row = pg_fetch_row($result);
+		return(self::getBillingsSubscriptionActionLogById($row[0]));
+	}
+
+	public static function updateBillingsSubscriptionActionLogProcessingStatus(BillingsSubscriptionActionLog $billingsSubscriptionActionLog) {
+		$query = "UPDATE billing_subscriptions_action_logs SET processing_status = $1, ended_date = CURRENT_TIMESTAMP, message = $2 WHERE _id = $3";
+		$result = pg_query_params(config::getDbConn(), $query, array($billingsSubscriptionActionLog->getProcessingStatus(), $billingsSubscriptionActionLog->getMessage(), $billingsSubscriptionActionLog->getId()));
+		$row = pg_fetch_row($result);
+		return(self::getBillingsSubscriptionActionLogById($row[0]));
+	}
+	
+	public static function getBillingsSubscriptionActionLogById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions_action_logs WHERE _id = $1";
+
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+
+		$out = null;
+
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingsSubscriptionActionLogFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+}
+
+class UtilsDAO {
+	
 
 }
 

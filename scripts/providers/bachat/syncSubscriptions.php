@@ -42,8 +42,19 @@ if(isset($_GET["-limit"])) {
 
 print_r("using limit=".$limit."\n");
 
+$force = false;
+
+if(isset($_GET["-force"])) {
+	$force = boolval($_GET["-force"]);
+}
+
+print_r("using force=".var_export($force, true)."\n");
+
 print_r("processing...\n");
 
-//TODO
+$billingsBachatWorkers = new BillingsBachatWorkers();
 
+$billingsBachatWorkers->doRequestRenewSubscriptions($force);
+
+print_r("processing done\n");
 ?>
