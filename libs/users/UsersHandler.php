@@ -156,6 +156,7 @@ class UsersHandler {
 				$user_opts->setUserId($db_user->getId());
 				$user_opts->setOpts($user_opts_array);
 				$user_opts = UserOptsDAO::addUserOpts($user_opts);
+				//COMMIT
 				pg_query("COMMIT");
 			}
 			config::getLogger()->addInfo("user getting/creating done successfully, userid=".$db_user->getId());

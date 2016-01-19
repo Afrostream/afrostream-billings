@@ -10,11 +10,11 @@ use Monolog\Handler\StreamHandler;
 if(getEnv('BILLINGS_API_URL') === false) {
 	putEnv('BILLINGS_API_URL=http://afrostream-billings-staging.herokuapp.com');
 }
-if((getEnv('BILLINGS_API_HTTP_AUTH_USER') === false)) {
+if(getEnv('BILLINGS_API_HTTP_AUTH_USER') === false) {
 	putEnv('BILLINGS_API_HTTP_AUTH_USER=admin');
 }
 
-if((getEnv('BILLINGS_API_HTTP_AUTH_PWD') === false)) {
+if(getEnv('BILLINGS_API_HTTP_AUTH_PWD') === false) {
 	putEnv('BILLINGS_API_HTTP_AUTH_PWD=pwd');
 }
 

@@ -15,16 +15,40 @@ if(getEnv('AFR_DB_PORT') == false) {
 	putEnv('AFR_DB_PORT=5432');
 }
 
-if((getEnv('AFR_DB_NAME') === false)) {
+if(getEnv('AFR_DB_NAME') === false) {
 	putEnv('AFR_DB_NAME=afr-afr-staging');
 }
 
-if((getEnv('AFR_DB_USER') === false)) {
+if(getEnv('AFR_DB_USER') === false) {
 	putEnv('AFR_DB_USER=postgres');
 }
 
-if((getEnv('AFR_DB_PASSWORD') === false)) {
+if(getEnv('AFR_DB_PASSWORD') === false) {
 	putEnv('AFR_DB_PASSWORD=password');
+}
+
+if(getEnv('BOUYGUES_SERVICEID') === false) {
+	putEnv('BOUYGUES_SERVICEID=0');
+}
+
+if(getEnv('BOUYGUES_BILLING_SYSTEM_URL') === false) {
+	putEnv('BOUYGUES_BILLING_SYSTEM_URL=https://httpbin.org/put');
+}
+
+if(getEnv('BOUYGUES_PROXY') === false) {
+	putEnv('BOUYGUES_PROXY=');
+}
+
+if(getEnv('BOUYGUES_PROXY_PORT') === false) {
+	putEnv('BOUYGUES_PROXY_PORT=8080');
+}
+
+if(getEnv('BOUYGUES_PROXY_USER') === false) {
+	putEnv('BOUYGUES_PROXY_USER=');
+}
+
+if(getEnv('BOUYGUES_PROXY_PWD') === false) {
+	putEnv('BOUYGUES_PROXY_PWD=');
 }
 
 #logger, #db_conn, ...

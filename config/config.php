@@ -19,62 +19,62 @@ if(getEnv('DB_PORT') == false) {
 	putEnv('DB_PORT=5432');
 }
 
-if((getEnv('DB_NAME') === false)) {
+if(getEnv('DB_NAME') === false) {
 	putEnv('DB_NAME=afr-billings-local');
 }
 
-if((getEnv('DB_USER') === false)) {
+if(getEnv('DB_USER') === false) {
 	putEnv('DB_USER=postgres');
 }
 
-if((getEnv('DB_PASSWORD') === false)) {
+if(getEnv('DB_PASSWORD') === false) {
 	putEnv('DB_PASSWORD=password');
 }
 
 #Billings API
-if((getEnv('API_HTTP_AUTH_USER') === false)) {
+if(getEnv('API_HTTP_AUTH_USER') === false) {
 	putEnv('API_HTTP_AUTH_USER=admin');
 }
 
-if((getEnv('API_HTTP_AUTH_PWD') === false)) {
+if(getEnv('API_HTTP_AUTH_PWD') === false) {
 	putEnv('API_HTTP_AUTH_PWD=pwd');
 }
 
-if((getEnv('RECURLY_WH_REPOST_URLS') === false)) {
+if(getEnv('RECURLY_WH_REPOST_URLS') === false) {
 	putEnv('RECURLY_WH_REPOST_URLS=');
 }
 
-if((getEnv('API_HTTP_SECURE') === false)) {
+if(getEnv('API_HTTP_SECURE') === false) {
 	putEnv('API_HTTP_SECURE=false');// /!\ true do not seem to work on heroku (https already 'on')
 }
 
 #Recurly API
-if((getEnv('RECURLY_API_SUBDOMAIN') === false)) {
+if(getEnv('RECURLY_API_SUBDOMAIN') === false) {
 	putEnv('RECURLY_API_SUBDOMAIN=johnarch');
 }
 
-if((getEnv('RECURLY_API_KEY') === false)) {
+if(getEnv('RECURLY_API_KEY') === false) {
 	putEnv('RECURLY_API_KEY=67dbb29f0dbe4e219bc247a3b5387652');
 }
 
 #Recurly WebHooks
-if((getEnv('RECURLY_WH_HTTP_AUTH_USER') === false)) {
+if(getEnv('RECURLY_WH_HTTP_AUTH_USER') === false) {
 	putEnv('RECURLY_WH_HTTP_AUTH_USER=admin');
 }
-if((getEnv('RECURLY_WH_HTTP_AUTH_PWD') === false)) {
+if(getEnv('RECURLY_WH_HTTP_AUTH_PWD') === false) {
 	putEnv('RECURLY_WH_HTTP_AUTH_PWD=pwd');
 }
 
 #Gocardless API
-if((getEnv('GOCARDLESS_API_ENV') === false)) {
+if(getEnv('GOCARDLESS_API_ENV') === false) {
 	putEnv('GOCARDLESS_API_ENV=sandbox');
 }
 
-if((getEnv('GOCARDLESS_API_KEY') === false)) {
+if(getEnv('GOCARDLESS_API_KEY') === false) {
 	putEnv('GOCARDLESS_API_KEY=YXwxcLeTGwGv3sPd1-CpmNh3nAsqtDfzGuV8_Vji');
 }
 
-if((getEnv('GOCARDLESS_WH_SECRET') === false)) {
+if(getEnv('GOCARDLESS_WH_SECRET') === false) {
 	putEnv('GOCARDLESS_WH_SECRET=nelsounet');
 }
 
