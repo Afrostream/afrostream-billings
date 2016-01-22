@@ -27,12 +27,16 @@ if(getEnv('AFR_DB_PASSWORD') === false) {
 	putEnv('AFR_DB_PASSWORD=password');
 }
 
+if(getEnv('BOUYGUES_MERCHANTID') === false) {
+	putEnv('BOUYGUES_MERCHANTID=0');
+}
+
 if(getEnv('BOUYGUES_SERVICEID') === false) {
 	putEnv('BOUYGUES_SERVICEID=0');
 }
 
 if(getEnv('BOUYGUES_BILLING_SYSTEM_URL') === false) {
-	putEnv('BOUYGUES_BILLING_SYSTEM_URL=https://httpbin.org/put');
+	putEnv('BOUYGUES_BILLING_SYSTEM_URL=https://vod.bouyguestelecom.fr/merchant/'.getEnv('BOUYGUES_MERCHANTID').'_'.getEnv('BOUYGUES_SERVICEID'));
 }
 
 if(getEnv('BOUYGUES_PROXY') === false) {

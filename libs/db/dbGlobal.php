@@ -1254,7 +1254,7 @@ class BillingsSubscriptionDAO {
 			$query.= " AND BU.providerId = $".(count($params));
 		}
 		$params[] = dbGlobal::toISODate($sub_period_ends_date);
-		$query.= " AND BS.sub_period_ends_date <= $".(count($params));
+		$query.= " AND BS.sub_period_ends_date < $".(count($params));//STRICT
 		$query.= " ORDER BY BU._id DESC";//LAST USERS FIRST
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
@@ -1270,6 +1270,42 @@ class BillingsSubscriptionDAO {
 		return($out);
 	}
 	
+	public static function getRequestingCanceledBillingsSubscriptions($limit = 0, $offset = 0, $providerId = NULL, $status_array = array('requesting_canceled')) {
+		$params = array();
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS";
+		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
+		$query.= " WHERE BU.deleted = false AND BS.deleted = false";
+		$query.= " AND BS.sub_status in (";
+		$firstLoop = true;
+		foreach($status_array as $status) {
+			$params[] = $status;
+			if($firstLoop) {
+				$firstLoop = false;
+				$query .= "$".(count($params));
+			} else {
+				$query .= ", $".(count($params));
+			}
+		}
+		$query.= ")";
+		if(isset($providerId)) {
+			$params[] = $providerId;
+			$query.= " AND BU.providerId = $".(count($params));
+		}
+		$query.= " ORDER BY BU._id DESC";//LAST USERS FIRST
+		if($limit > 0) { $query.= " LIMIT ".$limit; }
+		if($offset > 0) { $query.= " OFFSET ".$offset; }
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getBillingsSubscriptionFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+		
 }
 
 BillingsSubscriptionDAO::init();

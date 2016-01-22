@@ -47,6 +47,7 @@ class BachatSubscriptionsHandler {
 			case PlanPeriodUnit::day :
 				$end_date = clone $start_date;
 				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+				$end_date->setTime(23, 59, 59);//force the time to the end of the day
 				break;
 			default :
 				$msg = "unsupported periodUnit : ".$internaPlan->getPeriodUnit()->getValue();
@@ -135,6 +136,42 @@ class BachatSubscriptionsHandler {
 				break;
 		}
 		$subscription->setIsActive($is_active);
+	}
+	
+	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date) {
+		$provider_plan = PlanDAO::getPlanById($subscription->getPlanId());
+		if($provider_plan == NULL) {
+			$msg = "unknown plan with id : ".$subscription->getPlanId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($provider_plan->getId()));
+		if($internalPlan == NULL) {
+			$msg = "plan with uuid=".$provider_plan->getId()." for provider bachat is not linked to an internal plan";
+			config::getLogger()->addError($msg);
+			throw new Exception($msg);
+		}
+		$end_date = NULL;
+		switch($internalPlan->getPeriodUnit()) {
+			case PlanPeriodUnit::day :
+				$end_date = clone $start_date;
+				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				break;
+			default :
+				$msg = "unsupported periodUnit : ".$internaPlan->getPeriodUnit()->getValue();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				break;
+		}
+		$subscription->setSubPeriodStartedDate($start_date);
+		$subscription->setSubPeriodEndsDate($end_date);
+		//START TRANSACTION
+		pg_query("BEGIN");
+		BillingsSubscriptionDAO::updateSubStartedDate($subscription);
+		BillingsSubscriptionDAO::updateSubEndsDate($subscription);
+		//COMMIT
+		pg_query("COMMIT");
 	}
 	
 }

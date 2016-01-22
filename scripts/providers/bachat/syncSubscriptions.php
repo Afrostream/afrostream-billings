@@ -54,7 +54,7 @@ print_r("processing...\n");
 
 $billingsBachatWorkers = new BillingsBachatWorkers();
 
-$billingsBachatWorkers->doRequestRenewSubscriptions($force);
+$billingsBachatWorkers->doRequestCancelSubscriptions($force);
 
 print_r("processing done\n");
 ?>
