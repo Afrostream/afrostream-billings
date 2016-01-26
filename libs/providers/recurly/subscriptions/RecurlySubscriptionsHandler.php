@@ -299,10 +299,10 @@ class RecurlySubscriptionsHandler {
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
 			case 'active' :
-				$is_active = 'yes';
+				$is_active = 'yes';//always 'yes' : recurly is managing the status
 				break;
 			case 'canceled' :
-				$is_active = 'yes';
+				$is_active = 'yes';//always 'yes' : recurly is managning the status (will change to expired automatically)
 				break;
 			case 'future' :
 				$is_active = 'no';

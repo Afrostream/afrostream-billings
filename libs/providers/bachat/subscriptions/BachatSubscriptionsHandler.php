@@ -115,14 +115,27 @@ class BachatSubscriptionsHandler {
 	}
 	
 	public function doFillSubscription(BillingsSubscription $subscription) {
-		//TODO : later, is_active will be changed when a subscription is postponed
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
+			case 'pending_active' :
 			case 'active' :
-				$is_active = 'yes';
-				break;
+			case 'requesting_canceled' :
+			case 'pending_canceled' :
 			case 'canceled' :
-				$is_active = 'yes';
+			case 'pending_expired' :
+				$now = new DateTime();
+				//check dates
+				if(
+						($now < (new DateTime($subscription->getSubPeriodEndsDate())))
+								&&
+						($now > (new DateTime($subscription->getSubPeriodStartedDate())))
+				) {
+					//inside the period
+					$is_active = 'yes';
+				} else {
+					//outside the period
+					$is_active = 'no';
+				}
 				break;
 			case 'future' :
 				$is_active = 'no';
@@ -139,6 +152,12 @@ class BachatSubscriptionsHandler {
 	}
 	
 	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date) {
+		if($subscription->getSubStatus() == "pending_canceled") {
+			$msg = "cannot renew because of the current_status=".$subscription->getSubStatus();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			break;
+		}
 		$provider_plan = PlanDAO::getPlanById($subscription->getPlanId());
 		if($provider_plan == NULL) {
 			$msg = "unknown plan with id : ".$subscription->getPlanId();
@@ -166,10 +185,33 @@ class BachatSubscriptionsHandler {
 		}
 		$subscription->setSubPeriodStartedDate($start_date);
 		$subscription->setSubPeriodEndsDate($end_date);
+		$subscription->setSubStatus('active');
 		//START TRANSACTION
 		pg_query("BEGIN");
 		BillingsSubscriptionDAO::updateSubStartedDate($subscription);
 		BillingsSubscriptionDAO::updateSubEndsDate($subscription);
+		BillingsSubscriptionDAO::updateSubStatus($subscription);
+		//COMMIT
+		pg_query("COMMIT");
+	}
+		
+	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+		if($subscription->getSubStatus() == "pending_active") {
+			$msg = "cannot cancel because of the current_status=".$subscription->getSubStatus();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			break;
+		}
+		$subscription->setSubCanceledDate($cancel_date);
+		if($is_a_request == true) {
+			$subscription->setSubStatus('requesting_canceled');
+		} else {
+			$subscription->setSubStatus('canceled');
+		}
+		//START TRANSACTION
+		pg_query("BEGIN");
+		BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+		BillingsSubscriptionDAO::updateSubStatus($subscription);
 		//COMMIT
 		pg_query("COMMIT");
 	}

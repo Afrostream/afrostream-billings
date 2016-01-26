@@ -1839,6 +1839,139 @@ class BillingsSubscriptionActionLogDAO {
 	}
 }
 
+class ProcessingLog {
+	
+	private $_id;
+	private $providerid;
+	private $processing_type;
+	private $processing_status;
+	private $started_date;
+	private $ended_date;
+	private $message;
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function setProviderId($id) {
+		$this->provider = $id;
+	}
+	
+	public function getProviderId() {
+		return($this->providerid);
+	}
+	
+	public function setProcessingType($type) {
+		$this->processing_type = $type;
+	}
+	
+	public function getProcessingType() {
+		return($this->processing_type);
+	}
+	
+	public function getProcessingStatus() {
+		return($this->processing_status);
+	}
+	
+	public function setProcessingStatus($status) {
+		$this->processing_status = $status;
+	}
+	
+	public function getStartedDate() {
+		return($this->started_date);
+	}
+	
+	public function setStartedDate($date) {
+		$this->started_date = $date;
+	}
+	
+	public function getEndedDate() {
+		return($this->ended_date);
+	}
+	
+	public function setEndedDate($date) {
+		$this->ended_date = $date;
+	}
+	
+	public function getMessage() {
+		return($this->message);
+	}
+	
+	public function setMessage($msg) {
+		$this->message = $msg;
+	}
+	
+}
+
+class ProcessingLogDAO {
+
+	private static $sfields = "_id, providerid, processing_type, processing_status, started_date, ended_date, message";
+	
+	private static function getProcessingLogFromRow($row) {
+		$out = new ProcessingLog();
+		$out->setId($row["_id"]);
+		$out->setProviderId($row["providerid"]);
+		$out->setProcessingType($row["processing_type"]);
+		$out->setProcessingStatus($row["processing_status"]);
+		$out->setStartedDate($row["started_date"]);
+		$out->setEndedDate($row["ended_date"]);
+		$out->setMessage($row["message"]);
+		return($out);
+	}
+	
+	public static function addProcessingLog($providerid, $processing_type) {
+		$query = "INSERT INTO billing_processing_logs (providerid, processing_type, processing_status) VALUES ($1, $2, $3) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $processing_type, "running"));
+		$row = pg_fetch_row($result);
+		return(self::getProcessingLogById($row[0]));
+	}
+	
+	public static function updateProcessingLogProcessingStatus(ProcessingLog $processingLog) {
+		$query = "UPDATE billing_processing_logs SET processing_status = $1, ended_date = CURRENT_TIMESTAMP, message = $2 WHERE _id = $3";
+		$result = pg_query_params(config::getDbConn(), $query, array($processingLog->getProcessingStatus(), $processingLog->getMessage(), $processingLog->getId()));
+		$row = pg_fetch_row($result);
+		return(self::getProcessingLogById($row[0]));
+	}
+	
+	public static function getProcessingLogById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE _id = $1";
+		
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getProcessingLogFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getProcessingLogByDay($providerid, $processing_type, Datetime $day) {
+		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE providerid = $1 AND processing_type = $2 AND date(ended_date) = date($3)";
+		
+		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $processing_type, dbGlobal::toISODate($day)));
+		
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getProcessingLogFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+}
+
+
 class UtilsDAO {
 	
 
