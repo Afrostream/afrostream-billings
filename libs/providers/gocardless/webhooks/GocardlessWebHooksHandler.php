@@ -33,7 +33,7 @@ class GocardlessWebHooksHandler {
 		$resource_type = $notification_as_array['resource_type'];
 		switch($resource_type) {
 			case "subscriptions" :
-				$action = notification_as_array['action'];
+				$action = $notification_as_array['action'];
 				switch($action) {
 					case 'created' :
 						//NOW IGNORED : since subscription is created through API, just log for information

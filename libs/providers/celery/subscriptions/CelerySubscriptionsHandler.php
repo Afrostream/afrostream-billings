@@ -45,6 +45,7 @@ class CelerySubscriptionsHandler {
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
 			case 'active' :
+			case 'canceled' :
 				$now = new DateTime();
 				//check dates
 				if(
@@ -58,9 +59,6 @@ class CelerySubscriptionsHandler {
 					//outside the period
 					$is_active = 'no';
 				}
-				break;
-			case 'canceled' :
-				$is_active = 'yes';
 				break;
 			case 'future' :
 				$is_active = 'no';

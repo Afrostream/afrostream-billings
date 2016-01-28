@@ -294,15 +294,53 @@ class RecurlySubscriptionsHandler {
 		}
 	}
 	
+	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+		try {
+			config::getLogger()->addInfo("recurly subscription cancel...");
+			//
+			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
+			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			//
+			$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
+			//
+			$api_subscription->cancel();
+			//
+			$subscription->setSubCanceledDate($cancel_date);
+			$subscription->setSubStatus('canceled');
+			//
+			//START TRANSACTION
+			pg_query("BEGIN");
+			BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+			BillingsSubscriptionDAO::updateSubStatus($subscription);
+			//COMMIT
+			pg_query("COMMIT");
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("recurly subscription cancel done successfully for recurly_subscription_uuid=".$subscription->getSubUid());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while cancelling a recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription cancelling failed : ".$msg);
+			throw $e;
+		} catch (Recurly_ValidationError $e) {
+			$msg = "a validation error exception occurred while cancelling a recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription cancelling failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while cancelling a recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription cancelling failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($subscription);
+	}
+	
 	public function doFillSubscription(BillingsSubscription $subscription) {
 		//TODO : later, is_active will be changed when a subscription is postponed
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
 			case 'active' :
-				$is_active = 'yes';
+				$is_active = 'yes';//always 'yes' : recurly is managing the status
 				break;
 			case 'canceled' :
-				$is_active = 'yes';
+				$is_active = 'yes';//always 'yes' : recurly is managning the status (will change to expired automatically)
 				break;
 			case 'future' :
 				$is_active = 'no';
