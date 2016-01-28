@@ -18,6 +18,11 @@ class SubscriptionsHandler {
 			config::getLogger()->addInfo("subscription getting for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
 			//
 			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			if($db_subscription == NULL) {
+				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			//
 			$this->doFillSubscription($db_subscription);
 			//
@@ -243,10 +248,17 @@ class SubscriptionsHandler {
 		}
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date) {
+	public function doRenewSubscription($subscriptionBillingUuid, DateTime $start_date) {
+		$db_subscription = NULL;
 		try {
-			config::getLogger()->addInfo("dbsubscription renewing for subscriptionBillingUuid=".$subscription->getSubscriptionBillingUuid()."...");
-			$provider = ProviderDAO::getProviderById($subscription->getProviderId());
+			config::getLogger()->addInfo("dbsubscription renewing for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			if($db_subscription == NULL) {
+				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
 				$msg = "unknown provider with id : ".$user->getProviderId();
 				config::getLogger()->addError($msg);
@@ -270,7 +282,7 @@ class SubscriptionsHandler {
 					break;
 				case 'bachat' :
 					$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
-					$bachatSubscriptionsHandler->doRenewSubscription($subscription, $start_date);
+					$db_subscription = $bachatSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -278,22 +290,33 @@ class SubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
-			config::getLogger()->addInfo("dbsubscription renewing for subscriptionBillingUuid=".$subscription->getSubscriptionBillingUuid()." done successfully");
+			//
+			$this->doFillSubscription($db_subscription);
+			//
+			config::getLogger()->addInfo("dbsubscription renewing for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while dbsubscription renewing for subscriptionBillingUuid=".$subscription->getSubscriptionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while dbsubscription renewing for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription renewing failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while dbsubscription renewing for subscriptionBillingUuid=".$subscription->getSubscriptionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while dbsubscription renewing for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription renewing failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		return($db_subscription);
 	}
 	
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription($subscriptionBillingUuid, DateTime $cancel_date, $is_a_request = true) {
+		$db_subscription = NULL;
 		try {
-			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscription->getSubscriptionBillingUuid()."...");
-			$provider = ProviderDAO::getProviderById($subscription->getProviderId());
+			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			if($db_subscription == NULL) {
+				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
 				$msg = "unknown provider with id : ".$user->getProviderId();
 				config::getLogger()->addError($msg);
@@ -301,9 +324,8 @@ class SubscriptionsHandler {
 			}
 			switch($provider->getName()) {
 				case 'recurly' :
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
+					$db_subscription = $recurlySubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request = true);
 					break;
 				case 'gocardless' :
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -317,7 +339,7 @@ class SubscriptionsHandler {
 					break;
 				case 'bachat' :
 					$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
-					$bachatSubscriptionsHandler->doCancelSubscription($subscription, $start_date, $is_a_request = true);
+					$db_subscription = $bachatSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request = true);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -325,16 +347,20 @@ class SubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
-			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscription->getSubscriptionBillingUuid()." done successfully");
+			//
+			$this->doFillSubscription($db_subscription);
+			//
+			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while dbsubscription canceling for subscriptionBillingUuid=".$subscription->getSubscriptionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription canceling failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while dbsubscription canceling for subscriptionBillingUuid=".$subscription->getSubscriptionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription canceling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		return($db_subscription);
 	}
 	
 	

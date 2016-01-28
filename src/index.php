@@ -342,6 +342,13 @@ $app->get("/billings/api/subscriptions/", function ($request, $response, $args) 
 	return($subscriptionsController->getMulti($request, $response, $args));
 });
 
+//cancel a subscription
+
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/cancel", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->cancel($request, $response, $args));
+});
+
 //InternalPlans
 
 //get one InternalPlan

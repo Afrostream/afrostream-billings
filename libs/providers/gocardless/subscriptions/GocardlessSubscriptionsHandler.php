@@ -417,6 +417,45 @@ class GocardlessSubscriptionsHandler {
 		}
 	}
 	
+	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+		try {
+			config::getLogger()->addInfo("gocardless subscription cancel...");
+			//
+			//
+			$client = new Client(array(
+					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'environment' => getEnv('GOCARDLESS_API_ENV')
+			));
+			//
+			$client->subscriptions()->cancel($subscription->getSubUid());
+			//
+			$subscription->setSubCanceledDate($cancel_date);
+			$subscription->setSubStatus('canceled');
+			//
+			//START TRANSACTION
+			pg_query("BEGIN");
+			BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+			BillingsSubscriptionDAO::updateSubStatus($subscription);
+			//COMMIT
+			pg_query("COMMIT");
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("gocardless subscription cancel done successfully for gocardless_subscription_uuid=".$subscription->getSubUid());
+			return($subscription);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while cancelling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("gocardless subscription cancelling failed : ".$msg);
+			throw $e;
+		} catch (GoCardlessProException $e) {
+			$msg = "a GoCardlessProException occurred while cancelling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("gocardless subscription cancelling failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while cancelling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("gocardless subscription cancelling failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+	}
+	
 	public function doFillSubscription(BillingsSubscription $subscription) {
 		//TODO : later, is_active will be changed when a subscription is postponed
 		//TODO :

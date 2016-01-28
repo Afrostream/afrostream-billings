@@ -591,7 +591,7 @@ class BillingsBachatWorkers {
 			//START TRANSACTION
 			pg_query("BEGIN");
 			$subscriptionsHandler = new SubscriptionsHandler();
-			$subscriptionsHandler->doRenewSubscription($subscription, $start_date);
+			$subscriptionsHandler->doRenewSubscription($subscription->getSubscriptionBillingUuid(), $start_date);
 			$billingsSubscriptionActionLog->setProcessingStatus('done');
 			BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 			//COMMIT
@@ -618,6 +618,8 @@ class BillingsBachatWorkers {
 	
 	public function doCheckCancelResultFile() {
 		$processingLog  = NULL;
+		$current_can_file_path = NULL;
+		$current_can_file_res = NULL;
 		try {
 			$provider_name = "bachat";
 			
@@ -641,12 +643,66 @@ class BillingsBachatWorkers {
 			
 			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_response_cancel');
 			
+			if(($current_can_file_path = tempnam('', 'tmp')) === false) {
+				throw new BillingsException("CAN file cannot be created");
+			}
+			if(($current_can_file_res = fopen($current_can_file_path, "w")) === false) {
+				throw new BillingsException("CAN file cannot be open (for write)");
+			}
+			ScriptsConfig::getLogger()->addInfo("CAN file successfully created here : ".$current_can_file_path);
+			
 			$file_found = false;
-			//TODO
-			//DONE
+			
+			//GET FILE FROM THE SYSTEM WEBDAV (GET)
+			ScriptsConfig::getLogger()->addInfo("CAN downloading...");
+			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/CAN_".$today->format("Ymd").".csv";
+			$curl_options = array(
+				CURLOPT_URL => $url,
+				CURLOPT_FILE => $current_can_file_res,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_HEADER  => false
+			);
+			if(	null !== (getEnv('BOUYGUES_PROXY'))
+				&&
+				null !== (getEnv('BOUYGUES_PROXY_PORT'))
+			) {
+				$curl_options[CURLOPT_PROXY] = getEnv('BOUYGUES_PROXY');
+				$curl_options[CURLOPT_PROXYPORT] = getEnv('BOUYGUES_PROXY_PORT');
+			}
+			if(	null !== (getEnv('BOUYGUES_PROXY_USER'))
+				&&
+				null !== (getEnv('BOUYGUES_PROXY_PWD'))
+			) {
+				$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
+			}
+			$CURL = curl_init();
+			curl_setopt_array($CURL, $curl_options);
+			$content = curl_exec($CURL);
+			$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
+			curl_close($CURL);
+			fclose($current_can_file_res);
+			$current_can_file_res = NULL;
+			if(httpCode == 200) {
+				$file_found = true;
+			} else if(httpCode == 404) {
+				$file_found = false;
+			} else {
+				$msg = "an error occurred while downloading the CAN file, the httpCode is : ".$httpCode;
+				ScriptsConfig::getLogger()->addError($msg);
+				throw new Exception($msg);
+			}
 			if($file_found) {
+				if(($current_can_file_res = fopen($current_can_file_path, "r")) === false) {
+					throw new BillingsException("CAN file cannot be open (for read)");
+				}
+				$this->doProcessCancelResultFile($current_can_file_res);
+				fclose($current_can_file_res);
+				$current_can_file_res = NULL;
+				unlink($current_can_file_path);
+				$current_can_file_path = NULL;
 				$processingLog->setProcessingStatus('done');
 			} else {
+				//NOTHING TO DO YET
 				$processingLog->setProcessingStatus('postponed');
 			}
 			ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions cancel file done successfully");
@@ -664,7 +720,15 @@ class BillingsBachatWorkers {
 				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			}
 			//COMMIT
-			pg_query("COMMIT");			
+			pg_query("COMMIT");
+			if(isset($current_can_file_res)) {
+				fclose($current_can_file_res);
+				$current_can_file_res = NULL;
+			}
+			if(isset($current_can_file_path)) {
+				unlink($current_can_file_path);
+				$current_can_file_path = NULL;
+			}
 		}
 	}
 	
@@ -748,7 +812,7 @@ class BillingsBachatWorkers {
 			//START TRANSACTION
 			pg_query("BEGIN");
 			$subscriptionsHandler = new SubscriptionsHandler();
-			$subscriptionsHandler->doCancelSubscription($subscription, $cancel_date, false);
+			$subscriptionsHandler->doCancelSubscription($subscription->getSubscriptionBillingUuid(), $cancel_date, false);
 			$billingsSubscriptionActionLog->setProcessingStatus('done');
 			BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 			//COMMIT

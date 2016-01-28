@@ -193,6 +193,7 @@ class BachatSubscriptionsHandler {
 		BillingsSubscriptionDAO::updateSubStatus($subscription);
 		//COMMIT
 		pg_query("COMMIT");
+		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
 	}
 		
 	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
@@ -214,6 +215,7 @@ class BachatSubscriptionsHandler {
 		BillingsSubscriptionDAO::updateSubStatus($subscription);
 		//COMMIT
 		pg_query("COMMIT");
+		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
 	}
 	
 }
