@@ -2,13 +2,13 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
-require_once __DIR__ . '/../../libs/providers/bachat/BillingsBachatWorkers.php';
+require_once __DIR__ . '/../../libs/providers/gocardless/BillingsGocardlessWorkers.php';
 
 /*
- * Tool to sync subscriptions from Afrostream to Bachat
+ * Tool to refresh subscriptions : because periods are not managed by Gocardless
  */
 
-print_r("starting tool...\n");
+print_r("starting tool to refresh Gocardless subscriptions...\n");
 
 foreach ($argv as $arg) {
 	$e=explode("=",$arg);
@@ -52,9 +52,9 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsBachatWorkers = new BillingsBachatWorkers();
+$billingsGocardlessWorkers = new BillingsGocardlessWorkers();
 
-$billingsBachatWorkers->doRequestCancelSubscriptions($force);
+$billingsGocardlessWorkers->doRefreshSubscriptions();
 
 print_r("processing done\n");
 ?>

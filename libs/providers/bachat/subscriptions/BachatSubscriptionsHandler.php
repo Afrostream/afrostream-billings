@@ -145,13 +145,13 @@ class BachatSubscriptionsHandler {
 				break;
 			default :
 				$is_active = 'no';
-				config::getLogger()->addWarning("bachat dbsubscription unknown subStatus=".$subscription->getSubStatus().", recurly_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
+				config::getLogger()->addWarning("bachat dbsubscription unknown subStatus=".$subscription->getSubStatus().", bachat_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;
 		}
 		$subscription->setIsActive($is_active);
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date) {
+	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL) {
 		if($subscription->getSubStatus() == "pending_canceled") {
 			$msg = "cannot renew because of the current_status=".$subscription->getSubStatus();
 			config::getLogger()->addError($msg);
@@ -170,6 +170,9 @@ class BachatSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new Exception($msg);
 		}
+		if($start_date == NULL) {
+			$start_date = new DateTime();//NOW
+		}
 		$end_date = NULL;
 		switch($internalPlan->getPeriodUnit()) {
 			case PlanPeriodUnit::day :
@@ -186,13 +189,18 @@ class BachatSubscriptionsHandler {
 		$subscription->setSubPeriodStartedDate($start_date);
 		$subscription->setSubPeriodEndsDate($end_date);
 		$subscription->setSubStatus('active');
-		//START TRANSACTION
-		pg_query("BEGIN");
-		BillingsSubscriptionDAO::updateSubStartedDate($subscription);
-		BillingsSubscriptionDAO::updateSubEndsDate($subscription);
-		BillingsSubscriptionDAO::updateSubStatus($subscription);
-		//COMMIT
-		pg_query("COMMIT");
+		try {
+			//START TRANSACTION
+			pg_query("BEGIN");
+			BillingsSubscriptionDAO::updateSubStartedDate($subscription);
+			BillingsSubscriptionDAO::updateSubEndsDate($subscription);
+			BillingsSubscriptionDAO::updateSubStatus($subscription);
+			//COMMIT
+			pg_query("COMMIT");
+		} catch(Exception $e) {
+			pg_query("ROLLBACK");
+			throw $e;
+		}
 		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
 	}
 		
@@ -209,12 +217,17 @@ class BachatSubscriptionsHandler {
 		} else {
 			$subscription->setSubStatus('canceled');
 		}
-		//START TRANSACTION
-		pg_query("BEGIN");
-		BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
-		BillingsSubscriptionDAO::updateSubStatus($subscription);
-		//COMMIT
-		pg_query("COMMIT");
+		try {
+			//START TRANSACTION
+			pg_query("BEGIN");
+			BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+			BillingsSubscriptionDAO::updateSubStatus($subscription);
+			//COMMIT
+			pg_query("COMMIT");
+		} catch(Exception $e) {
+			pg_query("ROLLBACK");
+			throw $e;
+		}
 		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
 	}
 	
