@@ -1,13 +1,13 @@
 <?php
 
+require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php';
 
-class BillingsBachatWorkers {
-	
-	private static $timezone = "Europe/Paris";
+class BillingsBachatWorkers extends BillingsWorkers {
 	
 	public function __construct() {
+		parent::__construct();
 	}
 	
 	public function doRequestRenewSubscriptions($force = false) {
@@ -25,13 +25,11 @@ class BillingsBachatWorkers {
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			
-			$today = new DateTime(NULL, new DateTimeZone(self::$timezone));
-				
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_request_renew', $today);
+
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_request_renew', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal bypassed - already done today -");
-				break;
+				exit;
 			}
 			
 			ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal...");
@@ -48,7 +46,7 @@ class BillingsBachatWorkers {
 			$offset = 0;
 			$limit = 100;
 			//will select all day strictly before tommorrow (the reason why DateInterval is +1 DAY) 
-			$sub_period_ends_date = clone $today;
+			$sub_period_ends_date = clone $this->today;
 			$sub_period_ends_date->add(new DateInterval("P1D"));
 			$sub_period_ends_date->setTime(0, 0, 0);
 			//
@@ -80,7 +78,7 @@ class BillingsBachatWorkers {
 			ScriptsConfig::getLogger()->addInfo("PAR_REN uploading...");
 			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL');
 			$data = array(
-					"filename" => "PAR_REN_".$today->format("Ymd").".csv"
+					"filename" => "PAR_REN_".$this->today->format("Ymd").".csv"
 			);
 			$curl_options = array(
 					CURLOPT_URL => $url,
@@ -137,15 +135,6 @@ class BillingsBachatWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			self::doSaveBillingsSubscriptionsStatus($billingsSubscriptionsOkToProceed);
-			self::doSaveBillingsSubscriptionActionLogs($billingsSubscriptionActionLogs);
-			if(isset($processingLog)) {
-				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
-			}
-			//COMMIT
-			pg_query("COMMIT");
 			if(isset($current_par_ren_file_res)) {
 				fclose($current_par_ren_file_res);
 				$current_par_ren_file_res = NULL;
@@ -153,6 +142,20 @@ class BillingsBachatWorkers {
 			if(isset($current_par_ren_file_path)) {
 				unlink($current_par_ren_file_path);
 				$current_par_ren_file_path = NULL;
+			}
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				self::doSaveBillingsSubscriptionsStatus($billingsSubscriptionsOkToProceed);
+				self::doSaveBillingsSubscriptionActionLogs($billingsSubscriptionActionLogs);
+				if(isset($processingLog)) {
+					ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
+				}
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
 			}
 		}
 	}
@@ -236,12 +239,10 @@ class BillingsBachatWorkers {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
-			$today = new DateTime(NULL, new DateTimeZone(self::$timezone));
-			
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_cancel', $today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_cancel', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling bypassed - already done today -");
-				break;
+				exit;
 			}
 			
 			ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling...");
@@ -286,7 +287,7 @@ class BillingsBachatWorkers {
 			ScriptsConfig::getLogger()->addInfo("PAR_CAN uploading...");
 			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL');
 			$data = array(
-					"filename" => "PAR_CAN_".$today->format("Ymd").".csv"
+					"filename" => "PAR_CAN_".$this->today->format("Ymd").".csv"
 			);
 			$curl_options = array(
 					CURLOPT_URL => $url,
@@ -343,15 +344,6 @@ class BillingsBachatWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			self::doSaveBillingsSubscriptionsStatus($billingsSubscriptionsOkToProceed);
-			self::doSaveBillingsSubscriptionActionLogs($billingsSubscriptionActionLogs);
-			if(isset($processingLog)) {
-				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
-			}
-			//COMMIT
-			pg_query("COMMIT");
 			if(isset($current_par_can_file_res)) {
 				fclose($current_par_can_file_res);
 				$current_par_can_file_res = NULL;
@@ -359,6 +351,20 @@ class BillingsBachatWorkers {
 			if(isset($current_par_can_file_path)) {
 				unlink($current_par_can_file_path);
 				$current_par_can_file_path = NULL;
+			}
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				self::doSaveBillingsSubscriptionsStatus($billingsSubscriptionsOkToProceed);
+				self::doSaveBillingsSubscriptionActionLogs($billingsSubscriptionActionLogs);
+				if(isset($processingLog)) {
+					ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
+				}
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
 			}
 		}
 	}
@@ -404,10 +410,8 @@ class BillingsBachatWorkers {
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-	
-			$today = new DateTime(NULL, new DateTimeZone(self::$timezone));
 				
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_cancel', $today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_cancel', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling bypassed - already done today -");
 				break;
@@ -429,7 +433,7 @@ class BillingsBachatWorkers {
 			
 			//GET FILE FROM THE SYSTEM WEBDAV (GET)
 			ScriptsConfig::getLogger()->addInfo("REN downloading...");
-			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/REN_".$today->format("Ymd").".csv";
+			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/REN_".$this->today->format("Ymd").".csv";
 			$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_FILE => $current_ren_file_res,
@@ -488,13 +492,6 @@ class BillingsBachatWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			if(isset($processingLog)) {
-				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
-			}
-			//COMMIT
-			pg_query("COMMIT");	
 			if(isset($current_ren_file_res)) {
 				fclose($current_ren_file_res);
 				$current_ren_file_res = NULL;
@@ -502,6 +499,9 @@ class BillingsBachatWorkers {
 			if(isset($current_ren_file_path)) {
 				unlink($current_ren_file_path);
 				$current_ren_file_path = NULL;
+			}
+			if(isset($processingLog)) {
+				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			}
 		}
 	}
@@ -588,14 +588,19 @@ class BillingsBachatWorkers {
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			//START TRANSACTION
-			pg_query("BEGIN");
-			$subscriptionsHandler = new SubscriptionsHandler();
-			$subscriptionsHandler->doRenewSubscription($subscription->getSubscriptionBillingUuid(), $start_date);
-			$billingsSubscriptionActionLog->setProcessingStatus('done');
-			BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
-			//COMMIT
-			pg_query("COMMIT");
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				$subscriptionsHandler = new SubscriptionsHandler();
+				$subscriptionsHandler->doRenewSubscription($subscription->getSubscriptionBillingUuid(), $start_date);
+				$billingsSubscriptionActionLog->setProcessingStatus('done');
+				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 			ScriptsConfig::getLogger()->addInfo("processing a renew line done successfully");
 			$billingsSubscriptionActionLog = NULL;
 		} catch(BillingsException $e) {
@@ -631,9 +636,7 @@ class BillingsBachatWorkers {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
-			$today = new DateTime(NULL, new DateTimeZone(self::$timezone));
-			
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_cancel', $today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_cancel', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling bypassed - already done today -");
 				break;
@@ -655,7 +658,7 @@ class BillingsBachatWorkers {
 			
 			//GET FILE FROM THE SYSTEM WEBDAV (GET)
 			ScriptsConfig::getLogger()->addInfo("CAN downloading...");
-			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/CAN_".$today->format("Ymd").".csv";
+			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/CAN_".$this->today->format("Ymd").".csv";
 			$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_FILE => $current_can_file_res,
@@ -714,13 +717,9 @@ class BillingsBachatWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
-			//START TRANSACTION
-			pg_query("BEGIN");
 			if(isset($processingLog)) {
 				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			}
-			//COMMIT
-			pg_query("COMMIT");
 			if(isset($current_can_file_res)) {
 				fclose($current_can_file_res);
 				$current_can_file_res = NULL;
@@ -809,14 +808,19 @@ class BillingsBachatWorkers {
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			//START TRANSACTION
-			pg_query("BEGIN");
-			$subscriptionsHandler = new SubscriptionsHandler();
-			$subscriptionsHandler->doCancelSubscription($subscription->getSubscriptionBillingUuid(), $cancel_date, false);
-			$billingsSubscriptionActionLog->setProcessingStatus('done');
-			BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
-			//COMMIT
-			pg_query("COMMIT");
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				$subscriptionsHandler = new SubscriptionsHandler();
+				$subscriptionsHandler->doCancelSubscription($subscription->getSubscriptionBillingUuid(), $cancel_date, false);
+				$billingsSubscriptionActionLog->setProcessingStatus('done');
+				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 			ScriptsConfig::getLogger()->addInfo("processing a cancel line done successfully");
 			$billingsSubscriptionActionLog = NULL;
 		} catch(BillingsException $e) {
@@ -835,19 +839,7 @@ class BillingsBachatWorkers {
 				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 			}
 		}
-	}
-	
-	private static function hasProcessingStatus($processingLogs, $processing_status) {
-		$has = false;
-		foreach($processingLogs as $processingLog) {
-			if($processingLog->getProcessingStatus() == $processing_status) {
-				$has = true;
-				break;
-			}
-		}
-		return($has);
-	}
-	
+	}	
 	
 }
 
