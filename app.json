@@ -3,78 +3,30 @@
   "scripts": {
   },
   "env": {
-    "AFR_DB_HOST": {
-      "required": true
-    },
-    "AFR_DB_NAME": {
-      "required": true
-    },
-    "AFR_DB_PASSWORD": {
-      "required": true
-    },
-    "AFR_DB_PORT": {
-      "required": true
-    },
-    "AFR_DB_USER": {
-      "required": true
-    },
-    "API_HTTP_AUTH_PWD": {
-      "required": true
-    },
-    "API_HTTP_AUTH_USER": {
-      "required": true
-    },
-    "API_HTTP_SECURE": {
-      "required": true
-    },
-    "BILLINGS_API_HTTP_AUTH_PWD": {
-      "required": true
-    },
-    "BILLINGS_API_HTTP_AUTH_USER": {
-      "required": true
-    },
-    "BILLINGS_API_URL": {
-      "required": true
-    },
-    "DB_HOST": {
-      "required": true
-    },
-    "DB_NAME": {
-      "required": true
-    },
-    "DB_PASSWORD": {
-      "required": true
-    },
-    "DB_PORT": {
-      "required": true
-    },
-    "DB_USER": {
-      "required": true
-    },
-    "GOCARDLESS_API_ENV": {
-      "required": true
-    },
-    "GOCARDLESS_API_KEY": {
-      "required": true
-    },
-    "GOCARDLESS_WH_SECRET": {
-      "required": true
-    },
-    "RECURLY_API_KEY": {
-      "required": true
-    },
-    "RECURLY_API_SUBDOMAIN": {
-      "required": true
-    },
-    "RECURLY_WH_HTTP_AUTH_PWD": {
-      "required": true
-    },
-    "RECURLY_WH_HTTP_AUTH_USER": {
-      "required": true
-    },
-    "RECURLY_WH_REPOST_URLS": {
-      "required": true
-    }
+    "AFR_DB_HOST": "",
+    "AFR_DB_NAME":  "",
+    "AFR_DB_PASSWORD":  "",
+    "AFR_DB_PORT": "",
+    "AFR_DB_USER":  "",
+    "API_HTTP_AUTH_PWD":  "",
+    "API_HTTP_AUTH_USER":  "",
+    "API_HTTP_SECURE":  "",
+    "BILLINGS_API_HTTP_AUTH_PWD":  "",
+    "BILLINGS_API_HTTP_AUTH_USER": "",
+    "BILLINGS_API_URL":  "",
+    "DB_HOST":  "",
+    "DB_NAME":  "",
+    "DB_PASSWORD":  "",
+    "DB_PORT":  "",
+    "DB_USER": "",
+    "GOCARDLESS_API_ENV": "",
+    "GOCARDLESS_API_KEY":  "",
+    "GOCARDLESS_WH_SECRET":  "",
+    "RECURLY_API_KEY":  "",
+    "RECURLY_API_SUBDOMAIN":  "",
+    "RECURLY_WH_HTTP_AUTH_PWD":  "",
+    "RECURLY_WH_HTTP_AUTH_USER":  "",
+    "RECURLY_WH_REPOST_URLS":  ""
   },
   "addons": [
     "heroku-postgresql"
