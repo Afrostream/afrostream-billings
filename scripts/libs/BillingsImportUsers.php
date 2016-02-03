@@ -29,7 +29,11 @@ class BillingsImportUsers {
 				$apiCreateUserRequest = new ApiCreateUserRequest();
 				$apiCreateUserRequest->setProviderName("celery");
 				$apiCreateUserRequest->setUserReferenceUuid($afrUser->getId());
-				$apiCreateUserRequest->setUserProviderUuid($afrUser->getAccountCode());
+				$accountCode = $afrUser->getAccountCode();
+				if(!isset($accountCode)) {
+					$accountCode = "F_".guid();
+				}
+				$apiCreateUserRequest->setUserProviderUuid($accountCode);
 				$apiCreateUserRequest->setUserOpts("email", $afrUser->getEmail());
 				$apiCreateUserRequest->setUserOpts("firstName", "firstNameValue");
 				$apiCreateUserRequest->setUserOpts("lastName", "lastNameValue");
