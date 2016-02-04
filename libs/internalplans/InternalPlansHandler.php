@@ -109,7 +109,7 @@ class InternalPlansHandler {
 				$db_internal_plan = new InternalPlan();
 				$db_internal_plan->setInternalPlanUid($internalPlanUuid);
 				$db_internal_plan->setName($name);
-				$db_internal_plan->setAmoutInCents($amount_in_cents);
+				$db_internal_plan->setAmountInCents($amount_in_cents);
 				$db_internal_plan->setCurrency($currency);
 				$db_internal_plan->setCycle($planCycle);
 				$db_internal_plan->setPeriodUnit($planPeriodUnit);
