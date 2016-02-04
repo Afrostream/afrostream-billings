@@ -1585,7 +1585,7 @@ class BillingsSubscriptionOptsDAO {
 	}
 
 	public static function addBillingsSubscriptionOpts(BillingsSubscriptionOpts $billingsSubscriptionOpts) {
-		foreach ($user_opts->getOpts() as $k => $v) {
+		foreach ($billingsSubscriptionOpts->getOpts() as $k => $v) {
 			if(isset($v)) {
 				$query = "INSERT INTO billing_subscriptions_opts (subid, key, value)";
 				$query.= " VALUES ($1, $2, $3) RETURNING _id";
@@ -1623,7 +1623,7 @@ class BillingsSubscriptionOptsDAO {
 	}
 
 	public static function deleteBillingsSubscriptionOptBySubId($subid) {
-		$query = "UPDATE billing_users_opts SET deleted = true WHERE subid = $1";
+		$query = "UPDATE billing_subscriptions_opts SET deleted = true WHERE subid = $1";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array($subid));
 		return($result);

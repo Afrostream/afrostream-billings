@@ -133,6 +133,16 @@ class SubscriptionsController extends BillingsController {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 			}
+			$sub_opts = array();
+			if(isset($data['subOpts'])) {
+				if(!is_array($data['subOpts'])) {
+					//exception
+					$msg = "field 'subOpts' must be an array";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$sub_opts = $data['subOpts'];
+			}
 			$user_billing_uuid = $data['userBillingUuid'];
 			$internal_plan_uuid = $data['internalPlanUuid'];
 			$billing_info_opts = $data['billingInfoOpts'];
@@ -141,7 +151,7 @@ class SubscriptionsController extends BillingsController {
 				$subscription_provider_uuid = $data['subscriptionProviderUuid'];
 			}
 			$subscriptionsHandler = new SubscriptionsHandler();
-			$subscription = $subscriptionsHandler->doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, $billing_info_opts);
+			$subscription = $subscriptionsHandler->doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, $billing_info_opts, $sub_opts);
 			return($this->returnObjectAsJson($response, 'subscription', $subscription));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while creating a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();

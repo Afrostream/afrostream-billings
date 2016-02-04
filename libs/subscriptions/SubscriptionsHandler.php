@@ -39,13 +39,15 @@ class SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	public function doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, array $billing_info_opts_array) {
+	public function doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, array $billing_info_opts_array, array $sub_opts_array) {
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("subscription creating...");
 			$this->checkBillingInfoOptsArray($billing_info_opts_array);
-			$billing_info_opts = new BillingInfoOpts();
-			$billing_info_opts->setOpts($billing_info_opts_array);
+			$billingInfoOpts = new BillingInfoOpts();
+			$billingInfoOpts->setOpts($billing_info_opts_array);
+			$subOpts = new BillingsSubscriptionOpts();
+			$subOpts->setOpts($sub_opts_array);
 			$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
 			if($user == NULL) {
 				$msg = "unknown user_billing_uuid : ".$user_billing_uuid;
@@ -80,7 +82,7 @@ class SubscriptionsHandler {
 			
 			$provider_plan = PlanDAO::getPlanById($provider_plan_id);
 			if($provider_plan == NULL) {
-				$msg = "unknown plan with id : ".$provider_plan_id;
+				$msg = "unknown plan with id tutu : ".$provider_plan_id;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -117,11 +119,11 @@ class SubscriptionsHandler {
 				switch($provider->getName()) {
 					case 'recurly' :
 						$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-						$sub_uuid = $recurlySubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billing_info_opts);
+						$sub_uuid = $recurlySubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $sub_opts);
 						break;
 					case 'gocardless' :
 						$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
-						$sub_uuid = $gocardlessSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billing_info_opts);
+						$sub_uuid = $gocardlessSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
 						break;
 					case 'celery' :
 						$msg = "unsupported feature for provider named : ".$provider_name;
@@ -130,7 +132,7 @@ class SubscriptionsHandler {
 						break;
 					case 'bachat' :
 						$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
-						$sub_uuid = $bachatSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billing_info_opts);
+						$sub_uuid = $bachatSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
 						break;
 					default:
 						$msg = "unsupported feature for provider named : ".$provider_name;
@@ -148,11 +150,11 @@ class SubscriptionsHandler {
 					switch($provider->getName()) {
 						case 'recurly' :
 							$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-							$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $sub_uuid, 'api', 0);
+							$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
 						case 'gocardless' :
 							$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
-							$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $sub_uuid, 'api', 0);
+							$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
 						case 'celery' :
 							$msg = "unsupported feature for provider named : ".$provider_name;
@@ -161,7 +163,7 @@ class SubscriptionsHandler {
 							break;
 						case 'bachat' :
 							$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
-							$db_subscription = $bachatSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $sub_uuid, 'api', 0);
+							$db_subscription = $bachatSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
 						default:
 							$msg = "unsupported feature for provider named : ".$provider_name;
