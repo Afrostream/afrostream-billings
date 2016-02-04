@@ -142,34 +142,39 @@ class SubscriptionsHandler {
 				//subscription created provider side, save it in billings database
 				config::getLogger()->addInfo("subscription creating...database savings...");
 				//TODO : should not have yet a switch here (later)
-				//START TRANSACTION
-				pg_query("BEGIN");
-				switch($provider->getName()) {
-					case 'recurly' :
-						$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-						$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $sub_uuid, 'api', 0);
-						break;
-					case 'gocardless' :
-						$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
-						$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $sub_uuid, 'api', 0);
-						break;
-					case 'celery' :
-						$msg = "unsupported feature for provider named : ".$provider_name;
-						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-						break;
-					case 'bachat' :
-						$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
-						$db_subscription = $bachatSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $sub_uuid, 'api', 0);
-						break;
-					default:
-						$msg = "unsupported feature for provider named : ".$provider_name;
-						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-						break;
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					switch($provider->getName()) {
+						case 'recurly' :
+							$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
+							$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $sub_uuid, 'api', 0);
+							break;
+						case 'gocardless' :
+							$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
+							$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $sub_uuid, 'api', 0);
+							break;
+						case 'celery' :
+							$msg = "unsupported feature for provider named : ".$provider_name;
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+						case 'bachat' :
+							$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
+							$db_subscription = $bachatSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $sub_uuid, 'api', 0);
+							break;
+						default:
+							$msg = "unsupported feature for provider named : ".$provider_name;
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+					}
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
 				}
-				//COMMIT
-				pg_query("COMMIT");
 			}
 			config::getLogger()->addInfo("subscription creating...database savings done successfully");
 			//
@@ -248,7 +253,7 @@ class SubscriptionsHandler {
 		}
 	}
 	
-	public function doRenewSubscription($subscriptionBillingUuid, DateTime $start_date) {
+	public function doRenewSubscription($subscriptionBillingUuid, DateTime $start_date = NULL) {
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription renewing for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
@@ -271,9 +276,8 @@ class SubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 				case 'gocardless' :
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					$gocardlessSubscriptionsHandler = new GoCardlessSubscriptionsHandler();
+					$db_subscription = $gocardlessSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date);
 					break;
 				case 'celery' :
 					$msg = "unsupported feature for provider named : ".$provider->getName();

@@ -275,10 +275,32 @@ class GocardlessSubscriptionsHandler {
 		//
 		$db_subscription->setSubCanceledDate(NULL);//TODO
 		$db_subscription->setSubExpiresDate(NULL);//TODO
-		//To be calculated from billings api
-		$db_subscription->setSubPeriodStartedDate(NULL);
-		//To be calculated from billings api
-		$db_subscription->setSubPeriodEndsDate(NULL);
+		$start_date = new DateTime($api_subscription->created_at);
+		$end_date = NULL;
+		switch($internalPlan->getPeriodUnit()) {
+			case PlanPeriodUnit::day :
+				$end_date = clone $start_date;
+				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				break;
+			case PlanPeriodUnit::month :
+				$end_date = clone $start_date;
+				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
+				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				break;	
+			case PlanPeriodUnit::year :
+				$end_date = clone $start_date;
+				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
+				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				break;
+			default :
+				$msg = "unsupported periodUnit : ".$internaPlan->getPeriodUnit()->getValue();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				break;
+		}
+		$subscription->setSubPeriodStartedDate($start_date);
+		$subscription->setSubPeriodEndsDate($end_date);
 		//The information is in the PLAN
 		/*switch ($api_subscription->collection_mode) {
 			case 'automatic' :
@@ -417,6 +439,75 @@ class GocardlessSubscriptionsHandler {
 		}
 	}
 	
+	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL) {
+		$provider_plan = PlanDAO::getPlanById($subscription->getPlanId());
+		if($provider_plan == NULL) {
+			$msg = "unknown plan with id : ".$subscription->getPlanId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($provider_plan->getId()));
+		if($internalPlan == NULL) {
+			$msg = "plan with uuid=".$provider_plan->getId()." for provider gocardless is not linked to an internal plan";
+			config::getLogger()->addError($msg);
+			throw new Exception($msg);
+		}
+		
+		$today = new DateTime();
+		
+		if($start_date == NULL) {
+			$start_date = new DateTime();//NOW
+		}
+		$end_date = NULL;
+		switch($internalPlan->getPeriodUnit()) {
+			case PlanPeriodUnit::day :
+				$end_date = clone $start_date;
+				do {
+					$start_date = clone $end_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				} while($end_date < $today);
+				break;
+			case PlanPeriodUnit::month :
+				$end_date = clone $start_date;
+				do {
+					$start_date = clone $end_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				} while($end_date < $today);
+				break;	
+			case PlanPeriodUnit::year :
+				$end_date = clone $start_date;
+				do {
+					$start_date = clone $end_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				} while($end_date < $today);
+				break;
+			default :
+				$msg = "unsupported periodUnit : ".$internaPlan->getPeriodUnit()->getValue();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				break;
+		}
+		$subscription->setSubPeriodStartedDate($start_date);
+		$subscription->setSubPeriodEndsDate($end_date);
+		$subscription->setSubStatus('active');
+		try {
+			//START TRANSACTION
+			pg_query("BEGIN");
+			BillingsSubscriptionDAO::updateSubStartedDate($subscription);
+			BillingsSubscriptionDAO::updateSubEndsDate($subscription);
+			BillingsSubscriptionDAO::updateSubStatus($subscription);
+			//COMMIT
+			pg_query("COMMIT");
+		} catch(Exception $e) {
+			pg_query("ROLLBACK");
+			throw $e;
+		}
+		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
 	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
 		try {
 			config::getLogger()->addInfo("gocardless subscription cancel...");
@@ -432,24 +523,32 @@ class GocardlessSubscriptionsHandler {
 			$subscription->setSubCanceledDate($cancel_date);
 			$subscription->setSubStatus('canceled');
 			//
-			//START TRANSACTION
-			pg_query("BEGIN");
-			BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
-			BillingsSubscriptionDAO::updateSubStatus($subscription);
-			//COMMIT
-			pg_query("COMMIT");
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+				BillingsSubscriptionDAO::updateSubStatus($subscription);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch (Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("gocardless subscription cancel done successfully for gocardless_subscription_uuid=".$subscription->getSubUid());
 			return($subscription);
 		} catch(BillingsException $e) {
+			pg_query("ROLLBACK");
 			$msg = "a billings exception occurred while cancelling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless subscription cancelling failed : ".$msg);
 			throw $e;
 		} catch (GoCardlessProException $e) {
+			pg_query("ROLLBACK");
 			$msg = "a GoCardlessProException occurred while cancelling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless subscription cancelling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
+			pg_query("ROLLBACK");
 			$msg = "an unknown exception occurred while cancelling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless subscription cancelling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -457,35 +556,39 @@ class GocardlessSubscriptionsHandler {
 	}
 	
 	public function doFillSubscription(BillingsSubscription $subscription) {
-		//TODO : later, is_active will be changed when a subscription is postponed
-		//TODO :
-		/*$oRange = new DateRange(new DateTime(), new DateTime($subscription->getSubActivatedDate()), DateInterval::createFromDateString("-1 month") );
-		foreach ($oRange as $oDate)
-		{
-			echo $oDate->format("Y-m-d") . "<br />";
-		}*/
-		
-		//find period : monthly / yearly / what about : one shot ?
-		/*$activated_date = $subscription->getSubActivatedDate();
-		$activated_day_of_month = (new DateTime($activated_date))->format('d');
-		$now = new DateTime();
-		echo "activated_date=".$activated_date." dayOfMonth=".$activated_day_of_month;
-		$today_day_of_month = $now->format('d');
-		echo "now=".dbGlobal::toISODate($now)." dayOfMonth=".$today_day_of_month;
-		$diff = $today_day_of_month - $activated_day_of_month;
-		$periodStartedDate = NULL;
-		$periodEndedDate = NULL;
-		if($diff >= 0) {
-			$oRange = new DateRange();
-		} else {
-			
+		$is_active = NULL;
+		switch($subscription->getSubStatus()) {
+			case 'active' :
+			case 'canceled' :
+				$now = new DateTime();
+				//check dates
+				if(
+						($now < (new DateTime($subscription->getSubPeriodEndsDate())))
+								&&
+						($now > (new DateTime($subscription->getSubPeriodStartedDate())))
+				) {
+					//inside the period
+					$is_active = 'yes';
+				} else {
+					//outside the period
+					$is_active = 'no';
+				}
+				break;
+			case 'future' :
+				$is_active = 'no';
+				break;
+			case 'expired' :
+				$is_active = 'no';
+				break;
+			default :
+				$is_active = 'no';
+				config::getLogger()->addWarning("gocardless dbsubscription unknown subStatus=".$subscription->getSubStatus().", gocardless_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
+				break;		
 		}
-		//To be calculated from billings api
-		$db_subscription->setSubPeriodStartedDate(NULL);
-		//To be calculated from billings api
-		$db_subscription->setSubPeriodEndsDate(NULL);
-		*/
+		//done
+		$subscription->setIsActive($is_active);
 	}
+	
 }
 
 ?>

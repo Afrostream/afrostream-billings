@@ -12,7 +12,6 @@ class RecurlyUsersHandler {
 	public function doCreateUser($user_reference_uuid, $user_provider_uuid, array $user_opts_array) {
 		try {
 			config::getLogger()->addInfo("recurly user creation...");
-			config::getLogger()->addInfo("recurly user creation...user_provider_uuid=".$user_provider_uuid);
 			if(isset($user_provider_uuid)) {
 				//
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');

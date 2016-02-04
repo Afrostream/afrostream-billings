@@ -146,18 +146,23 @@ class UsersHandler {
 				$db_user = $this->doCreateUser($provider_name, $user_reference_uuid, $user_provider_uuid, $user_opts_array);
 			} else {
 				//update user_opts
-				//START TRANSACTION
-				pg_query("BEGIN");
-				//USER_OPTS
-				//DELETE USER_OPTS
-				UserOptsDAO::deleteUserOptsByUserId($db_user->getId());
-				//RECREATE USER_OPTS
-				$user_opts = new UserOpts();
-				$user_opts->setUserId($db_user->getId());
-				$user_opts->setOpts($user_opts_array);
-				$user_opts = UserOptsDAO::addUserOpts($user_opts);
-				//COMMIT
-				pg_query("COMMIT");
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					//USER_OPTS
+					//DELETE USER_OPTS
+					UserOptsDAO::deleteUserOptsByUserId($db_user->getId());
+					//RECREATE USER_OPTS
+					$user_opts = new UserOpts();
+					$user_opts->setUserId($db_user->getId());
+					$user_opts->setOpts($user_opts_array);
+					$user_opts = UserOptsDAO::addUserOpts($user_opts);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
 			}
 			config::getLogger()->addInfo("user getting/creating done successfully, userid=".$db_user->getId());
 		} catch(BillingsException $e) {
@@ -209,22 +214,27 @@ class UsersHandler {
 					break;
 			}
 			//user created provider side, save it in billings database
-			//START TRANSACTION
-			pg_query("BEGIN");
-			//USER
-			$db_user = new User();
-			$db_user->setUserBillingUuid(guid());
-			$db_user->setProviderId($provider->getId());
-			$db_user->setUserReferenceUuid($user_reference_uuid);
-			$db_user->setUserProviderUuid($user_provider_uuid);
-			$db_user = UserDAO::addUser($db_user);
-			//USER_OPTS
-			$user_opts = new UserOpts();
-			$user_opts->setUserId($db_user->getId());
-			$user_opts->setOpts($user_opts_array);
-			$user_opts = UserOptsDAO::addUserOpts($user_opts);
-			//COMMIT
-			pg_query("COMMIT");
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				//USER
+				$db_user = new User();
+				$db_user->setUserBillingUuid(guid());
+				$db_user->setProviderId($provider->getId());
+				$db_user->setUserReferenceUuid($user_reference_uuid);
+				$db_user->setUserProviderUuid($user_provider_uuid);
+				$db_user = UserDAO::addUser($db_user);
+				//USER_OPTS
+				$user_opts = new UserOpts();
+				$user_opts->setUserId($db_user->getId());
+				$user_opts->setOpts($user_opts_array);
+				$user_opts = UserOptsDAO::addUserOpts($user_opts);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 			config::getLogger()->addInfo("user creating done successfully, userid=".$db_user->getId());
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while creating an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -251,23 +261,28 @@ class UsersHandler {
 			}
 			$db_user_opts = UserOptsDAO::getUserOptsByUserId($db_user->getId());
 			$current_user_opts_array = $db_user_opts->getOpts();
-			//START TRANSACTION
-			pg_query("BEGIN");
-			foreach ($user_opts_array as $key => $value) {
-				if(array_key_exists($key, $current_user_opts_array)) {
-					//UPDATE OR DELETE
-					if(isset($value)) {
-						UserOptsDAO::updateUserOptsKey($db_user->getId(), $key, $value);
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				foreach ($user_opts_array as $key => $value) {
+					if(array_key_exists($key, $current_user_opts_array)) {
+						//UPDATE OR DELETE
+						if(isset($value)) {
+							UserOptsDAO::updateUserOptsKey($db_user->getId(), $key, $value);
+						} else {
+							UserOptsDAO::deleteUserOptsKey($db_user->getId(), $key);
+						}
 					} else {
-						UserOptsDAO::deleteUserOptsKey($db_user->getId(), $key);
+						//ADD
+						UserOptsDAO::addUserOptsKey($db_user->getId(), $key, $value);
 					}
-				} else {
-					//ADD
-					UserOptsDAO::addUserOptsKey($db_user->getId(), $key, $value);
 				}
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
 			}
-			//COMMIT
-			pg_query("COMMIT");
 			//done
 			$db_user = UserDAO::getUserById($db_user->getId());
 			config::getLogger()->addInfo("user opts updating done successfully");

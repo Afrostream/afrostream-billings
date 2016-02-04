@@ -41,7 +41,6 @@ class CelerySubscriptionsHandler {
 	}
 	
 	public function doFillSubscription(BillingsSubscription $subscription) {
-		//TODO : later, is_active will be changed when a subscription is postponed
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
 			case 'active' :
