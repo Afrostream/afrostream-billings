@@ -308,12 +308,17 @@ class RecurlySubscriptionsHandler {
 			$subscription->setSubCanceledDate($cancel_date);
 			$subscription->setSubStatus('canceled');
 			//
-			//START TRANSACTION
-			pg_query("BEGIN");
-			BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
-			BillingsSubscriptionDAO::updateSubStatus($subscription);
-			//COMMIT
-			pg_query("COMMIT");
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+				BillingsSubscriptionDAO::updateSubStatus($subscription);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("recurly subscription cancel done successfully for recurly_subscription_uuid=".$subscription->getSubUid());
 		} catch(BillingsException $e) {
@@ -333,14 +338,13 @@ class RecurlySubscriptionsHandler {
 	}
 	
 	public function doFillSubscription(BillingsSubscription $subscription) {
-		//TODO : later, is_active will be changed when a subscription is postponed
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
 			case 'active' :
 				$is_active = 'yes';//always 'yes' : recurly is managing the status
 				break;
 			case 'canceled' :
-				$is_active = 'yes';//always 'yes' : recurly is managning the status (will change to expired automatically)
+				$is_active = 'yes';//always 'yes' : recurly is managning the status (will change to expired status automatically)
 				break;
 			case 'future' :
 				$is_active = 'no';

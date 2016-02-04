@@ -312,7 +312,7 @@ class InternalPlanDAO {
 		$out->setInternalPlanUid($row["internal_plan_uuid"]);
 		$out->setName($row["name"]);
 		$out->setDescription($row["description"]);
-		$out->setAmoutInCents($row["amount_in_cents"]);
+		$out->setAmountInCents($row["amount_in_cents"]);
 		$out->setCurrency($row["currency"]);
 		$out->setCycle(new PlanCycle($row["cycle"]));
 		$out->setPeriodUnit(new PlanPeriodUnit($row["period_unit"]));
@@ -441,6 +441,7 @@ class InternalPlan implements JsonSerializable {
 	private $periodUnit;
 	private $periodLength;
 	private $showProviderPlans = true;
+	private $vatRate = 20;
 
 	public function getId() {
 		return($this->_id);
@@ -474,7 +475,7 @@ class InternalPlan implements JsonSerializable {
 		$this->description = $description;
 	}
 	
-	public function setAmoutInCents($integer) {
+	public function setAmountInCents($integer) {
 		$this->amount_in_cents = $integer;
 	}
 	
@@ -522,13 +523,27 @@ class InternalPlan implements JsonSerializable {
 		return($this->showProviderPlans);
 	}
 	
+	public function setVatRate($value) {
+		$this->vatRate = $value;
+	}
+	
+	public function getVatRate() {
+		return($this->vatRate);
+	}
+	
+	public function getAmountInCentsExclTax() {
+		return(intval($this->amount_in_cents * (100 - $this->vatRate) / 100));
+	}
+	
 	public function jsonSerialize() {
 		$return =
 			[
 				'internalPlanUuid' => $this->internal_plan_uuid,
 				'name' => $this->name,
 				'description' => $this->description,
-				'amount_in_cents' => $this->amount_in_cents,
+				'amountInCents' => $this->amount_in_cents,
+				'amountInCentsExclTax' => (string) $this->getAmountInCentsExclTax(),
+				'vatRate' => (string) $this->vatRate,
 				'currency' => $this->currency,
 				'cycle' => $this->cycle,
 				'periodUnit' => $this->periodUnit,
@@ -694,7 +709,7 @@ class InternalPlanLinksDAO {
 
 class PlanDAO {
 	
-	private static $sfields = "_id, providerid, plan_uuid, name, description";
+	private static $sfields = "BP._id, BP.providerid, BP.plan_uuid, BP.name, BP.description";
 	
 	private static function getPlanFromRow($row) {
 		$out = new Plan();
@@ -707,7 +722,7 @@ class PlanDAO {
 	}
 	
 	public static function getPlanByUuid($providerId, $plan_uuid) {
-		$query = "SELECT ".self::$sfields." FROM billing_plans WHERE providerid = $1 AND plan_uuid = $2";
+		$query = "SELECT ".self::$sfields." FROM billing_plans BP WHERE BP.providerid = $1 AND BP.plan_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $plan_uuid));
 		
 		$out = null;
@@ -722,7 +737,7 @@ class PlanDAO {
 	}
 	
 	public static function getPlanById($plan_id) {
-		$query = "SELECT ".self::$sfields." FROM billing_plans WHERE _id = $1";
+		$query = "SELECT ".self::$sfields." FROM BP.billing_plans BP WHERE BP._id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($plan_id));
 	
 		$out = null;
@@ -737,7 +752,7 @@ class PlanDAO {
 	}
 	
 	public static function getPlanByName($providerId, $name) {
-		$query = "SELECT ".self::$sfields." FROM billing_plans WHERE providerid = $1 AND name = $2";
+		$query = "SELECT ".self::$sfields." FROM billing_plans BP WHERE BP.providerid = $1 AND BP.name = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $name));
 		
 		$out = null;
@@ -752,13 +767,13 @@ class PlanDAO {
 	}
 	
 	public static function getPlans($providerId = NULL) {
-		$query = "SELECT ".self::$sfields." FROM billing_plans";
+		$query = "SELECT ".self::$sfields." FROM billing_plans BP";
 		$params = array();
 	
 		$out = array();
 		
 		if(isset($providerId)) {
-			$query.= " WHERE providerid = $1";
+			$query.= " WHERE BP.providerid = $1";
 			$params[] = $providerId;
 		}
 		
@@ -775,7 +790,8 @@ class PlanDAO {
 	
 	public static function getPlansFromList(array $list_of_billing_plan_ids) {
 		if(count($list_of_billing_plan_ids) == 0) return(array());
-		$query = "SELECT ".self::$sfields." FROM billing_plans";
+		$query = "SELECT P.name as provider_name, ".self::$sfields." FROM billing_plans BP";
+		$query.= " INNER JOIN billing_providers P ON (BP.providerid = P._id)";
 		$params = array();
 	
 		$out = array();
@@ -786,7 +802,7 @@ class PlanDAO {
 		foreach ($list_of_billing_plan_ids as $billing_plan_id) {
 			if($firstLoop == true) {
 				$firstLoop = false;
-				$query.= " WHERE _id in ($".$i;
+				$query.= " WHERE BP._id in ($".$i;
 			} else {
 				$query.= ", $".$i;
 			}
@@ -799,7 +815,7 @@ class PlanDAO {
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 	
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($out, self::getPlanFromRow($row));
+			$out[$row['provider_name']] = self::getPlanFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -2060,7 +2076,7 @@ class ProcessingLogDAO {
 	}
 	
 	public static function getProcessingLogByDay($providerid, $processing_type, Datetime $day) {
-		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE providerid = $1 AND processing_type = $2 AND date(ended_date) = date($3)";
+		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE providerid = $1 AND processing_type = $2 AND date(started_date) = date($3)";
 		
 		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $processing_type, dbGlobal::toISODate($day)));
 		

@@ -102,27 +102,33 @@ class InternalPlansHandler {
 			}
 			$planPeriodUnit = new PlanPeriodUnit($period_unit_str);
 			//
-			//START TRANSACTION
-			pg_query("BEGIN");
-			//INTERNAL_PLAN
-			$db_internal_plan = new InternalPlan();
-			$db_internal_plan->setInternalPlanUid($internalPlanUuid);
-			$db_internal_plan->setName($name);
-			$db_internal_plan->setAmoutInCents($amount_in_cents);
-			$db_internal_plan->setCurrency($currency);
-			$db_internal_plan->setCycle($planCycle);
-			$db_internal_plan->setPeriodUnit($planPeriodUnit);
-			$db_internal_plan->setPeriodLength($period_length);
-			$db_internal_plan = InternalPlanDAO::addInternalPlan($db_internal_plan);
-			//INTERNAL_PLAN_OPTS
-			$internalPlanOpts = new InternalPlanOpts();
-			$internalPlanOpts->setInternalPlanId($db_internal_plan->getId());
-			$internalPlanOpts->setOpts($internalplan_opts_array);
-			$internalPlanOpts = InternalPlanOptsDAO::addInternalPlanOpts($internalPlanOpts);
-			//COMMIT
-			pg_query("COMMIT");
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				//INTERNAL_PLAN
+				$db_internal_plan = new InternalPlan();
+				$db_internal_plan->setInternalPlanUid($internalPlanUuid);
+				$db_internal_plan->setName($name);
+				$db_internal_plan->setAmountInCents($amount_in_cents);
+				$db_internal_plan->setCurrency($currency);
+				$db_internal_plan->setCycle($planCycle);
+				$db_internal_plan->setPeriodUnit($planPeriodUnit);
+				$db_internal_plan->setPeriodLength($period_length);
+				$db_internal_plan = InternalPlanDAO::addInternalPlan($db_internal_plan);
+				//INTERNAL_PLAN_OPTS
+				$internalPlanOpts = new InternalPlanOpts();
+				$internalPlanOpts->setInternalPlanId($db_internal_plan->getId());
+				$internalPlanOpts->setOpts($internalplan_opts_array);
+				$internalPlanOpts = InternalPlanOptsDAO::addInternalPlanOpts($internalPlanOpts);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 			config::getLogger()->addInfo("internal plan creating done successfully, internalplanid=".$db_internal_plan->getId());
 		} catch(BillingsException $e) {
+			pg_query("ROLLBACK");
 			$msg = "a billings exception occurred while creating an internal plan, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("internal plan creating failed : ".$msg);
 			throw $e;
@@ -218,27 +224,33 @@ class InternalPlansHandler {
 			}
 			$db_internal_plan_opts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($db_internal_plan->getId());
 			$current_internalplan_opts_array = $db_internal_plan_opts->getOpts();
-			//START TRANSACTION
-			pg_query("BEGIN");
-			foreach ($internalplan_opts_array as $key => $value) {
-				if(array_key_exists($key, $current_internalplan_opts_array)) {
-					//UPDATE OR DELETE
-					if(isset($value)) {
-						InternalPlanOptsDAO::updateInternalPlanOptsKey($db_internal_plan->getId(), $key, $value);
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				foreach ($internalplan_opts_array as $key => $value) {
+					if(array_key_exists($key, $current_internalplan_opts_array)) {
+						//UPDATE OR DELETE
+						if(isset($value)) {
+							InternalPlanOptsDAO::updateInternalPlanOptsKey($db_internal_plan->getId(), $key, $value);
+						} else {
+							InternalPlanOptsDAO::deleteInternalPlanOptsKey($db_internal_plan->getId(), $key);
+						}
 					} else {
-						InternalPlanOptsDAO::deleteInternalPlanOptsKey($db_internal_plan->getId(), $key);
+						//ADD
+						InternalPlanOptsDAO::addInternalPlanOptsKey($db_internal_plan->getId(), $key, $value);
 					}
-				} else {
-					//ADD
-					InternalPlanOptsDAO::addInternalPlanOptsKey($db_internal_plan->getId(), $key, $value);
 				}
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
 			}
-			//COMMIT
-			pg_query("COMMIT");
 			//done
 			$db_internal_plan = InternalPlanDAO::getInternalPlanById($db_internal_plan->getId());
 			config::getLogger()->addInfo("internal plan opts updating done successfully");
 		} catch(BillingsException $e) {
+			pg_query("ROLLBACK");
 			$msg = "a billings exception occurred while updating Internal Plan Opts, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("internal plan opts updating failed : ".$msg);
 			throw $e;

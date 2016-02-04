@@ -89,7 +89,7 @@ try {
 			switch($afrUser->getBillingProvider()) {
 				case 'celery' :
 					if(in_array('celery', $current_providers)) {
-						if(isset($accountCode)) { 
+						//if(isset($accountCode)) {
 							try {
 								$celery_todo_count++;
 								$billingsImportUsers->doImportCeleryUser($afrUser);
@@ -98,7 +98,7 @@ try {
 								$celery_error_count++;
 								ScriptsConfig::getLogger()->addError("an error occurred while importing a celery user, message=".$e->getMessage());
 							}
-						}
+						//}
 					}
 					break;
 				case 'recurly' :
