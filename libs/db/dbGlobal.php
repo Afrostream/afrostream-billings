@@ -542,7 +542,7 @@ class InternalPlan implements JsonSerializable {
 				'name' => $this->name,
 				'description' => $this->description,
 				'amountInCents' => $this->amount_in_cents,
-				'amountInCentsExlTax' => (string) $this->getAmountInCentsExclTax(),
+				'amountInCentsExclTax' => (string) $this->getAmountInCentsExclTax(),
 				'vatRate' => (string) $this->vatRate,
 				'currency' => $this->currency,
 				'cycle' => $this->cycle,
