@@ -192,7 +192,12 @@ $app->put("/billings/api/users/{userBillingUuid}", function ($request, $response
       			"subCanceledDate": null,
       			"subExpiresDate": null,
       			"subPeriodStartedDate": "2015-12-25 12:00:00+00",
-      			"subPeriodEndsDate": "2016-01-25 12:00:00+00"
+      			"subPeriodEndsDate": "2016-01-25 12:00:00+00",
+      			"subOpts": {
+        			"key1": "value1",
+        			"key2": "value2",
+        			"key3": "value3"
+      			}
     		}
   		}
 	}
@@ -214,7 +219,12 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
     	"internalPlanUuid" : "InternalPlanUuid",			//Plan (internal name)	 
     	"subscriptionProviderUuid" : "SubscriptionProviderUUID",//given by the provider when subscription is created from provider side
     	"billingInfoOpts" : {								//nothing for now
-    	}
+    	},
+    	"subOpts": {
+        	"key1": "value1",
+        	"key2": "value2",
+        	"key3": "value3"
+      	}
 	}
  
  	sample answer :
@@ -258,7 +268,12 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
       			"subCanceledDate": null,
       			"subExpiresDate": null,
       			"subPeriodStartedDate": "2015-12-25 12:00:00+00",
-      			"subPeriodEndsDate": "2016-01-25 12:00:00+00"
+      			"subPeriodEndsDate": "2016-01-25 12:00:00+00",
+      			"subOpts": {
+        			"key1": "value1",
+        			"key2": "value2",
+        			"key3": "value3"
+      			}
     		}
   		}
 	}
