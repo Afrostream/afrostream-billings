@@ -11,11 +11,12 @@ class BachatSubscriptionsHandler {
 	public function __construct() {
 	}
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("bachat subscription creation...");
 			//pre-requisite
+			checkSubOptsArray($subOpts->getOpts(), 'bachat');
 			if(!isset($subscription_provider_uuid)) {
 				$msg = "field 'subscriptionProviderUuid' was not provided";
 				config::getLogger()->addError($msg);
@@ -35,7 +36,7 @@ class BachatSubscriptionsHandler {
 		return($sub_uuid);
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $sub_uuid, $update_type, $updateId) {
 		$api_subscription = new BillingsSubscription();
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('active');
@@ -56,10 +57,10 @@ class BachatSubscriptionsHandler {
 				break;
 		}
 		$api_subscription->setSubPeriodEndsDate($end_date);
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingsSubscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("bachat dbsubscription creation for userid=".$user->getId().", bachat_subscription_uuid=".$api_subscription->getSubUid()."...");
 		//CREATE
 		$db_subscription = new BillingsSubscription();
@@ -109,7 +110,21 @@ class BachatSubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
 		//
-		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
+		try {
+			//START TRANSACTION
+			pg_query("BEGIN");
+			$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
+			//SUB_OPTS
+			if(isset($subOpts)) {
+				$subOpts->setSubId($db_subscription->getId());
+				$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+			}
+			//COMMIT
+			pg_query("COMMIT");
+		} catch(Exception $e) {
+			pg_query("ROLLBACK");
+			throw $e;
+		}	
 		config::getLogger()->addInfo("bachat dbsubscription creation for userid=".$user->getId().", bachat_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
 		return($db_subscription);
 	}
@@ -128,7 +143,7 @@ class BachatSubscriptionsHandler {
 				if(
 						($now < (new DateTime($subscription->getSubPeriodEndsDate())))
 								&&
-						($now > (new DateTime($subscription->getSubPeriodStartedDate())))
+						($now >= (new DateTime($subscription->getSubPeriodStartedDate())))
 				) {
 					//inside the period
 					$is_active = 'yes';

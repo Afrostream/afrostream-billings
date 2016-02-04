@@ -1043,6 +1043,7 @@ class BillingsSubscriptionDAO {
 		$out->setUpdateType($row["update_type"]);
 		$out->setUpdateId($row["updateid"]);
 		$out->setDeleted($row["deleted"]);
+		$out->setBillingsSubscriptionOpts(BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($row["_id"]));
 		return($out);
 	}
 	
@@ -1348,6 +1349,8 @@ class BillingsSubscription implements JsonSerializable {
 	private $deleted;
 	//
 	private $is_active;
+	//
+	private $billingsSubscriptionOpts = NULL;
 	
 	public function getId() {
 		return($this->_id);
@@ -1500,6 +1503,14 @@ class BillingsSubscription implements JsonSerializable {
 		return($this->is_active);
 	}
 	
+	public function setBillingsSubscriptionOpts($billingsSubscriptionOpts) {
+		$this->billingsSubscriptionOpts = $billingsSubscriptionOpts;
+	}
+	
+	public function getBillingsSubscriptionOpts() {
+		return($this->billingsSubscriptionOpts);
+	}
+	
 	public function jsonSerialize() {
 		$return = [
 			'subscriptionBillingUuid' => $this->subscription_billing_uuid,
@@ -1514,7 +1525,8 @@ class BillingsSubscription implements JsonSerializable {
 			'subCanceledDate' => $this->sub_canceled_date,
 			'subExpiresDate' => $this->sub_expires_date,
 			'subPeriodStartedDate' => $this->sub_period_started_date,
-			'subPeriodEndsDate' => $this->sub_period_ends_date
+			'subPeriodEndsDate' => $this->sub_period_ends_date,
+			'subOpts' => (BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($this->_id)->jsonSerialize())
 		];
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->planid));
 		$internalPlan->setShowProviderPlans(false);
@@ -1522,6 +1534,100 @@ class BillingsSubscription implements JsonSerializable {
 		return($return);
 	}
 	
+}
+
+class BillingsSubscriptionOpts implements JsonSerializable {
+
+	private $subid;
+	private $opts = array();
+
+	public function setSubId($subid) {
+		$this->subid = $subid;
+	}
+
+	public function getSubId() {
+		return($this->subid);
+	}
+
+	public function setOpt($key, $value) {
+		$this->opts[$key] = $value;
+	}
+
+	public function setOpts($opts) {
+		$this->opts = $opts;
+	}
+
+	public function getOpts() {
+		return($this->opts);
+	}
+
+	public function jsonSerialize() {
+		return($this->opts);
+	}
+
+}
+
+class BillingsSubscriptionOptsDAO {
+
+	public static function getBillingsSubscriptionOptsBySubId($subid) {
+		$query = "SELECT _id, subid, key, value FROM billing_subscriptions_opts WHERE deleted = false AND subid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($subid));
+
+		$out = new BillingsSubscriptionOpts();
+		$out->setSubId($subid);
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out->setOpt($row["key"], $row["value"]);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+
+	public static function addBillingsSubscriptionOpts(BillingsSubscriptionOpts $billingsSubscriptionOpts) {
+		foreach ($billingsSubscriptionOpts->getOpts() as $k => $v) {
+			if(isset($v)) {
+				$query = "INSERT INTO billing_subscriptions_opts (subid, key, value)";
+				$query.= " VALUES ($1, $2, $3) RETURNING _id";
+				$result = pg_query_params(config::getDbConn(), $query,
+						array($billingsSubscriptionOpts->getSubId(),
+								$k,
+								$v));
+			}
+		}
+		return(self::getBillingsSubscriptionOptsBySubId($billingsSubscriptionOpts->getSubId()));
+	}
+
+	public static function updateBillingsSubscriptionOptsKey($subid, $key, $value) {
+		$query = "UPDATE billing_subscriptions_opts SET value = $3 WHERE subid = $1 AND key = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($subid, $key, $value));
+		return($result);
+	}
+
+	public static function deleteBillingsSubscriptionOptsKey($subid, $key) {
+		$query = "UPDATE billing_subscriptions_opts SET deleted = true WHERE subid = $1 AND key = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($userid, $key));
+		return($result);
+	}
+
+	public static function addBillingsSubscriptionOptsKey($subid, $key, $value) {
+		$query = "INSERT INTO billing_subscriptions_opts (subid, key, value)";
+		$query.= " VALUES ($1, $2, $3) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($subid,
+						$key,
+						$value));
+		return($result);
+	}
+
+	public static function deleteBillingsSubscriptionOptBySubId($subid) {
+		$query = "UPDATE billing_subscriptions_opts SET deleted = true WHERE subid = $1";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($subid));
+		return($result);
+	}
 }
 
 class BillingInfoOpts {
