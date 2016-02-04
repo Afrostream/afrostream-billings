@@ -737,7 +737,7 @@ class PlanDAO {
 	}
 	
 	public static function getPlanById($plan_id) {
-		$query = "SELECT ".self::$sfields." FROM BP.billing_plans BP WHERE BP._id = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_plans BP WHERE BP._id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($plan_id));
 	
 		$out = null;
