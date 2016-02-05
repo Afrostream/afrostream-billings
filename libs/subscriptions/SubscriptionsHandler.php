@@ -179,7 +179,7 @@ class SubscriptionsHandler {
 					throw $e;
 				}
 				//CREATED
-				//if($provider->getName() != 'recurly') {
+				/*if($provider->getName() != 'recurly') {
 					if($db_subscription->getSubStatus() == 'active') {
 						$emailTo = $userOpts->getOpts()['email'];
 						$userName = $userOpts->getOpts()['firstName'];
@@ -215,7 +215,7 @@ class SubscriptionsHandler {
 							config::getLogger()->addWarning($msg);
 						}
 					}
-				//}
+				}*/
 			}
 			//
 			$this->doFillSubscription($db_subscription);
