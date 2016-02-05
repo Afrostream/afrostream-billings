@@ -173,12 +173,49 @@ class SubscriptionsHandler {
 					}
 					//COMMIT
 					pg_query("COMMIT");
+					config::getLogger()->addInfo("subscription creating...database savings done successfully");
 				} catch(Exception $e) {
 					pg_query("ROLLBACK");
 					throw $e;
 				}
+				//CREATED
+				//if($provider->getName() != 'recurly') {
+					if($db_subscription->getSubStatus() == 'active') {
+						$emailTo = $userOpts->getOpts()['email'];
+						$userName = $userOpts->getOpts()['firstName'];
+						if($userName == '' || $userName == 'firstNameValue') {
+							$userName = explode('@', $emailTo)[0];
+						}
+						$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
+						$email = new SendGrid\Email();
+						$email
+						->addTo($emailTo)
+						->setFrom(getEnv('SENDGRID_FROM'))
+						->setFromName(getEnv('SENDGRID_FROM_NAME'))
+						->setText(' ')
+						->setHtml(' ')
+						->setTemplateId(getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID'))
+						->addSubstitution("%userName%", array($userName))
+						->addSubstitution("%planCode%", array($internal_plan->getName()));
+						// Or catch the error
+						try {
+							$sendgrid->send($email);
+						} catch(\SendGrid\Exception $e) {
+							$msg = 'an error occurred while sending email for a new subscription, error_code='.$e->getCode().", error_message=";
+							$firstLoop = true;
+							foreach($e->getErrors() as $er) {
+								if($firstLoop == true) {
+									$firstLoop = false;
+									$msg.= $er;
+								} else {
+									$msg.= ", ".$er;
+								}
+							}
+							config::getLogger()->addWarning($msg);
+						}
+					}
+				//}
 			}
-			config::getLogger()->addInfo("subscription creating...database savings done successfully");
 			//
 			$this->doFillSubscription($db_subscription);
 			//
