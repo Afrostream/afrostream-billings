@@ -78,6 +78,24 @@ if(getEnv('GOCARDLESS_WH_SECRET') === false) {
 	putEnv('GOCARDLESS_WH_SECRET=nelsounet');
 }
 
+#SendGrid API
+
+if(getEnv('SENDGRID_API_KEY') === false) {
+	putEnv('SENDGRID_API_KEY=SG.lliM3Gp5QyuqgmQ36iLwLw.u3mP5Ne2PhP5Kohs8MO8rHhlA0Q3GLyZil45b9qgl5E');
+}
+
+if(getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID') === false) {
+	putEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID=dde84299-e6fe-47a0-909b-1ee11417efe1');
+}
+
+if(getEnv('SENDGRID_FROM') === false) {
+	putEnv('SENDGRID_FROM=abonnement@afrostream.tv');
+}
+
+if(getEnv('SENDGRID_FROM_NAME') === false) {
+	putEnv('SENDGRID_FROM_NAME=Tonjé, Fondateur d\'Afrostream');
+}
+
 #logger, #db_conn, ...
 
 class config {
