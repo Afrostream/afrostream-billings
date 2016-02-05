@@ -192,6 +192,7 @@ class SubscriptionsHandler {
 						->addTo($emailTo)
 						->setFrom(getEnv('SENDGRID_FROM'))
 						->setFromName(getEnv('SENDGRID_FROM_NAME'))
+						->setSubject(' ')
 						->setText(' ')
 						->setHtml(' ')
 						->setTemplateId(getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID'))
