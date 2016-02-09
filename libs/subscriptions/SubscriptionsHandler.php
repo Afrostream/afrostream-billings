@@ -374,13 +374,13 @@ class SubscriptionsHandler {
 	}
 	
 	
-	private function doFillSubscriptions($subscriptions) {
+	protected function doFillSubscriptions($subscriptions) {
 		foreach($subscriptions as $subscription) {
 			$this->doFillSubscription($subscription);
 		}
 	}
 
-	private function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
 		if($subscription == NULL) {
 			return;
 		}
