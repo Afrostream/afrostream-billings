@@ -129,7 +129,10 @@ class BachatSubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	public function doFillSubscription(BillingsSubscription $subscription) {
+	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		if($subscription == NULL) {
+			return;
+		}
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
 			case 'pending_active' :

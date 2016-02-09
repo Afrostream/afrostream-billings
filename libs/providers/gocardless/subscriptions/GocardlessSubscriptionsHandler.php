@@ -570,7 +570,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		}
 	}
 	
-	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
 		if($subscription == NULL) {
 			return;
 		}

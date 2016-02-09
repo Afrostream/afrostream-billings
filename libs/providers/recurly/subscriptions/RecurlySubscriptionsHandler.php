@@ -351,7 +351,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		return($subscription);
 	}
 	
-	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
 		if($subscription == NULL) {
 			return;
 		}
