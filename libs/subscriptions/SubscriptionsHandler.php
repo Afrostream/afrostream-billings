@@ -472,8 +472,7 @@ class SubscriptionsHandler {
 					    $userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 					    //DATA <--
 					    //DATA SUBSTITUTION -->
-					    setlocale(LC_MONETARY, $internalPlan->getCurrency());
-					    setlocale(LC_NUMERIC, 'fr_FR');//FORCE LC_NUMERIC //TODO
+					    setlocale(LC_MONETARY, 'fr_FR');//TODO : Forced to French Locale for "," in floats...
 					   	$substitions = array();
 					   	//provider : nothing
 					   	//providerPlan : nothing
@@ -482,10 +481,10 @@ class SubscriptionsHandler {
 					   	$substitions['%internalplandesc%'] = $internalPlan->getDescription(); 
 					   	$substitions['%amountincents%'] = $internalPlan->getAmountInCents();
 					   	$amountInMoney = new Money((integer) $internalPlan->getAmountInCents(), new Currency($internalPlan->getCurrency()));
-					   	$substitions['%amount%'] = money_format('%.2n', $amountInMoney->getConvertedAmount());
+					   	$substitions['%amount%'] = money_format('%!.2n', $amountInMoney->getConvertedAmount());
 					   	$substitions['%amountincentsexcltax%'] = $internalPlan->getAmountInCentsExclTax();
 					   	$amountExclTaxInMoney = new Money((integer) $internalPlan->getAmountInCentsExclTax(), new Currency($internalPlan->getCurrency()));
-					   	$substitions['%amountexcltax%'] = money_format('%.2n', $amountExclTaxInMoney->getConvertedAmount());
+					   	$substitions['%amountexcltax%'] = money_format('%!.2n', $amountExclTaxInMoney->getConvertedAmount());
 					   	if($internalPlan->getVatRate() == NULL) {
 					   		$substitions['%vat%'] = 'N/A'; 
 					   	} else {
@@ -493,7 +492,7 @@ class SubscriptionsHandler {
 					   	}
 					   	$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
 					   	$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
-					   	$substitions['%amounttax%'] = money_format('%.2n', $amountTaxInMoney->getConvertedAmount());
+					   	$substitions['%amounttax%'] = money_format('%!.2n', $amountTaxInMoney->getConvertedAmount());
 					   	$substitions['%currency%'] = $internalPlan->getCurrency();
 					   	$substitions['%cycle%'] = $internalPlan->getCycle();
 					   	$substitions['%periodunit%'] = $internalPlan->getPeriodUnit();
@@ -532,6 +531,9 @@ class SubscriptionsHandler {
 						->setTemplateId(getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID'));
 						foreach($substitions as $var => $val) {
 							$email->addSubstitution($var, array($val));
+						}
+						if( (null !== (getEnv('SENGRID_BCC'))) && ('' !== (getEnv('SENGRID_BCC')))) {
+							$email->setBcc(getEnv('SENGRID_BCC'));	
 						}
 						$sendgrid->send($email);
 						config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=subscription_is_new, sending mail done successfully");
