@@ -1,11 +1,12 @@
 <?php
 
 require_once __DIR__ . '/../../../../config/config.php';
-require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
-require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
-require_once __DIR__ . '/../../../../libs/utils/utils.php';
+require_once __DIR__ . '/../../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../../utils/utils.php';
+require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 
-class RecurlySubscriptionsHandler {
+class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function __construct() {
 	}
@@ -286,8 +287,7 @@ class RecurlySubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateId($db_subscription);
 		//$db_subscription->setDeleted('false');//STATIC
-		//
-		//$db_subscription = BillingsSubscriptionDAO::updateBillingsSubscription($db_subscription);
+		// 
 		config::getLogger()->addInfo("recurly dbsubscription update for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()." done successfully");
 		return($db_subscription);
 	}
@@ -351,7 +351,10 @@ class RecurlySubscriptionsHandler {
 		return($subscription);
 	}
 	
-	public function doFillSubscription(BillingsSubscription $subscription) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		if($subscription == NULL) {
+			return;
+		}
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
 			case 'active' :
@@ -372,6 +375,10 @@ class RecurlySubscriptionsHandler {
 				break;		
 		}
 		$subscription->setIsActive($is_active);
+	}
+	
+	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
+		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
 	}
 	
 }

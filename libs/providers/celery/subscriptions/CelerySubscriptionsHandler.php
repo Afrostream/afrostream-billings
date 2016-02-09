@@ -1,11 +1,12 @@
 <?php
 
 require_once __DIR__ . '/../../../../config/config.php';
-require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
-require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
-require_once __DIR__ . '/../../../../libs/utils/utils.php';
+require_once __DIR__ . '/../../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../../utils/utils.php';
+require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 
-class CelerySubscriptionsHandler {
+class CelerySubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function __construct() {
 	}
@@ -40,7 +41,10 @@ class CelerySubscriptionsHandler {
 		}*/
 	}
 	
-	public function doFillSubscription(BillingsSubscription $subscription) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		if($subscription == NULL) {
+			return;
+		}
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
 			case 'active' :
@@ -72,6 +76,10 @@ class CelerySubscriptionsHandler {
 		}
 		//done
 		$subscription->setIsActive($is_active);
+	}
+	
+	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
+		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
 	}
 	
 }

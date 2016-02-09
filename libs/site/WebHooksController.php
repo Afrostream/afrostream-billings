@@ -81,7 +81,7 @@ class WebHooksController extends BillingsController {
 		
 			config::getLogger()->addInfo('Processing recurly webhook, id='.$billingsWebHook->getId().'...');
 			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
-			config::getLogger()->addInfo('Processing recurly webhook done sucessfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Processing recurly webhook done successfully, id='.$billingsWebHook->getId().'...');
 		
 			config::getLogger()->addInfo('Treating recurly webhook done successfully, id='.$billingsWebHook->getId().'...');
 		} catch(BillingsException $e) {
@@ -128,7 +128,7 @@ class WebHooksController extends BillingsController {
 		
 			config::getLogger()->addInfo('Processing gocardless webhook, id='.$billingsWebHook->getId().'...');
 			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
-			config::getLogger()->addInfo('Processing gocardless webhook done sucessfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Processing gocardless webhook done successfully, id='.$billingsWebHook->getId().'...');
 		
 			config::getLogger()->addInfo('Treating gocardless webhook done successfully, id='.$billingsWebHook->getId().'...');
 		} catch(BillingsException $e) {
@@ -183,7 +183,7 @@ class WebHooksController extends BillingsController {
 	
 			config::getLogger()->addInfo('Processing bachat webhook, id='.$billingsWebHook->getId().'...');
 			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
-			config::getLogger()->addInfo('Processing bachat webhook done sucessfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Processing bachat webhook done successfully, id='.$billingsWebHook->getId().'...');
 	
 			config::getLogger()->addInfo('Treating bachat webhook done successfully, id='.$billingsWebHook->getId().'...');
 		} catch(BillingsException $e) {
