@@ -245,7 +245,7 @@ class SubscriptionsController extends BillingsController {
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
 			//
 			$subscriptionsHandler = new SubscriptionsHandler();
-			$subscription = $subscriptionsHandler->doCancelSubscription($subscriptionBillingUuid, new DateTime(), true);
+			$subscription = $subscriptionsHandler->doCancelSubscriptionByUuid($subscriptionBillingUuid, new DateTime(), true);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {

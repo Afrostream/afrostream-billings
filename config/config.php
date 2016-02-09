@@ -15,7 +15,7 @@ if(getEnv('DB_HOST') === false) {
 	putEnv('DB_HOST=localhost');
 }
 
-if(getEnv('DB_PORT') == false) {
+if(getEnv('DB_PORT') === false) {
 	putEnv('DB_PORT=5432');
 }
 
@@ -94,6 +94,15 @@ if(getEnv('SENDGRID_FROM') === false) {
 
 if(getEnv('SENDGRID_FROM_NAME') === false) {
 	putEnv('SENDGRID_FROM_NAME=Tonjé, Fondateur d\'Afrostream');
+}
+
+#Event (MAIL)
+if(getEnv('EVENT_EMAIL_ACTIVATED') === false) {
+	putEnv('EVENT_EMAIL_ACTIVATED=true');
+}
+
+if(getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION') === false) {
+	putEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION=recurly');
 }
 
 #logger, #db_conn, ...

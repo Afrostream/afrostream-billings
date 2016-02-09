@@ -532,7 +532,11 @@ class InternalPlan implements JsonSerializable {
 	}
 	
 	public function getAmountInCentsExclTax() {
-		return(intval($this->amount_in_cents * (100 - $this->vatRate) / 100));
+		if($this->vatRate == NULL) {
+			return($this->amount_in_cents);
+		} else {
+			return(intval($this->amount_in_cents * (100 - $this->vatRate) / 100));
+		}
 	}
 	
 	public function jsonSerialize() {
