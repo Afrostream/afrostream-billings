@@ -96,6 +96,10 @@ if(getEnv('SENDGRID_FROM_NAME') === false) {
 	putEnv('SENDGRID_FROM_NAME=Tonjé, Fondateur d\'Afrostream');
 }
 
+if(getEnv('SENGRID_BCC') === false) {
+	putEnv('SENGRID_BCC=');
+}
+
 #Event (MAIL)
 if(getEnv('EVENT_EMAIL_ACTIVATED') === false) {
 	putEnv('EVENT_EMAIL_ACTIVATED=true');
