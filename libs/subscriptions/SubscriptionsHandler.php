@@ -472,8 +472,11 @@ class SubscriptionsHandler {
 					    $userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 					    //DATA <--
 					    //DATA SUBSTITUTION -->
-					    setlocale(LC_MONETARY, 'fr_FR');//TODO : Forced to French Locale for "," in floats...
+					    setlocale(LC_MONETARY, 'fr_FR.utf8');//TODO : Forced to French Locale for "," in floats...
 					   	$substitions = array();
+					   	//user
+					   	$substitions['%userreferenceuuid%'] = $user->getUserReferenceUuid();
+					   	$substitions['%userbillinguuid%'] = $user->getUserBillingUuid();
 					   	//provider : nothing
 					   	//providerPlan : nothing
 					   	//internalPlan :
@@ -517,6 +520,8 @@ class SubscriptionsHandler {
 					   	$substitions['%username%'] = $username;
 					   	$fullname = trim($firstname." ".$lastname);
 					   	$substitions['%fullname%'] = $fullname;
+					   	//subscription
+					   	$substitions['%subscriptionbillinguuid%'] = $subscription_after_update->getSubscriptionBillingUuid();
 					   	//DATA SUBSTITUTION <--
 						$emailTo = $substitions['%email%'];
 						$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
