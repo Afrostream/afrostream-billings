@@ -2092,7 +2092,8 @@ class ProcessingLogDAO {
 	}
 	
 	public static function getProcessingLogByDay($providerid, $processing_type, Datetime $day) {
-		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE providerid = $1 AND processing_type = $2 AND date(started_date) = date($3) AT TIME ZONE 'Europe/Paris'";
+		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE providerid = $1 AND processing_type = $2";
+		$query.= " AND date(started_date AT TIME ZONE 'Europe/Paris') = date($3)";
 		
 		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $processing_type, dbGlobal::toISODate($day)));
 		
