@@ -304,7 +304,7 @@ class UserOptsDAO {
 
 class InternalPlanDAO {
 	
-	private static $sfields = "BIP._id, BIP.internal_plan_uuid, BIP.name, BIP.description, BIP.amount_in_cents, BIP.currency, BIP.cycle, BIP.period_unit, BIP.period_length";
+	private static $sfields = "BIP._id, BIP.internal_plan_uuid, BIP.name, BIP.description, BIP.amount_in_cents, BIP.currency, BIP.cycle, BIP.period_unit, BIP.period_length, BIP.thumbid, BIP.vat_rate";
 	
 	private static function getInternalPlanFromRow($row) {
 		$out = new InternalPlan();
@@ -317,6 +317,8 @@ class InternalPlanDAO {
 		$out->setCycle(new PlanCycle($row["cycle"]));
 		$out->setPeriodUnit(new PlanPeriodUnit($row["period_unit"]));
 		$out->setPeriodLength($row["period_length"]);
+		$out->setThumbId($row["thumbid"]);
+		$out->setVatRate($row["vat_rate"]);
 		return($out);
 	}
 	
@@ -442,6 +444,7 @@ class InternalPlan implements JsonSerializable {
 	private $periodLength;
 	private $showProviderPlans = true;
 	private $vatRate = 20;
+	private $thumbId;
 
 	public function getId() {
 		return($this->_id);
@@ -539,6 +542,14 @@ class InternalPlan implements JsonSerializable {
 		}
 	}
 	
+	public function setThumbId($thumbId) {
+		$this->thumbId = $thumbId;
+	}
+	
+	public function getThumbId() {
+		return($this->thumbId);
+	}
+	
 	public function jsonSerialize() {
 		$return =
 			[
@@ -547,12 +558,13 @@ class InternalPlan implements JsonSerializable {
 				'description' => $this->description,
 				'amountInCents' => $this->amount_in_cents,
 				'amountInCentsExclTax' => (string) $this->getAmountInCentsExclTax(),
-				'vatRate' => (string) $this->vatRate,
+				'vatRate' => ($this->vatRate == NULL) ? NULL : (string) number_format($this->vatRate, 2, ',', ' '),//Forced to French Locale
 				'currency' => $this->currency,
 				'cycle' => $this->cycle,
 				'periodUnit' => $this->periodUnit,
 				'periodLength' => $this->periodLength,
-				'internalPlanOpts' => (InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($this->_id)->jsonSerialize())
+				'internalPlanOpts' => (InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($this->_id)->jsonSerialize()),
+				'thumb' => ThumbDAO::getThumbById($this->thumbId)
 		];
 		if($this->showProviderPlans) {
 			$return['providerPlans'] = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id));
@@ -2097,6 +2109,73 @@ class ProcessingLogDAO {
 	
 }
 
+class Thumb implements JsonSerializable {
+	
+	private $_id;
+	private $path;
+	private $imgix;
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getPath() {
+		return($this->path);
+	}
+	
+	public function setPath($str) {
+		$this->path= $str;
+	}
+	
+	public function getImgix() {
+		return($this->imgix);
+	}
+	
+	public function setImgix($str) {
+		$this->imgix = $str;
+	}
+	
+	public function jsonSerialize() {
+		return[
+				'path' => $this->path,
+				'imgix' => $this->imgix
+		];
+	}
+	
+}
+
+class ThumbDAO {
+	
+	private static $sfields = "_id, path, imgix";
+	
+	private static function getThumbFromRow($row) {
+		$out = new Thumb();
+		$out->setId($row["_id"]);
+		$out->setPath($row["path"]);
+		$out->setImgix($row["imgix"]);
+		return($out);
+	}
+	
+	public static function getThumbById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_thumbs WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getThumbFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+}
 
 class UtilsDAO {
 	
