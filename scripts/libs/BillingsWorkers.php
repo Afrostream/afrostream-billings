@@ -8,6 +8,7 @@ class BillingsWorkers {
 	
 	public function __construct() {
 		$this->today = new DateTime(NULL, new DateTimeZone(self::$timezone));
+		$this->today->setTime(0, 0, 0);
 	}
 	
 	protected static function hasProcessingStatus($processingLogs, $processing_status) {

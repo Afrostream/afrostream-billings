@@ -16,7 +16,7 @@ class BachatUsersHandler {
 				//nothing
 				//TODO : (should check provider side...)
 			} else {
-				$msg = "unsupported feature for provider named bachat";
+				$msg = "unsupported feature for provider named bachat, userProviderUuid have to be provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
