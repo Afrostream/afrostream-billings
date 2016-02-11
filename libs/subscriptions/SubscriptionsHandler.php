@@ -430,7 +430,7 @@ class SubscriptionsHandler {
 				}
 			} else {
 				if(
-						($subscription_befor_update->getSubStatus() != 'active')
+						($subscription_before_update->getSubStatus() != 'active')
 						&&
 						($subscription_after_update->getSubStatus() == 'active')
 				) {
