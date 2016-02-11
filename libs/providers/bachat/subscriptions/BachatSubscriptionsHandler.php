@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
 require_once __DIR__ . '/../../../../libs/utils/DateRange.php';
 require_once __DIR__ . '/../../../../libs/utils/utils.php';
 		
-class BachatSubscriptionsHandler {
+class BachatSubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function __construct() {
 	}
