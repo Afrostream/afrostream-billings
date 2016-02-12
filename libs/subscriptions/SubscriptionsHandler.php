@@ -332,6 +332,7 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$db_subscription_before_update = $db_subscription;
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
@@ -357,6 +358,8 @@ class SubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
+			//
+			$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 			//
 			$this->doFillSubscription($db_subscription);
 			//
@@ -423,6 +426,9 @@ class SubscriptionsHandler {
 		try {
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid()."...");
 			$subscription_is_new_event = false;
+			$subscription_is_canceled_event = false;
+			$sendgrid_tepmplate_id = NULL;
+			$event = NULL;
 			//check subscription_is_new_event
 			if($subscription_before_update == NULL) {
 				if($subscription_after_update->getSubStatus() == 'active') {
@@ -438,7 +444,28 @@ class SubscriptionsHandler {
 				}
 			}
 			if($subscription_is_new_event == true) {
-				config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=subscription_is_new, ...");
+				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID');
+				$event = "subscription_is_new";
+			}
+			if($subscription_before_update == NULL) {
+				if($subscription_after_update->getSubStatus() == 'canceled') {
+					$subscription_is_canceled_event = true;
+				}
+			} else {
+				if(
+						($subscription_before_update->getSubStatus() != 'canceled')
+						&&
+						($subscription_after_update->getSubStatus() == 'canceled')
+						) {
+							$subscription_is_canceled_event = true;
+						}
+			}
+			if($subscription_is_canceled_event == true) {
+				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
+				$event = "subscription_is_canceled";
+			}
+			if($subscription_is_new_event == true || $subscription_is_canceled_event == true) {
+				config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", ...");
 				if(getEnv('EVENT_EMAIL_ACTIVATED') == true) {
 					$eventEmailProvidersExceptionArray = explode(";", getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION'));
 					$provider = ProviderDAO::getProviderById($subscription_after_update->getProviderId());
@@ -448,7 +475,7 @@ class SubscriptionsHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					if(!in_array($provider->getName(), $eventEmailProvidersExceptionArray)) {
-						config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=subscription_is_new, sending mail...");
+						config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail...");
 					    //DATA -->
 					    $providerPlan = PlanDAO::getPlanById($subscription_after_update->getPlanId());
 					    if($providerPlan == NULL) {
@@ -533,7 +560,7 @@ class SubscriptionsHandler {
 						->setSubject(' ')
 						->setText(' ')
 						->setHtml(' ')
-						->setTemplateId(getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID'));
+						->setTemplateId($sendgrid_tepmplate_id);
 						foreach($substitions as $var => $val) {
 							$email->addSubstitution($var, array($val));
 						}
@@ -541,10 +568,10 @@ class SubscriptionsHandler {
 							$email->setBcc(getEnv('SENGRID_BCC'));	
 						}
 						$sendgrid->send($email);
-						config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=subscription_is_new, sending mail done successfully");
+						config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");
 					}
 				}
-				config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=subscription_is_new, done successfully");
+				config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", done successfully");
 			}
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid()." done successfully");
 		} catch(\SendGrid\Exception $e) {

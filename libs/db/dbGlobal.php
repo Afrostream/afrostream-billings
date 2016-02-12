@@ -538,7 +538,7 @@ class InternalPlan implements JsonSerializable {
 		if($this->vatRate == NULL) {
 			return($this->amount_in_cents);
 		} else {
-			return(intval($this->amount_in_cents * (100 - $this->vatRate) / 100));
+			return(intval(round($this->amount_in_cents / (1 + $this->vatRate / 100))));
 		}
 	}
 	
