@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:mstns="http://bouyguestelecom.fr/Services/EDBRefund.xsd" targetNamespace="http://bouyguestelecom.fr/Services/EDBRefund.xsd" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.1">
+  <xsd:element name="EDBRefundRequest">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="merchantId" type="xsd:integer" maxOccurs="1" minOccurs="1" />
+        <xsd:element name="serviceId" type="xsd:string" maxOccurs="1" minOccurs="1" />
+        <xsd:element name="chargeTransactionId " type="xsd:string" maxOccurs="1" minOccurs="1" />
+        <xsd:element name="requestId" type="xsd:string" maxOccurs="1" minOccurs="1" />
+        <xsd:element name="currency " type="xsd:string" maxOccurs="1" minOccurs="1" />
+        <xsd:element name="refundBase" type="xsd:string" maxOccurs="1" minOccurs="1" />
+        <xsd:element name="refundTax" type="xsd:string" maxOccurs="1" minOccurs="1" />
+        <xsd:element name="refundTotal" type="xsd:string" maxOccurs="1" minOccurs="1" />
+        <xsd:element name="reasonCode" type="xsd:integer" maxOccurs="1" minOccurs="1" />
+        <xsd:element name="reasonDescription" type="xsd:string" maxOccurs="1" minOccurs="1" />
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+  <xsd:element name="EDBRefundResponse">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="requestId" type="xsd:string" maxOccurs="1" minOccurs="1" />
+        <xsd:element name="result" type="xsd:integer" maxOccurs="1" minOccurs="1" />
+        <xsd:element name="resultMessage" type="xsd:string" maxOccurs="1" minOccurs="1" />
+        <xsd:element name="refundTransactionId" type="xsd:string" maxOccurs="1" minOccurs="1" />
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ .'/BillingsController.php';
-require_once __DIR__ . '/../../libs/webhooks/WebHooksHandler.php';
+require_once __DIR__ . '/../webhooks/WebHooksHandler.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;

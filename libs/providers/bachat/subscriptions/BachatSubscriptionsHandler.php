@@ -1,11 +1,14 @@
 <?php
 
 require_once __DIR__ . '/../../../../config/config.php';
-require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
-require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
-require_once __DIR__ . '/../../../../libs/utils/DateRange.php';
-require_once __DIR__ . '/../../../../libs/utils/utils.php';
-		
+require_once __DIR__ . '/../../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../../utils/utils.php';
+require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ .'/../client/soap-wsse.php';
+require_once __DIR__ .'/../client/WSSoapClient.class.php';
+require_once __DIR__ .'/../client/ByTelBachat.class.php';
+
 class BachatSubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function __construct() {
@@ -22,15 +25,34 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			//
+			$requestId = $subOpts->getOpts()['requestId'];
+			$idSession = $subOpts->getOpts()['idSession'];
+			$optCode = $subOpts->getOpts()['optCode'];
+			//
+			$bachat = new ByTelBAchat();
+			
+			$res = $bachat->requestEDBBilling($requestId, $idSession, $optCode);
+			if($res->resultMessage == "SUCCESS") {
+				//OK
+				config::getLogger()->addInfo("BACHAT OK, result=".$res->result.", requestId=".$res->requestId.", chargeTransactionId=".$res->chargeTransactionId);
+				$subOpts->setOpt('chargeTransactionId', $res->chargeTransactionId);
+			} else {
+				//KO
+				$msg = "BACHAT ERROR, result=".var_export($res, true);;
+				config::getLogger()->addError("bachat subscription creation failed : ".$msg);
+				throw $e;
+			}
+			//
 			$sub_uuid = $subscription_provider_uuid;
 			config::getLogger()->addInfo("bachat subscription creation done successfully, bachat_subscription_uuid=".$sub_uuid);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while creating a bachat subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("recurly subscription creation failed : ".$msg);
+			config::getLogger()->addError("bachat subscription creation failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while creating a bachat subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("recurly subscription creation failed : ".$msg);
+			config::getLogger()->addError("bachat subscription creation failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($sub_uuid);
@@ -229,24 +251,39 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			break;
 		}
-		$subscription->setSubCanceledDate($cancel_date);
-		if($is_a_request == true) {
-			$subscription->setSubStatus('requesting_canceled');
+		if(
+				$subscription->getSubStatus() == "canceled"
+				||
+				$subscription->getSubStatus() == "requesting_canceled"
+				||
+				$subscription->getSubStatus() == "pending_canceled"
+		)
+		{
+			//nothing todo : already done or in process
 		} else {
-			$subscription->setSubStatus('canceled');
-		}
-		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
-			BillingsSubscriptionDAO::updateSubStatus($subscription);
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
+			$subscription->setSubCanceledDate($cancel_date);
+			if($is_a_request == true) {
+				$subscription->setSubStatus('requesting_canceled');
+			} else {
+				$subscription->setSubStatus('canceled');
+			}
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+				BillingsSubscriptionDAO::updateSubStatus($subscription);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 		}
 		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
+		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
 	}
 	
 }

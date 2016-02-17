@@ -1,10 +1,11 @@
 <?php
 
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../libs/db/dbGlobal.php';
-require_once __DIR__ . '/../../libs/providers/recurly/plans/RecurlyPlansHandler.php';
-require_once __DIR__ . '/../../libs/providers/gocardless/plans/GocardlessPlansHandler.php';
-require_once __DIR__ . '/../../libs/providers/bachat/plans/BachatPlansHandler.php';
+require_once __DIR__ . '/../db/dbGlobal.php';
+require_once __DIR__ . '/../providers/recurly/plans/RecurlyPlansHandler.php';
+require_once __DIR__ . '/../providers/gocardless/plans/GocardlessPlansHandler.php';
+require_once __DIR__ . '/../providers/bachat/plans/BachatPlansHandler.php';
+require_once __DIR__ . '/../providers/idipper/plans/IdipperPlansHandler.php';
 
 use SebastianBergmann\Money\Currency;
 
@@ -128,7 +129,6 @@ class InternalPlansHandler {
 			}
 			config::getLogger()->addInfo("internal plan creating done successfully, internalplanid=".$db_internal_plan->getId());
 		} catch(BillingsException $e) {
-			pg_query("ROLLBACK");
 			$msg = "a billings exception occurred while creating an internal plan, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("internal plan creating failed : ".$msg);
 			throw $e;
@@ -182,6 +182,10 @@ class InternalPlansHandler {
 				case 'bachat' :
 					$bachatPlansHandler = new BachatPlansHandler();
 					$provider_plan_uuid = $bachatPlansHandler->createProviderPlan($db_internal_plan);
+					break;
+				case 'idipper' :
+					$idipperPlansHandler = new IdipperPlansHandler();
+					$provider_plan_uuid = $idipperPlansHandler->createProviderPlan($db_internal_plan);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -250,7 +254,6 @@ class InternalPlansHandler {
 			$db_internal_plan = InternalPlanDAO::getInternalPlanById($db_internal_plan->getId());
 			config::getLogger()->addInfo("internal plan opts updating done successfully");
 		} catch(BillingsException $e) {
-			pg_query("ROLLBACK");
 			$msg = "a billings exception occurred while updating Internal Plan Opts, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("internal plan opts updating failed : ".$msg);
 			throw $e;

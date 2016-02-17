@@ -7,6 +7,7 @@ require_once __DIR__ . '/../providers/celery/subscriptions/CelerySubscriptionsHa
 require_once __DIR__ . '/../providers/recurly/subscriptions/RecurlySubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/gocardless/subscriptions/GocardlessSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/bachat/subscriptions/BachatSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/idipper/subscriptions/IdipperSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 
 class SubscriptionsHandler {
@@ -136,6 +137,10 @@ class SubscriptionsHandler {
 						$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 						$sub_uuid = $bachatSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
 						break;
+					case 'idipper' :
+						$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
+						$sub_uuid = $idipperSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						break;
 					default:
 						$msg = "unsupported feature for provider named : ".$provider_name;
 						config::getLogger()->addError($msg);
@@ -166,6 +171,10 @@ class SubscriptionsHandler {
 						case 'bachat' :
 							$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 							$db_subscription = $bachatSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							break;
+						case 'idipper' :
+							$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
+							$db_subscription = $idipperSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);							
 							break;
 						default:
 							$msg = "unsupported feature for provider named : ".$provider_name;
@@ -339,9 +348,8 @@ class SubscriptionsHandler {
 					$db_subscription = $recurlySubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request = true);
 					break;
 				case 'gocardless' :
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
+					$db_subscription = $gocardlessSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request = true);
 					break;
 				case 'celery' :
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -409,6 +417,10 @@ class SubscriptionsHandler {
 			case 'bachat' :
 				$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 				$bachatSubscriptionsHandler->doFillSubscription($subscription);
+				break;
+			case 'idipper' :
+				$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
+				$idipperSubscriptionsHandler->doFillSubscription($subscription);
 				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();

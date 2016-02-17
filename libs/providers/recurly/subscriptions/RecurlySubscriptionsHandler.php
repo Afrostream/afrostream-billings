@@ -311,27 +311,34 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
 		try {
 			config::getLogger()->addInfo("recurly subscription cancel...");
+			if(
+					$subscription->getSubStatus() == "canceled"
+					)
+			{
+				//nothing todo : already done or in process
+			} else {
 			//
-			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
-			//
-			$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
-			//
-			$api_subscription->cancel();
-			//
-			$subscription->setSubCanceledDate($cancel_date);
-			$subscription->setSubStatus('canceled');
-			//
-			try {
-				//START TRANSACTION
-				pg_query("BEGIN");
-				BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
-				BillingsSubscriptionDAO::updateSubStatus($subscription);
-				//COMMIT
-				pg_query("COMMIT");
-			} catch(Exception $e) {
-				pg_query("ROLLBACK");
-				throw $e;
+				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
+				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+				//
+				$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
+				//
+				$api_subscription->cancel();
+				//
+				$subscription->setSubCanceledDate($cancel_date);
+				$subscription->setSubStatus('canceled');
+				//
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
 			}
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("recurly subscription cancel done successfully for recurly_subscription_uuid=".$subscription->getSubUid());
