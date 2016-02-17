@@ -5,9 +5,9 @@ require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
-require_once __DIR__ .'/../client/soap-wsse.php';
-require_once __DIR__ .'/../client/WSSoapClient.class.php';
-require_once __DIR__ .'/../client/ByTelBachat.class.php';
+require_once __DIR__ . '/../client/soap-wsse.php';
+require_once __DIR__ . '/../client/WSSoapClient.class.php';
+require_once __DIR__ . '/../client/ByTelBAchat.class.php';
 
 class BachatSubscriptionsHandler extends SubscriptionsHandler {
 	
