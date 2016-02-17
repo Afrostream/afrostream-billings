@@ -1,12 +1,13 @@
 <?php
 
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../libs/providers/celery/users/CeleryUsersHandler.php';
-require_once __DIR__ . '/../../libs/providers/recurly/users/RecurlyUsersHandler.php';
-require_once __DIR__ . '/../../libs/providers/gocardless/users/GocardlessUsersHandler.php';
-require_once __DIR__ . '/../../libs/providers/bachat/users/BachatUsersHandler.php';
-require_once __DIR__ . '/../../libs/db/dbGlobal.php';
-require_once __DIR__ . '/../../libs/utils/utils.php';
+require_once __DIR__ . '/../providers/celery/users/CeleryUsersHandler.php';
+require_once __DIR__ . '/../providers/recurly/users/RecurlyUsersHandler.php';
+require_once __DIR__ . '/../providers/gocardless/users/GocardlessUsersHandler.php';
+require_once __DIR__ . '/../providers/bachat/users/BachatUsersHandler.php';
+require_once __DIR__ . '/../providers/idipper/users/IdipperUsersHandler.php';
+require_once __DIR__ . '/../db/dbGlobal.php';
+require_once __DIR__ . '/../utils/utils.php';
 
 class UsersHandler {
 	
@@ -206,6 +207,10 @@ class UsersHandler {
 				case 'bachat' :
 					$bachatUsersHandler = new BachatUsersHandler();
 					$user_provider_uuid = $bachatUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					break;
+				case 'idipper' :
+					$idipperUsersHandler = new IdipperUsersHandler();
+					$user_provider_uuid = $idipperUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider_name;

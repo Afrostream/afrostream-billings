@@ -8,10 +8,8 @@ use GoCardlessPro\Core\Paginator;
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
-require_once __DIR__ . '/../../../utils/DateRange.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
-
 		
 class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 	
@@ -526,44 +524,48 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
 		try {
 			config::getLogger()->addInfo("gocardless subscription cancel...");
-			//
-			//
-			$client = new Client(array(
-					'access_token' => getEnv('GOCARDLESS_API_KEY'),
-					'environment' => getEnv('GOCARDLESS_API_ENV')
-			));
-			//
-			$client->subscriptions()->cancel($subscription->getSubUid());
-			//
-			$subscription->setSubCanceledDate($cancel_date);
-			$subscription->setSubStatus('canceled');
-			//
-			try {
-				//START TRANSACTION
-				pg_query("BEGIN");
-				BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
-				BillingsSubscriptionDAO::updateSubStatus($subscription);
-				//COMMIT
-				pg_query("COMMIT");
-			} catch (Exception $e) {
-				pg_query("ROLLBACK");
-				throw $e;
+			if(
+					$subscription->getSubStatus() == "canceled"
+			)
+			{
+				//nothing todo : already done or in process
+			} else {
+				//
+				//
+				$client = new Client(array(
+						'access_token' => getEnv('GOCARDLESS_API_KEY'),
+						'environment' => getEnv('GOCARDLESS_API_ENV')
+				));
+				//
+				$client->subscriptions()->cancel($subscription->getSubUid());
+				//
+				$subscription->setSubCanceledDate($cancel_date);
+				$subscription->setSubStatus('canceled');
+				//
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch (Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
 			}
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("gocardless subscription cancel done successfully for gocardless_subscription_uuid=".$subscription->getSubUid());
 			return($subscription);
 		} catch(BillingsException $e) {
-			pg_query("ROLLBACK");
 			$msg = "a billings exception occurred while cancelling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless subscription cancelling failed : ".$msg);
 			throw $e;
 		} catch (GoCardlessProException $e) {
-			pg_query("ROLLBACK");
 			$msg = "a GoCardlessProException occurred while cancelling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless subscription cancelling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
-			pg_query("ROLLBACK");
 			$msg = "an unknown exception occurred while cancelling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless subscription cancelling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);

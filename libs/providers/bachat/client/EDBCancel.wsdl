@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             xmlns:ccn="http://bouyguestelecom.fr/Services/EDBCancel-v1.1"
+             xmlns:xsd1="http://bouyguestelecom.fr/Services/EDBCancel.xsd"
+             xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:ns="http://schemas.xmlsoap.org/soap/encoding/"
+             targetNamespace="http://bouyguestelecom.fr/Services/EDBCancel-v1.1"
+             xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+    <types>
+        <schema xmlns="http://www.w3.org/2001/XMLSchema">
+            <import namespace="http://bouyguestelecom.fr/Services/EDBCancel.xsd" schemaLocation="EDBCancel.xsd"/>
+        </schema>
+
+    </types>
+    <message name="EDBCancelSoapIn">
+        <part name="InParameters" element="xsd1:EDBCancelRequest"/>
+    </message>
+    <message name="EDBCancelSoapOut">
+        <part name="OutParameters" element="xsd1:EDBCancelResponse"/>
+    </message>
+    <portType name="EDBCancelPortType">
+        <operation name="EDBCancel">
+            <input message="ccn:EDBCancelSoapIn"/>
+            <output message="ccn:EDBCancelSoapOut"/>
+        </operation>
+    </portType>
+    <binding name="EDBCancelBinding" type="ccn:EDBCancelPortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <operation name="EDBCancel">
+            <soap:operation soapAction="http://localhost:8080/facecbook-emulator/EDBCancel" style="document"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+    </binding>
+
+    <service name="EDBCancel">
+        <port name="EDBCancelPort" binding="ccn:EDBCancelBinding">
+            <soap:address location="https://market.bouyguestelecom.fr:1443/WMPFor3G/EDBCancel"/>
+        </port>
+    </service>
+</definitions>

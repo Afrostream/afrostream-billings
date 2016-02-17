@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:ccn="http://bouyguestelecom.fr/Services/EDBBilling-v1.1" xmlns:xsd2="http://bouyguestelecom.fr/Services/EDBBilling.xsd" xmlns="http://schemas.xmlsoap.org/wsdl/" xmlns:ns="http://schemas.xmlsoap.org/soap/encoding/" targetNamespace="http://bouyguestelecom.fr/Services/EDBBilling-v1.1">
+    <types>
+        <schema xmlns="http://www.w3.org/2001/XMLSchema">
+            <import namespace="http://bouyguestelecom.fr/Services/EDBBilling.xsd" schemaLocation="EDBBilling.xsd"/>
+        </schema>
+    </types>
+    <message name="EDBBillingSoapIn">
+        <part name="InParameters" element="xsd2:EDBBillingRequest"/>
+    </message>
+    <message name="EDBBillingSoapOut">
+        <part name="OutParameters" element="xsd2:EDBBillingResponse"/>
+    </message>
+    <portType name="EDBBillingPortType">
+        <operation name="EDBBilling">
+            <input message="ccn:EDBBillingSoapIn"/>
+            <output message="ccn:EDBBillingSoapOut"/>
+        </operation>
+    </portType>
+    <binding name="EDBBillingBinding" type="ccn:EDBBillingPortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <operation name="EDBBilling">
+            <soap:operation soapAction="http://localhost:8080/facecbook-emulator/EDBBilling" style="document"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+    </binding>
+    <service name="EDBBilling">
+        <port name="EDBBillingPort" binding="ccn:EDBBillingBinding">
+            <soap:address location="https://market.bouyguestelecom.fr:1443/WMPFor3G/EDBBilling"/>
+        </port>
+    </service>
+</definitions>

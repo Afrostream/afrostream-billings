@@ -5,6 +5,7 @@ require_once __DIR__ . '/../libs/site/UsersController.php';
 require_once __DIR__ . '/../libs/site/SubscriptionsController.php';
 require_once __DIR__ . '/../libs/site/InternalPlansController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
+require_once __DIR__ . '/test.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -517,6 +518,12 @@ $app->post("/billings/providers/gocardless/webhooks/", function ($request, $resp
 $app->post("/billings/providers/bachat/webhooks/", function ($request, $response, $args) {
 	$webHooksController = new WebHooksController();
 	return($webHooksController->bachatWebHooksPosting($request, $response, $args));
+});
+
+//Testing purpose
+
+$app->get("/billings/api/test/", function ($request, $response, $args) {
+	testMe();
 });
 
 $app->run();

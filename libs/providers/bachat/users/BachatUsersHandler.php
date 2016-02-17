@@ -1,8 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../../../../config/config.php';
-require_once __DIR__ . '/../../../../libs/utils/utils.php';
-require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
+require_once __DIR__ . '/../../../utils/utils.php';
+require_once __DIR__ . '/../../../utils/BillingsException.php';
 
 class BachatUsersHandler {
 	

@@ -53,7 +53,7 @@ class BillingsApiSubscriptions {
 						." statusMessage=".$billingsApiResponse->getStatusMessage());
 			}
 		} else {
-			BillingsApiClientConfig::getLogger()->addInfo("API CALL : updating subscriptions, code=".$httpCode);
+			BillingsApiClientConfig::getLogger()->addError("API CALL : updating subscriptions, code=".$httpCode);
 			throw new Exception("API CALL : updating subscriptions, code=".$httpCode." is unexpected...");
 		}
 		return($apiSubscriptions);
@@ -96,7 +96,7 @@ class BillingsApiSubscriptions {
 						." statusMessage=".$billingsApiResponse->getStatusMessage());
 			}
 		} else {
-			BillingsApiClientConfig::getLogger()->addInfo("API CALL : getting subscriptions, code=".$httpCode);
+			BillingsApiClientConfig::getLogger()->addError("API CALL : getting subscriptions, code=".$httpCode);
 			throw new Exception("API CALL : getting subscriptions, code=".$httpCode." is unexpected...");
 		}
 		BillingsApiClientConfig::getLogger()->addInfo("API CALL : getting subscriptions done successfully");
