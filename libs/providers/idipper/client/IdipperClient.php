@@ -114,7 +114,7 @@ class UtilisateurReponse {
 	}
 	
 	public function getRubriques() {
-		return($this->Rubrique);
+		return($this->Rubriques);
 	}
 	
 }
