@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../../../config/config.php';
+
 class WSSoapClient extends \SoapClient
 {
 
@@ -36,6 +38,8 @@ class WSSoapClient extends \SoapClient
 		*/
 		
 		$this->__last_request = $request;
+		
+		config::getLogger()->addInfo("BACHAT request=".$request);
 
 		return parent::__doRequest($request, $location, $saction, $version, $one_way);
 	}

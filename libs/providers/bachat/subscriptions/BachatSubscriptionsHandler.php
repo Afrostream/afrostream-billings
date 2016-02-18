@@ -39,7 +39,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				$subOpts->setOpt('chargeTransactionId', $res->chargeTransactionId);
 			} else {
 				//KO
-				$msg = "BACHAT ERROR, result=".var_export($res, true);;
+				$msg = "BACHAT ERROR, result=".var_export($res, true);
 				config::getLogger()->addError("bachat subscription creation failed : ".$msg);
 				throw $e;
 			}
