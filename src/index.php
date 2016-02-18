@@ -282,6 +282,7 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
 */
 
 $app->post("/billings/api/subscriptions/", function ($request, $response, $args) {
+	config::getLogger()->addInfo("POST SUBSCRIPTIONS, request=".$request->getBody());
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->create($request, $response, $args));
 });
