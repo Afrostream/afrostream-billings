@@ -81,7 +81,7 @@ class BillingsGocardlessWorkers extends BillingsWorkers {
 			ScriptsConfig::getLogger()->addInfo("refreshing gocardless subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()."...");
 			try {
 				pg_query("BEGIN");
-				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh");
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
 				$subscriptionsHandler = new SubscriptionsHandler();
 				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), new DateTime($subscription->getSubPeriodEndsDate()));
 				$billingsSubscriptionActionLog->setProcessingStatus('done');

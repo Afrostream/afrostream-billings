@@ -28,11 +28,11 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			//
 			$requestId = $subOpts->getOpts()['requestId'];
 			$idSession = $subOpts->getOpts()['idSession'];
-			$optCode = $subOpts->getOpts()['optCode'];
+			$otpCode = $subOpts->getOpts()['otpCode'];
 			//
 			$bachat = new ByTelBAchat();
 			
-			$res = $bachat->requestEDBBilling($requestId, $idSession, $optCode);
+			$res = $bachat->requestEDBBilling($requestId, $idSession, $otpCode);
 			if($res->resultMessage == "SUCCESS") {
 				//OK
 				config::getLogger()->addInfo("BACHAT OK, result=".$res->result.", requestId=".$res->requestId.", chargeTransactionId=".$res->chargeTransactionId);
@@ -40,8 +40,8 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			} else {
 				//KO
 				$msg = "BACHAT ERROR, result=".var_export($res, true);
-				config::getLogger()->addError("bachat subscription creation failed : ".$msg);
-				throw $e;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//
 			$sub_uuid = $subscription_provider_uuid;

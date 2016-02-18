@@ -84,9 +84,9 @@ function checkSubOptsArray(array $sub_opts_as_array, $providerName) {
 function checkSubOptsKeys(array $sub_opts_as_array, $providerName) {
 	switch($providerName) {
 		case 'bachat' :
-			if(!array_key_exists('optCode', $sub_opts_as_array)) {
+			if(!array_key_exists('otpCode', $sub_opts_as_array)) {
 				//exception
-				$msg = "subOpts field 'optCode' is missing";
+				$msg = "subOpts field 'otpCode' is missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
