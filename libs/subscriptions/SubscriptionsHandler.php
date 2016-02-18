@@ -360,6 +360,10 @@ class SubscriptionsHandler {
 					$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 					$db_subscription = $bachatSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request = true);
 					break;
+				case 'idipper' :
+					$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
+					$db_subscription = $idipperSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request = true);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
