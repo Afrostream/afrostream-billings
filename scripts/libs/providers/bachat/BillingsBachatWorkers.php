@@ -257,7 +257,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			if($firstAttemptDate < $now) {		
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling...");
 				
-				$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_response_cancel');
+				$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_cancel');
 				
 				if(($current_par_can_file_path = tempnam('', 'tmp')) === false) {
 					throw new BillingsException("PAR_CAN file cannot be created");
@@ -426,7 +426,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 				
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_cancel', $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_request_renew', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling bypassed - already done today -");
 				break;
