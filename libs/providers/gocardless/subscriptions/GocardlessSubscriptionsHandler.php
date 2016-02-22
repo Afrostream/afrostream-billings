@@ -52,7 +52,6 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$sub_uuid = $subscription_provider_uuid;
 			} else {
 				checkSubOptsArray($subOpts->getOpts(), 'gocardless', 'create');
-				config::getLogger()->addInfo("gocardless subscription creation... subscription creation...");
 				$amount = $internalPlan->getAmountInCents();
 				$currency = $internalPlan->getCurrency();
 				$name = $plan->getPlanUuid();
@@ -98,21 +97,43 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 						break;
 				}
 				$customer_bank_account_token = $subOpts->getOpts()['customerBankAccountToken'];
-				$params = ['params' =>
+				//Create a Bank Account
+				config::getLogger()->addInfo("gocardless subscription creation... bank account creation...");
+				$bank_account = $client->customerBankAccounts()->create(
+						['params' =>
+								[
+										'links' => [
+												'customer' => $user->getUserProviderUuid(),
+												'customer_bank_account_token' => $customer_bank_account_token
+										]
+								]
+						]);
+				config::getLogger()->addInfo("gocardless subscription creation... bank account creation done successfully, bank_acccount_id=".$bank_account->id);
+				//Create a Mandate
+				config::getLogger()->addInfo("gocardless subscription creation... mandate creation...");
+				$mandate = $client->mandates()->create(
+						['params' =>
+								[
+										'links' => ['customer_bank_account' => $bank_account->id]
+								]
+						]);
+				config::getLogger()->addInfo("gocardless subscription creation... mandate creation done successfully, mandate_id=".$mandate->id);
+				config::getLogger()->addInfo("gocardless subscription creation... subscription creation...");
+				$sub_params = ['params' =>
 					 		[
 					 				'amount' => $internalPlan->getAmountInCents(),
 					 				'currency' => $internalPlan->getCurrency(),
 					 				'name' => $plan->getName(),
 					 				'interval_unit' => $interval_unit,
 					 				'interval' => $internalPlan->getPeriodLength(),
-					 				'links' => ['customer_bank_account_token' => $customer_bank_account_token],
+					 				'links' => ['mandate' => $mandate->id],
 					 				'metadata' => ['internal_plan_uuid' => $internalPlan->getInternalPlanUuid()]
 					 		]
 					 ];
 				if(isset($count)) {
-					$params['params']['count'] = $count;
+					$sub_params['params']['count'] = $count;
 				}
-				$subscription = $client->subscriptions()->create($params);
+				$subscription = $client->subscriptions()->create($sub_params);
 				config::getLogger()->addInfo("gocardless subscription creation... subscription creation done successfully, subscription_id=".$subscription->id);
 				$sub_uuid = $subscription->id;	
 			}
