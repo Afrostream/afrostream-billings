@@ -31,12 +31,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal bypassed - already done today -");
 				exit;
 			}
+			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_renew');
 			$now = new DateTime(NULL, new DateTimeZone(self::$timezone));
 			$firstAttemptDate = clone $now;
 			$firstAttemptDate->setTime(getEnv('BOUYGUES_STORE_TIME_HOUR'), getEnv('BOUYGUES_STORE_TIME_MINUTE'));
 			if($firstAttemptDate < $now) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal...");
-				$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_renew');
 				
 				if(($current_par_ren_file_path = tempnam('', 'tmp')) === false) {
 					throw new BillingsException("PAR_REN file cannot be created");
@@ -251,14 +251,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling bypassed - already done today -");
 				exit;
 			}
+			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_cancel');
 			$now = new DateTime(NULL, new DateTimeZone(self::$timezone));
 			$firstAttemptDate = clone $now;
 			$firstAttemptDate->setTime(getEnv('BOUYGUES_STORE_TIME_HOUR'), getEnv('BOUYGUES_STORE_TIME_MINUTE'));
 			if($firstAttemptDate < $now) {		
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling...");
-				
-				$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_cancel');
-				
 				if(($current_par_can_file_path = tempnam('', 'tmp')) === false) {
 					throw new BillingsException("PAR_CAN file cannot be created");
 				}
