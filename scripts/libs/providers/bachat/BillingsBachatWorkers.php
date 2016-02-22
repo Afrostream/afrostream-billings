@@ -15,6 +15,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$billingsSubscriptionActionLogs = array();
 		$current_par_ren_file_path = NULL;
 		$current_par_ren_file_res = NULL;
+		$billingsSubscriptionsOkToProceed = array();
 		try {
 			$provider_name = "bachat";
 				
@@ -57,7 +58,6 @@ class BillingsBachatWorkers extends BillingsWorkers {
 					$status_array[] = 'pending_active';
 				}
 				//
-				$billingsSubscriptionsOkToProceed = array();
 				while(count($endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, $offset, $provider->getId(), $sub_period_ends_date, $status_array)) > 0) {
 					ScriptsConfig::getLogger()->addInfo("processing...current offset=".$offset);
 					$offset = $offset + $limit;
@@ -235,6 +235,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$billingsSubscriptionActionLogs = array();
 		$current_par_can_file_path = NULL;
 		$current_par_can_file_res = NULL;
+		$billingsSubscriptionsOkToProceed = array();
 		try {
 			$provider_name = "bachat";
 				
@@ -272,7 +273,6 @@ class BillingsBachatWorkers extends BillingsWorkers {
 					$status_array[] = 'pending_canceled';
 				}
 				//
-				$billingsSubscriptionsOkToProceed = array();
 				while(count($requestingCanceledBillingsSubscriptions = BillingsSubscriptionDAO::getRequestingCanceledBillingsSubscriptions($limit, $offset, $provider->getId(), $status_array)) > 0) {
 					ScriptsConfig::getLogger()->addInfo("processing...current offset=".$offset);
 					$offset = $offset + $limit;
