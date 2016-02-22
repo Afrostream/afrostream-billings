@@ -1,16 +1,17 @@
 <?php
 
 require_once __DIR__ . '/../../../../config/config.php';
-require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
-require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
-require_once __DIR__ . '/../../../../libs/utils/utils.php';
+require_once __DIR__ . '/../../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../../utils/utils.php';
+require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 
-class RecurlySubscriptionsHandler {
+class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function __construct() {
 	}
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("recurly subscription creation...");
@@ -129,7 +130,7 @@ class RecurlySubscriptionsHandler {
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->uuid);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
 				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
@@ -145,17 +146,17 @@ class RecurlySubscriptionsHandler {
 		config::getLogger()->addInfo("recurly dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $sub_uuid, $update_type, $updateId) {
 		//
 		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 		//
 		$api_subscription = Recurly_Subscription::get($sub_uuid);
 		//
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, Recurly_Subscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("recurly dbsubscription creation for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid."...");
 		//CREATE
 		$db_subscription = new BillingsSubscription();
@@ -204,7 +205,21 @@ class RecurlySubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
 		//
-		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
+		try {
+			//START TRANSACTION
+			pg_query("BEGIN");
+			$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
+			//SUB_OPTS
+			if(isset($subOpts)) {
+				$subOpts->setSubId($db_subscription->getId());
+				$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+			}
+			//COMMIT
+			pg_query("COMMIT");
+		} catch(Exception $e) {
+			pg_query("ROLLBACK");
+			throw $e;
+		}
 		config::getLogger()->addInfo("recurly dbsubscription creation for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid." done successfully, id=".$db_subscription->getId());
 		return($db_subscription);
 	}
@@ -272,8 +287,7 @@ class RecurlySubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateId($db_subscription);
 		//$db_subscription->setDeleted('false');//STATIC
-		//
-		//$db_subscription = BillingsSubscriptionDAO::updateBillingsSubscription($db_subscription);
+		// 
 		config::getLogger()->addInfo("recurly dbsubscription update for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()." done successfully");
 		return($db_subscription);
 	}
@@ -297,27 +311,34 @@ class RecurlySubscriptionsHandler {
 	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
 		try {
 			config::getLogger()->addInfo("recurly subscription cancel...");
+			if(
+					$subscription->getSubStatus() == "canceled"
+					)
+			{
+				//nothing todo : already done or in process
+			} else {
 			//
-			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
-			//
-			$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
-			//
-			$api_subscription->cancel();
-			//
-			$subscription->setSubCanceledDate($cancel_date);
-			$subscription->setSubStatus('canceled');
-			//
-			try {
-				//START TRANSACTION
-				pg_query("BEGIN");
-				BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
-				BillingsSubscriptionDAO::updateSubStatus($subscription);
-				//COMMIT
-				pg_query("COMMIT");
-			} catch(Exception $e) {
-				pg_query("ROLLBACK");
-				throw $e;
+				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
+				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+				//
+				$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
+				//
+				$api_subscription->cancel();
+				//
+				$subscription->setSubCanceledDate($cancel_date);
+				$subscription->setSubStatus('canceled');
+				//
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
 			}
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("recurly subscription cancel done successfully for recurly_subscription_uuid=".$subscription->getSubUid());
@@ -337,7 +358,10 @@ class RecurlySubscriptionsHandler {
 		return($subscription);
 	}
 	
-	public function doFillSubscription(BillingsSubscription $subscription) {
+	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		if($subscription == NULL) {
+			return;
+		}
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
 			case 'active' :
@@ -358,6 +382,10 @@ class RecurlySubscriptionsHandler {
 				break;		
 		}
 		$subscription->setIsActive($is_active);
+	}
+	
+	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
+		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
 	}
 	
 }

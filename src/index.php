@@ -5,6 +5,7 @@ require_once __DIR__ . '/../libs/site/UsersController.php';
 require_once __DIR__ . '/../libs/site/SubscriptionsController.php';
 require_once __DIR__ . '/../libs/site/InternalPlansController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
+//require_once __DIR__ . '/test.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -192,7 +193,12 @@ $app->put("/billings/api/users/{userBillingUuid}", function ($request, $response
       			"subCanceledDate": null,
       			"subExpiresDate": null,
       			"subPeriodStartedDate": "2015-12-25 12:00:00+00",
-      			"subPeriodEndsDate": "2016-01-25 12:00:00+00"
+      			"subPeriodEndsDate": "2016-01-25 12:00:00+00",
+      			"subOpts": {
+        			"key1": "value1",
+        			"key2": "value2",
+        			"key3": "value3"
+      			}
     		}
   		}
 	}
@@ -214,7 +220,12 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
     	"internalPlanUuid" : "InternalPlanUuid",			//Plan (internal name)	 
     	"subscriptionProviderUuid" : "SubscriptionProviderUUID",//given by the provider when subscription is created from provider side
     	"billingInfoOpts" : {								//nothing for now
-    	}
+    	},
+    	"subOpts": {
+        	"key1": "value1",
+        	"key2": "value2",
+        	"key3": "value3"
+      	}
 	}
  
  	sample answer :
@@ -258,7 +269,12 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
       			"subCanceledDate": null,
       			"subExpiresDate": null,
       			"subPeriodStartedDate": "2015-12-25 12:00:00+00",
-      			"subPeriodEndsDate": "2016-01-25 12:00:00+00"
+      			"subPeriodEndsDate": "2016-01-25 12:00:00+00",
+      			"subOpts": {
+        			"key1": "value1",
+        			"key2": "value2",
+        			"key3": "value3"
+      			}
     		}
   		}
 	}
@@ -266,6 +282,7 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
 */
 
 $app->post("/billings/api/subscriptions/", function ($request, $response, $args) {
+	config::getLogger()->addInfo("POST SUBSCRIPTIONS, request=".$request->getBody());
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->create($request, $response, $args));
 });
@@ -503,6 +520,12 @@ $app->post("/billings/providers/bachat/webhooks/", function ($request, $response
 	$webHooksController = new WebHooksController();
 	return($webHooksController->bachatWebHooksPosting($request, $response, $args));
 });
+
+//Testing purpose
+
+/*$app->get("/billings/api/test/", function ($request, $response, $args) {
+	testMe();
+});*/
 
 $app->run();
 

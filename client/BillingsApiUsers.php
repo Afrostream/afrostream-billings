@@ -47,7 +47,7 @@ class BillingsApiUsers {
 						." statusMessage=".$billingsApiResponse->getStatusMessage());
 			}
 		} else {
-			BillingsApiClientConfig::getLogger()->addInfo("API CALL : getting user, code=".$httpCode);
+			BillingsApiClientConfig::getLogger()->addError("API CALL : getting user, code=".$httpCode);
 			throw new Exception("API CALL : getting user, code=".$httpCode." is unexpected...");
 		}
 		BillingsApiClientConfig::getLogger()->addInfo("API CALL : getting user done successfully");
@@ -89,7 +89,7 @@ class BillingsApiUsers {
 						." statusMessage=".$billingsApiResponse->getStatusMessage());
 			}
 		} else {
-			BillingsApiClientConfig::getLogger()->addInfo("API CALL : creating user, code=".$httpCode);
+			BillingsApiClientConfig::getLogger()->addError("API CALL : creating user, code=".$httpCode);
 			throw new Exception("API CALL : creating user, code=".$httpCode." is unexpected...");
 		}
 		return($apiUser);

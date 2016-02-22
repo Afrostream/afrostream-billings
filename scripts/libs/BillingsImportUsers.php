@@ -128,16 +128,37 @@ class BillingsImportUsers {
 			} else {
 				ScriptsConfig::getLogger()->addInfo("importing a recurly user...id=".$afrUser->getId().", user does already exist, userBillingUuid=".$apiUser['userBillingUuid']);
 			}
+			//get current subscriptions
+			ScriptsConfig::getLogger()->addInfo("importing a recurly user...id=".$afrUser->getId().", getting existing subscriptions...");
+			$apiGetSubscriptionsRequest = new ApiGetSubscriptionsRequest();
+			$apiGetSubscriptionsRequest->setUserBillingUuid($apiUser['userBillingUuid']);
+			$apiSubscriptions = $this->billingsApiClient->getBillingsApiSubscriptions()->getMulti($apiGetSubscriptionsRequest);
+			$countSubscriptionsBeforeUpdate = 0;
+			if($apiSubscriptions == NULL) {
+				ScriptsConfig::getLogger()->addInfo("importing a recurly user...id=".$afrUser->getId().", existing subscriptions found : 0");
+			} else {
+				$countSubscriptionsBeforeUpdate = count($apiSubscriptions);
+				ScriptsConfig::getLogger()->addInfo("importing a recurly user...id=".$afrUser->getId().", existing subscriptions found : ".$countSubscriptionsBeforeUpdate);
+			}
+			ScriptsConfig::getLogger()->addInfo("importing a recurly user...id=".$afrUser->getId().", getting existing subscriptions done successfully");
 			//update subscriptions
 			ScriptsConfig::getLogger()->addInfo("importing a recurly user...id=".$afrUser->getId().", updating subscriptions...");
 			$apiUpdateSubscriptionsRequest = new ApiUpdateSubscriptionsRequest();
 			$apiUpdateSubscriptionsRequest->setUserBillingUuid($apiUser['userBillingUuid']);
 			$apiSubscriptions = $this->billingsApiClient->getBillingsApiSubscriptions()->update($apiUpdateSubscriptionsRequest);
+			$countSubscriptionsAfterUpdate = 0;
 			if($apiSubscriptions == NULL) {
 				ScriptsConfig::getLogger()->addInfo("importing a recurly user...id=".$afrUser->getId().", updated subscriptions found : 0");
 			} else {
-				ScriptsConfig::getLogger()->addInfo("importing a recurly user...id=".$afrUser->getId().", updated subscriptions found : ".count($apiSubscriptions));
+				$countSubscriptionsAfterUpdate = count($apiSubscriptions);
+				ScriptsConfig::getLogger()->addInfo("importing a recurly user...id=".$afrUser->getId().", updated subscriptions found : ".$countSubscriptionsAfterUpdate);
 			}
+			if($countSubscriptionsBeforeUpdate != $countSubscriptionsAfterUpdate) {
+				ScriptsConfig::getLogger()->addWarning("importing a recurly user...id=".$afrUser->getId().", number of subscriptions were updated, before update=".$countSubscriptionsBeforeUpdate.", after update=".$countSubscriptionsAfterUpdate);
+			} else {
+				ScriptsConfig::getLogger()->addInfo("importing a recurly user...id=".$afrUser->getId().", number of subscriptions is the same (".$countSubscriptionsAfterUpdate.")");
+			}
+			ScriptsConfig::getLogger()->addInfo("importing a recurly user...id=".$afrUser->getId().", updating subscriptions done successfully");
 			//done
 			ScriptsConfig::getLogger()->addInfo("importing a recurly user done successfully, id=".$afrUser->getId());
 		} catch(Exception $e) {

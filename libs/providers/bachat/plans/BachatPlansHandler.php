@@ -9,8 +9,7 @@ class BachatPlansHandler {
 	public static function init() {
 		BachatPlansHandler::$supported_currencies = array('EUR');
 		BachatPlansHandler::$supported_cycles = array(
-				(new PlanCycle(PlanCycle::auto))->getValue(),
-				(new PlanCycle(PlanCycle::once))->getValue()
+				(new PlanCycle(PlanCycle::auto))->getValue()
 		);
 		
 		BachatPlansHandler::$supported_periods = array(
@@ -64,6 +63,5 @@ class BachatPlansHandler {
 }
 
 BachatPlansHandler::init();
-
 
 ?>

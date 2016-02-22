@@ -4,7 +4,7 @@ use GoCardlessPro\Client;
 use GoCardlessPro\Core\Exception\GoCardlessProException;
 
 require_once __DIR__ . '/../../../../config/config.php';
-require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
+require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/GocardlessSubscriptionsHandler.php';
 
 class GocardlessWebHooksHandler {
@@ -75,7 +75,7 @@ class GocardlessWebHooksHandler {
 			config::getLogger()->addInfo('Processing gocardless hook subscription, getting api_customer_bank_account done successfully');
 			config::getLogger()->addInfo('Processing gocardless hook subscription, getting api_customer...');
 			$api_customer = $client->customers()->get($api_customer_bank_account->links->customer);
-			config::getLogger()->addInfo('Processing gocardless hook subscription, getting api_customer done sucessfully');
+			config::getLogger()->addInfo('Processing gocardless hook subscription, getting api_customer done successfully');
 			//
 		} catch (GoCardlessProException $e) {
 			$msg = "a GoCardlessProException occurred while getting gocardless subscription with subscription_provider_uuid=".$subscription_provider_uuid." from api, error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -125,6 +125,7 @@ class GocardlessWebHooksHandler {
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
+		$db_subscription_before_update = NULL;
 		//ADD OR UPDATE
 		if($db_subscription == NULL) {
 			$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found for user with provider_user_uuid=".$user->getUserProviderUuid();
@@ -136,6 +137,7 @@ class GocardlessWebHooksHandler {
 			//$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, 'api', 0);
 		} else {
 			//UPDATE
+			$db_subscription_before_update = $db_subscription;
 			$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
 		}
 		//WHEN ? (not given by the gocardless API)
@@ -165,6 +167,8 @@ class GocardlessWebHooksHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				//break;
 		}
+		//
+		$gocardlessSubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
 		config::getLogger()->addInfo('Processing gocardless hook subscription, action='.$notification_as_array['action'].' done successfully');
 	}

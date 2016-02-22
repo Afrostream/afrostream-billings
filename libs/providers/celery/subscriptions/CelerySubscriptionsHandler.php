@@ -1,16 +1,17 @@
 <?php
 
 require_once __DIR__ . '/../../../../config/config.php';
-require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
-require_once __DIR__ . '/../../../../libs/utils/BillingsException.php';
-require_once __DIR__ . '/../../../../libs/utils/utils.php';
+require_once __DIR__ . '/../../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../../utils/utils.php';
+require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 
-class CelerySubscriptionsHandler {
+class CelerySubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function __construct() {
 	}
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts, BillingsSubscriptionOpts $subOpts) {
 		
 	}
 	
@@ -18,9 +19,9 @@ class CelerySubscriptionsHandler {
 		
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, $internalPlan, $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $sub_uuid, $update_type, $updateId) {}
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, $internalPlan, $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $sub_uuid, $update_type, $updateId) {}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, Celery_Subscription $api_subscription, $update_type, $updateId) {}
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, Celery_Subscription $api_subscription, $update_type, $updateId) {}
 	
 	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, Celery_Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {}
 	
@@ -40,7 +41,10 @@ class CelerySubscriptionsHandler {
 		}*/
 	}
 	
-	public function doFillSubscription(BillingsSubscription $subscription) {
+	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		if($subscription == NULL) {
+			return;
+		}
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
 			case 'active' :
@@ -50,7 +54,7 @@ class CelerySubscriptionsHandler {
 				if(
 						($now < (new DateTime($subscription->getSubPeriodEndsDate())))
 								&&
-						($now > (new DateTime($subscription->getSubPeriodStartedDate())))
+						($now >= (new DateTime($subscription->getSubPeriodStartedDate())))
 				) {
 					//inside the period
 					$is_active = 'yes';
@@ -72,6 +76,10 @@ class CelerySubscriptionsHandler {
 		}
 		//done
 		$subscription->setIsActive($is_active);
+	}
+	
+	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
+		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
 	}
 	
 }

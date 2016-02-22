@@ -92,11 +92,11 @@ class BillingsBachatWorkers extends BillingsWorkers {
 					CURLOPT_RETURNTRANSFER => true,
 					CURLOPT_HEADER  => false
 			);
-			if(	null !== (getEnv('BOUYGUES_PROXY'))
+			if(	null !== (getEnv('BOUYGUES_PROXY_HOST'))
 				&&
 				null !== (getEnv('BOUYGUES_PROXY_PORT'))
 			) {
-				$curl_options[CURLOPT_PROXY] = getEnv('BOUYGUES_PROXY');
+				$curl_options[CURLOPT_PROXY] = getEnv('BOUYGUES_PROXY_HOST');
 				$curl_options[CURLOPT_PROXYPORT] = getEnv('BOUYGUES_PROXY_PORT');
 			}
 			if(	null !== (getEnv('BOUYGUES_PROXY_USER'))
@@ -301,11 +301,11 @@ class BillingsBachatWorkers extends BillingsWorkers {
 					CURLOPT_RETURNTRANSFER => true,
 					CURLOPT_HEADER  => false
 			);
-			if(	null !== (getEnv('BOUYGUES_PROXY'))
+			if(	null !== (getEnv('BOUYGUES_PROXY_HOST'))
 				&&
 				null !== (getEnv('BOUYGUES_PROXY_PORT'))
 			) {
-				$curl_options[CURLOPT_PROXY] = getEnv('BOUYGUES_PROXY');
+				$curl_options[CURLOPT_PROXY] = getEnv('BOUYGUES_PROXY_HOST');
 				$curl_options[CURLOPT_PROXYPORT] = getEnv('BOUYGUES_PROXY_PORT');
 			}
 			if(	null !== (getEnv('BOUYGUES_PROXY_USER'))
@@ -440,11 +440,11 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				CURLOPT_RETURNTRANSFER => true,
 				CURLOPT_HEADER  => false
 			);
-			if(	null !== (getEnv('BOUYGUES_PROXY'))
+			if(	null !== (getEnv('BOUYGUES_PROXY_HOST'))
 				&&
 				null !== (getEnv('BOUYGUES_PROXY_PORT'))
 			) {
-				$curl_options[CURLOPT_PROXY] = getEnv('BOUYGUES_PROXY');
+				$curl_options[CURLOPT_PROXY] = getEnv('BOUYGUES_PROXY_HOST');
 				$curl_options[CURLOPT_PROXYPORT] = getEnv('BOUYGUES_PROXY_PORT');
 			}
 			if(	null !== (getEnv('BOUYGUES_PROXY_USER'))
@@ -592,7 +592,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
-				$subscriptionsHandler->doRenewSubscription($subscription->getSubscriptionBillingUuid(), $start_date);
+				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), $start_date);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
 				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
@@ -665,11 +665,11 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				CURLOPT_RETURNTRANSFER => true,
 				CURLOPT_HEADER  => false
 			);
-			if(	null !== (getEnv('BOUYGUES_PROXY'))
+			if(	null !== (getEnv('BOUYGUES_PROXY_HOST'))
 				&&
 				null !== (getEnv('BOUYGUES_PROXY_PORT'))
 			) {
-				$curl_options[CURLOPT_PROXY] = getEnv('BOUYGUES_PROXY');
+				$curl_options[CURLOPT_PROXY] = getEnv('BOUYGUES_PROXY_HOST');
 				$curl_options[CURLOPT_PROXYPORT] = getEnv('BOUYGUES_PROXY_PORT');
 			}
 			if(	null !== (getEnv('BOUYGUES_PROXY_USER'))
@@ -812,7 +812,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
-				$subscriptionsHandler->doCancelSubscription($subscription->getSubscriptionBillingUuid(), $cancel_date, false);
+				$subscriptionsHandler->doCancelSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), $cancel_date, false);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
 				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
