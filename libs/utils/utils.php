@@ -81,7 +81,8 @@ function checkSubOptsArray(array $sub_opts_as_array, $providerName) {
 	checkSubOptsValues($sub_opts_as_array, $providerName);
 }
 
-function checkSubOptsKeys(array $sub_opts_as_array, $providerName) {
+//$case = all, create, get
+function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all') {
 	switch($providerName) {
 		case 'bachat' :
 			if(!array_key_exists('otpCode', $sub_opts_as_array)) {
@@ -143,6 +144,16 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName) {
 				$msg = "subOpts field 'promoDuration' is missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			break;
+		case 'gocardless':
+			if($case == 'create') {
+				if(!array_key_exists('customerBankAccountToken', $sub_opts_as_array)) {
+					//exception
+					$msg = "subOpts field 'customerBankAccountToken' is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
 			}
 			break;
 		default :
