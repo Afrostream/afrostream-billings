@@ -55,6 +55,14 @@ if(getEnv('BOUYGUES_PROXY_PWD') === false) {
 	putEnv('BOUYGUES_PROXY_PWD=');
 }
 
+if(getEnv('BOUYGUES_STORE_TIME_HOUR' === false)) {
+	putEnv('BOUYGUES_STORE_TIME_HOUR=4');
+}
+
+if(getEnv('BOUYGUES_STORE_TIME_MINUTE' === false)) {
+	putEnv('BOUYGUES_STORE_TIME_MINUTE=5');
+}
+
 #logger, #db_conn, ...
 
 class ScriptsConfig {
