@@ -64,5 +64,4 @@ class BachatPlansHandler {
 
 BachatPlansHandler::init();
 
-
 ?>

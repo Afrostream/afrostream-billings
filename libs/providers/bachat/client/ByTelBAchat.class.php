@@ -11,7 +11,7 @@
       		array(	'trace' => 1, 
       				'soap_version' => SOAP_1_1,
       				'connection_timeout' => 3600
-      				/* PHP BUG ? */,
+      				/* PHP BUG : https://bugs.php.net/bug.php?id=68855 */,
       				'exceptions' => 1,
       				'stream_context' => stream_context_create(
       						array(
