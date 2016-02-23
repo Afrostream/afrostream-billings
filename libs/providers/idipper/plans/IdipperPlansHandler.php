@@ -20,33 +20,33 @@ class IdipperPlansHandler {
 	public function __construct() {
 	}
 	
-	public function createProviderPlan(InternalPlan $internaPlan) {
+	public function createProviderPlan(InternalPlan $internalPlan) {
 		$provider_plan_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("Idipper plan creation...");
-			if(!in_array($internaPlan->getCurrency(), IdipperPlansHandler::$supported_currencies))  {
+			if(!in_array($internalPlan->getCurrency(), IdipperPlansHandler::$supported_currencies))  {
 				$msg = "unsupported currency, must be in : ".implode(', ', IdipperPlansHandler::$supported_currencies);
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(!in_array($internaPlan->getCycle()->getValue(), IdipperPlansHandler::$supported_cycles)) {
+			if(!in_array($internalPlan->getCycle()->getValue(), IdipperPlansHandler::$supported_cycles)) {
 				$msg = "unsupported cycle, must be in : ".implode(', ', IdipperPlansHandler::$supported_cycles);
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(!array_key_exists($internaPlan->getPeriodUnit()->getValue(), IdipperPlansHandler::$supported_periods)) {
+			if(!array_key_exists($internalPlan->getPeriodUnit()->getValue(), IdipperPlansHandler::$supported_periods)) {
 				$msg = "unsupported period unit, must be in : ".implode(', ', array_keys(IdipperPlansHandler::$supported_periods));
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$supported_period_length = IdipperPlansHandler::$supported_periods[$internaPlan->getPeriodUnit()->getValue()];
-			if(!in_array($internaPlan->getPeriodLength(), $supported_period_length)) {
+			$supported_period_length = IdipperPlansHandler::$supported_periods[$internalPlan->getPeriodUnit()->getValue()];
+			if(!in_array($internalPlan->getPeriodLength(), $supported_period_length)) {
 				$msg = "unsupported period length for this period unit, must be in : ".implode(', ', $supported_period_length);
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//done
-			$provider_plan_uuid = $internaPlan->getInternalPlanUuid();
+			$provider_plan_uuid = $internalPlan->getInternalPlanUuid();
 			config::getLogger()->addInfo("idipper plan creation done successfully, idipper_plan_uuid=".$provider_plan_uuid);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while creating a idipper plan, error_code=".$e->getCode().", error_message=".$e->getMessage();

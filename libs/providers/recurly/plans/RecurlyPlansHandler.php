@@ -5,18 +5,18 @@ class RecurlyPlansHandler {
 	public function __construct() {
 	}
 	
-	public function createProviderPlan(InternalPlan $internaPlan) {
+	public function createProviderPlan(InternalPlan $internalPlan) {
 		$provider_plan_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("recurly plan creation...");
 			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 			$plan = new Recurly_Plan();
-			$plan->plan_code = $internaPlan->getInternalPlanUuid();
-			$plan->name = $internaPlan->getName();
-			$plan->description = $internaPlan->getDescription();
-			$plan->unit_amount_in_cents->addCurrency($internaPlan->getCurrency(), $internaPlan->getAmountInCents());
-			switch ($internaPlan->getCycle()) {
+			$plan->plan_code = $internalPlan->getInternalPlanUuid();
+			$plan->name = $internalPlan->getName();
+			$plan->description = $internalPlan->getDescription();
+			$plan->unit_amount_in_cents->addCurrency($internalPlan->getCurrency(), $internalPlan->getAmountInCents());
+			switch ($internalPlan->getCycle()) {
 				case PlanCycle::once :
 					$plan->total_billing_cycles = 1;
 					break;
@@ -24,26 +24,26 @@ class RecurlyPlansHandler {
 					$plan->total_billing_cycles = NULL;
 					break;
 				default :
-					$msg = "unknown cycle : ".$internaPlan->getCycle()->getValue();
+					$msg = "unknown cycle : ".$internalPlan->getCycle()->getValue();
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
-			switch($internaPlan->getPeriodUnit()) {
+			switch($internalPlan->getPeriodUnit()) {
 				case PlanPeriodUnit::day :
 					$plan->plan_interval_unit = 'days';
-					$plan->plan_interval_length = 1 * $internaPlan->getPeriodLength();
+					$plan->plan_interval_length = 1 * $internalPlan->getPeriodLength();
 					break;
 				case PlanPeriodUnit::month :
 					$plan->plan_interval_unit = 'months';
-					$plan->plan_interval_length = 1 * $internaPlan->getPeriodLength();
+					$plan->plan_interval_length = 1 * $internalPlan->getPeriodLength();
 					break;
 				case PlanPeriodUnit::year :
 					$plan->plan_interval_unit = 'months';
-					$plan->plan_interval_length = 12 * $internaPlan->getPeriodLength();
+					$plan->plan_interval_length = 12 * $internalPlan->getPeriodLength();
 					break;
 				default :
-					$msg = "unknown periodUnit : ".$internaPlan->getPeriodUnit()->getValue();
+					$msg = "unknown periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;

@@ -55,7 +55,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$amount = $internalPlan->getAmountInCents();
 				$currency = $internalPlan->getCurrency();
 				$name = $plan->getPlanUuid();
-				if(!array_key_exists($internaPlan->getPeriodUnit()->getValue(), GocardlessPlansHandler::$supported_periods)) {
+				if(!array_key_exists($internalPlan->getPeriodUnit()->getValue(), GocardlessPlansHandler::$supported_periods)) {
 					$msg = "unsupported period unit, must be in : ".implode(', ', array_keys(GocardlessPlansHandler::$supported_periods));
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -77,7 +77,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						break;
 				}
-				if(!in_array($internaPlan->getCycle()->getValue(), GocardlessPlansHandler::$supported_cycles)) {
+				if(!in_array($internalPlan->getCycle()->getValue(), GocardlessPlansHandler::$supported_cycles)) {
 					$msg = "unsupported cycle, must be in : ".implode(', ', GocardlessPlansHandler::$supported_cycles);
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -377,7 +377,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$end_date->setTime(23, 59, 59);//force the time to the end of the day
 				break;
 			default :
-				$msg = "unsupported periodUnit : ".$internaPlan->getPeriodUnit()->getValue();
+				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
@@ -581,7 +581,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				} while($end_date < $today);
 				break;
 			default :
-				$msg = "unsupported periodUnit : ".$internaPlan->getPeriodUnit()->getValue();
+				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
