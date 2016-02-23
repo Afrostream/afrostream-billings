@@ -2,6 +2,7 @@
 	"name": "afrostream/billings",
 	"description": "add providers api support",
 	"require": {
+		"ext-soap": "*",		
 		"recurly/recurly-client": "^2.4",
 		"monolog/monolog": "^1.17",
 		"gocardless/gocardless-pro": "^0.9.2",
@@ -9,7 +10,8 @@
 		"php" :"^5.5.0",
 		"myclabs/php-enum": "^1.4",
 		"tuupola/slim-basic-auth": "^2.0",
-		"sebastian/money": "^1.6"
+		"sebastian/money": "^1.6",
+		"sendgrid/sendgrid": "^4.0"
 	},
 	"authors": [
 		{

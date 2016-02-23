@@ -66,6 +66,24 @@ class AfrUserDAO {
 		return($out);
 	}
 	
+	public static function getAfrUserByAccountCode($account_code) {
+		$query = "SELECT _id, email, billing_provider, account_code FROM \"Users\" WHERE account_code = $1";
+		$result = pg_query_params(ScriptsConfig::getDbConn(), $query, array($account_code));
+		$out = NULL;
+		
+		if ($line = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out =  new AfrUser();
+			$out->setId($line["_id"]);
+			$out->setEmail($line["email"]);
+			$out->setBillingProvider($line["billing_provider"]);
+			$out->setAccountCode($line["account_code"]);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
 }
 
 ?>

@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ .'/BillingsController.php';
-require_once __DIR__ . '/../../libs/webhooks/WebHooksHandler.php';
+require_once __DIR__ . '/../webhooks/WebHooksHandler.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -81,7 +81,7 @@ class WebHooksController extends BillingsController {
 		
 			config::getLogger()->addInfo('Processing recurly webhook, id='.$billingsWebHook->getId().'...');
 			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
-			config::getLogger()->addInfo('Processing recurly webhook done sucessfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Processing recurly webhook done successfully, id='.$billingsWebHook->getId().'...');
 		
 			config::getLogger()->addInfo('Treating recurly webhook done successfully, id='.$billingsWebHook->getId().'...');
 		} catch(BillingsException $e) {
@@ -128,7 +128,7 @@ class WebHooksController extends BillingsController {
 		
 			config::getLogger()->addInfo('Processing gocardless webhook, id='.$billingsWebHook->getId().'...');
 			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
-			config::getLogger()->addInfo('Processing gocardless webhook done sucessfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Processing gocardless webhook done successfully, id='.$billingsWebHook->getId().'...');
 		
 			config::getLogger()->addInfo('Treating gocardless webhook done successfully, id='.$billingsWebHook->getId().'...');
 		} catch(BillingsException $e) {
@@ -183,7 +183,7 @@ class WebHooksController extends BillingsController {
 	
 			config::getLogger()->addInfo('Processing bachat webhook, id='.$billingsWebHook->getId().'...');
 			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
-			config::getLogger()->addInfo('Processing bachat webhook done sucessfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Processing bachat webhook done successfully, id='.$billingsWebHook->getId().'...');
 	
 			config::getLogger()->addInfo('Treating bachat webhook done successfully, id='.$billingsWebHook->getId().'...');
 		} catch(BillingsException $e) {

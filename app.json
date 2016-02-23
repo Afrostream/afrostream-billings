@@ -3,80 +3,47 @@
   "scripts": {
   },
   "env": {
-    "AFR_DB_HOST": {
-      "required": "true"
-    },
-    "AFR_DB_NAME": {
-      "required": "true"
-    },
-    "AFR_DB_PASSWORD": {
-      "required": "true"
-    },
-    "AFR_DB_PORT": {
-      "required": "true"
-    },
-    "AFR_DB_USER": {
-      "required": "true"
-    },
-    "API_HTTP_AUTH_PWD": {
-      "required": "true"
-    },
-    "API_HTTP_AUTH_USER": {
-      "required": "true"
-    },
-    "API_HTTP_SECURE": {
-      "required": "true"
-    },
-    "BILLINGS_API_HTTP_AUTH_PWD": {
-      "required": "true"
-    },
-    "BILLINGS_API_HTTP_AUTH_USER": {
-      "required": "true"
-    },
-    "BILLINGS_API_URL": {
-      "required": "true"
-    },
-    "DB_HOST": {
-      "required": "true"
-    },
-    "DB_NAME": {
-      "required": "true"
-    },
-    "DB_PASSWORD": {
-      "required": "true"
-    },
-    "DB_PORT": {
-      "required": "true"
-    },
-    "DB_USER": {
-      "required": "true"
-    },
-    "GOCARDLESS_API_ENV": {
-      "required": "true"
-    },
-    "GOCARDLESS_API_KEY": {
-      "required": "true"
-    },
-    "GOCARDLESS_WH_SECRET": {
-      "required": "true"
-    },
-    "RECURLY_API_KEY": {
-      "required": "true"
-    },
-    "RECURLY_API_SUBDOMAIN": {
-      "required": "true"
-    },
-    "RECURLY_WH_HTTP_AUTH_PWD": {
-      "required": "true"
-    },
-    "RECURLY_WH_HTTP_AUTH_USER": {
-      "required": "true"
-    },
-    "RECURLY_WH_REPOST_URLS": {
-      "required": "true"
-    }
-  },
-  "addons": [
-    "heroku-postgresql"
-  ]
+    "AFR_DB_HOST": "ec2-54-228-194-210.eu-west-1.compute.amazonaws.com",
+    "AFR_DB_NAME": "d71on7act83b7i",
+    "AFR_DB_PASSWORD": "pt7eht3e9v3lnehhh27m7sfeol",
+    "AFR_DB_PORT": "5522",
+    "AFR_DB_USER": "u4fp4ad34q8qvi",
+    "API_HTTP_AUTH_PWD": "billingsapirocks",
+    "API_HTTP_AUTH_USER": "admin",
+    "API_HTTP_SECURE": "false",
+    "BILLINGS_API_HTTP_AUTH_PWD": "billingsapirocks",
+    "BILLINGS_API_HTTP_AUTH_USER": "admin",
+    "BILLINGS_API_URL": "https://afrostream-billings-staging.herokuapp.com",
+    "BOUYGUES_STORE_TIME_HOUR": "0",
+    "BOUYGUES_STORE_TIME_MINUTE": "5",
+    "DATABASE_URL": "postgres://tjmgcqkrixvkzu:4TwV23GXYZCyDhtJ5ybAyYeKEK@ec2-54-247-167-90.eu-west-1.compute.amazonaws.com:5432/d8pun490ac8ria",
+    "DB_HOST": "",
+    "DB_NAME": "",
+    "DB_PASSWORD": "",
+    "DB_PORT": "",
+    "DB_USER": "",
+    "EVENT_EMAIL_ACTIVATED": "true",
+    "EVENT_EMAIL_PROVIDERS_EXCEPTION": "",
+    "GOCARDLESS_API_ENV": "sandbox",
+    "GOCARDLESS_API_KEY": "YXwxcLeTGwGv3sPd1-CpmNh3nAsqtDfzGuV8_Vji",
+    "GOCARDLESS_WH_SECRET": "gocardlessrocks",
+    "RECURLY_API_KEY": "67dbb29f0dbe4e219bc247a3b5387652",
+    "RECURLY_API_SUBDOMAIN": "johnarch",
+    "RECURLY_WH_HTTP_AUTH_PWD": "recurlyrocks",
+    "RECURLY_WH_HTTP_AUTH_USER": "admin",
+    "RECURLY_WH_REPOST_URLS": "",
+    "SENDGRID_PASSWORD": "mdaf58gf2829",
+    "SENDGRID_USERNAME": "app41486990@heroku.com",
+    "SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID": "dde84299-e6fe-47a0-909b-1ee11417efe1",
+    "SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID": "32685665-87ba-4c67-a726-395b58c2e36b",
+    "SENDGRID_FROM": "abonnement@afrostream.tv",
+    "SENDGRID_FROM_NAME": "Tonjé, Fondateur d'Afrostream",
+    "SENGRID_BCC": "",
+    "BOUYGUES_MERCHANTID": "0",
+    "BOUYGUES_SERVICEID": "0",
+    "BOUYGUES_PROXY_HOST": "",
+    "BOUYGUES_PROXY_PORT": "8080",
+    "BOUYGUES_PROXY_USER": "",
+    "BOUYGUES_PROXY_PWD": ""
+  }
 }

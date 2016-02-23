@@ -304,7 +304,7 @@ class UserOptsDAO {
 
 class InternalPlanDAO {
 	
-	private static $sfields = "BIP._id, BIP.internal_plan_uuid, BIP.name, BIP.description, BIP.amount_in_cents, BIP.currency, BIP.cycle, BIP.period_unit, BIP.period_length";
+	private static $sfields = "BIP._id, BIP.internal_plan_uuid, BIP.name, BIP.description, BIP.amount_in_cents, BIP.currency, BIP.cycle, BIP.period_unit, BIP.period_length, BIP.thumbid, BIP.vat_rate";
 	
 	private static function getInternalPlanFromRow($row) {
 		$out = new InternalPlan();
@@ -312,11 +312,13 @@ class InternalPlanDAO {
 		$out->setInternalPlanUid($row["internal_plan_uuid"]);
 		$out->setName($row["name"]);
 		$out->setDescription($row["description"]);
-		$out->setAmoutInCents($row["amount_in_cents"]);
+		$out->setAmountInCents($row["amount_in_cents"]);
 		$out->setCurrency($row["currency"]);
 		$out->setCycle(new PlanCycle($row["cycle"]));
 		$out->setPeriodUnit(new PlanPeriodUnit($row["period_unit"]));
 		$out->setPeriodLength($row["period_length"]);
+		$out->setThumbId($row["thumbid"]);
+		$out->setVatRate($row["vat_rate"]);
 		return($out);
 	}
 	
@@ -441,6 +443,8 @@ class InternalPlan implements JsonSerializable {
 	private $periodUnit;
 	private $periodLength;
 	private $showProviderPlans = true;
+	private $vatRate = 20;
+	private $thumbId;
 
 	public function getId() {
 		return($this->_id);
@@ -474,7 +478,7 @@ class InternalPlan implements JsonSerializable {
 		$this->description = $description;
 	}
 	
-	public function setAmoutInCents($integer) {
+	public function setAmountInCents($integer) {
 		$this->amount_in_cents = $integer;
 	}
 	
@@ -522,18 +526,45 @@ class InternalPlan implements JsonSerializable {
 		return($this->showProviderPlans);
 	}
 	
+	public function setVatRate($value) {
+		$this->vatRate = $value;
+	}
+	
+	public function getVatRate() {
+		return($this->vatRate);
+	}
+	
+	public function getAmountInCentsExclTax() {
+		if($this->vatRate == NULL) {
+			return($this->amount_in_cents);
+		} else {
+			return(intval(round($this->amount_in_cents / (1 + $this->vatRate / 100))));
+		}
+	}
+	
+	public function setThumbId($thumbId) {
+		$this->thumbId = $thumbId;
+	}
+	
+	public function getThumbId() {
+		return($this->thumbId);
+	}
+	
 	public function jsonSerialize() {
 		$return =
 			[
 				'internalPlanUuid' => $this->internal_plan_uuid,
 				'name' => $this->name,
 				'description' => $this->description,
-				'amount_in_cents' => $this->amount_in_cents,
+				'amountInCents' => $this->amount_in_cents,
+				'amountInCentsExclTax' => (string) $this->getAmountInCentsExclTax(),
+				'vatRate' => ($this->vatRate == NULL) ? NULL : (string) number_format($this->vatRate, 2, ',', ' '),//Forced to French Locale
 				'currency' => $this->currency,
 				'cycle' => $this->cycle,
 				'periodUnit' => $this->periodUnit,
 				'periodLength' => $this->periodLength,
-				'internalPlanOpts' => (InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($this->_id)->jsonSerialize())
+				'internalPlanOpts' => (InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($this->_id)->jsonSerialize()),
+				'thumb' => ThumbDAO::getThumbById($this->thumbId)
 		];
 		if($this->showProviderPlans) {
 			$return['providerPlans'] = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id));
@@ -694,7 +725,7 @@ class InternalPlanLinksDAO {
 
 class PlanDAO {
 	
-	private static $sfields = "_id, providerid, plan_uuid, name, description";
+	private static $sfields = "BP._id, BP.providerid, BP.plan_uuid, BP.name, BP.description";
 	
 	private static function getPlanFromRow($row) {
 		$out = new Plan();
@@ -707,7 +738,7 @@ class PlanDAO {
 	}
 	
 	public static function getPlanByUuid($providerId, $plan_uuid) {
-		$query = "SELECT ".self::$sfields." FROM billing_plans WHERE providerid = $1 AND plan_uuid = $2";
+		$query = "SELECT ".self::$sfields." FROM billing_plans BP WHERE BP.providerid = $1 AND BP.plan_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $plan_uuid));
 		
 		$out = null;
@@ -722,7 +753,7 @@ class PlanDAO {
 	}
 	
 	public static function getPlanById($plan_id) {
-		$query = "SELECT ".self::$sfields." FROM billing_plans WHERE _id = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_plans BP WHERE BP._id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($plan_id));
 	
 		$out = null;
@@ -737,7 +768,7 @@ class PlanDAO {
 	}
 	
 	public static function getPlanByName($providerId, $name) {
-		$query = "SELECT ".self::$sfields." FROM billing_plans WHERE providerid = $1 AND name = $2";
+		$query = "SELECT ".self::$sfields." FROM billing_plans BP WHERE BP.providerid = $1 AND BP.name = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $name));
 		
 		$out = null;
@@ -752,13 +783,13 @@ class PlanDAO {
 	}
 	
 	public static function getPlans($providerId = NULL) {
-		$query = "SELECT ".self::$sfields." FROM billing_plans";
+		$query = "SELECT ".self::$sfields." FROM billing_plans BP";
 		$params = array();
 	
 		$out = array();
 		
 		if(isset($providerId)) {
-			$query.= " WHERE providerid = $1";
+			$query.= " WHERE BP.providerid = $1";
 			$params[] = $providerId;
 		}
 		
@@ -775,7 +806,8 @@ class PlanDAO {
 	
 	public static function getPlansFromList(array $list_of_billing_plan_ids) {
 		if(count($list_of_billing_plan_ids) == 0) return(array());
-		$query = "SELECT ".self::$sfields." FROM billing_plans";
+		$query = "SELECT P.name as provider_name, ".self::$sfields." FROM billing_plans BP";
+		$query.= " INNER JOIN billing_providers P ON (BP.providerid = P._id)";
 		$params = array();
 	
 		$out = array();
@@ -786,7 +818,7 @@ class PlanDAO {
 		foreach ($list_of_billing_plan_ids as $billing_plan_id) {
 			if($firstLoop == true) {
 				$firstLoop = false;
-				$query.= " WHERE _id in ($".$i;
+				$query.= " WHERE BP._id in ($".$i;
 			} else {
 				$query.= ", $".$i;
 			}
@@ -799,7 +831,7 @@ class PlanDAO {
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 	
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($out, self::getPlanFromRow($row));
+			$out[$row['provider_name']] = self::getPlanFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -1027,6 +1059,7 @@ class BillingsSubscriptionDAO {
 		$out->setUpdateType($row["update_type"]);
 		$out->setUpdateId($row["updateid"]);
 		$out->setDeleted($row["deleted"]);
+		$out->setBillingsSubscriptionOpts(BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($row["_id"]));
 		return($out);
 	}
 	
@@ -1332,6 +1365,8 @@ class BillingsSubscription implements JsonSerializable {
 	private $deleted;
 	//
 	private $is_active;
+	//
+	private $billingsSubscriptionOpts = NULL;
 	
 	public function getId() {
 		return($this->_id);
@@ -1484,6 +1519,14 @@ class BillingsSubscription implements JsonSerializable {
 		return($this->is_active);
 	}
 	
+	public function setBillingsSubscriptionOpts($billingsSubscriptionOpts) {
+		$this->billingsSubscriptionOpts = $billingsSubscriptionOpts;
+	}
+	
+	public function getBillingsSubscriptionOpts() {
+		return($this->billingsSubscriptionOpts);
+	}
+	
 	public function jsonSerialize() {
 		$return = [
 			'subscriptionBillingUuid' => $this->subscription_billing_uuid,
@@ -1498,7 +1541,8 @@ class BillingsSubscription implements JsonSerializable {
 			'subCanceledDate' => $this->sub_canceled_date,
 			'subExpiresDate' => $this->sub_expires_date,
 			'subPeriodStartedDate' => $this->sub_period_started_date,
-			'subPeriodEndsDate' => $this->sub_period_ends_date
+			'subPeriodEndsDate' => $this->sub_period_ends_date,
+			'subOpts' => (BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($this->_id)->jsonSerialize())
 		];
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->planid));
 		$internalPlan->setShowProviderPlans(false);
@@ -1506,6 +1550,100 @@ class BillingsSubscription implements JsonSerializable {
 		return($return);
 	}
 	
+}
+
+class BillingsSubscriptionOpts implements JsonSerializable {
+
+	private $subid;
+	private $opts = array();
+
+	public function setSubId($subid) {
+		$this->subid = $subid;
+	}
+
+	public function getSubId() {
+		return($this->subid);
+	}
+
+	public function setOpt($key, $value) {
+		$this->opts[$key] = $value;
+	}
+
+	public function setOpts($opts) {
+		$this->opts = $opts;
+	}
+
+	public function getOpts() {
+		return($this->opts);
+	}
+
+	public function jsonSerialize() {
+		return($this->opts);
+	}
+
+}
+
+class BillingsSubscriptionOptsDAO {
+
+	public static function getBillingsSubscriptionOptsBySubId($subid) {
+		$query = "SELECT _id, subid, key, value FROM billing_subscriptions_opts WHERE deleted = false AND subid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($subid));
+
+		$out = new BillingsSubscriptionOpts();
+		$out->setSubId($subid);
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out->setOpt($row["key"], $row["value"]);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+
+	public static function addBillingsSubscriptionOpts(BillingsSubscriptionOpts $billingsSubscriptionOpts) {
+		foreach ($billingsSubscriptionOpts->getOpts() as $k => $v) {
+			if(isset($v)) {
+				$query = "INSERT INTO billing_subscriptions_opts (subid, key, value)";
+				$query.= " VALUES ($1, $2, $3) RETURNING _id";
+				$result = pg_query_params(config::getDbConn(), $query,
+						array($billingsSubscriptionOpts->getSubId(),
+								$k,
+								$v));
+			}
+		}
+		return(self::getBillingsSubscriptionOptsBySubId($billingsSubscriptionOpts->getSubId()));
+	}
+
+	public static function updateBillingsSubscriptionOptsKey($subid, $key, $value) {
+		$query = "UPDATE billing_subscriptions_opts SET value = $3 WHERE subid = $1 AND key = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($subid, $key, $value));
+		return($result);
+	}
+
+	public static function deleteBillingsSubscriptionOptsKey($subid, $key) {
+		$query = "UPDATE billing_subscriptions_opts SET deleted = true WHERE subid = $1 AND key = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($userid, $key));
+		return($result);
+	}
+
+	public static function addBillingsSubscriptionOptsKey($subid, $key, $value) {
+		$query = "INSERT INTO billing_subscriptions_opts (subid, key, value)";
+		$query.= " VALUES ($1, $2, $3) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($subid,
+						$key,
+						$value));
+		return($result);
+	}
+
+	public static function deleteBillingsSubscriptionOptBySubId($subid) {
+		$query = "UPDATE billing_subscriptions_opts SET deleted = true WHERE subid = $1";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($subid));
+		return($result);
+	}
 }
 
 class BillingInfoOpts {
@@ -1954,9 +2092,11 @@ class ProcessingLogDAO {
 	}
 	
 	public static function getProcessingLogByDay($providerid, $processing_type, Datetime $day) {
-		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE providerid = $1 AND processing_type = $2 AND date(started_date) = date($3)";
-		
-		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $processing_type, dbGlobal::toISODate($day)));
+		$dayStr = dbGlobal::toISODate($day);
+		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE providerid = $1 AND processing_type = $2";
+		$query.= " AND date(started_date AT TIME ZONE 'Europe/Paris') = date('".$dayStr."')";
+		// /!\ Querying with dbGlobal::toISODate($day) in the pg_query_params DOES NOT WORK !!!
+		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $processing_type));
 		
 		$out = array();
 		
@@ -1971,6 +2111,73 @@ class ProcessingLogDAO {
 	
 }
 
+class Thumb implements JsonSerializable {
+	
+	private $_id;
+	private $path;
+	private $imgix;
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getPath() {
+		return($this->path);
+	}
+	
+	public function setPath($str) {
+		$this->path= $str;
+	}
+	
+	public function getImgix() {
+		return($this->imgix);
+	}
+	
+	public function setImgix($str) {
+		$this->imgix = $str;
+	}
+	
+	public function jsonSerialize() {
+		return[
+				'path' => $this->path,
+				'imgix' => $this->imgix
+		];
+	}
+	
+}
+
+class ThumbDAO {
+	
+	private static $sfields = "_id, path, imgix";
+	
+	private static function getThumbFromRow($row) {
+		$out = new Thumb();
+		$out->setId($row["_id"]);
+		$out->setPath($row["path"]);
+		$out->setImgix($row["imgix"]);
+		return($out);
+	}
+	
+	public static function getThumbById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_thumbs WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getThumbFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+}
 
 class UtilsDAO {
 	

@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../../../config/config.php';
-require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
+require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/RecurlySubscriptionsHandler.php';
 
 class RecurlyWebHooksHandler {
@@ -130,7 +130,9 @@ class RecurlyWebHooksHandler {
 			//$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 		} else {
 			//UPDATE
+			$db_subscription_before_update = $db_subscription;
 			$db_subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
+			$recurlySubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		}
 		//
 		config::getLogger()->addInfo('Processing recurly hook subscription, notification_type='.$notification->type.' done successfully');

@@ -2,12 +2,13 @@
 
 class BillingsWorkers {
 	
-	private static $timezone = "Europe/Paris";
+	protected static $timezone = "Europe/Paris";
 	
 	protected $today = NULL;
 	
 	public function __construct() {
 		$this->today = new DateTime(NULL, new DateTimeZone(self::$timezone));
+		$this->today->setTime(0, 0, 0);
 	}
 	
 	protected static function hasProcessingStatus($processingLogs, $processing_status) {

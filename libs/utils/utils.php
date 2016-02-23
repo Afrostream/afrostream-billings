@@ -21,12 +21,12 @@ function guid( $opt = false ) {       //  Set to true/false as your default way 
 	}
 }
 
-function checkUserOptsArray($user_opts_as_array) {
+function checkUserOptsArray(array $user_opts_as_array) {
 	checkUserOptsKeys($user_opts_as_array);
 	checkUserOptsValues($user_opts_as_array);
 }
 
-function checkUserOptsKeys($user_opts_as_array) {
+function checkUserOptsKeys(array $user_opts_as_array) {
 	if(!array_key_exists('email', $user_opts_as_array)) {
 		//exception
 		$msg = "userOpts field 'email' is missing";
@@ -47,7 +47,7 @@ function checkUserOptsKeys($user_opts_as_array) {
 	}
 }
 
-function checkUserOptsValues($user_opts_as_array) {
+function checkUserOptsValues(array $user_opts_as_array) {
 	if(array_key_exists('email', $user_opts_as_array)) {
 		$email = $user_opts_as_array['email'];
 		if(strlen(trim($email)) == 0) {
@@ -74,6 +74,101 @@ function checkUserOptsValues($user_opts_as_array) {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+	}
+}
+function checkSubOptsArray(array $sub_opts_as_array, $providerName) {
+	checkSubOptsKeys($sub_opts_as_array, $providerName);
+	checkSubOptsValues($sub_opts_as_array, $providerName);
+}
+
+//$case = all, create, get
+function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all') {
+	switch($providerName) {
+		case 'bachat' :
+			if(!array_key_exists('otpCode', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'otpCode' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('idSession', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'idSession' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('requestId', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'requestId' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('promoEnabled', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'promoEnabled' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('promoItemBasePrice', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'promoItemBasePrice' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('promoItemTaxAmount', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'promoItemTaxAmount' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('promoItemTotal', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'promoItemTotal' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('promoCurrency', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'promoCurrency' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('promoPeriod', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'promoPeriod' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('promoDuration', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'promoDuration' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			break;
+		case 'gocardless':
+			if($case == 'create') {
+				if(!array_key_exists('customerBankAccountToken', $sub_opts_as_array)) {
+					//exception
+					$msg = "subOpts field 'customerBankAccountToken' is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
+			break;
+		default :
+			//nothing
+			break;
+	}
+}
+
+function checkSubOptsValues(array $sub_opts_as_array, $providerName) {
+	switch($providerName) {
+		case 'bachat' :
+			break;
+		default :
+			//nothing
+			break;
 	}
 }
 

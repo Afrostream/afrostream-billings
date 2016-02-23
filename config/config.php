@@ -15,7 +15,7 @@ if(getEnv('DB_HOST') === false) {
 	putEnv('DB_HOST=localhost');
 }
 
-if(getEnv('DB_PORT') == false) {
+if(getEnv('DB_PORT') === false) {
 	putEnv('DB_PORT=5432');
 }
 
@@ -76,6 +76,41 @@ if(getEnv('GOCARDLESS_API_KEY') === false) {
 
 if(getEnv('GOCARDLESS_WH_SECRET') === false) {
 	putEnv('GOCARDLESS_WH_SECRET=nelsounet');
+}
+
+#SendGrid API
+
+if(getEnv('SENDGRID_API_KEY') === false) {
+	putEnv('SENDGRID_API_KEY=SG.lliM3Gp5QyuqgmQ36iLwLw.u3mP5Ne2PhP5Kohs8MO8rHhlA0Q3GLyZil45b9qgl5E');
+}
+
+if(getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID') === false) {
+	putEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID=dde84299-e6fe-47a0-909b-1ee11417efe1');
+}
+
+if(getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID') === false) {
+	putEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID=32685665-87ba-4c67-a726-395b58c2e36b');
+}
+
+if(getEnv('SENDGRID_FROM') === false) {
+	putEnv('SENDGRID_FROM=abonnement@afrostream.tv');
+}
+
+if(getEnv('SENDGRID_FROM_NAME') === false) {
+	putEnv('SENDGRID_FROM_NAME=Tonjé, Fondateur d\'Afrostream');
+}
+
+if(getEnv('SENGRID_BCC') === false) {
+	putEnv('SENGRID_BCC=');
+}
+
+#Event (MAIL)
+if(getEnv('EVENT_EMAIL_ACTIVATED') === false) {
+	putEnv('EVENT_EMAIL_ACTIVATED=true');
+}
+
+if(getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION') === false) {
+	putEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION=recurly');
 }
 
 #logger, #db_conn, ...

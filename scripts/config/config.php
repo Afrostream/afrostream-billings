@@ -8,23 +8,23 @@ use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 
 if(getEnv('AFR_DB_HOST') === false) {
-	putEnv('AFR_DB_HOST=localhost');
+	putEnv('AFR_DB_HOST=ec2-54-228-194-210.eu-west-1.compute.amazonaws.com');
 }
 
 if(getEnv('AFR_DB_PORT') == false) {
-	putEnv('AFR_DB_PORT=5432');
+	putEnv('AFR_DB_PORT=5522');
 }
 
 if(getEnv('AFR_DB_NAME') === false) {
-	putEnv('AFR_DB_NAME=afr-afr-staging');
+	putEnv('AFR_DB_NAME=d71on7act83b7i');
 }
 
 if(getEnv('AFR_DB_USER') === false) {
-	putEnv('AFR_DB_USER=postgres');
+	putEnv('AFR_DB_USER=u4fp4ad34q8qvi');
 }
 
 if(getEnv('AFR_DB_PASSWORD') === false) {
-	putEnv('AFR_DB_PASSWORD=password');
+	putEnv('AFR_DB_PASSWORD=pt7eht3e9v3lnehhh27m7sfeol');
 }
 
 if(getEnv('BOUYGUES_MERCHANTID') === false) {
@@ -39,8 +39,8 @@ if(getEnv('BOUYGUES_BILLING_SYSTEM_URL') === false) {
 	putEnv('BOUYGUES_BILLING_SYSTEM_URL=https://vod.bouyguestelecom.fr/merchant/'.getEnv('BOUYGUES_MERCHANTID').'_'.getEnv('BOUYGUES_SERVICEID'));
 }
 
-if(getEnv('BOUYGUES_PROXY') === false) {
-	putEnv('BOUYGUES_PROXY=');
+if(getEnv('BOUYGUES_PROXY_HOST') === false) {
+	putEnv('BOUYGUES_PROXY_HOST=');
 }
 
 if(getEnv('BOUYGUES_PROXY_PORT') === false) {
@@ -53,6 +53,14 @@ if(getEnv('BOUYGUES_PROXY_USER') === false) {
 
 if(getEnv('BOUYGUES_PROXY_PWD') === false) {
 	putEnv('BOUYGUES_PROXY_PWD=');
+}
+
+if(getEnv('BOUYGUES_STORE_TIME_HOUR' === false)) {
+	putEnv('BOUYGUES_STORE_TIME_HOUR=4');
+}
+
+if(getEnv('BOUYGUES_STORE_TIME_MINUTE' === false)) {
+	putEnv('BOUYGUES_STORE_TIME_MINUTE=5');
 }
 
 #logger, #db_conn, ...
