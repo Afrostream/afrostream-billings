@@ -76,9 +76,11 @@ function checkUserOptsValues(array $user_opts_as_array) {
 		}
 	}
 }
-function checkSubOptsArray(array $sub_opts_as_array, $providerName) {
-	checkSubOptsKeys($sub_opts_as_array, $providerName);
-	checkSubOptsValues($sub_opts_as_array, $providerName);
+
+//$case = all, create, get
+function checkSubOptsArray(array $sub_opts_as_array, $providerName, $case = 'all') {
+	checkSubOptsKeys($sub_opts_as_array, $providerName, $case);
+	checkSubOptsValues($sub_opts_as_array, $providerName, $case);
 }
 
 //$case = all, create, get
@@ -162,7 +164,7 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 	}
 }
 
-function checkSubOptsValues(array $sub_opts_as_array, $providerName) {
+function checkSubOptsValues(array $sub_opts_as_array, $providerName, $case = 'all') {
 	switch($providerName) {
 		case 'bachat' :
 			break;
