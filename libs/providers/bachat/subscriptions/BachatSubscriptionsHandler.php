@@ -39,6 +39,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				$subOpts->setOpt('chargeTransactionId', $res->chargeTransactionId);
 			} else {
 				//KO
+				//TODO : TO BE REMOVED : do not var_export all the response from BACHAT
 				$msg = "BACHAT ERROR, result=".var_export($res, true);
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -73,7 +74,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				$end_date->setTime(23, 59, 59);//force the time to the end of the day
 				break;
 			default :
-				$msg = "unsupported periodUnit : ".$internaPlan->getPeriodUnit()->getValue();
+				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
@@ -221,7 +222,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				$end_date->setTime(23, 59, 59);//force the time to the end of the day
 				break;
 			default :
-				$msg = "unsupported periodUnit : ".$internaPlan->getPeriodUnit()->getValue();
+				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;

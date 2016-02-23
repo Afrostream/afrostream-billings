@@ -2,9 +2,9 @@
 
 class BachatPlansHandler {
 	
-	private static $supported_currencies = array();
-	private static $supported_cycles = array();
-	private static $supported_periods = array();
+	public static $supported_currencies = array();
+	public static $supported_cycles = array();
+	public static $supported_periods = array();
 	
 	public static function init() {
 		BachatPlansHandler::$supported_currencies = array('EUR');
@@ -20,33 +20,33 @@ class BachatPlansHandler {
 	public function __construct() {
 	}
 	
-	public function createProviderPlan(InternalPlan $internaPlan) {
+	public function createProviderPlan(InternalPlan $internalPlan) {
 		$provider_plan_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("bachat plan creation...");
-			if(!in_array($internaPlan->getCurrency(), BachatPlansHandler::$supported_currencies))  {
+			if(!in_array($internalPlan->getCurrency(), BachatPlansHandler::$supported_currencies))  {
 				$msg = "unsupported currency, must be in : ".implode(', ', BachatPlansHandler::$supported_currencies);
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(!in_array($internaPlan->getCycle()->getValue(), BachatPlansHandler::$supported_cycles)) {
+			if(!in_array($internalPlan->getCycle()->getValue(), BachatPlansHandler::$supported_cycles)) {
 				$msg = "unsupported cycle, must be in : ".implode(', ', BachatPlansHandler::$supported_cycles);
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(!array_key_exists($internaPlan->getPeriodUnit()->getValue(), BachatPlansHandler::$supported_periods)) {
+			if(!array_key_exists($internalPlan->getPeriodUnit()->getValue(), BachatPlansHandler::$supported_periods)) {
 				$msg = "unsupported period unit, must be in : ".implode(', ', array_keys(BachatPlansHandler::$supported_periods));
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$supported_period_length = BachatPlansHandler::$supported_periods[$internaPlan->getPeriodUnit()->getValue()];
-			if(!in_array($internaPlan->getPeriodLength(), $supported_period_length)) {
+			$supported_period_length = BachatPlansHandler::$supported_periods[$internalPlan->getPeriodUnit()->getValue()];
+			if(!in_array($internalPlan->getPeriodLength(), $supported_period_length)) {
 				$msg = "unsupported period length for this period unit, must be in : ".implode(', ', $supported_period_length);
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//done
-			$provider_plan_uuid = $internaPlan->getInternalPlanUuid();
+			$provider_plan_uuid = $internalPlan->getInternalPlanUuid();
 			config::getLogger()->addInfo("bachat plan creation done successfully, bachat_plan_uuid=".$provider_plan_uuid);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while creating a bachat plan, error_code=".$e->getCode().", error_message=".$e->getMessage();
