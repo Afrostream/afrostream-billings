@@ -101,6 +101,21 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 						'access_token' => getEnv('GOCARDLESS_API_KEY'),
 						'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
+				//HACK : Disable current Bank Accounts (Create will be enable existing accounts)
+				config::getLogger()->addInfo("gocardless subscription creation... bank accounts deactivation...");
+				$bank_accounts = $client->customerBankAccounts()->all(
+						['params' =>
+								[
+										'customer' => $user->getUserProviderUuid()
+								]
+						]);
+				foreach ($bank_accounts as $current_bank_account) {
+					if($current_bank_account->links->customer == $user->getUserProviderUuid()) //Double CHECK :)
+					{
+						$client->customerBankAccounts()->disable($current_bank_account->id);
+					}
+				}
+				config::getLogger()->addInfo("gocardless subscription creation... bank accounts deactivation done successfully");
 				//Create a Bank Account
 				config::getLogger()->addInfo("gocardless subscription creation... bank account creation...");
 				$bank_account = $client->customerBankAccounts()->create(
