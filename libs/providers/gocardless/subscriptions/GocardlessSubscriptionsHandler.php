@@ -54,7 +54,6 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				checkSubOptsArray($subOpts->getOpts(), 'gocardless', 'create');
 				$amount = $internalPlan->getAmountInCents();
 				$currency = $internalPlan->getCurrency();
-				$name = $plan->getPlanUuid();
 				if(!array_key_exists($internalPlan->getPeriodUnit()->getValue(), GocardlessPlansHandler::$supported_periods)) {
 					$msg = "unsupported period unit, must be in : ".implode(', ', array_keys(GocardlessPlansHandler::$supported_periods));
 					config::getLogger()->addError($msg);
@@ -138,6 +137,8 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				if(isset($count)) {
 					$sub_params['params']['count'] = $count;
 				}
+				//TODO : TO BE REMOVED
+				config::getLogger()->addInfo("GOCARLESS SUB REQUEST, sub_params=".var_export($sub_params, true));
 				$subscription = $client->subscriptions()->create($sub_params);
 				config::getLogger()->addInfo("gocardless subscription creation... subscription creation done successfully, subscription_id=".$subscription->id);
 				$sub_uuid = $subscription->id;	

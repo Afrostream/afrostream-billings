@@ -39,6 +39,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				$subOpts->setOpt('chargeTransactionId', $res->chargeTransactionId);
 			} else {
 				//KO
+				//TODO : TO BE REMOVED : do not var_export all the response from BACHAT
 				$msg = "BACHAT ERROR, result=".var_export($res, true);
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
