@@ -2,9 +2,9 @@
 
 class IdipperPlansHandler {
 	
-	private static $supported_currencies = array();
-	private static $supported_cycles = array();
-	private static $supported_periods = array();
+	public static $supported_currencies = array();
+	public static $supported_cycles = array();
+	public static $supported_periods = array();
 	
 	public static function init() {
 		IdipperPlansHandler::$supported_currencies = array('EUR');
