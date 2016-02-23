@@ -18,7 +18,6 @@
     "BOUYGUES_STORE_TIME_MINUTE": "5",
     "DATABASE_URL": "postgres://tjmgcqkrixvkzu:4TwV23GXYZCyDhtJ5ybAyYeKEK@ec2-54-247-167-90.eu-west-1.compute.amazonaws.com:5432/d8pun490ac8ria",
     "EVENT_EMAIL_ACTIVATED": "true",
-    "EVENT_EMAIL_PROVIDERS_EXCEPTION": "",
     "GOCARDLESS_API_ENV": "sandbox",
     "GOCARDLESS_API_KEY": "YXwxcLeTGwGv3sPd1-CpmNh3nAsqtDfzGuV8_Vji",
     "GOCARDLESS_WH_SECRET": "gocardlessrocks",
