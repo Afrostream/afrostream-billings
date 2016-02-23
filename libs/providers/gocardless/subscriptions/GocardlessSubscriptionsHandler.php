@@ -97,6 +97,11 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 						break;
 				}
 				$customer_bank_account_token = $subOpts->getOpts()['customerBankAccountToken'];
+				//
+				$client = new Client(array(
+						'access_token' => getEnv('GOCARDLESS_API_KEY'),
+						'environment' => getEnv('GOCARDLESS_API_ENV')
+				));
 				//Create a Bank Account
 				config::getLogger()->addInfo("gocardless subscription creation... bank account creation...");
 				$bank_account = $client->customerBankAccounts()->create(
