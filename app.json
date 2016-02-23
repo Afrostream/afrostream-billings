@@ -3,78 +3,30 @@
   "scripts": {
   },
   "env": {
-    "AFR_DB_HOST": {
-      "required": true
-    },
-    "AFR_DB_NAME": {
-      "required": true
-    },
-    "AFR_DB_PASSWORD": {
-      "required": true
-    },
-    "AFR_DB_PORT": {
-      "required": true
-    },
-    "AFR_DB_USER": {
-      "required": true
-    },
-    "API_HTTP_AUTH_PWD": {
-      "required": true
-    },
-    "API_HTTP_AUTH_USER": {
-      "required": true
-    },
-    "API_HTTP_SECURE": {
-      "required": true
-    },
-    "BILLINGS_API_HTTP_AUTH_PWD": {
-      "required": true
-    },
-    "BILLINGS_API_HTTP_AUTH_USER": {
-      "required": true
-    },
-    "BILLINGS_API_URL": {
-      "required": true
-    },
-    "DB_HOST": {
-      "required": true
-    },
-    "DB_NAME": {
-      "required": true
-    },
-    "DB_PASSWORD": {
-      "required": true
-    },
-    "DB_PORT": {
-      "required": true
-    },
-    "DB_USER": {
-      "required": true
-    },
-    "GOCARDLESS_API_ENV": {
-      "required": true
-    },
-    "GOCARDLESS_API_KEY": {
-      "required": true
-    },
-    "GOCARDLESS_WH_SECRET": {
-      "required": true
-    },
-    "RECURLY_API_KEY": {
-      "required": true
-    },
-    "RECURLY_API_SUBDOMAIN": {
-      "required": true
-    },
-    "RECURLY_WH_HTTP_AUTH_PWD": {
-      "required": true
-    },
-    "RECURLY_WH_HTTP_AUTH_USER": {
-      "required": true
-    },
-    "RECURLY_WH_REPOST_URLS": {
-      "required": true
-    }
+    "AFR_DB_HOST": "FIXME",
+    "AFR_DB_NAME":  "FIXME",
+    "AFR_DB_PASSWORD":  "FIXME",
+    "AFR_DB_PORT": "FIXME",
+    "AFR_DB_USER":  "FIXME",
+    "API_HTTP_AUTH_PWD":  "FIXME",
+    "API_HTTP_AUTH_USER":  "FIXME",
+    "API_HTTP_SECURE":  "FIXME",
+    "BILLINGS_API_HTTP_AUTH_PWD":  "FIXME",
+    "BILLINGS_API_HTTP_AUTH_USER": "FIXME",
+    "BILLINGS_API_URL":  "FIXME",
+    "DB_HOST":  "FIXME",
+    "DB_NAME":  "FIXME",
+    "DB_PASSWORD":  "FIXME",
+    "DB_PORT":  "FIXME",
+    "DB_USER": "FIXME",
+    "GOCARDLESS_API_ENV": "FIXME",
+    "GOCARDLESS_API_KEY":  "FIXME",
+    "GOCARDLESS_WH_SECRET":  "FIXME",
+    "RECURLY_API_KEY":  "FIXME",
+    "RECURLY_API_SUBDOMAIN":  "FIXME",
+    "RECURLY_WH_HTTP_AUTH_PWD":  "FIXME",
+    "RECURLY_WH_HTTP_AUTH_USER":  "FIXME",
+    "RECURLY_WH_REPOST_URLS":  "FIXME"
   },
   "addons": [
     "heroku-postgresql"
