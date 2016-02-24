@@ -2,7 +2,7 @@
 
 class BillingsWorkers {
 	
-	private static $timezone = "Europe/Paris";
+	protected static $timezone = "Europe/Paris";
 	
 	protected $today = NULL;
 	
