@@ -403,8 +403,8 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 		}
-		$subscription->setSubPeriodStartedDate($start_date);
-		$subscription->setSubPeriodEndsDate($end_date);
+		$db_subscription->setSubPeriodStartedDate($start_date);
+		$db_subscription->setSubPeriodEndsDate($end_date);
 		//The information is in the PLAN
 		/*switch ($api_subscription->collection_mode) {
 			case 'automatic' :
