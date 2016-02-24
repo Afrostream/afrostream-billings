@@ -138,7 +138,7 @@ class GocardlessWebHooksHandler {
 		} else {
 			//UPDATE
 			$db_subscription_before_update = $db_subscription;
-			$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
+			$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
 		}
 		//WHEN ? (not given by the gocardless API)
 		switch($notification_as_array['action']) {
