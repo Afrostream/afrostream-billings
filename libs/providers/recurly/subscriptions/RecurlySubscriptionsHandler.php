@@ -16,6 +16,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		try {
 			config::getLogger()->addInfo("recurly subscription creation...");
 			if(isset($subscription_provider_uuid)) {
+				checkSubOptsArray($subOpts->getOpts(), 'recurly', 'get');
 				//** in recurly : user subscription is pre-created **/
 				//
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
@@ -35,6 +36,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 			} else {
+				checkSubOptsArray($subOpts->getOpts(), 'recurly', 'create');
 				//** in recurly : user subscription is NOT pre-created **/
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
@@ -42,7 +44,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				$subscription = new Recurly_Subscription();
 				$subscription->plan_code = $plan->getPlanUuid();
 				$subscription->currency = $internalPlan->getCurrency();
-			
+				
 				$account = new Recurly_Account();
 				$account->account_code = $user->getUserProviderUuid();
 				$account->email = $userOpts->getOpts()['email'];
@@ -50,19 +52,27 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				$account->last_name = $userOpts->getOpts()['last_name'];
 			
 				$billing_info = new Recurly_BillingInfo();
-				$billing_info->number = $billingInfoOpts->getOpts()['number'];
-				$billing_info->month = $billingInfoOpts->getOpts()['month'];
-				$billing_info->year = $billingInfoOpts->getOpts()['year'];
-				$billing_info->verification_value = $billingInfoOpts->getOpts()['verification_value'];
-				$billing_info->address1 = $billingInfoOpts->getOpts()['address1'];
-				$billing_info->city = $billingInfoOpts->getOpts()['city'];
-				$billing_info->state = $billingInfoOpts->getOpts()['state'];
-				$billing_info->country = $billingInfoOpts->getOpts()['country'];
-				$billing_info->zip = $billingInfoOpts->getOpts()['zip'];
-			
+				if(array_key_exists('customerBankAccountToken', $subOpts->getOpts())) {
+					$billing_info->token_id = $subOpts->getOpts()['customerBankAccountToken'];
+				} else {
+					$billing_info->number = $billingInfoOpts->getOpts()['number'];
+					$billing_info->month = $billingInfoOpts->getOpts()['month'];
+					$billing_info->year = $billingInfoOpts->getOpts()['year'];
+					$billing_info->verification_value = $billingInfoOpts->getOpts()['verification_value'];
+					$billing_info->address1 = $billingInfoOpts->getOpts()['address1'];
+					$billing_info->city = $billingInfoOpts->getOpts()['city'];
+					$billing_info->state = $billingInfoOpts->getOpts()['state'];
+					$billing_info->country = $billingInfoOpts->getOpts()['country'];
+					$billing_info->zip = $billingInfoOpts->getOpts()['zip'];
+				}
+				
 				$account->billing_info = $billing_info;
 				$subscription->account = $account;
-			
+				
+				if(array_key_exists('couponCode', $subOpts->getOpts())) {
+					$subscription->coupon_code = $subOpts->getOpts()['couponCode'];
+				}
+				
 				$subscription->create();
 			}
 			//
