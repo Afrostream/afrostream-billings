@@ -90,12 +90,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 						/*CURLOPT_POSTFIELDS, http_build_query($data),*/
 						CURLOPT_HTTPHEADER => array(
 								//TODO : HACK HEROKU
-								'Expect:',
+								/*'Expect:',*/
 								'Content-Type: text/plain',
 								'Content-length: '.filesize($current_par_ren_file_path)
 						),
 						CURLOPT_RETURNTRANSFER => true,
-						CURLOPT_HEADER  => true,
+						CURLOPT_HEADER  => true
 						//TODO : HACK HEROKU
 						/*CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_0*/
 				);
