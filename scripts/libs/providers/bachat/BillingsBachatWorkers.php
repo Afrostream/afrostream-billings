@@ -95,7 +95,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 								/*'Content-length: '.filesize($current_par_ren_file_path)*/
 						),
 						CURLOPT_RETURNTRANSFER => true,
-						CURLOPT_HEADER  => false,
+						CURLOPT_HEADER  => true,
 						//TODO : HACK HEROKU
 						/*CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_0*/
 				);
