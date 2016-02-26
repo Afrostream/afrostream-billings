@@ -92,7 +92,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 								//TODO : HACK HEROKU
 								/*'Expect: 100-continue',*/
 								'Content-Type: text/csv',
-								'Content-length: '.filesize($current_par_ren_file_path)
+								/*'Content-length: '.filesize($current_par_ren_file_path)*/
 						),
 						CURLOPT_RETURNTRANSFER => true,
 						CURLOPT_HEADER  => false,
