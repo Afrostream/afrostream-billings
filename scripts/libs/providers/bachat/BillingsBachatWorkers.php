@@ -42,7 +42,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				if(($current_par_ren_file_path = tempnam('', 'tmp')) === false) {
 					throw new BillingsException("PAR_REN file cannot be created");
 				}
-				if(($current_par_ren_file_res = fopen($current_par_ren_file_path, "w+")) === false) {
+				if(($current_par_ren_file_res = fopen($current_par_ren_file_path, "w")) === false) {
 					throw new BillingsException("PAR_REN file cannot be open");
 				}
 				ScriptsConfig::getLogger()->addInfo("PAR_REN file successfully created here : ".$current_par_ren_file_path);
@@ -87,7 +87,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 						CURLOPT_PUT => true,
 						CURLOPT_INFILE => $current_par_ren_file_res,
 						CURLOPT_INFILESIZE => filesize($current_par_ren_file_path),
-						CURLOPT_POSTFIELDS, http_build_query($data),
+						/*CURLOPT_POSTFIELDS, http_build_query($data),*/
 						CURLOPT_HTTPHEADER => array(
 								//TODO : HACK HEROKU
 								/*'Expect: 100-continue',*/
