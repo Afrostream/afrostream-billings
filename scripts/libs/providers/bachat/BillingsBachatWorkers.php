@@ -79,17 +79,15 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_REN uploading...");
 				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."PAR_REN_".$this->today->format("Ymd").".csv";
-				/*$data = array(
+				$data = array(
 						"filename" => "PAR_REN_".$this->today->format("Ymd").".csv"
-				);*/
-				fclose($current_par_ren_file_res);
-				$current_par_ren_file_res = fopen($current_par_ren_file_path, "r");
+				);
 				$curl_options = array(
 						CURLOPT_URL => $url,
 						CURLOPT_PUT => true,
 						CURLOPT_INFILE => $current_par_ren_file_res,
 						CURLOPT_INFILESIZE => filesize($current_par_ren_file_path),
-						/*CURLOPT_POSTFIELDS, http_build_query($data),*/
+						CURLOPT_POSTFIELDS, http_build_query($data),
 						CURLOPT_HTTPHEADER => array(
 								//TODO : HACK HEROKU
 								/*'Expect: 100-continue',*/
