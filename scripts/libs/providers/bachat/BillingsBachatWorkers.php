@@ -34,9 +34,9 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			}
 			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_renew');
 			$now = new DateTime(NULL, new DateTimeZone(self::$timezone));
-			$firstAttemptDate = clone $now;
-			$firstAttemptDate->setTime(getEnv('BOUYGUES_STORE_TIME_HOUR'), getEnv('BOUYGUES_STORE_TIME_MINUTE'));
-			if($firstAttemptDate < $now) {
+			$lastAttemptDate = clone $now;
+			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
+			if($lastAttemptDate > $now) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal...");
 				
 				if(($current_par_ren_file_path = tempnam('', 'tmp')) === false) {
@@ -78,7 +78,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				}
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_REN uploading...");
-				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL');
+				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."PAR_REN_".$this->today->format("Ymd").".csv";
 				$data = array(
 						"filename" => "PAR_REN_".$this->today->format("Ymd").".csv"
 				);
@@ -124,7 +124,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$current_par_ren_file_res = NULL;
 				unlink($current_par_ren_file_path);
 				$current_par_ren_file_path = NULL;
-				if($httpCode == 200 || $httpCode == 204) {
+				if($httpCode == 200 || $httpCode == 201 || $httpCode == 204) {
 					ScriptsConfig::getLogger()->addInfo("PAR_REN uploading done successfully, the httpCode is : ".$httpCode);
 				} else {
 					$msg = "an error occurred while uploading the PAR_REN file, the httpCode is : ".$httpCode;
@@ -262,9 +262,9 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			}
 			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_cancel');
 			$now = new DateTime(NULL, new DateTimeZone(self::$timezone));
-			$firstAttemptDate = clone $now;
-			$firstAttemptDate->setTime(getEnv('BOUYGUES_STORE_TIME_HOUR'), getEnv('BOUYGUES_STORE_TIME_MINUTE'));
-			if($firstAttemptDate < $now) {		
+			$lastAttemptDate = clone $now;
+			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
+			if($lastAttemptDate > $now) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling...");
 				if(($current_par_can_file_path = tempnam('', 'tmp')) === false) {
 					throw new BillingsException("PAR_CAN file cannot be created");
@@ -301,7 +301,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				}
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_CAN uploading...");
-				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL');
+				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."PAR_CAN_".$this->today->format("Ymd").".csv";
 				$data = array(
 						"filename" => "PAR_CAN_".$this->today->format("Ymd").".csv"
 				);
@@ -339,7 +339,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$current_par_can_file_res = NULL;
 				unlink($current_par_can_file_path);
 				$current_par_can_file_path = NULL;
-				if($httpCode == 200 || $httpCode == 204) {
+				if($httpCode == 200 || $httpCode == 201 || $httpCode == 204) {
 					ScriptsConfig::getLogger()->addInfo("PAR_CAN uploading done successfully, the httpCode is : ".$httpCode);
 				} else {
 					$msg = "an error occurred while uploading the PAR_CAN file, the httpCode is : ".$httpCode;
@@ -454,7 +454,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			//GET FILE FROM THE SYSTEM WEBDAV (GET)
 			ScriptsConfig::getLogger()->addInfo("REN downloading...");
-			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/REN_".$this->today->format("Ymd").".csv";
+			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."REN_".$this->today->format("Ymd").".csv";
 			$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_FILE => $current_ren_file_res,
@@ -680,7 +680,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			//GET FILE FROM THE SYSTEM WEBDAV (GET)
 			ScriptsConfig::getLogger()->addInfo("CAN downloading...");
-			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/CAN_".$this->today->format("Ymd").".csv";
+			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."CAN_".$this->today->format("Ymd").".csv";
 			$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_FILE => $current_can_file_res,
