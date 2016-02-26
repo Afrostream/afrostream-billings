@@ -90,11 +90,13 @@ class BillingsBachatWorkers extends BillingsWorkers {
 						CURLOPT_POSTFIELDS, http_build_query($data),
 						CURLOPT_HTTPHEADER => array(
 								//TODO : HACK HEROKU
-								'Expect:',
+								/*'Expect:',*/
 								'Content-Type: text/csv'
 						),
 						CURLOPT_RETURNTRANSFER => true,
-						CURLOPT_HEADER  => false
+						CURLOPT_HEADER  => false,
+						//TODO : HACK HEROKU
+						CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_0
 				);
 				if(	null !== (getEnv('BOUYGUES_PROXY_HOST'))
 					&&
