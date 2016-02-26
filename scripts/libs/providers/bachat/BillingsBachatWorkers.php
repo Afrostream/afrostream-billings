@@ -89,6 +89,8 @@ class BillingsBachatWorkers extends BillingsWorkers {
 						CURLOPT_INFILESIZE => filesize($current_par_ren_file_path),
 						CURLOPT_POSTFIELDS, http_build_query($data),
 						CURLOPT_HTTPHEADER => array(
+								//TODO : HACK HEROKU
+								'Expect:',
 								'Content-Type: text/csv'
 						),
 						CURLOPT_RETURNTRANSFER => true,
