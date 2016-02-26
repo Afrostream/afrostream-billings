@@ -96,7 +96,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 						CURLOPT_RETURNTRANSFER => true,
 						CURLOPT_HEADER  => false,
 						//TODO : HACK HEROKU
-						CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_0
+						/*CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_0*/
 				);
 				if(	null !== (getEnv('BOUYGUES_PROXY_HOST'))
 					&&
