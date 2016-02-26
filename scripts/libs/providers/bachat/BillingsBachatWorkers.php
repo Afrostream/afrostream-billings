@@ -36,7 +36,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$now = new DateTime(NULL, new DateTimeZone(self::$timezone));
 			$lastAttemptDate = clone $now;
 			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
-			if($lastAttemptDate < $now) {
+			if($lastAttemptDate > $now) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal...");
 				
 				if(($current_par_ren_file_path = tempnam('', 'tmp')) === false) {
@@ -264,7 +264,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$now = new DateTime(NULL, new DateTimeZone(self::$timezone));
 			$lastAttemptDate = clone $now;
 			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
-			if($lastAttemptDate < $now) {
+			if($lastAttemptDate > $now) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling...");
 				if(($current_par_can_file_path = tempnam('', 'tmp')) === false) {
 					throw new BillingsException("PAR_CAN file cannot be created");
