@@ -43,7 +43,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 					throw new BillingsException("PAR_REN file cannot be created");
 				}
 				if(($current_par_ren_file_res = fopen($current_par_ren_file_path, "w")) === false) {
-					throw new BillingsException("PAR_REN file cannot be open for write");
+					throw new BillingsException("PAR_REN file cannot be open (for write)");
 				}
 				ScriptsConfig::getLogger()->addInfo("PAR_REN file successfully created here : ".$current_par_ren_file_path);
 				$offset = 0;
@@ -79,7 +79,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				fclose($current_par_ren_file_res);
 				$current_par_ren_file_res = NULL;
 				if(($current_par_ren_file_res = fopen($current_par_ren_file_path, "r")) === false) {
-					throw new BillingsException("PAR_REN file cannot be open for read");
+					throw new BillingsException("PAR_REN file cannot be open (for read)");
 				}
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_REN uploading...");
@@ -270,8 +270,8 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				if(($current_par_can_file_path = tempnam('', 'tmp')) === false) {
 					throw new BillingsException("PAR_CAN file cannot be created");
 				}
-				if(($current_par_can_file_res = fopen($current_par_can_file_path, "w+")) === false) {
-					throw new BillingsException("PAR_CAN file cannot be open");
+				if(($current_par_can_file_res = fopen($current_par_can_file_path, "w")) === false) {
+					throw new BillingsException("PAR_CAN file cannot be open (for write)");
 				}
 				ScriptsConfig::getLogger()->addInfo("PAR_CAN file successfully created here : ".$current_par_can_file_path);
 				$offset = 0;
@@ -300,18 +300,19 @@ class BillingsBachatWorkers extends BillingsWorkers {
 						}
 					}
 				}
+				fclose($current_par_can_file_res);
+				$current_par_can_file_res = NULL;
+				if(($current_par_can_file_res = fopen($current_par_can_file_path, "r")) === false) {
+					throw new BillingsException("PAR_CAN file cannot be open (for read)");
+				}
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_CAN uploading...");
 				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."PAR_CAN_".$this->today->format("Ymd").".csv";
-				$data = array(
-						"filename" => "PAR_CAN_".$this->today->format("Ymd").".csv"
-				);
 				$curl_options = array(
 						CURLOPT_URL => $url,
 						CURLOPT_PUT => true,
 						CURLOPT_INFILE => $current_par_can_file_res,
 						CURLOPT_INFILESIZE => filesize($current_par_can_file_path),
-						CURLOPT_POSTFIELDS, http_build_query($data),
 						CURLOPT_HTTPHEADER => array(
 								'Content-Type: text/csv'
 						),
@@ -331,6 +332,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				) {
 					$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 				}
+				$curl_options[CURLOPT_VERBOSE] = 1;
 				$CURL = curl_init();
 				curl_setopt_array($CURL, $curl_options);
 				$content = curl_exec($CURL);
@@ -446,7 +448,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			if(($current_ren_file_path = tempnam('', 'tmp')) === false) {
 				throw new BillingsException("REN file cannot be created");
 			}
-			if(($current_ren_file_res = fopen($current_ren_file_path, "w+")) === false) {
+			if(($current_ren_file_res = fopen($current_ren_file_path, "w")) === false) {
 				throw new BillingsException("REN file cannot be open (for write)");
 			}
 			ScriptsConfig::getLogger()->addInfo("REN file successfully created here : ".$current_ren_file_path);
@@ -475,6 +477,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			) {
 				$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 			}
+			$curl_options[CURLOPT_VERBOSE] = 1;
 			$CURL = curl_init();
 			curl_setopt_array($CURL, $curl_options);
 			$content = curl_exec($CURL);
@@ -672,7 +675,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			if(($current_can_file_path = tempnam('', 'tmp')) === false) {
 				throw new BillingsException("CAN file cannot be created");
 			}
-			if(($current_can_file_res = fopen($current_can_file_path, "w+")) === false) {
+			if(($current_can_file_res = fopen($current_can_file_path, "w")) === false) {
 				throw new BillingsException("CAN file cannot be open (for write)");
 			}
 			ScriptsConfig::getLogger()->addInfo("CAN file successfully created here : ".$current_can_file_path);
@@ -701,6 +704,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			) {
 				$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 			}
+			$curl_options[CURLOPT_VERBOSE] = 1;
 			$CURL = curl_init();
 			curl_setopt_array($CURL, $curl_options);
 			$content = curl_exec($CURL);
