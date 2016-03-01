@@ -4,10 +4,10 @@ require_once __DIR__ . '/../config/config.php';
 
 ScriptsConfig::getLogger()->addInfo("filled file upload...");
 
-$current_par_can_file_path = "filled.csv";
+$current_par_can_file_path = __DIR__ . "/"."filled.csv";
 $current_par_can_file_res = NULL;
-if(($current_par_can_file_res = fopen($current_par_can_file_path, "w+")) === false) {
-	throw new BillingsException("filled file cannot be open");
+if(($current_par_can_file_res = fopen($current_par_can_file_path, "r")) === false) {
+	throw new Exception("filled file cannot be open");
 }
 $url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."filled.csv";
 
@@ -50,7 +50,7 @@ $httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
 curl_close($CURL);
 fclose($current_par_can_file_res);
 $current_par_can_file_res = NULL;
-unlink($current_par_can_file_path);
+//unlink($current_par_can_file_path);
 $current_par_can_file_path = NULL;
 if($httpCode == 200 || $httpCode == 201 || $httpCode == 204) {
 	ScriptsConfig::getLogger()->addInfo("filled file uploaded successfully, the httpCode is : ".$httpCode);
