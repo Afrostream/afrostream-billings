@@ -33,6 +33,9 @@ class RecurlyUsersHandler {
 				$account->first_name = $user_opts_array['firstName'];
 				$account->last_name = $user_opts_array['lastName'];
 				//
+				config::getLogger()->addInfo(
+						"recurly account object will be created with : email=".$account->email.", first_name=".$account->first_name.", last_name=".$account->last_name);
+				//
 				$account->create();
 				//
 			}
