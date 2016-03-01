@@ -43,7 +43,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 					throw new BillingsException("PAR_REN file cannot be created");
 				}
 				if(($current_par_ren_file_res = fopen($current_par_ren_file_path, "w")) === false) {
-					throw new BillingsException("PAR_REN file cannot be open");
+					throw new BillingsException("PAR_REN file cannot be open for write");
 				}
 				ScriptsConfig::getLogger()->addInfo("PAR_REN file successfully created here : ".$current_par_ren_file_path);
 				$offset = 0;
@@ -76,28 +76,24 @@ class BillingsBachatWorkers extends BillingsWorkers {
 						}
 					}
 				}
+				fclose($current_par_ren_file_res);
+				$current_par_ren_file_res = NULL;
+				if(($current_par_ren_file_res = fopen($current_par_ren_file_path, "r")) === false) {
+					throw new BillingsException("PAR_REN file cannot be open for read");
+				}
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_REN uploading...");
 				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."PAR_REN_".$this->today->format("Ymd").".csv";
-				$data = array(
-						"filename" => "PAR_REN_".$this->today->format("Ymd").".csv"
-				);
 				$curl_options = array(
 						CURLOPT_URL => $url,
 						CURLOPT_PUT => true,
 						CURLOPT_INFILE => $current_par_ren_file_res,
 						CURLOPT_INFILESIZE => filesize($current_par_ren_file_path),
-						/*CURLOPT_POSTFIELDS, http_build_query($data),*/
 						CURLOPT_HTTPHEADER => array(
-								//TODO : HACK HEROKU
-								/*'Expect:',*/
-								'Content-Type: text/plain',
-								'Content-length: '.filesize($current_par_ren_file_path)
+								'Content-Type: text/csv'
 						),
 						CURLOPT_RETURNTRANSFER => true,
-						CURLOPT_HEADER  => true
-						//TODO : HACK HEROKU
-						/*CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_0*/
+						CURLOPT_HEADER  => false
 				);
 				if(	null !== (getEnv('BOUYGUES_PROXY_HOST'))
 					&&
