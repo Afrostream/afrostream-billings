@@ -499,9 +499,9 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			curl_close($CURL);
 			fclose($current_ren_file_res);
 			$current_ren_file_res = NULL;
-			if(httpCode == 200) {
+			if($httpCode == 200) {
 				$file_found = true;
-			} else if(httpCode == 404) {
+			} else if($httpCode == 404) {
 				$file_found = false;
 			} else {
 				$msg = "an error occurred while downloading the REN file, the httpCode is : ".$httpCode;
@@ -733,9 +733,9 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			curl_close($CURL);
 			fclose($current_can_file_res);
 			$current_can_file_res = NULL;
-			if(httpCode == 200) {
+			if($httpCode == 200) {
 				$file_found = true;
-			} else if(httpCode == 404) {
+			} else if($httpCode == 404) {
 				$file_found = false;
 			} else {
 				$msg = "an error occurred while downloading the CAN file, the httpCode is : ".$httpCode;
