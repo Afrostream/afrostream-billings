@@ -38,6 +38,9 @@ class RecurlyUsersHandler {
 				//
 				$account->create();
 				//
+				config::getLogger()->addInfo(
+						"recurly account object have been created with : email=".$account->email.", first_name=".$account->first_name.", last_name=".$account->last_name);
+				//
 			}
 			$user_provider_uuid = $account->account_code;
 			config::getLogger()->addInfo("recurly user creation done successfully, user_provider_uuid=".$user_provider_uuid);
