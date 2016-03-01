@@ -445,7 +445,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_renew', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling bypassed - already done today -");
-				break;
+				exit;
 			}
 			
 			ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions renewal file...");
@@ -679,7 +679,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_cancel', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling bypassed - already done today -");
-				break;
+				exit;
 			}
 			
 			ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions cancel file...");

@@ -22,6 +22,9 @@ class RecurlyUsersHandler {
 				//
 				checkUserOptsArray($user_opts_array);
 				//
+				config::getLogger()->addInfo(
+						"recurly user will be created with : email=".$user_opts_array['email'].", first_name=".$user_opts_array['firstName'].", last_name=".$user_opts_array['lastName']);
+				//
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 				//
