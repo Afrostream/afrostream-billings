@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "af21f3a49483027181c5b13932687d9b",
-    "content-hash": "6d943b2ccdbca99baf154bbfe812e5cf",
+    "hash": "d01cea638005a3dc959910c1cf783a63",
+    "content-hash": "aaa203a89e916a883c8f5c267f1c8fcb",
     "packages": [
         {
             "name": "container-interop/container-interop",
@@ -296,16 +296,16 @@
         },
         {
             "name": "guzzlehttp/psr7",
-            "version": "1.2.2",
+            "version": "1.2.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/psr7.git",
-                "reference": "f5d04bdd2881ac89abde1fb78cc234bce24327bb"
+                "reference": "2e89629ff057ebb49492ba08e6995d3a6a80021b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/psr7/zipball/f5d04bdd2881ac89abde1fb78cc234bce24327bb",
-                "reference": "f5d04bdd2881ac89abde1fb78cc234bce24327bb",
+                "url": "https://api.github.com/repos/guzzle/psr7/zipball/2e89629ff057ebb49492ba08e6995d3a6a80021b",
+                "reference": "2e89629ff057ebb49492ba08e6995d3a6a80021b",
                 "shasum": ""
             },
             "require": {
@@ -350,7 +350,7 @@
                 "stream",
                 "uri"
             ],
-            "time": "2016-01-23 01:23:02"
+            "time": "2016-02-18 21:54:00"
         },
         {
             "name": "ircmaxell/password-compat",
@@ -693,16 +693,16 @@
         },
         {
             "name": "recurly/recurly-client",
-            "version": "2.5.0",
+            "version": "2.5.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/recurly/recurly-client-php.git",
-                "reference": "94dc6ce518e2696e76b90d9def349e2ef4e9889e"
+                "reference": "777109cf2b58a46250217d744350cd58dca191f7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/recurly/recurly-client-php/zipball/94dc6ce518e2696e76b90d9def349e2ef4e9889e",
-                "reference": "94dc6ce518e2696e76b90d9def349e2ef4e9889e",
+                "url": "https://api.github.com/repos/recurly/recurly-client-php/zipball/777109cf2b58a46250217d744350cd58dca191f7",
+                "reference": "777109cf2b58a46250217d744350cd58dca191f7",
                 "shasum": ""
             },
             "require": {
@@ -734,7 +734,7 @@
                 "payments",
                 "recurly"
             ],
-            "time": "2016-01-13 23:54:19"
+            "time": "2016-02-20 01:17:39"
         },
         {
             "name": "sebastian/money",
@@ -784,16 +784,16 @@
         },
         {
             "name": "sendgrid/sendgrid",
-            "version": "4.0.2",
+            "version": "4.0.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sendgrid/sendgrid-php.git",
-                "reference": "ebf68af9d4158450b6d673bf6d31ff5297057882"
+                "reference": "b7d88a78b5ef7c029237e449e0adcaa1b7b70092"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sendgrid/sendgrid-php/zipball/ebf68af9d4158450b6d673bf6d31ff5297057882",
-                "reference": "ebf68af9d4158450b6d673bf6d31ff5297057882",
+                "url": "https://api.github.com/repos/sendgrid/sendgrid-php/zipball/b7d88a78b5ef7c029237e449e0adcaa1b7b70092",
+                "reference": "b7d88a78b5ef7c029237e449e0adcaa1b7b70092",
                 "shasum": ""
             },
             "require": {
@@ -827,7 +827,7 @@
                 "send",
                 "sendgrid"
             ],
-            "time": "2015-12-15 17:04:40"
+            "time": "2016-02-18 21:40:14"
         },
         {
             "name": "sendgrid/smtpapi",
@@ -879,16 +879,16 @@
         },
         {
             "name": "slim/slim",
-            "version": "3.1.0",
+            "version": "3.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/slimphp/Slim.git",
-                "reference": "03b44a4b41896ba42c78bbd5fa172cd79e650496"
+                "reference": "53a4dd576dd3add4efd113ca77c3c21fa559b33e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/slimphp/Slim/zipball/03b44a4b41896ba42c78bbd5fa172cd79e650496",
-                "reference": "03b44a4b41896ba42c78bbd5fa172cd79e650496",
+                "url": "https://api.github.com/repos/slimphp/Slim/zipball/53a4dd576dd3add4efd113ca77c3c21fa559b33e",
+                "reference": "53a4dd576dd3add4efd113ca77c3c21fa559b33e",
                 "shasum": ""
             },
             "require": {
@@ -942,20 +942,20 @@
                 "micro",
                 "router"
             ],
-            "time": "2016-01-08 15:37:50"
+            "time": "2016-02-29 21:39:18"
         },
         {
             "name": "symfony/event-dispatcher",
-            "version": "v2.8.2",
+            "version": "v2.8.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/event-dispatcher.git",
-                "reference": "ee278f7c851533e58ca307f66305ccb9188aceda"
+                "reference": "78c468665c9568c3faaa9c416a7134308f2d85c3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/event-dispatcher/zipball/ee278f7c851533e58ca307f66305ccb9188aceda",
-                "reference": "ee278f7c851533e58ca307f66305ccb9188aceda",
+                "url": "https://api.github.com/repos/symfony/event-dispatcher/zipball/78c468665c9568c3faaa9c416a7134308f2d85c3",
+                "reference": "78c468665c9568c3faaa9c416a7134308f2d85c3",
                 "shasum": ""
             },
             "require": {
@@ -1002,7 +1002,7 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "https://symfony.com",
-            "time": "2016-01-13 10:28:07"
+            "time": "2016-01-27 05:14:19"
         },
         {
             "name": "tuupola/slim-basic-auth",
