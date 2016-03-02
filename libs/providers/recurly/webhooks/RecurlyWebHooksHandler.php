@@ -130,7 +130,7 @@ class RecurlyWebHooksHandler {
 			//$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 		} else {
 			//UPDATE
-			$db_subscription_before_update = $db_subscription;
+			$db_subscription_before_update = clone $db_subscription;
 			$db_subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
 			$recurlySubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		}
