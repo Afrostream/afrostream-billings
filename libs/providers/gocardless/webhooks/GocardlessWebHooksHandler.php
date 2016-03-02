@@ -87,6 +87,8 @@ class GocardlessWebHooksHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 			
 		}
+		//TODO : remove
+		config::getLogger()->addInfo('Processing gocardless hook subscription, sub_uuid='.$subscription_provider_uuid, "sub_status=".$api_subscription->status);
 		//provider
 		$provider = ProviderDAO::getProviderByName('gocardless');
 		if($provider == NULL) {
