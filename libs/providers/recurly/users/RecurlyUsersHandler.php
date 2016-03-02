@@ -22,9 +22,6 @@ class RecurlyUsersHandler {
 				//
 				checkUserOptsArray($user_opts_array);
 				//
-				config::getLogger()->addInfo(
-						"recurly user will be created with : email=".$user_opts_array['email'].", first_name=".$user_opts_array['firstName'].", last_name=".$user_opts_array['lastName']);
-				//
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 				//
@@ -33,13 +30,7 @@ class RecurlyUsersHandler {
 				$account->first_name = $user_opts_array['firstName'];
 				$account->last_name = $user_opts_array['lastName'];
 				//
-				config::getLogger()->addInfo(
-						"recurly account object will be created with : email=".$account->email.", first_name=".$account->first_name.", last_name=".$account->last_name);
-				//
 				$account->create();
-				//
-				config::getLogger()->addInfo(
-						"recurly account object have been created with : email=".$account->email.", first_name=".$account->first_name.", last_name=".$account->last_name);
 				//
 			}
 			$user_provider_uuid = $account->account_code;
