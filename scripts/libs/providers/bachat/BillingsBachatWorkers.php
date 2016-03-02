@@ -34,16 +34,16 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			}
 			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_renew');
 			$now = new DateTime(NULL, new DateTimeZone(self::$timezone));
-			$firstAttemptDate = clone $now;
-			$firstAttemptDate->setTime(getEnv('BOUYGUES_STORE_TIME_HOUR'), getEnv('BOUYGUES_STORE_TIME_MINUTE'));
-			if($firstAttemptDate < $now) {
+			$lastAttemptDate = clone $now;
+			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
+			if($lastAttemptDate > $now) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal...");
 				
 				if(($current_par_ren_file_path = tempnam('', 'tmp')) === false) {
 					throw new BillingsException("PAR_REN file cannot be created");
 				}
 				if(($current_par_ren_file_res = fopen($current_par_ren_file_path, "w")) === false) {
-					throw new BillingsException("PAR_REN file cannot be open");
+					throw new BillingsException("PAR_REN file cannot be open (for write)");
 				}
 				ScriptsConfig::getLogger()->addInfo("PAR_REN file successfully created here : ".$current_par_ren_file_path);
 				$offset = 0;
@@ -76,18 +76,19 @@ class BillingsBachatWorkers extends BillingsWorkers {
 						}
 					}
 				}
+				fclose($current_par_ren_file_res);
+				$current_par_ren_file_res = NULL;
+				if(($current_par_ren_file_res = fopen($current_par_ren_file_path, "r")) === false) {
+					throw new BillingsException("PAR_REN file cannot be open (for read)");
+				}
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_REN uploading...");
-				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL');
-				$data = array(
-						"filename" => "PAR_REN_".$this->today->format("Ymd").".csv"
-				);
+				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."PAR_REN_".$this->today->format("Ymd").".csv";
 				$curl_options = array(
 						CURLOPT_URL => $url,
 						CURLOPT_PUT => true,
 						CURLOPT_INFILE => $current_par_ren_file_res,
 						CURLOPT_INFILESIZE => filesize($current_par_ren_file_path),
-						CURLOPT_POSTFIELDS, http_build_query($data),
 						CURLOPT_HTTPHEADER => array(
 								'Content-Type: text/csv'
 						),
@@ -107,6 +108,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				) {
 					$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 				}
+				if(	null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER'))
+						&&
+					null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD'))
+				) {			
+					$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
+					$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
+				}
+				$curl_options[CURLOPT_VERBOSE] = 1;
 				$CURL = curl_init();
 				curl_setopt_array($CURL, $curl_options);
 				$content = curl_exec($CURL);
@@ -116,7 +125,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$current_par_ren_file_res = NULL;
 				unlink($current_par_ren_file_path);
 				$current_par_ren_file_path = NULL;
-				if($httpCode == 200 || $httpCode == 204) {
+				if($httpCode == 200 || $httpCode == 201 || $httpCode == 204) {
 					ScriptsConfig::getLogger()->addInfo("PAR_REN uploading done successfully, the httpCode is : ".$httpCode);
 				} else {
 					$msg = "an error occurred while uploading the PAR_REN file, the httpCode is : ".$httpCode;
@@ -254,15 +263,15 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			}
 			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_cancel');
 			$now = new DateTime(NULL, new DateTimeZone(self::$timezone));
-			$firstAttemptDate = clone $now;
-			$firstAttemptDate->setTime(getEnv('BOUYGUES_STORE_TIME_HOUR'), getEnv('BOUYGUES_STORE_TIME_MINUTE'));
-			if($firstAttemptDate < $now) {		
+			$lastAttemptDate = clone $now;
+			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
+			if($lastAttemptDate > $now) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling...");
 				if(($current_par_can_file_path = tempnam('', 'tmp')) === false) {
 					throw new BillingsException("PAR_CAN file cannot be created");
 				}
 				if(($current_par_can_file_res = fopen($current_par_can_file_path, "w")) === false) {
-					throw new BillingsException("PAR_CAN file cannot be open");
+					throw new BillingsException("PAR_CAN file cannot be open (for write)");
 				}
 				ScriptsConfig::getLogger()->addInfo("PAR_CAN file successfully created here : ".$current_par_can_file_path);
 				$offset = 0;
@@ -291,18 +300,19 @@ class BillingsBachatWorkers extends BillingsWorkers {
 						}
 					}
 				}
+				fclose($current_par_can_file_res);
+				$current_par_can_file_res = NULL;
+				if(($current_par_can_file_res = fopen($current_par_can_file_path, "r")) === false) {
+					throw new BillingsException("PAR_CAN file cannot be open (for read)");
+				}
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_CAN uploading...");
-				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL');
-				$data = array(
-						"filename" => "PAR_CAN_".$this->today->format("Ymd").".csv"
-				);
+				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."PAR_CAN_".$this->today->format("Ymd").".csv";
 				$curl_options = array(
 						CURLOPT_URL => $url,
 						CURLOPT_PUT => true,
 						CURLOPT_INFILE => $current_par_can_file_res,
 						CURLOPT_INFILESIZE => filesize($current_par_can_file_path),
-						CURLOPT_POSTFIELDS, http_build_query($data),
 						CURLOPT_HTTPHEADER => array(
 								'Content-Type: text/csv'
 						),
@@ -322,6 +332,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				) {
 					$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 				}
+				if(	null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER'))
+					&&
+					null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD'))
+				) {
+					$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
+					$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
+				}
+				$curl_options[CURLOPT_VERBOSE] = 1;
 				$CURL = curl_init();
 				curl_setopt_array($CURL, $curl_options);
 				$content = curl_exec($CURL);
@@ -331,7 +349,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$current_par_can_file_res = NULL;
 				unlink($current_par_can_file_path);
 				$current_par_can_file_path = NULL;
-				if($httpCode == 200 || $httpCode == 204) {
+				if($httpCode == 200 || $httpCode == 201 || $httpCode == 204) {
 					ScriptsConfig::getLogger()->addInfo("PAR_CAN uploading done successfully, the httpCode is : ".$httpCode);
 				} else {
 					$msg = "an error occurred while uploading the PAR_CAN file, the httpCode is : ".$httpCode;
@@ -427,7 +445,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_renew', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling bypassed - already done today -");
-				break;
+				exit;
 			}
 			
 			ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions renewal file...");
@@ -446,7 +464,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			//GET FILE FROM THE SYSTEM WEBDAV (GET)
 			ScriptsConfig::getLogger()->addInfo("REN downloading...");
-			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/REN_".$this->today->format("Ymd").".csv";
+			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."REN_".$this->today->format("Ymd").".csv";
 			$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_FILE => $current_ren_file_res,
@@ -466,6 +484,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			) {
 				$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 			}
+			if(	null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER'))
+				&&
+				null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD'))
+			) {
+				$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
+				$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
+			}
+			$curl_options[CURLOPT_VERBOSE] = 1;
 			$CURL = curl_init();
 			curl_setopt_array($CURL, $curl_options);
 			$content = curl_exec($CURL);
@@ -473,9 +499,9 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			curl_close($CURL);
 			fclose($current_ren_file_res);
 			$current_ren_file_res = NULL;
-			if(httpCode == 200) {
+			if($httpCode == 200) {
 				$file_found = true;
-			} else if(httpCode == 404) {
+			} else if($httpCode == 404) {
 				$file_found = false;
 			} else {
 				$msg = "an error occurred while downloading the REN file, the httpCode is : ".$httpCode;
@@ -653,7 +679,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_cancel', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling bypassed - already done today -");
-				break;
+				exit;
 			}
 			
 			ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions cancel file...");
@@ -672,7 +698,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			//GET FILE FROM THE SYSTEM WEBDAV (GET)
 			ScriptsConfig::getLogger()->addInfo("CAN downloading...");
-			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/CAN_".$this->today->format("Ymd").".csv";
+			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."CAN_".$this->today->format("Ymd").".csv";
 			$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_FILE => $current_can_file_res,
@@ -692,6 +718,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			) {
 				$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 			}
+			if(	null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER'))
+				&&
+				null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD'))
+			) {
+				$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
+				$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
+			}
+			$curl_options[CURLOPT_VERBOSE] = 1;
 			$CURL = curl_init();
 			curl_setopt_array($CURL, $curl_options);
 			$content = curl_exec($CURL);
@@ -699,9 +733,9 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			curl_close($CURL);
 			fclose($current_can_file_res);
 			$current_can_file_res = NULL;
-			if(httpCode == 200) {
+			if($httpCode == 200) {
 				$file_found = true;
-			} else if(httpCode == 404) {
+			} else if($httpCode == 404) {
 				$file_found = false;
 			} else {
 				$msg = "an error occurred while downloading the CAN file, the httpCode is : ".$httpCode;

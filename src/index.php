@@ -132,6 +132,8 @@ $app->get("/billings/api/users/", function ($request, $response, $args) {
  */
 
 $app->post("/billings/api/users/", function ($request, $response, $args) {
+	//TODO : TO BE REMOVED
+	config::getLogger()->addInfo("POST USERS, request=".$request->getBody());
 	$usersController = new UsersController();
 	return($usersController->create($request, $response, $args));
 });
@@ -139,6 +141,7 @@ $app->post("/billings/api/users/", function ($request, $response, $args) {
 //update
 	
 $app->put("/billings/api/users/{userBillingUuid}", function ($request, $response, $args) {
+	config::getLogger()->addInfo("PUT USERS, request=".$request->getBody());
 	$usersController = new UsersController();
 	return($usersController->update($request, $response, $args));
 });
