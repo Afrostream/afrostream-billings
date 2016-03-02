@@ -119,6 +119,11 @@ class config {
 	
 	private static $logger;
 	
+	public static function init() {
+		self::getLogger();
+		self::getDbConn();
+	}
+	
 	public static function getLogger() {
 		if(self::$logger == NULL) {
 			self::$logger = new Logger('afrostream-billings');
@@ -143,5 +148,7 @@ class config {
 		return(self::$db_conn);
 	}
 }
+
+config::init();
 
 ?>
