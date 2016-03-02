@@ -71,7 +71,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		switch($internalPlan->getPeriodUnit()) {
 			case PlanPeriodUnit::day :
 				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+				$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
 				$end_date->setTime(23, 59, 59);//force the time to the end of the day
 				break;
 			default :
@@ -224,7 +224,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		switch($internalPlan->getPeriodUnit()) {
 			case PlanPeriodUnit::day :
 				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+				$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
 				$end_date->setTime(23, 59, 59);//force the time to the end of the day
 				break;
 			default :
