@@ -327,12 +327,8 @@ class SubscriptionsHandler {
 	
 	public function doCancelSubscriptionByUuid($subscriptionBillingUuid, DateTime $cancel_date, $is_a_request = true) {
 		$db_subscription = NULL;
-		$in_transaction = false;
 		try {
 			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
-			//START TRANSACTION
-			pg_query("BEGIN");
-			$in_transaction = true;
 			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
 			if($db_subscription == NULL) {
 				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
@@ -378,18 +374,13 @@ class SubscriptionsHandler {
 			$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 			//
 			$this->doFillSubscription($db_subscription);
-			//COMMIT
-			pg_query("COMMIT");
-			$in_transaction = false;
 			//
 			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
 		} catch(BillingsException $e) {
-			if($in_transaction) { pg_query("ROLLBACK"); }
 			$msg = "a billings exception occurred while dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription canceling failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			if($in_transaction) { pg_query("ROLLBACK"); }
 			$msg = "an unknown exception occurred while dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription canceling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
