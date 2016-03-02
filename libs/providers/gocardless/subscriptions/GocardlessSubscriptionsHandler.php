@@ -646,17 +646,8 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$subscription->setSubCanceledDate($cancel_date);
 				$subscription->setSubStatus('canceled');
 				//
-				try {
-					//START TRANSACTION
-					pg_query("BEGIN");
-					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
-					BillingsSubscriptionDAO::updateSubStatus($subscription);
-					//COMMIT
-					pg_query("COMMIT");
-				} catch (Exception $e) {
-					pg_query("ROLLBACK");
-					throw $e;
-				}
+				BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+				BillingsSubscriptionDAO::updateSubStatus($subscription);
 			}
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("gocardless subscription cancel done successfully for gocardless_subscription_uuid=".$subscription->getSubUid());
