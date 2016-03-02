@@ -464,27 +464,17 @@ class SubscriptionsHandler {
 				$event = "subscription_is_new";
 			}
 			if($subscription_before_update == NULL) {
-				//TODO : remove
-				config::getLogger()->addInfo("event : subscription_before_update is NULL");
-				config::getLogger()->addInfo("event : subscription_after_update status =".$subscription_after_update->getSubStatus());
 				if($subscription_after_update->getSubStatus() == 'canceled') {
-					//TODO : remove
-					config::getLogger()->addInfo("event : subscription_is_canceled_event->true");
 					$subscription_is_canceled_event = true;
 				}
 			} else {
-				//TODO : remove
-				config::getLogger()->addInfo("event : subscription_before_update status=".$subscription_before_update->getSubStatus());
-				config::getLogger()->addInfo("event : subscription_after_update status =".$subscription_after_update->getSubStatus());
 				if(
-						($subscription_before_update->getSubStatus() != 'canceled')
-						&&
-						($subscription_after_update->getSubStatus() == 'canceled')
-						) {
-							//TODO : remove
-							config::getLogger()->addInfo("event : subscription_is_canceled_event->true");
-							$subscription_is_canceled_event = true;
-						}
+					($subscription_before_update->getSubStatus() != 'canceled')
+					&&
+					($subscription_after_update->getSubStatus() == 'canceled')
+					) {
+						$subscription_is_canceled_event = true;
+					}
 			}
 			if($subscription_is_canceled_event == true) {
 				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
