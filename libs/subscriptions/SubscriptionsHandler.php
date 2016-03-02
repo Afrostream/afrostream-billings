@@ -580,8 +580,8 @@ class SubscriptionsHandler {
 						foreach($substitions as $var => $val) {
 							$email->addSubstitution($var, array($val));
 						}
-						if( (null !== (getEnv('SENGRID_BCC'))) && ('' !== (getEnv('SENGRID_BCC')))) {
-							$email->setBcc(getEnv('SENGRID_BCC'));	
+						if( (null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
+							$email->setBcc(getEnv('SENDGRID_BCC'));	
 						}
 						$sendgrid->send($email);
 						config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");
