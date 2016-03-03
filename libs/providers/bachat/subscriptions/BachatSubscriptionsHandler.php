@@ -93,7 +93,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//CREATE
 		$db_subscription = new BillingsSubscription();
-		$db_subscription->setSubscriptionBillingUuid($subOpts['subscriptionBillingUuid']);
+		$db_subscription->setSubscriptionBillingUuid($subOpts->getOpts()['subscriptionBillingUuid']);
 		$db_subscription->setProviderId($provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
