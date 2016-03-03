@@ -12,7 +12,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		parent::__construct();
 	}
 	
-	public function doRequestRenewSubscriptions($force = false) {
+	public function doRequestRenewSubscriptions($force = true) {
 		$processingLog  = NULL;
 		$billingsSubscriptionActionLogs = array();
 		$current_par_ren_file_path = NULL;
@@ -241,7 +241,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		}
 	}
 	
-	public function doRequestCancelSubscriptions($force = false) {
+	public function doRequestCancelSubscriptions($force = true) {
 		$processingLog  = NULL;
 		$billingsSubscriptionActionLogs = array();
 		$current_par_can_file_path = NULL;
