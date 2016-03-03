@@ -72,7 +72,8 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			case PlanPeriodUnit::day :
 				$end_date = clone $start_date;
 				$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				//DO NOT FORCE ANYMORE AS RECOMMENDED BY Niji
+				//$end_date->setTime(23, 59, 59);//force the time to the end of the day
 				break;
 			default :
 				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
@@ -225,7 +226,8 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			case PlanPeriodUnit::day :
 				$end_date = clone $start_date;
 				$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				//DO NOT FORCE ANYMORE AS RECOMMENDED BY Niji
+				//$end_date->setTime(23, 59, 59);//force the time to the end of the day
 				break;
 			default :
 				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
