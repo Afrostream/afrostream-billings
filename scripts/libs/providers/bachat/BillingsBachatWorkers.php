@@ -654,7 +654,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$billingsSubscriptionActionLog->setProcessingStatus("error");
 				$billingsSubscriptionActionLog->setMessage($msg);
 			}
-			throw $e;
+			/*throw $e;*/
 		} catch(Exception $e) {
 			$msg = "an error occurred while processing a renew line, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
@@ -662,7 +662,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$billingsSubscriptionActionLog->setProcessingStatus("error");
 				$billingsSubscriptionActionLog->setMessage($msg);
 			}
-			throw $e;
+			/*throw $e;*/
 		} finally {
 			if(isset($billingsSubscriptionActionLog)) {
 				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
@@ -890,7 +890,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$billingsSubscriptionActionLog->setProcessingStatus("error");
 				$billingsSubscriptionActionLog->setMessage($msg);
 			}
-			throw $e;
+			/*throw $e;*/
 		} catch(Exception $e) {
 			$msg = "an error occurred while processing a cancel line, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
@@ -898,7 +898,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$billingsSubscriptionActionLog->setProcessingStatus("error");
 				$billingsSubscriptionActionLog->setMessage($msg);
 			}
-			throw $e;
+			/*throw $e;*/
 		} finally {
 			if(isset($billingsSubscriptionActionLog)) {
 				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
