@@ -190,7 +190,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			}*/
 			$fields = array();
 			$fields[] = (new DateTime(NULL, new DateTimeZone(self::$timezone)))->format("dmY");//current Day// was : (new DateTime($subscription->getSubPeriodEndsDate()))->format("dmY");//DATE DDMMYYYY
-			$fields[] = (new DateTime($subscription->getSubPeriodEndsDate()))->format("His");//TIME HHMMSS
+			$fields[] = (new DateTime($subscription->getSubPeriodEndsDate(), new DateTimeZone(self::$timezone)))->format("His");//TIME HHMMSS
 			$fields[] = getEnv("BOUYGUES_SERVICEID");//ServiceId
 			$fields[] = $subscription->getSubscriptionBillingUuid();//SubscriptionServiceId
 			$fields[] = $subscription->getSubUid();//SubscriptionId
@@ -413,8 +413,8 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}*/
 			$fields = array();
-			$fields[] = (new DateTime($subscription->getSubCanceledDate()))->format("dmY");//must be in the past//DATE DDMMYYYY
-			$fields[] = (new DateTime($subscription->getSubCanceledDate()))->format("His");//TIME HHMMSS
+			$fields[] = (new DateTime($subscription->getSubCanceledDate(), new DateTimeZone(self::$timezone)))->format("dmY");//must be in the past//DATE DDMMYYYY
+			$fields[] = (new DateTime($subscription->getSubCanceledDate(), new DateTimeZone(self::$timezone)))->format("His");//TIME HHMMSS
 			$fields[] = getEnv("BOUYGUES_SERVICEID");//ServiceId
 			$fields[] = $subscription->getSubscriptionBillingUuid();//SubscriptionServiceId
 			$fields[] = $subscription->getSubUid();//SubscriptionId
