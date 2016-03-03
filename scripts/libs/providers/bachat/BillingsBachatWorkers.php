@@ -551,7 +551,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 	private function doProcessRenewResultFile($current_ren_file_res)
 	{
 		$fields = NULL;
-		while(($fields = fgetcsv($current_ren_file_res)) != NULL) {
+		while(($fields = fgetcsv($current_ren_file_res)) !== false) {
 			$this->doProcessRenewResultLine($fields);
 		}
 	}
@@ -784,7 +784,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 	
 	private function doProcessCancelResultFile($current_can_file_res) {
 		$fields = NULL;
-		while(($fields = fgetcsv($current_can_file_res)) != NULL) {
+		while(($fields = fgetcsv($current_can_file_res)) !== false) {
 			$this->doProcessCancelResultLine($fields);
 		}
 	}
