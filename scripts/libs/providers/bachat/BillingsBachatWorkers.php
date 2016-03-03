@@ -470,7 +470,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_FILE => $current_ren_file_res,
-				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_RETURNTRANSFER => false,
 				CURLOPT_HEADER  => false
 			);
 			if(	null !== (getEnv('BOUYGUES_PROXY_HOST'))
@@ -704,7 +704,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_FILE => $current_can_file_res,
-				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_RETURNTRANSFER => false,
 				CURLOPT_HEADER  => false
 			);
 			if(	null !== (getEnv('BOUYGUES_PROXY_HOST'))
