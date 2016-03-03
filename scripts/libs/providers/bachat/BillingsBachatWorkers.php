@@ -4,6 +4,8 @@ require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php';
 
+ini_set("auto_detect_line_endings", true);
+
 class BillingsBachatWorkers extends BillingsWorkers {
 	
 	public function __construct() {
