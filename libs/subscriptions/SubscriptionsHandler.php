@@ -357,7 +357,7 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_subscription_before_update = $db_subscription;
+			$db_subscription_before_update = clone $db_subscription;
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
@@ -489,12 +489,12 @@ class SubscriptionsHandler {
 				}
 			} else {
 				if(
-						($subscription_before_update->getSubStatus() != 'canceled')
-						&&
-						($subscription_after_update->getSubStatus() == 'canceled')
-						) {
-							$subscription_is_canceled_event = true;
-						}
+					($subscription_before_update->getSubStatus() != 'canceled')
+					&&
+					($subscription_after_update->getSubStatus() == 'canceled')
+					) {
+						$subscription_is_canceled_event = true;
+					}
 			}
 			if($subscription_is_canceled_event == true) {
 				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
@@ -600,8 +600,8 @@ class SubscriptionsHandler {
 						foreach($substitions as $var => $val) {
 							$email->addSubstitution($var, array($val));
 						}
-						if( (null !== (getEnv('SENGRID_BCC'))) && ('' !== (getEnv('SENGRID_BCC')))) {
-							$email->setBcc(getEnv('SENGRID_BCC'));	
+						if( (null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
+							$email->setBcc(getEnv('SENDGRID_BCC'));	
 						}
 						$sendgrid->send($email);
 						config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");

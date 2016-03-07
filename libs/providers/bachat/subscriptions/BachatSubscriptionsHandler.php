@@ -20,8 +20,8 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addInfo("bachat subscription creation...");
 			//pre-requisite
 			checkSubOptsArray($subOpts->getOpts(), 'bachat');
-			if(!isset($subscription_provider_uuid)) {
-				$msg = "field 'subscriptionProviderUuid' was not provided";
+			if(isset($subscription_provider_uuid)) {
+				$msg = "field 'subscriptionProviderUuid' must not be provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -35,8 +35,9 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			$res = $bachat->requestEDBBilling($requestId, $idSession, $otpCode);
 			if($res->resultMessage == "SUCCESS") {
 				//OK
-				config::getLogger()->addInfo("BACHAT OK, result=".$res->result.", requestId=".$res->requestId.", chargeTransactionId=".$res->chargeTransactionId);
+				config::getLogger()->addInfo("BACHAT OK, result=".$res->result.", subscriptionId=".$res->subscriptionId.", requestId=".$res->requestId.", chargeTransactionId=".$res->chargeTransactionId);
 				$subOpts->setOpt('chargeTransactionId', $res->chargeTransactionId);
+				$subscription_provider_uuid = $res->subscriptionId;
 			} else {
 				//KO
 				//TODO : TO BE REMOVED : do not var_export all the response from BACHAT
@@ -70,8 +71,9 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		switch($internalPlan->getPeriodUnit()) {
 			case PlanPeriodUnit::day :
 				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
+				//DO NOT FORCE ANYMORE AS RECOMMENDED BY Niji
+				//$end_date->setTime(23, 59, 59);//force the time to the end of the day
 				break;
 			default :
 				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
@@ -85,9 +87,14 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingsSubscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("bachat dbsubscription creation for userid=".$user->getId().", bachat_subscription_uuid=".$api_subscription->getSubUid()."...");
+		if($subOpts == NULL) {
+			$msg = "subOpts is NULL";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
 		//CREATE
 		$db_subscription = new BillingsSubscription();
-		$db_subscription->setSubscriptionBillingUuid(guid());
+		$db_subscription->setSubscriptionBillingUuid($subOpts->getOpts()['subscriptionBillingUuid']);
 		$db_subscription->setProviderId($provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
@@ -218,8 +225,9 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		switch($internalPlan->getPeriodUnit()) {
 			case PlanPeriodUnit::day :
 				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
+				//DO NOT FORCE ANYMORE AS RECOMMENDED BY Niji
+				//$end_date->setTime(23, 59, 59);//force the time to the end of the day
 				break;
 			default :
 				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();

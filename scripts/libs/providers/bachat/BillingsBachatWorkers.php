@@ -4,13 +4,15 @@ require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php';
 
+ini_set("auto_detect_line_endings", true);
+
 class BillingsBachatWorkers extends BillingsWorkers {
 	
 	public function __construct() {
 		parent::__construct();
 	}
 	
-	public function doRequestRenewSubscriptions($force = false) {
+	public function doRequestRenewSubscriptions($force = true) {
 		$processingLog  = NULL;
 		$billingsSubscriptionActionLogs = array();
 		$current_par_ren_file_path = NULL;
@@ -48,9 +50,8 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addInfo("PAR_REN file successfully created here : ".$current_par_ren_file_path);
 				$offset = 0;
 				$limit = 100;
-				//will select all day strictly before tommorrow (the reason why DateInterval is +1 DAY) 
+				//will select all day strictly before today
 				$sub_period_ends_date = clone $this->today;
-				$sub_period_ends_date->add(new DateInterval("P1D"));
 				$sub_period_ends_date->setTime(0, 0, 0);
 				//
 				$status_array = array('active');
@@ -115,7 +116,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 					$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
 					$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
 				}
-				$curl_options[CURLOPT_VERBOSE] = 1;
+				$curl_options[CURLOPT_VERBOSE] = true;
 				$CURL = curl_init();
 				curl_setopt_array($CURL, $curl_options);
 				$content = curl_exec($CURL);
@@ -188,7 +189,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			}*/
 			$fields = array();
 			$fields[] = (new DateTime(NULL, new DateTimeZone(self::$timezone)))->format("dmY");//current Day// was : (new DateTime($subscription->getSubPeriodEndsDate()))->format("dmY");//DATE DDMMYYYY
-			$fields[] = (new DateTime($subscription->getSubPeriodEndsDate()))->format("His");//TIME HHMMSS
+			$fields[] = (new DateTime($subscription->getSubPeriodEndsDate(), new DateTimeZone(self::$timezone)))->format("His");//TIME HHMMSS
 			$fields[] = getEnv("BOUYGUES_SERVICEID");//ServiceId
 			$fields[] = $subscription->getSubscriptionBillingUuid();//SubscriptionServiceId
 			$fields[] = $subscription->getSubUid();//SubscriptionId
@@ -239,7 +240,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		}
 	}
 	
-	public function doRequestCancelSubscriptions($force = false) {
+	public function doRequestCancelSubscriptions($force = true) {
 		$processingLog  = NULL;
 		$billingsSubscriptionActionLogs = array();
 		$current_par_can_file_path = NULL;
@@ -339,7 +340,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 					$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
 					$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
 				}
-				$curl_options[CURLOPT_VERBOSE] = 1;
+				$curl_options[CURLOPT_VERBOSE] = true;
 				$CURL = curl_init();
 				curl_setopt_array($CURL, $curl_options);
 				$content = curl_exec($CURL);
@@ -411,8 +412,8 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}*/
 			$fields = array();
-			$fields[] = (new DateTime($subscription->getSubCanceledDate()))->format("dmY");//must be in the past//DATE DDMMYYYY
-			$fields[] = (new DateTime($subscription->getSubCanceledDate()))->format("His");//TIME HHMMSS
+			$fields[] = (new DateTime($subscription->getSubCanceledDate(), new DateTimeZone(self::$timezone)))->format("dmY");//must be in the past//DATE DDMMYYYY
+			$fields[] = (new DateTime($subscription->getSubCanceledDate(), new DateTimeZone(self::$timezone)))->format("His");//TIME HHMMSS
 			$fields[] = getEnv("BOUYGUES_SERVICEID");//ServiceId
 			$fields[] = $subscription->getSubscriptionBillingUuid();//SubscriptionServiceId
 			$fields[] = $subscription->getSubUid();//SubscriptionId
@@ -467,9 +468,9 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."REN_".$this->today->format("Ymd").".csv";
 			$curl_options = array(
 				CURLOPT_URL => $url,
-				CURLOPT_FILE => $current_ren_file_res,
 				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_HEADER  => false
+				CURLOPT_HEADER  => false,
+				CURLOPT_FOLLOWLOCATION => true
 			);
 			if(	null !== (getEnv('BOUYGUES_PROXY_HOST'))
 				&&
@@ -491,16 +492,15 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
 				$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
 			}
-			$curl_options[CURLOPT_VERBOSE] = 1;
+			$curl_options[CURLOPT_VERBOSE] = true;
 			$CURL = curl_init();
 			curl_setopt_array($CURL, $curl_options);
 			$content = curl_exec($CURL);
 			$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
 			curl_close($CURL);
-			fclose($current_ren_file_res);
-			$current_ren_file_res = NULL;
 			if($httpCode == 200) {
 				$file_found = true;
+				fwrite($current_ren_file_res, $content);
 			} else if($httpCode == 404) {
 				$file_found = false;
 			} else {
@@ -508,6 +508,9 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new Exception($msg);
 			}
+			//anyway
+			fclose($current_ren_file_res);
+			$current_ren_file_res = NULL;
 			if($file_found) {
 				if(($current_ren_file_res = fopen($current_ren_file_path, "r")) === false) {
 					throw new BillingsException("REN file cannot be open (for read)");
@@ -549,7 +552,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 	private function doProcessRenewResultFile($current_ren_file_res)
 	{
 		$fields = NULL;
-		while(($fields = fgetcsv($current_ren_file_res)) != NULL) {
+		while(($fields = fgetcsv($current_ren_file_res)) !== false) {
 			$this->doProcessRenewResultLine($fields);
 		}
 	}
@@ -561,7 +564,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			if(count($current_line_fields) < 7) {
 				$msg = "line cannot be processed, it contains only ".count($current_line_fields)." fields, 7 minimum are expected";
 				ScriptsConfig::getLogger()->addError($msg);
-				throw new Exception(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$date_str = $current_line_fields[0];
 			$time_str = $current_line_fields[1];
@@ -575,7 +578,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			if($subscription == NULL) {
 				$msg = "subscription with subscriptionServiceId=".$subscriptionServiceId." could not been found";
 				ScriptsConfig::getLogger()->addError($msg);
-				throw new Exception(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "response_renew");
 			//check
@@ -646,14 +649,19 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		} catch(BillingsException $e) {
 			$msg = "an error occurred while processing a renew line, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError("processing a renew line failed : ".$msg);
-			$billingsSubscriptionActionLog->setProcessingStatus("error");
-			$billingsSubscriptionActionLog->setMessage($msg);
-			throw $e;
+			if(isset($billingsSubscriptionActionLog)) {
+				$billingsSubscriptionActionLog->setProcessingStatus("error");
+				$billingsSubscriptionActionLog->setMessage($msg);
+			}
+			/*throw $e;*/
 		} catch(Exception $e) {
 			$msg = "an error occurred while processing a renew line, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
-			//$billingsSubscriptionActionLog not initialized !
-			throw $e;
+			if(isset($billingsSubscriptionActionLog)) {
+				$billingsSubscriptionActionLog->setProcessingStatus("error");
+				$billingsSubscriptionActionLog->setMessage($msg);
+			}
+			/*throw $e;*/
 		} finally {
 			if(isset($billingsSubscriptionActionLog)) {
 				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
@@ -701,9 +709,9 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."CAN_".$this->today->format("Ymd").".csv";
 			$curl_options = array(
 				CURLOPT_URL => $url,
-				CURLOPT_FILE => $current_can_file_res,
 				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_HEADER  => false
+				CURLOPT_HEADER  => false,
+				CURLOPT_FOLLOWLOCATION => true
 			);
 			if(	null !== (getEnv('BOUYGUES_PROXY_HOST'))
 				&&
@@ -725,16 +733,15 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
 				$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
 			}
-			$curl_options[CURLOPT_VERBOSE] = 1;
+			$curl_options[CURLOPT_VERBOSE] = true;
 			$CURL = curl_init();
 			curl_setopt_array($CURL, $curl_options);
 			$content = curl_exec($CURL);
 			$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
 			curl_close($CURL);
-			fclose($current_can_file_res);
-			$current_can_file_res = NULL;
 			if($httpCode == 200) {
 				$file_found = true;
+				fwrite($current_can_file_res, $content);
 			} else if($httpCode == 404) {
 				$file_found = false;
 			} else {
@@ -742,6 +749,9 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new Exception($msg);
 			}
+			//anyway
+			fclose($current_can_file_res);
+			$current_can_file_res = NULL;
 			if($file_found) {
 				if(($current_can_file_res = fopen($current_can_file_path, "r")) === false) {
 					throw new BillingsException("CAN file cannot be open (for read)");
@@ -782,7 +792,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 	
 	private function doProcessCancelResultFile($current_can_file_res) {
 		$fields = NULL;
-		while(($fields = fgetcsv($current_can_file_res)) != NULL) {
+		while(($fields = fgetcsv($current_can_file_res)) !== false) {
 			$this->doProcessCancelResultLine($fields);
 		}
 	}
@@ -794,7 +804,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			if(count($current_line_fields) < 6) {
 				$msg = "line cannot be processed, it contains only ".count($current_line_fields)." fields, 6 minimum are expected";
 				ScriptsConfig::getLogger()->addError($msg);
-				throw new Exception(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$date_str = $current_line_fields[0];
 			$time_str = $current_line_fields[1];
@@ -807,7 +817,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			if($subscription == NULL) {
 				$msg = "subscription with subscriptionServiceId=".$subscriptionServiceId." could not been found";
 				ScriptsConfig::getLogger()->addError($msg);
-				throw new Exception(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "response_cancel");
 			//check
@@ -875,14 +885,19 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		} catch(BillingsException $e) {
 			$msg = "an error occurred while processing a cancel line, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError("processing a cancel line failed : ".$msg);
-			$billingsSubscriptionActionLog->setProcessingStatus("error");
-			$billingsSubscriptionActionLog->setMessage($msg);
-			throw $e;
+			if(isset($billingsSubscriptionActionLog)) {
+				$billingsSubscriptionActionLog->setProcessingStatus("error");
+				$billingsSubscriptionActionLog->setMessage($msg);
+			}
+			/*throw $e;*/
 		} catch(Exception $e) {
 			$msg = "an error occurred while processing a cancel line, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
-			//$billingsSubscriptionActionLog not initialized !
-			throw $e;
+			if(isset($billingsSubscriptionActionLog)) {
+				$billingsSubscriptionActionLog->setProcessingStatus("error");
+				$billingsSubscriptionActionLog->setMessage($msg);
+			}
+			/*throw $e;*/
 		} finally {
 			if(isset($billingsSubscriptionActionLog)) {
 				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);

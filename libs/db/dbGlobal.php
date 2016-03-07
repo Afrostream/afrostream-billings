@@ -1284,7 +1284,7 @@ class BillingsSubscriptionDAO {
 		$query.= ")";
 		if(isset($providerId)) {
 			$params[] = $providerId;
-			$query.= " AND BU.providerId = $".(count($params));
+			$query.= " AND BU.providerid = $".(count($params));
 		}
 		$params[] = dbGlobal::toISODate($sub_period_ends_date);
 		$query.= " AND BS.sub_period_ends_date < $".(count($params));//STRICT
@@ -1322,7 +1322,7 @@ class BillingsSubscriptionDAO {
 		$query.= ")";
 		if(isset($providerId)) {
 			$params[] = $providerId;
-			$query.= " AND BU.providerId = $".(count($params));
+			$query.= " AND BU.providerid = $".(count($params));
 		}
 		$query.= " ORDER BY BU._id DESC";//LAST USERS FIRST
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
