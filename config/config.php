@@ -116,6 +116,8 @@ if(getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION') === false) {
 #logger, #db_conn, ...
 
 class config {
+
+	public static $timezone = "Europe/Paris";
 	
 	private static $logger;
 	
