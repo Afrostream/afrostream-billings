@@ -50,9 +50,8 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addInfo("PAR_REN file successfully created here : ".$current_par_ren_file_path);
 				$offset = 0;
 				$limit = 100;
-				//will select all day strictly before tommorrow (the reason why DateInterval is +1 DAY) 
+				//will select all day strictly before today
 				$sub_period_ends_date = clone $this->today;
-				$sub_period_ends_date->add(new DateInterval("P1D"));
 				$sub_period_ends_date->setTime(0, 0, 0);
 				//
 				$status_array = array('active');

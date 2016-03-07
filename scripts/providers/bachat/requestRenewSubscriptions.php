@@ -14,7 +14,7 @@ foreach ($argv as $arg) {
 			$_GET[$e[0]]=0;
 }
 
-$force = false;
+$force = true;
 
 if(isset($_GET["-force"])) {
 	$force = boolval($_GET["-force"]);

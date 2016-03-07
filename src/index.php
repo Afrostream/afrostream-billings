@@ -4,6 +4,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../libs/site/UsersController.php';
 require_once __DIR__ . '/../libs/site/SubscriptionsController.php';
 require_once __DIR__ . '/../libs/site/InternalPlansController.php';
+require_once __DIR__ . '/../libs/site/CouponsController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
 //require_once __DIR__ . '/test.php';
 
@@ -500,6 +501,48 @@ $app->put("/billings/api/internalplans/{internalPlanUuid}", function ($request, 
 $app->put("/billings/api/internalplans/{internalPlanUuid}/addtoprovider/{providerName}", function ($request, $response, $args) {
 	$internalPlansController = new InternalPlansController();
 	return($internalPlansController->addToProvider($request, $response, $args));
+});
+
+//get coupon
+	
+/*
+	sample call :
+	
+	GET /billings/api/coupons/?providerName=afr&couponCode=prefix-1111
+	
+	sample answer :
+	
+{
+  "status": "done",
+  "statusMessage": "success",
+  "statusCode": 0,
+  "response": {
+    "coupon": {
+      "code": "prefix-1111",
+      "status": "waiting",
+      "campaign": {
+        "couponCampaignBillingUuid": "11111111-1111-1111-1111-1111111",
+        "creationDate": "2016-01-01 00:00:00.00000+01",
+        "name": "campaign_name",
+        "description": "campaign_desc",
+        "provider": {
+          "providerName": "afr"
+        },
+        "internalPlan": {...}
+      },
+      "provider": {
+        "providerName": "afr"
+      },
+      "internalPlan": {..}
+    }
+  }
+}
+	
+*/
+
+$app->get("/billings/api/coupons/", function ($request, $response, $args) {
+	$couponsController = new CouponsController();
+	return($couponsController->get($request, $response, $args));
 });
 
 //WebHooks
