@@ -64,5 +64,4 @@ class IdipperPlansHandler {
 
 IdipperPlansHandler::init();
 
-
 ?>

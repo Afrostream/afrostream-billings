@@ -148,7 +148,7 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			break;
-		case 'gocardless':
+		case 'gocardless' :
 			if($case == 'create') {
 				if(!array_key_exists('customerBankAccountToken', $sub_opts_as_array)) {
 					//exception
@@ -156,6 +156,14 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
+			}
+			break;
+		case 'afr' :
+			if(!array_key_exists('couponCode', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'couponCode' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			break;
 		default :

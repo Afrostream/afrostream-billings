@@ -12,7 +12,7 @@ class CeleryUsersHandler {
 				//nothing
 				//TODO : (should check provider side...)
 			} else {
-				$msg = "unsupported feature for provider named celery, userProviderUuid have to be provided";
+				$msg = "unsupported feature for provider named celery, userProviderUuid has to be provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
