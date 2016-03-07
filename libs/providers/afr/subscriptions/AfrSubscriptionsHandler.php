@@ -29,6 +29,23 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
 			}
+			$couponProviderPlan = PlanDAO::getPlanById($coupon->getProviderPlanId());
+			if($couponProviderPlan == NULL) {
+				$msg = "unknown coupon plan with id : ".$coupon->getProviderPlanId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			}
+			$couponInternalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($couponProviderPlan->getId()));
+			if($couponInternalPlan == NULL) {
+				$msg = "coupon plan with uuid=".$couponProviderPlan->getPlanUuid()." for provider afr is not linked to an internal plan";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);		
+			}
+			if($internalPlan->getId() != $couponInternalPlan->getId()) {
+				$msg = "coupon : code=".$couponCode." cannot be used with internalPlan with uuid=".$internalPlan->getInternalPlanUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
+			}
 			if($coupon->getStatus() == 'redeemed') {
 				$msg = "coupon : code=".$couponCode." already redeemed";
 				config::getLogger()->addError($msg);
@@ -244,6 +261,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($provider_plan->getId()));
 		if($internalPlan == NULL) {
+			$msg = "plan with uuid=".$provider_plan->getPlanUuid()." for provider afr is not linked to an internal plan";
 			config::getLogger()->addError($msg);
 			throw new Exception($msg);
 		}
