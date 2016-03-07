@@ -42,10 +42,10 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal...");
 				
 				if(($current_par_ren_file_path = tempnam('', 'tmp')) === false) {
-					throw new BillingsException("PAR_REN file cannot be created");
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), "PAR_REN file cannot be created");
 				}
 				if(($current_par_ren_file_res = fopen($current_par_ren_file_path, "w")) === false) {
-					throw new BillingsException("PAR_REN file cannot be open (for write)");
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), "PAR_REN file cannot be open (for write)");
 				}
 				ScriptsConfig::getLogger()->addInfo("PAR_REN file successfully created here : ".$current_par_ren_file_path);
 				$offset = 0;
@@ -80,7 +80,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				fclose($current_par_ren_file_res);
 				$current_par_ren_file_res = NULL;
 				if(($current_par_ren_file_res = fopen($current_par_ren_file_path, "r")) === false) {
-					throw new BillingsException("PAR_REN file cannot be open (for read)");
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), "PAR_REN file cannot be open (for read)");
 				}
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_REN uploading...");
@@ -131,7 +131,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				} else {
 					$msg = "an error occurred while uploading the PAR_REN file, the httpCode is : ".$httpCode;
 					ScriptsConfig::getLogger()->addError($msg);
-					throw new Exception($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				//DONE
 				self::setBillingsSubscriptionsStatus($billingsSubscriptionsOkToProceed, 'pending_active');
@@ -181,19 +181,25 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		try {
 			//
 			ScriptsConfig::getLogger()->addInfo("preparing bachat subscription renewal for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()."...");
-			/*$plan = PlanDAO::getPlanById($subscription->getPlanId());
-			if($plan == NULL) {
+			$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
+			if($providerPlan == NULL) {
 				$msg = "unknown provider plan with id : ".$subscription->getPlanId();
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}*/
+			}
+			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
+			if($internalPlan == NULL) {
+				$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider bachat is not linked to an internal plan";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			$fields = array();
 			$fields[] = (new DateTime(NULL, new DateTimeZone(self::$timezone)))->format("dmY");//current Day// was : (new DateTime($subscription->getSubPeriodEndsDate()))->format("dmY");//DATE DDMMYYYY
 			$fields[] = (new DateTime($subscription->getSubPeriodEndsDate(), new DateTimeZone(self::$timezone)))->format("His");//TIME HHMMSS
 			$fields[] = getEnv("BOUYGUES_SERVICEID");//ServiceId
 			$fields[] = $subscription->getSubscriptionBillingUuid();//SubscriptionServiceId
 			$fields[] = $subscription->getSubUid();//SubscriptionId
-			$fields[] = "20.0";//VAT
+			$fields[] = (string) number_format($internalPlan->getVatRate(), 2, '.', ' ');//VAT
 			fputcsv($current_par_ren_file_res, $fields);
 			ScriptsConfig::getLogger()->addInfo("preparing bachat subscription renewal for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()." done successfully");
 		} catch(Exception $e) {
@@ -269,10 +275,10 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			if($lastAttemptDate > $now) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling...");
 				if(($current_par_can_file_path = tempnam('', 'tmp')) === false) {
-					throw new BillingsException("PAR_CAN file cannot be created");
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), "PAR_CAN file cannot be created");
 				}
 				if(($current_par_can_file_res = fopen($current_par_can_file_path, "w")) === false) {
-					throw new BillingsException("PAR_CAN file cannot be open (for write)");
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), "PAR_CAN file cannot be open (for write)");
 				}
 				ScriptsConfig::getLogger()->addInfo("PAR_CAN file successfully created here : ".$current_par_can_file_path);
 				$offset = 0;
@@ -304,7 +310,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				fclose($current_par_can_file_res);
 				$current_par_can_file_res = NULL;
 				if(($current_par_can_file_res = fopen($current_par_can_file_path, "r")) === false) {
-					throw new BillingsException("PAR_CAN file cannot be open (for read)");
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), "PAR_CAN file cannot be open (for read)");
 				}
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_CAN uploading...");
@@ -355,7 +361,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				} else {
 					$msg = "an error occurred while uploading the PAR_CAN file, the httpCode is : ".$httpCode;
 					ScriptsConfig::getLogger()->addError($msg);
-					throw new Exception($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				//DONE
 				self::setBillingsSubscriptionsStatus($billingsSubscriptionsOkToProceed, 'pending_canceled');
@@ -454,10 +460,10 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_response_renew');
 			
 			if(($current_ren_file_path = tempnam('', 'tmp')) === false) {
-				throw new BillingsException("REN file cannot be created");
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), "REN file cannot be created");
 			}
 			if(($current_ren_file_res = fopen($current_ren_file_path, "w")) === false) {
-				throw new BillingsException("REN file cannot be open (for write)");
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), "REN file cannot be open (for write)");
 			}
 			ScriptsConfig::getLogger()->addInfo("REN file successfully created here : ".$current_ren_file_path);
 			
@@ -506,14 +512,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			} else {
 				$msg = "an error occurred while downloading the REN file, the httpCode is : ".$httpCode;
 				ScriptsConfig::getLogger()->addError($msg);
-				throw new Exception($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//anyway
 			fclose($current_ren_file_res);
 			$current_ren_file_res = NULL;
 			if($file_found) {
 				if(($current_ren_file_res = fopen($current_ren_file_path, "r")) === false) {
-					throw new BillingsException("REN file cannot be open (for read)");
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), "REN file cannot be open (for read)");
 				}
 				$this->doProcessRenewResultFile($current_ren_file_res);
 				fclose($current_ren_file_res);
@@ -695,10 +701,10 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_response_cancel');
 			
 			if(($current_can_file_path = tempnam('', 'tmp')) === false) {
-				throw new BillingsException("CAN file cannot be created");
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), "CAN file cannot be created");
 			}
 			if(($current_can_file_res = fopen($current_can_file_path, "w")) === false) {
-				throw new BillingsException("CAN file cannot be open (for write)");
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), "CAN file cannot be open (for write)");
 			}
 			ScriptsConfig::getLogger()->addInfo("CAN file successfully created here : ".$current_can_file_path);
 			
@@ -747,14 +753,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			} else {
 				$msg = "an error occurred while downloading the CAN file, the httpCode is : ".$httpCode;
 				ScriptsConfig::getLogger()->addError($msg);
-				throw new Exception($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//anyway
 			fclose($current_can_file_res);
 			$current_can_file_res = NULL;
 			if($file_found) {
 				if(($current_can_file_res = fopen($current_can_file_path, "r")) === false) {
-					throw new BillingsException("CAN file cannot be open (for read)");
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), "CAN file cannot be open (for read)");
 				}
 				$this->doProcessCancelResultFile($current_can_file_res);
 				fclose($current_can_file_res);

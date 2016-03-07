@@ -116,7 +116,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while getting subscriptions for user_provider_uuid=".$user->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		//ADD OR UPDATE
@@ -127,14 +127,14 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			if($plan == NULL) {
 				$msg = "plan with uuid=".$plan_uuid." not found";
 				config::getLogger()->addError($msg);
-				throw new Exception($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$plan_uuid." for provider ".$provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);
-				throw new Exception($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->uuid);
@@ -258,7 +258,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			default :
 				$msg = "unknown subscription state : ".$api_subscription->state;
 				config::getLogger()->addError($msg);
-				throw new Exception($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				//break;
 		}
 		$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
