@@ -8,6 +8,7 @@ require_once __DIR__ . '/../providers/recurly/subscriptions/RecurlySubscriptions
 require_once __DIR__ . '/../providers/gocardless/subscriptions/GocardlessSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/bachat/subscriptions/BachatSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/idipper/subscriptions/IdipperSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/afr/subscriptions/AfrSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 
 class SubscriptionsHandler {
@@ -141,6 +142,10 @@ class SubscriptionsHandler {
 						$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
 						$sub_uuid = $idipperSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
 						break;
+					case 'afr' :
+						$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
+						$sub_uuid = $afrSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);						
+						break;
 					default:
 						$msg = "unsupported feature for provider named : ".$provider_name;
 						config::getLogger()->addError($msg);
@@ -175,6 +180,10 @@ class SubscriptionsHandler {
 						case 'idipper' :
 							$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
 							$db_subscription = $idipperSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);							
+							break;
+						case 'afr' :
+							$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
+							$db_subscription = $afrSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
 						default:
 							$msg = "unsupported feature for provider named : ".$provider_name;
@@ -252,6 +261,13 @@ class SubscriptionsHandler {
 					break;
 				case 'bachat' :
 					//nothing to do (owned)
+					break;
+				case 'idipper' :
+					//TODO
+					break;
+				case 'afr' :
+					//nothing to do (owned)
+					break;
 				default:
 					//nothing to do (unknown)
 					break;
@@ -425,6 +441,10 @@ class SubscriptionsHandler {
 			case 'idipper' :
 				$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
 				$idipperSubscriptionsHandler->doFillSubscription($subscription);
+				break;
+			case 'afr' :
+				$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
+				$afrSubscriptionsHandler->doFillSubscription($subscription);				
 				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
