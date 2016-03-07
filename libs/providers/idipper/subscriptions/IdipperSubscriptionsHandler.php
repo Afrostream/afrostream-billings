@@ -196,6 +196,31 @@ class IdipperSubscriptionsHandler extends SubscriptionsHandler {
 		$subscription->setIsActive($is_active);
 	}
 	
+	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+		try {
+			config::getLogger()->addInfo("idipper subscription cancel...");
+			if(
+					$subscription->getSubStatus() == "canceled"
+					)
+			{
+				//nothing todo : already done or in process
+			} else {
+				//TODO
+			}
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("idipper subscription cancel done successfully for idipper_subscription_uuid=".$subscription->getSubUid());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while cancelling a idipper subscription for idipper_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("idipper subscription cancelling failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while cancelling a idipper subscription for idipper_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("idipper subscription cancelling failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($subscription);
+	}
+	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
 		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
 	}
