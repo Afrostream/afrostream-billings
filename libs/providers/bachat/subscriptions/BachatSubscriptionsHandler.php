@@ -164,6 +164,11 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			return;
 		}
 		$is_active = NULL;
+		$periodStartedDate = new DateTime($subscription->getSubPeriodStartedDate(), config::$timezone);
+		$periodEndsDate = new DateTime($subscription->getSubPeriodEndsDate(), config::$timezone);
+		$periodEndsDate->setTime(23, 59, 59);
+		$periodeGraceEndsDate = clone $periodEndsDate;
+		$periodeGraceEndsDate->add(new DateInterval("P3D"));//3 full days of grace period
 		switch($subscription->getSubStatus()) {
 			case 'pending_active' :
 			case 'active' :
@@ -174,9 +179,9 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < (new DateTime($subscription->getSubPeriodEndsDate())))
+						($now < $periodStartedDate)
 								&&
-						($now >= (new DateTime($subscription->getSubPeriodStartedDate())))
+						($now >= $periodeGraceEndsDate)
 				) {
 					//inside the period
 					$is_active = 'yes';
