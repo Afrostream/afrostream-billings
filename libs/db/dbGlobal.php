@@ -1284,7 +1284,7 @@ class BillingsSubscriptionDAO {
 		$query.= ")";
 		if(isset($providerId)) {
 			$params[] = $providerId;
-			$query.= " AND BU.providerId = $".(count($params));
+			$query.= " AND BU.providerid = $".(count($params));
 		}
 		$params[] = dbGlobal::toISODate($sub_period_ends_date);
 		$query.= " AND BS.sub_period_ends_date < $".(count($params));//STRICT
@@ -1322,7 +1322,7 @@ class BillingsSubscriptionDAO {
 		$query.= ")";
 		if(isset($providerId)) {
 			$params[] = $providerId;
-			$query.= " AND BU.providerId = $".(count($params));
+			$query.= " AND BU.providerid = $".(count($params));
 		}
 		$query.= " ORDER BY BU._id DESC";//LAST USERS FIRST
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
@@ -2178,6 +2178,401 @@ class ThumbDAO {
 	}
 	
 }
+
+class CouponCampaign implements JsonSerializable {
+	
+	private $_id;
+	private $uuid;
+	private $name;
+	private $description;
+	private $creation_date;
+	private $providerid;
+	private $providerplanid;
+	private $prefix;
+	private $generated_code_length;
+	private	$total_number;
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getUuid() {
+		return($this->uuid);
+	}
+	
+	public function setUuid($uuid) {
+		$this->uuid = $uuid;
+	}
+	
+	public function setName($str) {
+		$this->name = $str;
+	}
+	
+	public function getName() {
+		return($this->name);
+	}
+	
+	public function setDescription($str) {
+		$this->description = $str;
+	}
+	
+	public function getDescription() {
+		return($this->description);
+	}
+	
+	public function getCreationDate() {
+		return($this->creation_date);
+	}
+	
+	public function setCreationDate($date) {
+		$this->creation_date = $date;
+	}
+	
+	public function setProviderId($id) {
+		$this->providerid = $id;
+	}
+	
+	public function getProviderId() {
+		return($this->providerid);
+	}
+
+	public function setProviderPlanId($id) {
+		$this->providerplanid = $id;
+	}
+	
+	public function getProviderPlanId() {
+		return($this->providerplanid);
+	}
+	
+	public function setPrefix($str) {
+		$this->prefix = $str;
+	}
+	
+	public function getPrefix() {
+		return($this->prefix);
+	}
+	
+	public function setGeneratedCodeLength($length) {
+		$this->generated_code_length = $length;
+	}
+	
+	public function getGeneratedCodeLength() {
+		return($this->generated_code_length);
+	}
+	
+	public function setTotalNumber($nb) {
+		$this->total_number = $nb;
+	}
+	
+	public function getTotalNumber() {
+		return($this->total_number);
+	}
+	
+	public function jsonSerialize() {
+		$return = [
+			'couponCampaignBillingUuid' => $this->uuid,
+			'creationDate' => $this->creation_date,
+			'name' => $this->name,
+			'description' => $this->description,
+			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize()))
+		];
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->providerplanid));
+		$internalPlan->setShowProviderPlans(false);
+		$return['internalPlan'] = $internalPlan->jsonSerialize();
+		return($return);
+	}
+	
+}
+
+class CouponCampaignDAO {
+	
+	private static $sfields = "_id, coupons_campaigns_uuid, creation_date, name, description, providerid, providerplanid, prefix, generated_code_length, total_number";
+	
+	private static function getCouponCampaignFromRow($row) {
+		$out = new CouponCampaign();
+		$out->setId($row["_id"]);
+		$out->setUuid($row["coupons_campaigns_uuid"]);
+		$out->setCreationDate($row["creation_date"]);
+		$out->setName($row["name"]);
+		$out->setDescription($row["description"]);
+		$out->setProviderId($row["providerid"]);
+		$out->setProviderPlanId($row["providerplanid"]);
+		$out->setPrefix($row["prefix"]);
+		$out->setGeneratedCodeLength($row["generated_code_length"]);
+		$out->setTotalNumber($row["total_number"]);
+		return($out);
+	}
+	
+	public static function getCouponCampaignById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons_campaigns WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getCouponCampaignFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);		
+	}
+	
+	public static function getCouponCampaignByUuid($uuid) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons_campaigns WHERE coupons_campaigns_uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($uuid));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getCouponCampaignFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+}
+
+class Coupon implements JsonSerializable {
+	
+	private $_id;
+	private $couponcampaignid;
+	private $providerid;
+	private $providerplanid;
+	private $code;
+	private $status;
+	private $creation_date;
+	private $updated_date;
+	private $redeemed_date;
+	private $userid;
+	private $subid;
+
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getCouponCampaignId() {
+		return($this->couponcampaignid);
+	}
+	
+	public function setCouponCampaignId($id) {
+		$this->couponcampaignid = $id;
+	}
+	
+	public function setProviderId($id) {
+		$this->providerid = $id;
+	}
+	
+	public function getProviderId() {
+		return($this->providerid);
+	}
+	
+	public function setProviderPlanId($id) {
+		$this->providerplanid = $id;
+	}
+	
+	public function getProviderPlanId() {
+		return($this->providerplanid);
+	}
+	
+	public function getCode() {
+		return($this->code);
+	}
+	
+	public function setCode($str) {
+		$this->code = $str;
+	}
+	
+	public function getStatus() {
+		return($this->status);
+	}
+	
+	public function setStatus($status) {
+		$this->status = $status;
+	}
+	
+	public function getCreationDate() {
+		return($this->creation_date);
+	}
+	
+	public function setCreationDate($date) {
+		$this->creation_date = $date;
+	}
+	
+	public function getUpdatedDate() {
+		return($this->updated_date);
+	}
+	
+	public function setUpdatedDate($date) {
+		$this->updated_date = $date;
+	}
+	
+	public function setRedeemedDate($date) {
+		$this->redeemed_date = $date;
+	}
+	
+	public function getRedeemedDate() {
+		return($this->redeemed_date);
+	}
+	
+	public function setUserId($id) {
+		$this->userid = $id;
+	}
+	
+	public function getUserId() {
+		return($this->userid);
+	}
+	
+	public function setSubId($id) {
+		$this->subid = $id;
+	}
+	
+	public function getSubId() {
+		return($this->subid);
+	}
+	
+	public function jsonSerialize() {
+		$return = [
+				'code' => $this->code,
+				'status' => $this->status,
+				'campaign' => CouponCampaignDAO::getCouponCampaignById($this->couponcampaignid)->jsonSerialize(),
+				'provider' => ProviderDAO::getProviderById($this->providerid)->jsonSerialize()
+		];
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->providerplanid));
+		$internalPlan->setShowProviderPlans(false);
+		$return['internalPlan'] = $internalPlan->jsonSerialize();
+		return($return);
+	}
+}
+
+class CouponDAO {
+	
+	private static $sfields = NULL;
+	
+	public static function init() {
+		CouponDAO::$sfields = "_id, couponscampaignsid, providerid, providerplanid, code, coupon_status,".
+							" creation_date, updated_date, redeemed_date,".
+							" userid, subid";
+	}
+	
+	private static function getCouponFromRow($row) {
+		$out = new Coupon();
+		$out->setId($row["_id"]);
+		$out->setCouponCampaignId($row["couponscampaignsid"]);
+		$out->setProviderId($row["providerid"]);
+		$out->setProviderPlanId($row["providerplanid"]);
+		$out->setCode($row["code"]);
+		$out->setStatus($row["coupon_status"]);
+		$out->setCreationDate($row["creation_date"]);
+		$out->setUpdatedDate($row["updated_date"]);
+		$out->setRedeemedDate($row["redeemed_date"]);
+		$out->setUserId($row["userid"]);
+		$out->setSubId($row["subid"]);
+		return($out);
+	}
+	
+	public static function getCouponById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getCouponFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getCoupon($providerId, $couponCode) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE providerid = $1 AND code = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $couponCode));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getCouponFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function addCoupon(Coupon $coupon) {
+		$query = "INSERT INTO billing_coupons (couponscampaignsid, providerid, providerplanid, code)";
+		$query.= " VALUES ($1, $2, $3, $4) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$coupon->getCouponCampaignId(),
+						$coupon->getProviderId(),
+						$coupon->getProviderPlanId(),
+						$coupon->getCode()));
+		$row = pg_fetch_row($result);
+		return(self::getCouponById($row[0]));
+	}
+	
+	public static function getCouponsTotalNumberByCouponCampaignId($couponscampaignsid) {
+		$query = "SELECT count(*) as counter FROM billing_coupons WHERE couponscampaignsid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($couponscampaignsid));
+		
+		$out = 0;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = $row['counter'];
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public function updateStatus(Coupon $coupon) {
+		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, coupon_status = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$coupon->getStatus(),
+						$coupon->getId()));
+		return(self::getCouponById($coupon->getId()));
+	}
+	
+	public function updateRedeemedDate(Coupon $coupon) {
+		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, redeemed_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($coupon->getRedeemedDate()),
+						$coupon->getId()));
+		return(self::getCouponById($coupon->getId()));
+	}
+
+	public function updateSubId(Coupon $coupon) {
+		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, subid = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$coupon->getSubId(),
+						$coupon->getId()));
+		return(self::getCouponById($coupon->getId()));		
+	}
+	
+	public function updateUserId(Coupon $coupon) {
+		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, userid = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$coupon->getUserId(),
+						$coupon->getId()));
+		return(self::getCouponById($coupon->getId()));		
+	}
+	
+}
+
+CouponDAO::init();
 
 class UtilsDAO {
 	

@@ -23,6 +23,9 @@ class IdipperSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			if($subscription_provider_uuid == 'generate') {
+				$subscription_provider_uuid = guid();
+			}
 			//Verification : Just that abonne = 1 for the good Rubrique (we cannot do more)
 			$idipperClient = new IdipperClient();
 			$utilisateurRequest = new UtilisateurRequest();

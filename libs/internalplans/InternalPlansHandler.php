@@ -6,6 +6,7 @@ require_once __DIR__ . '/../providers/recurly/plans/RecurlyPlansHandler.php';
 require_once __DIR__ . '/../providers/gocardless/plans/GocardlessPlansHandler.php';
 require_once __DIR__ . '/../providers/bachat/plans/BachatPlansHandler.php';
 require_once __DIR__ . '/../providers/idipper/plans/IdipperPlansHandler.php';
+require_once __DIR__ . '/../providers/afr/plans/AfrPlansHandler.php';
 
 use SebastianBergmann\Money\Currency;
 
@@ -187,6 +188,10 @@ class InternalPlansHandler {
 					$idipperPlansHandler = new IdipperPlansHandler();
 					$provider_plan_uuid = $idipperPlansHandler->createProviderPlan($db_internal_plan);
 					break;
+				case 'afr' :
+					$afrPlansHandler = new AfrPlansHandler();
+					$provider_plan_uuid = $afrPlansHandler->createProviderPlan($db_internal_plan);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
@@ -194,15 +199,24 @@ class InternalPlansHandler {
 					break;
 			}
 			//create it in DB
-			$provider_plan = new Plan();
-			$provider_plan->setProviderId($provider->getId());
-			$provider_plan->setPlanUid($provider_plan_uuid);
-			$provider_plan->setName($db_internal_plan->getName());
-			$provider_plan->setDescription($db_internal_plan->getDescription());
-			$provider_plan = PlanDAO::addPlan($provider_plan);
-			//link it
-			InternalPlanLinksDAO::addProviderPlanIdToInternalPlanId($db_internal_plan->getId(), $provider_plan->getId());
-			//done
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				$provider_plan = new Plan();
+				$provider_plan->setProviderId($provider->getId());
+				$provider_plan->setPlanUid($provider_plan_uuid);
+				$provider_plan->setName($db_internal_plan->getName());
+				$provider_plan->setDescription($db_internal_plan->getDescription());
+				$provider_plan = PlanDAO::addPlan($provider_plan);
+				//link it
+				InternalPlanLinksDAO::addProviderPlanIdToInternalPlanId($db_internal_plan->getId(), $provider_plan->getId());
+				//done
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 			$db_internal_plan = InternalPlanDAO::getInternalPlanById($db_internal_plan->getId());
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while adding an Internal Plan to a provider, error_code=".$e->getCode().", error_message=".$e->getMessage();

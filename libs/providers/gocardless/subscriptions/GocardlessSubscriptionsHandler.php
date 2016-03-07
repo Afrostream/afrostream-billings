@@ -152,8 +152,6 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				if(isset($count)) {
 					$sub_params['params']['count'] = $count;
 				}
-				//TODO : TO BE REMOVED
-				config::getLogger()->addInfo("GOCARLESS SUB REQUEST, sub_params=".var_export($sub_params, true));
 				$subscription = $client->subscriptions()->create($sub_params);
 				config::getLogger()->addInfo("gocardless subscription creation... subscription creation done successfully, subscription_id=".$subscription->id);
 				$sub_uuid = $subscription->id;	
@@ -653,7 +651,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT
 					pg_query("COMMIT");
-				} catch (Exception $e) {
+				} catch(Exception $e) {
 					pg_query("ROLLBACK");
 					throw $e;
 				}

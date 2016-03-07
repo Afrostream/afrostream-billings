@@ -253,3 +253,5 @@ class InternalPlansController extends BillingsController {
 	}
 	
 }
+
+?>

@@ -8,6 +8,7 @@ require_once __DIR__ . '/../providers/recurly/subscriptions/RecurlySubscriptions
 require_once __DIR__ . '/../providers/gocardless/subscriptions/GocardlessSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/bachat/subscriptions/BachatSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/idipper/subscriptions/IdipperSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/afr/subscriptions/AfrSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 
 class SubscriptionsHandler {
@@ -141,6 +142,10 @@ class SubscriptionsHandler {
 						$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
 						$sub_uuid = $idipperSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
 						break;
+					case 'afr' :
+						$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
+						$sub_uuid = $afrSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);						
+						break;
 					default:
 						$msg = "unsupported feature for provider named : ".$provider_name;
 						config::getLogger()->addError($msg);
@@ -175,6 +180,10 @@ class SubscriptionsHandler {
 						case 'idipper' :
 							$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
 							$db_subscription = $idipperSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);							
+							break;
+						case 'afr' :
+							$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
+							$db_subscription = $afrSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
 						default:
 							$msg = "unsupported feature for provider named : ".$provider_name;
@@ -252,6 +261,13 @@ class SubscriptionsHandler {
 					break;
 				case 'bachat' :
 					//nothing to do (owned)
+					break;
+				case 'idipper' :
+					//TODO
+					break;
+				case 'afr' :
+					//nothing to do (owned)
+					break;
 				default:
 					//nothing to do (unknown)
 					break;
@@ -341,7 +357,7 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_subscription_before_update = $db_subscription;
+			$db_subscription_before_update = clone $db_subscription;
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
@@ -426,6 +442,10 @@ class SubscriptionsHandler {
 				$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
 				$idipperSubscriptionsHandler->doFillSubscription($subscription);
 				break;
+			case 'afr' :
+				$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
+				$afrSubscriptionsHandler->doFillSubscription($subscription);				
+				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
 				config::getLogger()->addError($msg);
@@ -469,12 +489,12 @@ class SubscriptionsHandler {
 				}
 			} else {
 				if(
-						($subscription_before_update->getSubStatus() != 'canceled')
-						&&
-						($subscription_after_update->getSubStatus() == 'canceled')
-						) {
-							$subscription_is_canceled_event = true;
-						}
+					($subscription_before_update->getSubStatus() != 'canceled')
+					&&
+					($subscription_after_update->getSubStatus() == 'canceled')
+					) {
+						$subscription_is_canceled_event = true;
+					}
 			}
 			if($subscription_is_canceled_event == true) {
 				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
@@ -580,8 +600,8 @@ class SubscriptionsHandler {
 						foreach($substitions as $var => $val) {
 							$email->addSubstitution($var, array($val));
 						}
-						if( (null !== (getEnv('SENGRID_BCC'))) && ('' !== (getEnv('SENGRID_BCC')))) {
-							$email->setBcc(getEnv('SENGRID_BCC'));	
+						if( (null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
+							$email->setBcc(getEnv('SENDGRID_BCC'));	
 						}
 						$sendgrid->send($email);
 						config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");

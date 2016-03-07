@@ -100,8 +100,8 @@ if(getEnv('SENDGRID_FROM_NAME') === false) {
 	putEnv('SENDGRID_FROM_NAME=Tonjé, Fondateur d\'Afrostream');
 }
 
-if(getEnv('SENGRID_BCC') === false) {
-	putEnv('SENGRID_BCC=');
+if(getEnv('SENDGRID_BCC') === false) {
+	putEnv('SENDGRID_BCC=');
 }
 
 #Event (MAIL)
@@ -118,6 +118,11 @@ if(getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION') === false) {
 class config {
 	
 	private static $logger;
+	
+	public static function init() {
+		self::getLogger();
+		self::getDbConn();
+	}
 	
 	public static function getLogger() {
 		if(self::$logger == NULL) {
@@ -143,5 +148,7 @@ class config {
 		return(self::$db_conn);
 	}
 }
+
+config::init();
 
 ?>

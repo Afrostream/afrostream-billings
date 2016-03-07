@@ -137,7 +137,7 @@ class GocardlessWebHooksHandler {
 			//$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, 'api', 0);
 		} else {
 			//UPDATE
-			$db_subscription_before_update = $db_subscription;
+			$db_subscription_before_update = clone $db_subscription;
 			$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
 		}
 		//WHEN ? (not given by the gocardless API)
