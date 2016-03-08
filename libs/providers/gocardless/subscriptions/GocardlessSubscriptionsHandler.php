@@ -571,7 +571,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		$today = new DateTime();
 		
 		if($start_date == NULL) {
-			$start_date = new DateTime();//NOW
+			$start_date = $subscription->getSubPeriodEndsDate();
 		}
 		$end_date = NULL;
 		switch($internalPlan->getPeriodUnit()) {
@@ -685,9 +685,9 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < (new DateTime($subscription->getSubPeriodEndsDate())))
+						($now < $subscription->getSubPeriodEndsDate())
 								&&
-						($now >= (new DateTime($subscription->getSubPeriodStartedDate())))
+						($now >= $subscription->getSubPeriodStartedDate())
 				) {
 					//inside the period
 					$is_active = 'yes';
