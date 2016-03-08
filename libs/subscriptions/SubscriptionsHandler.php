@@ -521,9 +521,9 @@ class SubscriptionsHandler {
 					    }
 					    $internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
 					    if($internalPlan == NULL) {
-					    	$msg = "plan with uuid=".$provider_plan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+					    	$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
 					    	config::getLogger()->addError($msg);
-					    	throw new Exception($msg);
+					    	throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					    }
 					    $internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 					    $user = UserDAO::getUserById($subscription_after_update->getUserId());
@@ -597,11 +597,15 @@ class SubscriptionsHandler {
 						->setText(' ')
 						->setHtml(' ')
 						->setTemplateId($sendgrid_tepmplate_id);
-						foreach($substitions as $var => $val) {
-							$email->addSubstitution($var, array($val));
-						}
 						if( (null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
-							$email->setBcc(getEnv('SENDGRID_BCC'));	
+							$email->setBcc(getEnv('SENDGRID_BCC'));
+							foreach($substitions as $var => $val) {
+								$email->addSubstitution($var, array($val, $val));//same value twice (To + Bcc)
+							}
+						} else {
+							foreach($substitions as $var => $val) {
+								$email->addSubstitution($var, array($val));//once (To)
+							}	
 						}
 						$sendgrid->send($email);
 						config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");

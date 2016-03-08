@@ -209,19 +209,18 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			$msg = "cannot renew because of the current_status=".$subscription->getSubStatus();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			break;
 		}
-		$provider_plan = PlanDAO::getPlanById($subscription->getPlanId());
-		if($provider_plan == NULL) {
+		$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
+		if($providerPlan == NULL) {
 			$msg = "unknown plan with id : ".$subscription->getPlanId();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($provider_plan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
 		if($internalPlan == NULL) {
-			$msg = "plan with uuid=".$provider_plan->getId()." for provider bachat is not linked to an internal plan";
+			$msg = "plan with uuid=".$providerPlan->getId()." for provider bachat is not linked to an internal plan";
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		if($start_date == NULL) {
 			$start_date = new DateTime();//NOW
