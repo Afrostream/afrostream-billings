@@ -57,6 +57,10 @@ if(getEnv('RECURLY_API_KEY') === false) {
 	putEnv('RECURLY_API_KEY=67dbb29f0dbe4e219bc247a3b5387652');
 }
 
+if(getEnv('RECURLY_POSTPONE_ACTIVATED') === false) {
+	putEnv('RECURLY_POSTPONE_ACTIVATED=false');
+}
+
 #Recurly WebHooks
 if(getEnv('RECURLY_WH_HTTP_AUTH_USER') === false) {
 	putEnv('RECURLY_WH_HTTP_AUTH_USER=admin');
