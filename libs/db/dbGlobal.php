@@ -1412,7 +1412,7 @@ class BillingsSubscription implements JsonSerializable {
 		return($this->creation_date);
 	}
 	
-	public function setCreationDate(DateTime $date) {
+	public function setCreationDate($date) {
 		$this->creation_date = $date;
 	}
 	
@@ -1420,7 +1420,7 @@ class BillingsSubscription implements JsonSerializable {
 		return($this->updated_date);
 	}
 	
-	public function setUpdatedDate(DateTime $date) {
+	public function setUpdatedDate($date) {
 		$this->updated_date = $date;
 	}
 	
@@ -1444,7 +1444,7 @@ class BillingsSubscription implements JsonSerializable {
 		return($this->sub_activated_date);
 	}
 	
-	public function setSubActivatedDate(DateTime $date) {
+	public function setSubActivatedDate($date) {
 		$this->sub_activated_date = $date;
 	}
 	
@@ -1452,7 +1452,7 @@ class BillingsSubscription implements JsonSerializable {
 		return($this->sub_canceled_date);
 	}
 	
-	public function setSubCanceledDate(DateTime $date = NULL) {
+	public function setSubCanceledDate($date) {
 		$this->sub_canceled_date = $date;
 	}
 	
@@ -1460,7 +1460,7 @@ class BillingsSubscription implements JsonSerializable {
 		return($this->sub_expires_date);
 	}
 	
-	public function setSubExpiresDate(DateTime $date = NULL) {
+	public function setSubExpiresDate($date) {
 		$this->sub_expires_date = $date;
 	}
 	
@@ -1468,7 +1468,7 @@ class BillingsSubscription implements JsonSerializable {
 		return($this->sub_period_started_date);
 	}
 	
-	public function setSubPeriodStartedDate(DateTime $date) {
+	public function setSubPeriodStartedDate($date) {
 		$this->sub_period_started_date = $date;
 	}
 	

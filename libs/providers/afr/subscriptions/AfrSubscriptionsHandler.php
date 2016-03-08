@@ -221,9 +221,9 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < $subscription->getSubPeriodEndsDate())
+						($now < new DateTime($subscription->getSubPeriodEndsDate()))
 								&&
-						($now >= $subscription->getSubPeriodStartedDate())
+						($now >= new DateTime($subscription->getSubPeriodStartedDate()))
 				) {
 					//inside the period
 					$is_active = 'yes';
@@ -265,7 +265,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		if($start_date == NULL) {
-			$start_date = $subscription->getSubPeriodEndsDate();
+			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
 		}
 		$end_date = NULL;
 		switch($internalPlan->getPeriodUnit()) {

@@ -52,9 +52,9 @@ class CelerySubscriptionsHandler extends SubscriptionsHandler {
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < $subscription->getSubPeriodEndsDate())
+						($now < new DateTime($subscription->getSubPeriodEndsDate()))
 								&&
-						($now >= $subscription->getSubPeriodStartedDate())
+						($now >= new DateTime($subscription->getSubPeriodStartedDate()))
 				) {
 					//inside the period
 					$is_active = 'yes';
