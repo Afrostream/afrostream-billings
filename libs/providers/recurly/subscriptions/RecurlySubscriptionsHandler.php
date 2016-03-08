@@ -74,6 +74,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				if(getenv('RECURLY_POSTPONE_ACTIVATED') == true) {
 					//only postpone renewable and montlhy plans
 					if($internalPlan->getCycle() == 'auto' && $internalPlan->getPeriodUnit() == 'month') {
+						$subscription = Recurly_Subscription::get($subscription->uuid);
 						$interval = 0;
 						$period_ends_date_ref = clone $subscription->current_period_ends_at;
 						$period_ends_date_new = clone $subscription->current_period_ends_at;
