@@ -641,7 +641,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
-				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), $start_date);
+				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
 				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
