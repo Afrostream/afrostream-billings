@@ -29,5 +29,4 @@ class BillingsException extends Exception {
 	}
 }
 
-
 ?>
