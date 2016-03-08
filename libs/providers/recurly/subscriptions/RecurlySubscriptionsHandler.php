@@ -78,11 +78,12 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 						$period_ends_date_ref = clone $subscription->current_period_ends_at;
 						$period_ends_date_new = clone $subscription->current_period_ends_at;
 						$dayOfMonth = $period_ends_date_ref->format('j');
-						if($dayOfMonth >= 1 && $dayOfMonth <= 8) {
-							$interval = 10 - $dayOfMonth; 
-						} else if($dayOfMonth >= 29) {
+						
+						if($dayOfMonth >= 1 && $dayOfMonth <= getEnv('RECURLY_POSTPONE_LIMIT_IN')) {
+							$interval = getEnv('RECURLY_POSTPONE_TO') - $dayOfMonth; 
+						} else if($dayOfMonth >= getEnv('RECURLY_POSTPONE_LIMIT_OUT')) {
 							$lastDayOfMonth = $period_ends_date_ref->format('t');
-							$interval = 10 + ($lastDayOfMonth - $dayOfMonth + 1);
+							$interval = getEnv('RECURLY_POSTPONE_TO') + ($lastDayOfMonth - $dayOfMonth);
 						} else {
 							//nothing to do	
 						}
