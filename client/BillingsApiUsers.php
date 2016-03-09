@@ -255,7 +255,8 @@ class ApiUpdateUserRequest {
 	
 	public function getUrl() {
 		$url = getEnv('BILLINGS_API_URL');
-		$url.= '/'.$this->userBillingUuid;
+		$url.= "/billings/api/users/";
+		$url.= $this->userBillingUuid;
 		return($url);
 	}
 
