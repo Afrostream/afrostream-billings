@@ -223,7 +223,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		if($start_date == NULL) {
-			$start_date = $subscription->getSubPeriodEndsDate();
+			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
 		}
 		$end_date = NULL;
 		switch($internalPlan->getPeriodUnit()) {
