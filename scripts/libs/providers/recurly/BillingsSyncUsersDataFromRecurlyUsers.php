@@ -9,7 +9,7 @@ class BillingsSyncUsersDataFromRecurlyUsers {
 	private $providerid = NULL;
 	
 	public function __construct() {
-		$providerid = ProviderDAO::getProviderByName('recurly');
+		$this->$providerid = ProviderDAO::getProviderByName('recurly');
 	}
 	
 	public function doSyncUsersData() {
