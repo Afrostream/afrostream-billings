@@ -258,7 +258,7 @@ class UsersHandler {
 		return($db_user);
 	}
 	
-	public function doUpdateUserPlanOpts($userBillingUuid, array $user_opts_array) {
+	public function doUpdateUserOpts($userBillingUuid, array $user_opts_array) {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user opts updating...");
