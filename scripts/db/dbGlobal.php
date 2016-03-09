@@ -120,6 +120,21 @@ class AfrUserDAO {
 		return($out);
 	}
 	
+	public static function updateFirstName(AfrUser $user) {
+		$query = "UPDATE \"Users\" SET first_name = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$user->getFirstName(),
+						$user->getId()));
+		return(self::getAfrUserById($user->getId()));	
+	}
+	
+	public static function updateLastName(AfrUser $user) {
+		$query = "UPDATE \"Users\" SET last_name = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$user->getLastName(),
+						$user->getId()));
+		return(self::getAfrUserById($user->getId()));		
+	}
 }
 
 ?>
