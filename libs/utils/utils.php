@@ -76,15 +76,23 @@ function checkUserOptsValues(array $user_opts_as_array) {
 		}
 	}
 }
-function checkSubOptsArray(array $sub_opts_as_array, $providerName) {
-	checkSubOptsKeys($sub_opts_as_array, $providerName);
-	checkSubOptsValues($sub_opts_as_array, $providerName);
+
+//$case = all, create, get
+function checkSubOptsArray(array $sub_opts_as_array, $providerName, $case = 'all') {
+	checkSubOptsKeys($sub_opts_as_array, $providerName, $case);
+	checkSubOptsValues($sub_opts_as_array, $providerName, $case);
 }
 
 //$case = all, create, get
 function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all') {
 	switch($providerName) {
 		case 'bachat' :
+			if(!array_key_exists('subscriptionBillingUuid', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'subscriptionBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			if(!array_key_exists('otpCode', $sub_opts_as_array)) {
 				//exception
 				$msg = "subOpts field 'otpCode' is missing";
@@ -146,7 +154,7 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			break;
-		case 'gocardless':
+		case 'gocardless' :
 			if($case == 'create') {
 				if(!array_key_exists('customerBankAccountToken', $sub_opts_as_array)) {
 					//exception
@@ -156,13 +164,21 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 				}
 			}
 			break;
+		case 'afr' :
+			if(!array_key_exists('couponCode', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'couponCode' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			break;
 		default :
 			//nothing
 			break;
 	}
 }
 
-function checkSubOptsValues(array $sub_opts_as_array, $providerName) {
+function checkSubOptsValues(array $sub_opts_as_array, $providerName, $case = 'all') {
 	switch($providerName) {
 		case 'bachat' :
 			break;

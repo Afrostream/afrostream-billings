@@ -277,3 +277,5 @@ class SubscriptionsController extends BillingsController {
 	}
 	
 }
+
+?>

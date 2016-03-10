@@ -16,6 +16,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		try {
 			config::getLogger()->addInfo("recurly subscription creation...");
 			if(isset($subscription_provider_uuid)) {
+				checkSubOptsArray($subOpts->getOpts(), 'recurly', 'get');
 				//** in recurly : user subscription is pre-created **/
 				//
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
@@ -35,6 +36,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 			} else {
+				checkSubOptsArray($subOpts->getOpts(), 'recurly', 'create');
 				//** in recurly : user subscription is NOT pre-created **/
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
@@ -42,28 +44,64 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				$subscription = new Recurly_Subscription();
 				$subscription->plan_code = $plan->getPlanUuid();
 				$subscription->currency = $internalPlan->getCurrency();
-			
-				$account = new Recurly_Account();
-				$account->account_code = $user->getUserProviderUuid();
-				$account->email = $userOpts->getOpts()['email'];
-				$account->first_name = $userOpts->getOpts()['first_name'];
-				$account->last_name = $userOpts->getOpts()['last_name'];
+				
+				$account = Recurly_Account::get($user->getUserProviderUuid());
 			
 				$billing_info = new Recurly_BillingInfo();
-				$billing_info->number = $billingInfoOpts->getOpts()['number'];
-				$billing_info->month = $billingInfoOpts->getOpts()['month'];
-				$billing_info->year = $billingInfoOpts->getOpts()['year'];
-				$billing_info->verification_value = $billingInfoOpts->getOpts()['verification_value'];
-				$billing_info->address1 = $billingInfoOpts->getOpts()['address1'];
-				$billing_info->city = $billingInfoOpts->getOpts()['city'];
-				$billing_info->state = $billingInfoOpts->getOpts()['state'];
-				$billing_info->country = $billingInfoOpts->getOpts()['country'];
-				$billing_info->zip = $billingInfoOpts->getOpts()['zip'];
-			
+				if(array_key_exists('customerBankAccountToken', $subOpts->getOpts())) {
+					$billing_info->token_id = $subOpts->getOpts()['customerBankAccountToken'];
+				} else {
+					$billing_info->number = $billingInfoOpts->getOpts()['number'];
+					$billing_info->month = $billingInfoOpts->getOpts()['month'];
+					$billing_info->year = $billingInfoOpts->getOpts()['year'];
+					$billing_info->verification_value = $billingInfoOpts->getOpts()['verification_value'];
+					$billing_info->address1 = $billingInfoOpts->getOpts()['address1'];
+					$billing_info->city = $billingInfoOpts->getOpts()['city'];
+					$billing_info->state = $billingInfoOpts->getOpts()['state'];
+					$billing_info->country = $billingInfoOpts->getOpts()['country'];
+					$billing_info->zip = $billingInfoOpts->getOpts()['zip'];
+				}
+				
 				$account->billing_info = $billing_info;
 				$subscription->account = $account;
-			
+				
+				if(array_key_exists('couponCode', $subOpts->getOpts())) {
+					$subscription->coupon_code = $subOpts->getOpts()['couponCode'];
+				}
+				
 				$subscription->create();
+				//<-- POSTPONING -->
+				if(getenv('RECURLY_POSTPONE_ACTIVATED') == true) {
+					//only postpone renewable and montlhy plans
+					if($internalPlan->getCycle() == 'auto' && $internalPlan->getPeriodUnit() == 'month') {
+						$interval = 0;
+						$period_ends_date_ref = clone $subscription->current_period_ends_at;
+						$period_ends_date_new = clone $subscription->current_period_ends_at;
+						$dayOfMonth = $period_ends_date_ref->format('j');
+						
+						if($dayOfMonth >= 1 && $dayOfMonth <= getEnv('RECURLY_POSTPONE_LIMIT_IN')) {
+							$interval = getEnv('RECURLY_POSTPONE_TO') - $dayOfMonth; 
+						} else if($dayOfMonth >= getEnv('RECURLY_POSTPONE_LIMIT_OUT')) {
+							$lastDayOfMonth = $period_ends_date_ref->format('t');
+							$interval = getEnv('RECURLY_POSTPONE_TO') + ($lastDayOfMonth - $dayOfMonth);
+						} else {
+							//nothing to do	
+						}
+						if($interval > 0) {
+							config::getLogger()->addInfo("recurly subscription creation...postponing from : ".dbGlobal::toISODate($period_ends_date_ref)." to ".dbGlobal::toISODate($period_ends_date_new)."...");
+							$period_ends_date_new->add(new DateInterval("P".$interval."D"));
+							$subscription->postpone(dbGlobal::toISODate($period_ends_date_new));
+							config::getLogger()->addInfo("recurly subscription creation...postponing from : ".dbGlobal::toISODate($period_ends_date_ref)." to ".dbGlobal::toISODate($period_ends_date_new)." done successfullly");
+						} else {
+							config::getLogger()->addInfo("recurly subscription creation...no postpone needed");
+						}
+					} else {
+						config::getLogger()->addInfo("recurly subscription creation...no postpone there");
+					}
+				} else {
+					config::getLogger()->addInfo("recurly subscription creation...postpone not activated");
+				}
+				//<-- POSTPONING -->
 			}
 			//
 			$sub_uuid = $subscription->uuid;
@@ -72,6 +110,10 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			$msg = "a billings exception occurred while creating a recurly subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("recurly subscription creation failed : ".$msg);
 			throw $e;
+		} catch(Recurly_NotFoundError $e) {
+			$msg = "a not found error exception occurred while creating a recurly subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription creation failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch (Recurly_ValidationError $e) {
 			$msg = "a validation error exception occurred while creating a recurly subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("recurly subscription creation failed : ".$msg);
@@ -106,7 +148,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while getting subscriptions for user_provider_uuid=".$user->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		//ADD OR UPDATE
@@ -117,14 +159,14 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			if($plan == NULL) {
 				$msg = "plan with uuid=".$plan_uuid." not found";
 				config::getLogger()->addError($msg);
-				throw new Exception($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$plan_uuid." for provider ".$provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);
-				throw new Exception($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->uuid);
@@ -204,22 +246,15 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
-		//
-		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
-			//SUB_OPTS
-			if(isset($subOpts)) {
-				$subOpts->setSubId($db_subscription->getId());
-				$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
-			}
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
+		//NO MORE TRANSACTION (DONE BY CALLER)
+		//<-- DATABASE -->
+		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
+		//SUB_OPTS
+		if(isset($subOpts)) {
+			$subOpts->setSubId($db_subscription->getId());
+			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
 		}
+		//<-- DATABASE -->
 		config::getLogger()->addInfo("recurly dbsubscription creation for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid." done successfully, id=".$db_subscription->getId());
 		return($db_subscription);
 	}
@@ -248,7 +283,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			default :
 				$msg = "unknown subscription state : ".$api_subscription->state;
 				config::getLogger()->addError($msg);
-				throw new Exception($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				//break;
 		}
 		$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);

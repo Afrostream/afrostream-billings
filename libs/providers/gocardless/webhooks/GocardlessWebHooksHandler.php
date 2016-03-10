@@ -92,7 +92,7 @@ class GocardlessWebHooksHandler {
 		if($provider == NULL) {
 			$msg = "provider named 'gocardless' not found";
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		//plan (in metadata !!!)
 		/*$plan_uuid = $api_subscription->plan->plan_code;
@@ -112,14 +112,14 @@ class GocardlessWebHooksHandler {
 		if($account_code == NULL) {
 			$msg = "account_code not found";
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		config::getLogger()->addInfo('searching user with account_code='.$account_code.'...');
 		$user = UserDAO::getUserByUserProviderUuid($provider->getId(), $account_code);
 		if($user == NULL) {
 			$msg = 'searching user with account_code='.$account_code.' failed, no user found';
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
@@ -130,15 +130,15 @@ class GocardlessWebHooksHandler {
 		if($db_subscription == NULL) {
 			$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found for user with provider_user_uuid=".$user->getUserProviderUuid();
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			//DO NOT CREATE ANYMORE : race condition when creating from API + from the webhook
 			//WAS :
 			//CREATE
 			//$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, 'api', 0);
 		} else {
 			//UPDATE
-			$db_subscription_before_update = $db_subscription;
-			$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
+			$db_subscription_before_update = clone $db_subscription;
+			$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
 		}
 		//WHEN ? (not given by the gocardless API)
 		switch($notification_as_array['action']) {

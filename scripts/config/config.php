@@ -39,6 +39,14 @@ if(getEnv('BOUYGUES_BILLING_SYSTEM_URL') === false) {
 	putEnv('BOUYGUES_BILLING_SYSTEM_URL=https://vod.bouyguestelecom.fr/merchant/'.getEnv('BOUYGUES_MERCHANTID').'_'.getEnv('BOUYGUES_SERVICEID'));
 }
 
+if(getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER') === false) {
+	putEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER=admin');
+}
+
+if(getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD') === false) {
+	putEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD=pwd');
+}
+
 if(getEnv('BOUYGUES_PROXY_HOST') === false) {
 	putEnv('BOUYGUES_PROXY_HOST=');
 }
@@ -53,6 +61,14 @@ if(getEnv('BOUYGUES_PROXY_USER') === false) {
 
 if(getEnv('BOUYGUES_PROXY_PWD') === false) {
 	putEnv('BOUYGUES_PROXY_PWD=');
+}
+
+if(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR' === false)) {
+	putEnv('BOUYGUES_STORE_LAST_TIME_HOUR=0');
+}
+
+if(getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE' === false)) {
+	putEnv('BOUYGUES_STORE_LAST_TIME_MINUTE=25');
 }
 
 #logger, #db_conn, ...

@@ -57,4 +57,5 @@ $billingsGocardlessWorkers = new BillingsGocardlessWorkers();
 $billingsGocardlessWorkers->doRefreshSubscriptions();
 
 print_r("processing done\n");
+
 ?>

@@ -20,8 +20,8 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addInfo("bachat subscription creation...");
 			//pre-requisite
 			checkSubOptsArray($subOpts->getOpts(), 'bachat');
-			if(!isset($subscription_provider_uuid)) {
-				$msg = "field 'subscriptionProviderUuid' was not provided";
+			if(isset($subscription_provider_uuid)) {
+				$msg = "field 'subscriptionProviderUuid' must not be provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -35,10 +35,12 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			$res = $bachat->requestEDBBilling($requestId, $idSession, $otpCode);
 			if($res->resultMessage == "SUCCESS") {
 				//OK
-				config::getLogger()->addInfo("BACHAT OK, result=".$res->result.", requestId=".$res->requestId.", chargeTransactionId=".$res->chargeTransactionId);
+				config::getLogger()->addInfo("BACHAT OK, result=".$res->result.", subscriptionId=".$res->subscriptionId.", requestId=".$res->requestId.", chargeTransactionId=".$res->chargeTransactionId);
 				$subOpts->setOpt('chargeTransactionId', $res->chargeTransactionId);
+				$subscription_provider_uuid = $res->subscriptionId;
 			} else {
 				//KO
+				//TODO : TO BE REMOVED : do not var_export all the response from BACHAT
 				$msg = "BACHAT ERROR, result=".var_export($res, true);
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -69,11 +71,12 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		switch($internalPlan->getPeriodUnit()) {
 			case PlanPeriodUnit::day :
 				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
+				//DO NOT FORCE ANYMORE AS RECOMMENDED BY Niji
+				//$end_date->setTime(23, 59, 59);//force the time to the end of the day
 				break;
 			default :
-				$msg = "unsupported periodUnit : ".$internaPlan->getPeriodUnit()->getValue();
+				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
@@ -84,9 +87,14 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingsSubscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("bachat dbsubscription creation for userid=".$user->getId().", bachat_subscription_uuid=".$api_subscription->getSubUid()."...");
+		if($subOpts == NULL) {
+			$msg = "subOpts is NULL";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
 		//CREATE
 		$db_subscription = new BillingsSubscription();
-		$db_subscription->setSubscriptionBillingUuid(guid());
+		$db_subscription->setSubscriptionBillingUuid($subOpts->getOpts()['subscriptionBillingUuid']);
 		$db_subscription->setProviderId($provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
@@ -131,22 +139,15 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
-		//
-		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
-			//SUB_OPTS
-			if(isset($subOpts)) {
-				$subOpts->setSubId($db_subscription->getId());
-				$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
-			}
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
-		}	
+		//NO MORE TRANSACTION (DONE BY CALLER)
+		//<-- DATABASE -->
+		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
+		//SUB_OPTS
+		if(isset($subOpts)) {
+			$subOpts->setSubId($db_subscription->getId());
+			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+		}
+		//<-- DATABASE -->
 		config::getLogger()->addInfo("bachat dbsubscription creation for userid=".$user->getId().", bachat_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
 		return($db_subscription);
 	}
@@ -156,6 +157,11 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			return;
 		}
 		$is_active = NULL;
+		$periodStartedDate = new DateTime($subscription->getSubPeriodStartedDate(), new DateTimeZone(config::$timezone));
+		$periodEndsDate = new DateTime($subscription->getSubPeriodEndsDate(), new DateTimeZone(config::$timezone));
+		$periodEndsDate->setTime(23, 59, 59);
+		$periodeGraceEndsDate = clone $periodEndsDate;
+		$periodeGraceEndsDate->add(new DateInterval("P3D"));//3 full days of grace period
 		switch($subscription->getSubStatus()) {
 			case 'pending_active' :
 			case 'active' :
@@ -166,9 +172,9 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < (new DateTime($subscription->getSubPeriodEndsDate())))
+						($now < $periodStartedDate)
 								&&
-						($now >= (new DateTime($subscription->getSubPeriodStartedDate())))
+						($now >= $periodeGraceEndsDate)
 				) {
 					//inside the period
 					$is_active = 'yes';
@@ -196,32 +202,32 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			$msg = "cannot renew because of the current_status=".$subscription->getSubStatus();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			break;
 		}
-		$provider_plan = PlanDAO::getPlanById($subscription->getPlanId());
-		if($provider_plan == NULL) {
+		$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
+		if($providerPlan == NULL) {
 			$msg = "unknown plan with id : ".$subscription->getPlanId();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($provider_plan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
 		if($internalPlan == NULL) {
-			$msg = "plan with uuid=".$provider_plan->getId()." for provider bachat is not linked to an internal plan";
+			$msg = "plan with uuid=".$providerPlan->getId()." for provider bachat is not linked to an internal plan";
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		if($start_date == NULL) {
-			$start_date = new DateTime();//NOW
+			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
 		}
 		$end_date = NULL;
 		switch($internalPlan->getPeriodUnit()) {
 			case PlanPeriodUnit::day :
 				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
+				//DO NOT FORCE ANYMORE AS RECOMMENDED BY Niji
+				//$end_date->setTime(23, 59, 59);//force the time to the end of the day
 				break;
 			default :
-				$msg = "unsupported periodUnit : ".$internaPlan->getPeriodUnit()->getValue();
+				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
@@ -245,22 +251,33 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 	}
 		
 	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
-		if($subscription->getSubStatus() == "pending_active") {
-			$msg = "cannot cancel because of the current_status=".$subscription->getSubStatus();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			break;
-		}
-		if(
-				$subscription->getSubStatus() == "canceled"
-				||
-				$subscription->getSubStatus() == "requesting_canceled"
-				||
-				$subscription->getSubStatus() == "pending_canceled"
-		)
-		{
-			//nothing todo : already done or in process
+		$doIt = false;
+		if($is_a_request == true) {
+			if($subscription->getSubStatus() == "pending_active") {
+				$msg = "cannot cancel because of the current_status=".$subscription->getSubStatus();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(
+					$subscription->getSubStatus() == "canceled"
+					||
+					$subscription->getSubStatus() == "requesting_canceled"
+					||
+					$subscription->getSubStatus() == "pending_canceled"
+			)
+			{
+				//nothing todo : already done or in process
+				$doIt = false;
+			} else {
+				$doIt = true;
+			}
 		} else {
+			//do it only if not already canceled
+			if($subscription->getSubStatus() != "canceled") {
+				$doIt = true;
+			}
+		}
+		if($doIt == true) {
 			$subscription->setSubCanceledDate($cancel_date);
 			if($is_a_request == true) {
 				$subscription->setSubStatus('requesting_canceled');
