@@ -269,6 +269,12 @@ class UsersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$provider = ProviderDAO::getProviderById($db_user->getProviderId());
+			if($provider == NULL) {
+				$msg = "unknown provider id : ".$user->getProviderId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			$db_user_opts = UserOptsDAO::getUserOptsByUserId($db_user->getId());
 			$current_user_opts_array = $db_user_opts->getOpts();
 			try {
@@ -293,8 +299,23 @@ class UsersHandler {
 				pg_query("ROLLBACK");
 				throw $e;
 			}
-			//done
+			//done in db
+			$db_user_opts = UserOptsDAO::getUserOptsByUserId($db_user->getId());
 			$db_user = UserDAO::getUserById($db_user->getId());
+			//user creation provider side
+			switch($provider->getName()) {
+				case 'recurly' :
+					$recurlyUsersHandler = new RecurlyUsersHandler();
+					$recurlyUsersHandler->doUpdateUserOpts($db_user->getUserProviderUuid(), $db_user_opts->getOpts());
+					break;
+				case 'gocardless' :
+					$gocardlessUsersHandler = new GocardlessUsersHandler();
+					$gocardlessUsersHandler->doUpdateUserOpts($db_user->getUserProviderUuid(), $db_user_opts->getOpts());
+					break;
+				default:
+					//nothing to do
+					break;
+			}			
 			config::getLogger()->addInfo("user opts updating done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while updating user Opts, error_code=".$e->getCode().", error_message=".$e->getMessage();
