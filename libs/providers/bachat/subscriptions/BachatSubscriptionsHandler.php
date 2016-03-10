@@ -164,8 +164,8 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			return;
 		}
 		$is_active = NULL;
-		$periodStartedDate = new DateTime($subscription->getSubPeriodStartedDate(), config::$timezone);
-		$periodEndsDate = new DateTime($subscription->getSubPeriodEndsDate(), config::$timezone);
+		$periodStartedDate = new DateTime($subscription->getSubPeriodStartedDate(), new DateTimeZone(config::$timezone));
+		$periodEndsDate = new DateTime($subscription->getSubPeriodEndsDate(), new DateTimeZone(config::$timezone));
 		$periodEndsDate->setTime(23, 59, 59);
 		$periodeGraceEndsDate = clone $periodEndsDate;
 		$periodeGraceEndsDate->add(new DateInterval("P3D"));//3 full days of grace period

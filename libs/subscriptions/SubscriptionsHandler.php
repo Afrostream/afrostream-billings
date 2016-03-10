@@ -361,11 +361,11 @@ class SubscriptionsHandler {
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-					$db_subscription = $recurlySubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request = true);
+					$db_subscription = $recurlySubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
 				case 'gocardless' :
 					$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
-					$db_subscription = $gocardlessSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request = true);
+					$db_subscription = $gocardlessSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
 				case 'celery' :
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -374,11 +374,11 @@ class SubscriptionsHandler {
 					break;
 				case 'bachat' :
 					$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
-					$db_subscription = $bachatSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request = true);
+					$db_subscription = $bachatSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
 				case 'idipper' :
 					$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
-					$db_subscription = $idipperSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request = true);
+					$db_subscription = $idipperSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
