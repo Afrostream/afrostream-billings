@@ -258,24 +258,31 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 	}
 		
 	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+		$doIt = false;
 		if($is_a_request == true) {
 			if($subscription->getSubStatus() == "pending_active") {
 				$msg = "cannot cancel because of the current_status=".$subscription->getSubStatus();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
 			}
-		}
-		if(
-				$subscription->getSubStatus() == "canceled"
-				||
-				$subscription->getSubStatus() == "requesting_canceled"
-				||
-				$subscription->getSubStatus() == "pending_canceled"
-		)
-		{
-			//nothing todo : already done or in process
+			if(
+					$subscription->getSubStatus() == "canceled"
+					||
+					$subscription->getSubStatus() == "requesting_canceled"
+					||
+					$subscription->getSubStatus() == "pending_canceled"
+			)
+			{
+				//nothing todo : already done or in process
+				$doIt = false;
+			} else {
+				$doIt = true;
+			}
 		} else {
+			//do It anyway (request comes from Bouygues)
+			$doIt = true;
+		}
+		if($doIt == true) {
 			$subscription->setSubCanceledDate($cancel_date);
 			if($is_a_request == true) {
 				$subscription->setSubStatus('requesting_canceled');
