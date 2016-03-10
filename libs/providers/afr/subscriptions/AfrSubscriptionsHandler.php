@@ -175,33 +175,26 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 		}
-		//
-		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
-			//SUB_OPTS
-			if(isset($subOpts)) {
-				$subOpts->setSubId($db_subscription->getId());
-				$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
-			}
-			//COUPON
-			if(isset($coupon)) {
-				$coupon->setStatus("redeemed");
-				$coupon = CouponDAO::updateStatus($coupon);
-				$coupon->setRedeemedDate(new DateTime());
-				$coupon = CouponDAO::updateRedeemedDate($coupon);
-				$coupon->setSubId($db_subscription->getId());
-				$coupon = CouponDAO::updateSubId($coupon);
-				$coupon->setUserId($user->getId());
-				$coupon = CouponDAO::updateUserId($coupon);
-			}
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
-		}	
+		//NO MORE TRANSACTION (DONE BY CALLER)
+		//<-- DATABASE -->
+		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
+		//SUB_OPTS
+		if(isset($subOpts)) {
+			$subOpts->setSubId($db_subscription->getId());
+			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+		}
+		//COUPON
+		if(isset($coupon)) {
+			$coupon->setStatus("redeemed");
+			$coupon = CouponDAO::updateStatus($coupon);
+			$coupon->setRedeemedDate(new DateTime());
+			$coupon = CouponDAO::updateRedeemedDate($coupon);
+			$coupon->setSubId($db_subscription->getId());
+			$coupon = CouponDAO::updateSubId($coupon);
+			$coupon->setUserId($user->getId());
+			$coupon = CouponDAO::updateUserId($coupon);
+		}
+		//<-- DATABASE -->
 		config::getLogger()->addInfo("afr dbsubscription creation for userid=".$user->getId().", afr_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
 		return($db_subscription);
 	}
