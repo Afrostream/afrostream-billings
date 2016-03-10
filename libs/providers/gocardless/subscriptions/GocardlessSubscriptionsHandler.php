@@ -357,15 +357,21 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 			case 'cancelled' :
 				$db_subscription->setSubStatus('canceled');
+				//we do not really know
+				$db_subscription->setSubCanceledDate(new DateTime($api_subscription->created_at));
 				break;
 			case 'pending_customer_approval' :
 				$db_subscription->setSubStatus('future');
 				break;
 			case 'finished' :
 				$db_subscription->setSubStatus('expired');
+				//we do not really know
+				$db_subscription->setSubExpiresDate(new DateTime($api_subscription->created_at));
 				break;
 			case 'customer_approval_denied' :
 				$db_subscription->setSubStatus('expired');
+				//we do not really know
+				$db_subscription->setSubExpiresDate(new DateTime($api_subscription->created_at));
 				break;
 			default :
 				$msg = "unknown subscription status : ".$api_subscription->status;
@@ -375,8 +381,6 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		$db_subscription->setSubActivatedDate(new DateTime($api_subscription->created_at));
 		//
-		$db_subscription->setSubCanceledDate(NULL);//TODO
-		$db_subscription->setSubExpiresDate(NULL);//TODO
 		$start_date = new DateTime($api_subscription->created_at);
 		$end_date = NULL;
 		switch($internalPlan->getPeriodUnit()) {
