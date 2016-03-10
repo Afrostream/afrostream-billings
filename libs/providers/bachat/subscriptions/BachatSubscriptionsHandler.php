@@ -279,8 +279,10 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				$doIt = true;
 			}
 		} else {
-			//do It anyway (request comes from Bouygues)
-			$doIt = true;
+			//do it only if not already canceled
+			if($subscription->getSubStatus() != "canceled") {
+				$doIt = true;
+			}
 		}
 		if($doIt == true) {
 			$subscription->setSubCanceledDate($cancel_date);
