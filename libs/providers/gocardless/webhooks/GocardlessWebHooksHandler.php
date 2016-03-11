@@ -161,11 +161,13 @@ class GocardlessWebHooksHandler {
 					break;
 				case 'cancelled' :
 					if($notification_as_array['details']['cause'] == 'subscription_cancelled') {
+						config::getLogger()->addInfo('Processing gocardless hook subscription, subscription canceled');
 						//sub_canceled_date
 						$db_subscription->setSubCanceledDate(new DateTime($notification_as_array['created_at']));
 						$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
 						//STATUS IS CHANGED IN updateDbSubscriptionFromApiSubscription
 					} else {
+						config::getLogger()->addInfo('Processing gocardless hook subscription, subscription expired, cause='.$notification_as_array['details']['cause']);
 						//sub_expires_date
 						$db_subscription->setSubExpiresDate(new DateTime($notification_as_array['created_at']));
 						$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
