@@ -78,20 +78,20 @@ class RecurlyWebHooksHandler {
 		if($provider == NULL) {
 			$msg = "provider named 'recurly' not found";
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		//plan
 		$plan_uuid = $api_subscription->plan->plan_code;
 		if($plan_uuid == NULL) {
 			$msg = "plan uuid not found";
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$plan = PlanDAO::getPlanByUuid($provider->getId(), $plan_uuid);
 		if($plan == NULL) {
 			$msg = "plan with uuid=".$plan_uuid." not found";
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 		//$account_code
@@ -99,13 +99,13 @@ class RecurlyWebHooksHandler {
 		if($account_code == NULL) {
 			$msg = "account_code not found";
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
 		if($internalPlan == NULL) {
 			$msg = "plan with uuid=".$plan_uuid." for provider ".$provider->getName()." is not linked to an internal plan";
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 		config::getLogger()->addInfo('searching user with account_code='.$account_code.'...');
@@ -113,27 +113,37 @@ class RecurlyWebHooksHandler {
 		if($user == NULL) {
 			$msg = 'searching user with account_code='.$account_code.' failed, no user found';
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-		//ADD OR UPDATE
-		if($db_subscription == NULL) {
-			$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found for user with provider_user_uuid=".$user->getUserProviderUuid();
-			config::getLogger()->addError($msg);
-			throw new Exception($msg);
-			//DO NOT CREATE ANYMORE : race condition when creating from API + from the webhook
-			//WAS :
-			//CREATE
-			//$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
-		} else {
-			//UPDATE
-			$db_subscription_before_update = clone $db_subscription;
-			$db_subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
-			$recurlySubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+		$db_subscription_before_update = NULL;
+		try {
+			//START TRANSACTION
+			pg_query("BEGIN");
+			//ADD OR UPDATE
+			if($db_subscription == NULL) {
+				$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found for user with provider_user_uuid=".$user->getUserProviderUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				//DO NOT CREATE ANYMORE : race condition when creating from API + from the webhook
+				//WAS :
+				//CREATE
+				//$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
+			} else {
+				//UPDATE
+				$db_subscription_before_update = clone $db_subscription;
+				$db_subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
+			}
+			//COMMIT
+			pg_query("COMMIT");
+		} catch(Exception $e) {
+			pg_query("ROLLBACK");
+			throw $e;
 		}
+		$recurlySubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
 		config::getLogger()->addInfo('Processing recurly hook subscription, notification_type='.$notification->type.' done successfully');
 	}

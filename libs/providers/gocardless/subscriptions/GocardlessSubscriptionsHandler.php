@@ -112,7 +112,9 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				foreach ($bank_accounts as $current_bank_account) {
 					if($current_bank_account->links->customer == $user->getUserProviderUuid()) //Double CHECK :)
 					{
-						$client->customerBankAccounts()->disable($current_bank_account->id);
+						if($current_bank_account->enabled) {
+							$client->customerBankAccounts()->disable($current_bank_account->id);
+						}
 					}
 				}
 				config::getLogger()->addInfo("gocardless subscription creation... bank accounts deactivation done successfully");
@@ -357,15 +359,21 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 			case 'cancelled' :
 				$db_subscription->setSubStatus('canceled');
+				//we do not really know
+				$db_subscription->setSubCanceledDate(new DateTime($api_subscription->created_at));
 				break;
 			case 'pending_customer_approval' :
 				$db_subscription->setSubStatus('future');
 				break;
 			case 'finished' :
 				$db_subscription->setSubStatus('expired');
+				//we do not really know
+				$db_subscription->setSubExpiresDate(new DateTime($api_subscription->created_at));
 				break;
 			case 'customer_approval_denied' :
 				$db_subscription->setSubStatus('expired');
+				//we do not really know
+				$db_subscription->setSubExpiresDate(new DateTime($api_subscription->created_at));
 				break;
 			default :
 				$msg = "unknown subscription status : ".$api_subscription->status;
@@ -375,8 +383,6 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		$db_subscription->setSubActivatedDate(new DateTime($api_subscription->created_at));
 		//
-		$db_subscription->setSubCanceledDate(NULL);//TODO
-		$db_subscription->setSubExpiresDate(NULL);//TODO
 		$start_date = new DateTime($api_subscription->created_at);
 		$end_date = NULL;
 		switch($internalPlan->getPeriodUnit()) {
@@ -419,22 +425,15 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
-		//
-		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
-			//SUB_OPTS
-			if(isset($subOpts)) {
-				$subOpts->setSubId($db_subscription->getId());
-				$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
-			}
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
+		//NO MORE TRANSACTION (DONE BY CALLER)
+		//<-- DATABASE -->
+		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
+		//SUB_OPTS
+		if(isset($subOpts)) {
+			$subOpts->setSubId($db_subscription->getId());
+			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
 		}
+		//<-- DATABASE -->
 		config::getLogger()->addInfo("gocardless dbsubscription creation for userid=".$user->getId().", gocardless_subscription_uuid=".$api_subscription->id." done successfully, id=".$db_subscription->getId());
 		return($db_subscription);
 	}
@@ -555,23 +554,23 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 	}
 	
 	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL) {
-		$provider_plan = PlanDAO::getPlanById($subscription->getPlanId());
-		if($provider_plan == NULL) {
+		$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
+		if($providerPlan == NULL) {
 			$msg = "unknown plan with id : ".$subscription->getPlanId();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($provider_plan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
 		if($internalPlan == NULL) {
-			$msg = "plan with uuid=".$provider_plan->getId()." for provider gocardless is not linked to an internal plan";
+			$msg = "plan with uuid=".$providerPlan->getId()." for provider gocardless is not linked to an internal plan";
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		
 		$today = new DateTime();
 		
 		if($start_date == NULL) {
-			$start_date = new DateTime();//NOW
+			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
 		}
 		$end_date = NULL;
 		switch($internalPlan->getPeriodUnit()) {
@@ -685,9 +684,9 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < (new DateTime($subscription->getSubPeriodEndsDate())))
+						($now < new DateTime($subscription->getSubPeriodEndsDate()))
 								&&
-						($now >= (new DateTime($subscription->getSubPeriodStartedDate())))
+						($now >= new DateTime($subscription->getSubPeriodStartedDate()))
 				) {
 					//inside the period
 					$is_active = 'yes';

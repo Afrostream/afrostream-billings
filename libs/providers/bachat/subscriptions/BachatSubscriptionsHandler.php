@@ -139,22 +139,15 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
-		//
-		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
-			//SUB_OPTS
-			if(isset($subOpts)) {
-				$subOpts->setSubId($db_subscription->getId());
-				$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
-			}
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
-		}	
+		//NO MORE TRANSACTION (DONE BY CALLER)
+		//<-- DATABASE -->
+		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
+		//SUB_OPTS
+		if(isset($subOpts)) {
+			$subOpts->setSubId($db_subscription->getId());
+			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+		}
+		//<-- DATABASE -->
 		config::getLogger()->addInfo("bachat dbsubscription creation for userid=".$user->getId().", bachat_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
 		return($db_subscription);
 	}
@@ -164,6 +157,11 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			return;
 		}
 		$is_active = NULL;
+		$periodStartedDate = new DateTime($subscription->getSubPeriodStartedDate(), new DateTimeZone(config::$timezone));
+		$periodEndsDate = new DateTime($subscription->getSubPeriodEndsDate(), new DateTimeZone(config::$timezone));
+		$periodEndsDate->setTime(23, 59, 59);
+		$periodeGraceEndsDate = clone $periodEndsDate;
+		$periodeGraceEndsDate->add(new DateInterval("P3D"));//3 full days of grace period
 		switch($subscription->getSubStatus()) {
 			case 'pending_active' :
 			case 'active' :
@@ -174,9 +172,9 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < (new DateTime($subscription->getSubPeriodEndsDate())))
+						($now < $periodStartedDate)
 								&&
-						($now >= (new DateTime($subscription->getSubPeriodStartedDate())))
+						($now >= $periodeGraceEndsDate)
 				) {
 					//inside the period
 					$is_active = 'yes';
@@ -204,22 +202,21 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			$msg = "cannot renew because of the current_status=".$subscription->getSubStatus();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			break;
 		}
-		$provider_plan = PlanDAO::getPlanById($subscription->getPlanId());
-		if($provider_plan == NULL) {
+		$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
+		if($providerPlan == NULL) {
 			$msg = "unknown plan with id : ".$subscription->getPlanId();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($provider_plan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
 		if($internalPlan == NULL) {
-			$msg = "plan with uuid=".$provider_plan->getId()." for provider bachat is not linked to an internal plan";
+			$msg = "plan with uuid=".$providerPlan->getId()." for provider bachat is not linked to an internal plan";
 			config::getLogger()->addError($msg);
-			throw new Exception($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		if($start_date == NULL) {
-			$start_date = new DateTime();//NOW
+			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
 		}
 		$end_date = NULL;
 		switch($internalPlan->getPeriodUnit()) {
@@ -254,22 +251,33 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 	}
 		
 	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
-		if($subscription->getSubStatus() == "pending_active") {
-			$msg = "cannot cancel because of the current_status=".$subscription->getSubStatus();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			break;
-		}
-		if(
-				$subscription->getSubStatus() == "canceled"
-				||
-				$subscription->getSubStatus() == "requesting_canceled"
-				||
-				$subscription->getSubStatus() == "pending_canceled"
-		)
-		{
-			//nothing todo : already done or in process
+		$doIt = false;
+		if($is_a_request == true) {
+			if($subscription->getSubStatus() == "pending_active") {
+				$msg = "cannot cancel because of the current_status=".$subscription->getSubStatus();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(
+					$subscription->getSubStatus() == "canceled"
+					||
+					$subscription->getSubStatus() == "requesting_canceled"
+					||
+					$subscription->getSubStatus() == "pending_canceled"
+			)
+			{
+				//nothing todo : already done or in process
+				$doIt = false;
+			} else {
+				$doIt = true;
+			}
 		} else {
+			//do it only if not already canceled
+			if($subscription->getSubStatus() != "canceled") {
+				$doIt = true;
+			}
+		}
+		if($doIt == true) {
 			$subscription->setSubCanceledDate($cancel_date);
 			if($is_a_request == true) {
 				$subscription->setSubStatus('requesting_canceled');
