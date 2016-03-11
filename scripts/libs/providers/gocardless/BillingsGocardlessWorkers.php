@@ -83,7 +83,7 @@ class BillingsGocardlessWorkers extends BillingsWorkers {
 				pg_query("BEGIN");
 				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
 				$subscriptionsHandler = new SubscriptionsHandler();
-				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), new DateTime($subscription->getSubPeriodEndsDate()));
+				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
 				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT

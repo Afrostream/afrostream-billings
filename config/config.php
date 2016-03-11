@@ -57,6 +57,22 @@ if(getEnv('RECURLY_API_KEY') === false) {
 	putEnv('RECURLY_API_KEY=67dbb29f0dbe4e219bc247a3b5387652');
 }
 
+if(getEnv('RECURLY_POSTPONE_ACTIVATED') === false) {
+	putEnv('RECURLY_POSTPONE_ACTIVATED=false');
+}
+
+if(getEnv('RECURLY_POSTPONE_LIMIT_IN') === false) {
+	putEnv('RECURLY_POSTPONE_LIMIT_IN=28');
+}
+
+if(getEnv('RECURLY_POSTPONE_LIMIT_OUT') === false) {
+	putEnv('RECURLY_POSTPONE_LIMIT_OUT=7');
+}
+
+if(getEnv('RECURLY_POSTPONE_TO') === false) {
+	putEnv('RECURLY_POSTPONE_TO=10');
+}
+
 #Recurly WebHooks
 if(getEnv('RECURLY_WH_HTTP_AUTH_USER') === false) {
 	putEnv('RECURLY_WH_HTTP_AUTH_USER=admin');
@@ -116,6 +132,8 @@ if(getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION') === false) {
 #logger, #db_conn, ...
 
 class config {
+
+	public static $timezone = "Europe/Paris";
 	
 	private static $logger;
 	
