@@ -112,7 +112,9 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				foreach ($bank_accounts as $current_bank_account) {
 					if($current_bank_account->links->customer == $user->getUserProviderUuid()) //Double CHECK :)
 					{
-						$client->customerBankAccounts()->disable($current_bank_account->id);
+						if($current_bank_account->enabled) {
+							$client->customerBankAccounts()->disable($current_bank_account->id);
+						}
 					}
 				}
 				config::getLogger()->addInfo("gocardless subscription creation... bank accounts deactivation done successfully");
