@@ -2498,7 +2498,7 @@ class CouponDAO {
 	}
 	
 	public static function getCoupon($providerId, $couponCode) {
-		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE providerid = $1 AND code = $2";
+		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE providerid = $1 AND lower(code) = lower($2)";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $couponCode));
 		
 		$out = null;
