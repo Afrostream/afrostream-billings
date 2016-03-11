@@ -137,11 +137,11 @@ class GocardlessWebHooksHandler {
 				//DO NOT CREATE ANYMORE : race condition when creating from API + from the webhook
 				//WAS :
 				//CREATE
-				//$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, 'api', 0);
+				//$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, $update_type, $updateId);
 			} else {
 				//UPDATE
 				$db_subscription_before_update = clone $db_subscription;
-				$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
+				$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, $update_type, $updateId);
 			}
 			//WHEN ? (not given by the gocardless API)
 			switch($notification_as_array['action']) {
