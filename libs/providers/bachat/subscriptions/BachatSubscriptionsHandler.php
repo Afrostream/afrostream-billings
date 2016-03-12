@@ -64,7 +64,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		$api_subscription = new BillingsSubscription();
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('active');
-		$start_date = new DateTime();
+		$start_date = new DateTime(NULL, config::$timezone);
 		$api_subscription->setSubActivatedDate($start_date);
 		$api_subscription->setSubPeriodStartedDate($start_date);
 		$end_date = NULL;
@@ -172,9 +172,9 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < $periodStartedDate)
+						($now < $periodeGraceEndsDate)
 								&&
-						($now >= $periodeGraceEndsDate)
+						($now >= $periodStartedDate)
 				) {
 					//inside the period
 					$is_active = 'yes';
@@ -215,22 +215,26 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		if($start_date == NULL) {
-			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
+		if($internalPlan->getPeriodUnit() != PlanPeriodUnit::day) {
+			$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$end_date = NULL;
-		switch($internalPlan->getPeriodUnit()) {
-			case PlanPeriodUnit::day :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
-				//DO NOT FORCE ANYMORE AS RECOMMENDED BY Niji
-				//$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			default :
-				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
+		if($start_date == NULL) {
+			$start_date = new DateTime($subscription->getSubPeriodEndsDate(), config::$timezone);//yesterday
+			$start_date->add(new DateInterval("P1D"));//today
+			$end_date = clone $start_date;
+			//force start_date time AFTER cloning
+			$start_date->setTime(0, 0, 0);
+			$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
+			//DO NOT FORCE ANYMORE AS RECOMMENDED BY Niji
+			//$end_date->setTime(23, 59, 59);//force the time to the end of the day
+		} else {
+			$end_date = clone $start_date;
+			$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
+			//DO NOT FORCE ANYMORE AS RECOMMENDED BY Niji
+			//$end_date->setTime(23, 59, 59);//force the time to the end of the day
 		}
 		$subscription->setSubPeriodStartedDate($start_date);
 		$subscription->setSubPeriodEndsDate($end_date);

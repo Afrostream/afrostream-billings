@@ -36,9 +36,8 @@ class BillingsIdipperWorkers extends BillingsWorkers {
 			//
 			$offset = 0;
 			$limit = 100;
-			//will select all day strictly before tommorrow (the reason why DateInterval is +1 DAY)
+			//will select all day strictly before today
 			$sub_period_ends_date = clone $this->today;
-			$sub_period_ends_date->add(new DateInterval("P1D"));
 			$sub_period_ends_date->setTime(0, 0, 0);
 			//
 			$status_array = array('active');
@@ -96,10 +95,12 @@ class BillingsIdipperWorkers extends BillingsWorkers {
 			$utilisateurRequest = new UtilisateurRequest();
 			$utilisateurRequest->setExternalUserID($user->getUserReferenceUuid());
 			$utilisateurReponse = $idipperClient->getUtilisateur($utilisateurRequest);
+			$currrent_rubrique = NULL;
 			$rubriqueFound = false;
 			$hasSubscribed = false;
 			foreach ($utilisateurResponse->getRubriques() as $rubrique) {
 				if($rubrique->getIDRubrique() == $provider_plan->getPlanUuid()) {
+					$currrent_rubrique = $rubrique;
 					$rubriqueFound = true;
 					if($rubrique->getAbonne() == '1') {
 						$hasSubscribed = true;
@@ -113,8 +114,15 @@ class BillingsIdipperWorkers extends BillingsWorkers {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			if($hasSubscribed) {
+				if(creditExpiration > now) {
+					//RENEW (attention aux bornes (les 2)
+				} else {
+					//Verify GracePeriod > now
+					//< now
+				}
+				
 				//RENEW
-				try {
+				/*try {
 					 pg_query("BEGIN");
 					 $billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
 					 $subscriptionsHandler = new SubscriptionsHandler();
@@ -126,7 +134,7 @@ class BillingsIdipperWorkers extends BillingsWorkers {
 				 } catch (Exception $e) {
 				 	pg_query("ROLLBACK");
 				 	throw $e;
-				 }
+				 }*/
 			} else {
 				//CANCEL
 				try {
@@ -141,7 +149,7 @@ class BillingsIdipperWorkers extends BillingsWorkers {
 				} catch (Exception $e) {
 				 	pg_query("ROLLBACK");
 				 	throw $e;
-				 }
+				}
 			}
 			ScriptsConfig::getLogger()->addInfo("refreshing idipper subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()." done successfully");
 			$billingsSubscriptionActionLog = NULL;

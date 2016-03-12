@@ -67,25 +67,52 @@ class IdipperSubscriptionsHandler extends SubscriptionsHandler {
 	}
 	
 	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $sub_uuid, $update_type, $updateId) {
+		//Verification : Just that abonne = 1 for the good Rubrique (we cannot do more)
+		$idipperClient = new IdipperClient();
+		$utilisateurRequest = new UtilisateurRequest();
+		$utilisateurRequest->setExternalUserID($user->getUserProviderUuid());
+		$utilisateurResponse = $idipperClient->getUtilisateur($utilisateurRequest);
+		$currrent_rubrique = NULL;
+		$rubriqueFound = false;
+		$hasSubscribed = false;
+		foreach ($utilisateurResponse->getRubriques() as $rubrique) {
+			if($rubrique->getIDRubrique() == $plan->getPlanUuid()) {
+				$currrent_rubrique = $rubrique;
+				$rubriqueFound = true;
+				if($rubrique->getAbonne() == '1') {
+					$hasSubscribed = true;
+				}
+				break;
+			}
+		}
+		if(!$rubriqueFound) {
+			$msg = "rubrique with id=".$plan->getPlanUuid()." was not found";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if(!$hasSubscribed) {
+			$msg = "rubrique with id=".$plan->getPlanUuid()." not subscribed";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//start_date
+		$start_date = new DateTime();
+		//end_date
+		$end_date_str = $currrent_rubrique->getCreditExpiration();
+		
+		$end_date = DateTime::createFromFormat("Y-m-d H:i:s", $end_date_str, new DateTimeZone(config::$timezone));
+		if($end_date === false) {
+			$msg = "rubrique credit expiration date cannot be processed, date : ".$end_date_str." cannot be parsed";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$end_date->setTime(23, 59, 59);//force the time to the end of the day
+		
 		$api_subscription = new BillingsSubscription();
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('active');
-		$start_date = new DateTime();
 		$api_subscription->setSubActivatedDate($start_date);
 		$api_subscription->setSubPeriodStartedDate($start_date);
-		$end_date = NULL;
-		switch($internalPlan->getPeriodUnit()) {
-			case PlanPeriodUnit::day :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			default :
-				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
-		}
 		$api_subscription->setSubPeriodEndsDate($end_date);
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $api_subscription, $update_type, $updateId));
 	}
@@ -157,15 +184,20 @@ class IdipperSubscriptionsHandler extends SubscriptionsHandler {
 			return;
 		}
 		$is_active = NULL;
+		$periodStartedDate = new DateTime($subscription->getSubPeriodStartedDate(), new DateTimeZone(config::$timezone));
+		$periodEndsDate = new DateTime($subscription->getSubPeriodEndsDate(), new DateTimeZone(config::$timezone));
+		$periodEndsDate->setTime(23, 59, 59);
+		$periodeGraceEndsDate = clone $periodEndsDate;
+		$periodeGraceEndsDate->add(new DateInterval("P7D"));//7 full days of grace period
 		switch($subscription->getSubStatus()) {
 			case 'active' :
 			case 'canceled' :
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < new DateTime($subscription->getSubPeriodEndsDate()))
+						($now < $periodeGraceEndsDate)
 						&&
-						($now >= new DateTime($subscription->getSubPeriodStartedDate()))
+						($now >= $periodStartedDate)
 						) {
 							//inside the period
 							$is_active = 'yes';
@@ -194,11 +226,28 @@ class IdipperSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addInfo("idipper subscription cancel...");
 			if(
 					$subscription->getSubStatus() == "canceled"
-					)
+			)
 			{
 				//nothing todo : already done or in process
 			} else {
-				//TODO
+				if($is_a_request == true) {
+					//TODO : ???
+				} else {
+					$subscription->setSubCanceledDate($cancel_date);
+					$subscription->setSubStatus('canceled');
+					//
+					try {
+						//START TRANSACTION
+						pg_query("BEGIN");
+						BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+						BillingsSubscriptionDAO::updateSubStatus($subscription);
+						//COMMIT
+						pg_query("COMMIT");
+					} catch(Exception $e) {
+						pg_query("ROLLBACK");
+						throw $e;
+					}
+				}
 			}
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("idipper subscription cancel done successfully for idipper_subscription_uuid=".$subscription->getSubUid());
