@@ -348,7 +348,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addInfo("recurly subscription cancel...");
 			if(
 					$subscription->getSubStatus() == "canceled"
-					)
+			)
 			{
 				//nothing todo : already done or in process
 			} else {
