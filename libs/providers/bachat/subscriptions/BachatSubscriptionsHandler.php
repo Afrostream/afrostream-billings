@@ -64,7 +64,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		$api_subscription = new BillingsSubscription();
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('active');
-		$start_date = new DateTime(NULL, config::$timezone);
+		$start_date = new DateTime(NULL, new DateTimeZone(config::$timezone));
 		$api_subscription->setSubActivatedDate($start_date);
 		$api_subscription->setSubPeriodStartedDate($start_date);
 		$end_date = NULL;
@@ -222,7 +222,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		$end_date = NULL;
 		if($start_date == NULL) {
-			$start_date = new DateTime($subscription->getSubPeriodEndsDate(), config::$timezone);//yesterday
+			$start_date = new DateTime($subscription->getSubPeriodEndsDate(), new DateTimeZone(config::$timezone));//yesterday
 			$start_date->add(new DateInterval("P1D"));//today
 			$end_date = clone $start_date;
 			//force start_date time AFTER cloning
