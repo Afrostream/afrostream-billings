@@ -64,7 +64,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		$api_subscription = new BillingsSubscription();
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('active');
-		$start_date = new DateTime(NULL, new DateTimeZone(config::$timezone));
+		$start_date = (new DateTime())->setTimezone(new DateTimeZone(config::$timezone));
 		$api_subscription->setSubActivatedDate($start_date);
 		$api_subscription->setSubPeriodStartedDate($start_date);
 		$end_date = NULL;
@@ -157,8 +157,8 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			return;
 		}
 		$is_active = NULL;
-		$periodStartedDate = new DateTime($subscription->getSubPeriodStartedDate(), new DateTimeZone(config::$timezone));
-		$periodEndsDate = new DateTime($subscription->getSubPeriodEndsDate(), new DateTimeZone(config::$timezone));
+		$periodStartedDate = (new DateTime($subscription->getSubPeriodStartedDate()))->setTimezone(new DateTimeZone(config::$timezone));
+		$periodEndsDate = (new DateTime($subscription->getSubPeriodEndsDate()))->setTimezone(new DateTimeZone(config::$timezone));
 		$periodEndsDate->setTime(23, 59, 59);
 		$periodeGraceEndsDate = clone $periodEndsDate;
 		$periodeGraceEndsDate->add(new DateInterval("P3D"));//3 full days of grace period
@@ -220,36 +220,44 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$end_date = NULL;
+		
+		$today = new DateTime();
+		$today->setTimezone(new DateTimeZone(config::$timezone));
+		$today->setTime(0, 0, 0);
+		
 		if($start_date == NULL) {
-			$start_date = new DateTime($subscription->getSubPeriodEndsDate(), new DateTimeZone(config::$timezone));//yesterday
-			$start_date->add(new DateInterval("P1D"));//today
-			$end_date = clone $start_date;
-			//force start_date time AFTER cloning
-			$start_date->setTime(0, 0, 0);
-			$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
-			//DO NOT FORCE ANYMORE AS RECOMMENDED BY Niji
-			//$end_date->setTime(23, 59, 59);//force the time to the end of the day
-		} else {
-			$end_date = clone $start_date;
-			$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
-			//DO NOT FORCE ANYMORE AS RECOMMENDED BY Niji
-			//$end_date->setTime(23, 59, 59);//force the time to the end of the day
+			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
+			$start_date->add(new DateInterval("P1D"));
 		}
-		$subscription->setSubPeriodStartedDate($start_date);
-		$subscription->setSubPeriodEndsDate($end_date);
-		$subscription->setSubStatus('active');
-		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			BillingsSubscriptionDAO::updateSubStartedDate($subscription);
-			BillingsSubscriptionDAO::updateSubEndsDate($subscription);
-			BillingsSubscriptionDAO::updateSubStatus($subscription);
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
+		$start_date->setTimezone(new DateTimeZone(config::$timezone));
+		
+		$end_date = clone $start_date;
+		
+		$to_be_updated = false;
+		
+		while($end_date < $today) {
+			$to_be_updated = true;
+			$start_date = clone $end_date;
+			$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));
+		}
+		//done
+		$start_date->setTime(0, 0, 0);//force start_date to beginning of the day
+		if($to_be_updated) {
+			$subscription->setSubPeriodStartedDate($start_date);
+			$subscription->setSubPeriodEndsDate($end_date);
+			$subscription->setSubStatus('active');
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				BillingsSubscriptionDAO::updateSubStartedDate($subscription);
+				BillingsSubscriptionDAO::updateSubEndsDate($subscription);
+				BillingsSubscriptionDAO::updateSubStatus($subscription);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 		}
 		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
 	}

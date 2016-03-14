@@ -568,35 +568,42 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		
 		$today = new DateTime();
+		$today->setTimezone(new DateTimeZone(config::$timezone));
+		$today->setTime(0, 0, 0);
 		
 		if($start_date == NULL) {
 			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
 		}
-		$end_date = NULL;
+		$start_date->setTimezone(new DateTimeZone(config::$timezone));
+		
+		$end_date = clone $start_date;
+		
+		$to_be_updated = false;
+		
 		switch($internalPlan->getPeriodUnit()) {
 			case PlanPeriodUnit::day :
-				$end_date = clone $start_date;
-				do {
+				while ($end_date < $today) {
+					$to_be_updated = true;
 					$start_date = clone $end_date;
 					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
 					$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				} while($end_date < $today);
+				}
 				break;
 			case PlanPeriodUnit::month :
-				$end_date = clone $start_date;
-				do {
+				while ($end_date < $today) {
+					$to_be_updated = true;
 					$start_date = clone $end_date;
 					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
 					$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				} while($end_date < $today);
+				}
 				break;	
 			case PlanPeriodUnit::year :
-				$end_date = clone $start_date;
-				do {
+				while ($end_date < $today) {
+					$to_be_updated = true;
 					$start_date = clone $end_date;
 					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
 					$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				} while($end_date < $today);
+				}
 				break;
 			default :
 				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
@@ -604,20 +611,24 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 		}
-		$subscription->setSubPeriodStartedDate($start_date);
-		$subscription->setSubPeriodEndsDate($end_date);
-		$subscription->setSubStatus('active');
-		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			BillingsSubscriptionDAO::updateSubStartedDate($subscription);
-			BillingsSubscriptionDAO::updateSubEndsDate($subscription);
-			BillingsSubscriptionDAO::updateSubStatus($subscription);
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
+		//done
+		$start_date->setTime(0, 0, 0);//force start_date to beginning of the day
+		if($to_be_updated) {
+			$subscription->setSubPeriodStartedDate($start_date);
+			$subscription->setSubPeriodEndsDate($end_date);
+			$subscription->setSubStatus('active');
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				BillingsSubscriptionDAO::updateSubStartedDate($subscription);
+				BillingsSubscriptionDAO::updateSubEndsDate($subscription);
+				BillingsSubscriptionDAO::updateSubStatus($subscription);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 		}
 		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
 	}

@@ -371,6 +371,13 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/cancel", functi
 	return($subscriptionsController->cancel($request, $response, $args));
 });
 
+//renew a subscription
+
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/renew", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->renew($request, $response, $args));
+});
+
 //InternalPlans
 
 //get one InternalPlan

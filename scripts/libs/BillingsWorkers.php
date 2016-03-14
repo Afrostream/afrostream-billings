@@ -7,7 +7,7 @@ class BillingsWorkers {
 	protected $today = NULL;
 	
 	public function __construct() {
-		$this->today = new DateTime(NULL, new DateTimeZone(self::$timezone));
+		$this->today = (new DateTime())->setTimezone(new DateTimeZone(self::$timezone));
 		$this->today->setTime(0, 0, 0);
 	}
 	
