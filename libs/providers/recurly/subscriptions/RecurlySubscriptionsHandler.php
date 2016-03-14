@@ -71,7 +71,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				
 				$subscription->create();
 				//<-- POSTPONING -->
-				if(getenv('RECURLY_POSTPONE_ACTIVATED') == true) {
+				if(getenv('RECURLY_POSTPONE_ACTIVATED') == 1) {
 					//only postpone renewable and montlhy plans
 					if($internalPlan->getCycle() == 'auto' && $internalPlan->getPeriodUnit() == 'month') {
 						$interval = 0;

@@ -7,6 +7,12 @@ date_default_timezone_set("Europe/Paris");
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 
+#General
+
+if(getEnv('LOG_REQUESTS_ACTIVATED') === false) {
+	putEnv('LOG_REQUESTS_ACTIVATED=1');
+}
+
 #Database
 
 #DATABASE_URL is filled in by heroku
@@ -45,7 +51,7 @@ if(getEnv('RECURLY_WH_REPOST_URLS') === false) {
 }
 
 if(getEnv('API_HTTP_SECURE') === false) {
-	putEnv('API_HTTP_SECURE=false');// /!\ true do not seem to work on heroku (https already 'on')
+	putEnv('API_HTTP_SECURE=0');// /!\ true do not seem to work on heroku (https already 'on')
 }
 
 #Recurly API
@@ -58,7 +64,7 @@ if(getEnv('RECURLY_API_KEY') === false) {
 }
 
 if(getEnv('RECURLY_POSTPONE_ACTIVATED') === false) {
-	putEnv('RECURLY_POSTPONE_ACTIVATED=false');
+	putEnv('RECURLY_POSTPONE_ACTIVATED=1');
 }
 
 if(getEnv('RECURLY_POSTPONE_LIMIT_IN') === false) {
@@ -122,7 +128,7 @@ if(getEnv('SENDGRID_BCC') === false) {
 
 #Event (MAIL)
 if(getEnv('EVENT_EMAIL_ACTIVATED') === false) {
-	putEnv('EVENT_EMAIL_ACTIVATED=true');
+	putEnv('EVENT_EMAIL_ACTIVATED=1');
 }
 
 if(getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION') === false) {
@@ -145,7 +151,7 @@ class config {
 	public static function getLogger() {
 		if(self::$logger == NULL) {
 			self::$logger = new Logger('afrostream-billings');
-			self::$logger->pushHandler(new StreamHandler('php://stderr', Logger::INFO));
+			self::$logger->pushHandler(new StreamHandler('/Users/nelsounet/dev/php_loggers_log.log', Logger::INFO));
 		}
 		return(self::$logger);
 	}

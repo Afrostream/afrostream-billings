@@ -40,10 +40,9 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				$subscription_provider_uuid = $res->subscriptionId;
 			} else {
 				//KO
-				//TODO : TO BE REMOVED : do not var_export all the response from BACHAT
 				$msg = "BACHAT ERROR, result=".var_export($res, true);
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), "BACHAT ERROR, see logs for more details");
 			}
 			//
 			$sub_uuid = $subscription_provider_uuid;

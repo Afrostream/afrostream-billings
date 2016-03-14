@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../libs/site/UsersController.php';
 require_once __DIR__ . '/../libs/site/SubscriptionsController.php';
 require_once __DIR__ . '/../libs/site/InternalPlansController.php';
@@ -26,11 +27,23 @@ $c['errorHandler'] = function ($c) {
 
 $app = new \Slim\App($c);
 
+$app->add(function (Request $req, Response $res, callable $next) {
+	if(getEnv('LOG_REQUESTS_ACTIVATED') == 1) {
+		$msg = "REQUEST method=".$req->getMethod();
+		$msg.= " path='".$req->getUri()->getPath()."'";
+		$msg.= " params='".http_build_query($req->getQueryParams())."'";
+		$msg.= " body='".$req->getBody()."'";
+		config::getLogger()->addInfo($msg);
+	}
+	$newResponse = $next($req, $res);
+	return($newResponse);
+});
+
 //API BASIC AUTH ACTIVATION
 
 $app->add(new \Slim\Middleware\HttpBasicAuthentication([
 		"path" => "/billings/api",
-		"secure" => (getEnv('API_HTTP_SECURE') === 'true' ? true : false),
+		"secure" => getEnv('API_HTTP_SECURE') == 1 ? true : false,
 		"users" => [
 				getEnv('API_HTTP_AUTH_USER') => getEnv('API_HTTP_AUTH_PWD')
 		]
@@ -133,8 +146,6 @@ $app->get("/billings/api/users/", function ($request, $response, $args) {
  */
 
 $app->post("/billings/api/users/", function ($request, $response, $args) {
-	//TODO : TO BE REMOVED
-	config::getLogger()->addInfo("POST USERS, request=".$request->getBody());
 	$usersController = new UsersController();
 	return($usersController->create($request, $response, $args));
 });
@@ -142,7 +153,6 @@ $app->post("/billings/api/users/", function ($request, $response, $args) {
 //update
 	
 $app->put("/billings/api/users/{userBillingUuid}", function ($request, $response, $args) {
-	config::getLogger()->addInfo("PUT USERS, request=".$request->getBody());
 	$usersController = new UsersController();
 	return($usersController->update($request, $response, $args));
 });
@@ -286,8 +296,6 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
 */
 
 $app->post("/billings/api/subscriptions/", function ($request, $response, $args) {
-	//TODO : TO BE REMOVED
-	config::getLogger()->addInfo("POST SUBSCRIPTIONS, request=".$request->getBody());
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->create($request, $response, $args));
 });
