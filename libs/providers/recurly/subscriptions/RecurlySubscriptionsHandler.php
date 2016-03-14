@@ -71,7 +71,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				
 				$subscription->create();
 				//<-- POSTPONING -->
-				if(getenv('RECURLY_POSTPONE_ACTIVATED') == true) {
+				if(getenv('RECURLY_POSTPONE_ACTIVATED') == 1) {
 					//only postpone renewable and montlhy plans
 					if($internalPlan->getCycle() == 'auto' && $internalPlan->getPeriodUnit() == 'month') {
 						$interval = 0;
@@ -246,22 +246,15 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
-		//
-		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
-			//SUB_OPTS
-			if(isset($subOpts)) {
-				$subOpts->setSubId($db_subscription->getId());
-				$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
-			}
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
+		//NO MORE TRANSACTION (DONE BY CALLER)
+		//<-- DATABASE -->
+		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
+		//SUB_OPTS
+		if(isset($subOpts)) {
+			$subOpts->setSubId($db_subscription->getId());
+			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
 		}
+		//<-- DATABASE -->
 		config::getLogger()->addInfo("recurly dbsubscription creation for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid." done successfully, id=".$db_subscription->getId());
 		return($db_subscription);
 	}
@@ -355,7 +348,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addInfo("recurly subscription cancel...");
 			if(
 					$subscription->getSubStatus() == "canceled"
-					)
+			)
 			{
 				//nothing todo : already done or in process
 			} else {

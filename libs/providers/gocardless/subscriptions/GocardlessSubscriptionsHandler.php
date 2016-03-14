@@ -112,7 +112,9 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				foreach ($bank_accounts as $current_bank_account) {
 					if($current_bank_account->links->customer == $user->getUserProviderUuid()) //Double CHECK :)
 					{
-						$client->customerBankAccounts()->disable($current_bank_account->id);
+						if($current_bank_account->enabled) {
+							$client->customerBankAccounts()->disable($current_bank_account->id);
+						}
 					}
 				}
 				config::getLogger()->addInfo("gocardless subscription creation... bank accounts deactivation done successfully");
@@ -357,15 +359,21 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 			case 'cancelled' :
 				$db_subscription->setSubStatus('canceled');
+				//we do not really know
+				$db_subscription->setSubCanceledDate(new DateTime($api_subscription->created_at));
 				break;
 			case 'pending_customer_approval' :
 				$db_subscription->setSubStatus('future');
 				break;
 			case 'finished' :
 				$db_subscription->setSubStatus('expired');
+				//we do not really know
+				$db_subscription->setSubExpiresDate(new DateTime($api_subscription->created_at));
 				break;
 			case 'customer_approval_denied' :
 				$db_subscription->setSubStatus('expired');
+				//we do not really know
+				$db_subscription->setSubExpiresDate(new DateTime($api_subscription->created_at));
 				break;
 			default :
 				$msg = "unknown subscription status : ".$api_subscription->status;
@@ -375,8 +383,6 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		$db_subscription->setSubActivatedDate(new DateTime($api_subscription->created_at));
 		//
-		$db_subscription->setSubCanceledDate(NULL);//TODO
-		$db_subscription->setSubExpiresDate(NULL);//TODO
 		$start_date = new DateTime($api_subscription->created_at);
 		$end_date = NULL;
 		switch($internalPlan->getPeriodUnit()) {
@@ -419,22 +425,15 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
-		//
-		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
-			//SUB_OPTS
-			if(isset($subOpts)) {
-				$subOpts->setSubId($db_subscription->getId());
-				$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
-			}
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
+		//NO MORE TRANSACTION (DONE BY CALLER)
+		//<-- DATABASE -->
+		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
+		//SUB_OPTS
+		if(isset($subOpts)) {
+			$subOpts->setSubId($db_subscription->getId());
+			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
 		}
+		//<-- DATABASE -->
 		config::getLogger()->addInfo("gocardless dbsubscription creation for userid=".$user->getId().", gocardless_subscription_uuid=".$api_subscription->id." done successfully, id=".$db_subscription->getId());
 		return($db_subscription);
 	}
@@ -569,35 +568,42 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		
 		$today = new DateTime();
+		$today->setTimezone(new DateTimeZone(config::$timezone));
+		$today->setTime(0, 0, 0);
 		
 		if($start_date == NULL) {
 			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
 		}
-		$end_date = NULL;
+		$start_date->setTimezone(new DateTimeZone(config::$timezone));
+		
+		$end_date = clone $start_date;
+		
+		$to_be_updated = false;
+		
 		switch($internalPlan->getPeriodUnit()) {
 			case PlanPeriodUnit::day :
-				$end_date = clone $start_date;
-				do {
+				while ($end_date < $today) {
+					$to_be_updated = true;
 					$start_date = clone $end_date;
 					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
 					$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				} while($end_date < $today);
+				}
 				break;
 			case PlanPeriodUnit::month :
-				$end_date = clone $start_date;
-				do {
+				while ($end_date < $today) {
+					$to_be_updated = true;
 					$start_date = clone $end_date;
 					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
 					$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				} while($end_date < $today);
+				}
 				break;	
 			case PlanPeriodUnit::year :
-				$end_date = clone $start_date;
-				do {
+				while ($end_date < $today) {
+					$to_be_updated = true;
 					$start_date = clone $end_date;
 					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
 					$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				} while($end_date < $today);
+				}
 				break;
 			default :
 				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
@@ -605,20 +611,24 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 		}
-		$subscription->setSubPeriodStartedDate($start_date);
-		$subscription->setSubPeriodEndsDate($end_date);
-		$subscription->setSubStatus('active');
-		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			BillingsSubscriptionDAO::updateSubStartedDate($subscription);
-			BillingsSubscriptionDAO::updateSubEndsDate($subscription);
-			BillingsSubscriptionDAO::updateSubStatus($subscription);
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
+		//done
+		$start_date->setTime(0, 0, 0);//force start_date to beginning of the day
+		if($to_be_updated) {
+			$subscription->setSubPeriodStartedDate($start_date);
+			$subscription->setSubPeriodEndsDate($end_date);
+			$subscription->setSubStatus('active');
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				BillingsSubscriptionDAO::updateSubStartedDate($subscription);
+				BillingsSubscriptionDAO::updateSubEndsDate($subscription);
+				BillingsSubscriptionDAO::updateSubStatus($subscription);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 		}
 		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
 	}

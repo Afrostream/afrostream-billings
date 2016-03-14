@@ -40,10 +40,9 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				$subscription_provider_uuid = $res->subscriptionId;
 			} else {
 				//KO
-				//TODO : TO BE REMOVED : do not var_export all the response from BACHAT
 				$msg = "BACHAT ERROR, result=".var_export($res, true);
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), "BACHAT ERROR, see logs for more details");
 			}
 			//
 			$sub_uuid = $subscription_provider_uuid;
@@ -64,7 +63,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		$api_subscription = new BillingsSubscription();
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('active');
-		$start_date = new DateTime();
+		$start_date = (new DateTime())->setTimezone(new DateTimeZone(config::$timezone));
 		$api_subscription->setSubActivatedDate($start_date);
 		$api_subscription->setSubPeriodStartedDate($start_date);
 		$end_date = NULL;
@@ -139,22 +138,15 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
-		//
-		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
-			//SUB_OPTS
-			if(isset($subOpts)) {
-				$subOpts->setSubId($db_subscription->getId());
-				$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
-			}
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
-		}	
+		//NO MORE TRANSACTION (DONE BY CALLER)
+		//<-- DATABASE -->
+		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
+		//SUB_OPTS
+		if(isset($subOpts)) {
+			$subOpts->setSubId($db_subscription->getId());
+			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+		}
+		//<-- DATABASE -->
 		config::getLogger()->addInfo("bachat dbsubscription creation for userid=".$user->getId().", bachat_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
 		return($db_subscription);
 	}
@@ -164,8 +156,8 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			return;
 		}
 		$is_active = NULL;
-		$periodStartedDate = new DateTime($subscription->getSubPeriodStartedDate(), config::$timezone);
-		$periodEndsDate = new DateTime($subscription->getSubPeriodEndsDate(), config::$timezone);
+		$periodStartedDate = (new DateTime($subscription->getSubPeriodStartedDate()))->setTimezone(new DateTimeZone(config::$timezone));
+		$periodEndsDate = (new DateTime($subscription->getSubPeriodEndsDate()))->setTimezone(new DateTimeZone(config::$timezone));
 		$periodEndsDate->setTime(23, 59, 59);
 		$periodeGraceEndsDate = clone $periodEndsDate;
 		$periodeGraceEndsDate->add(new DateInterval("P3D"));//3 full days of grace period
@@ -179,9 +171,9 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < $periodStartedDate)
+						($now < $periodeGraceEndsDate)
 								&&
-						($now >= $periodeGraceEndsDate)
+						($now >= $periodStartedDate)
 				) {
 					//inside the period
 					$is_active = 'yes';
@@ -222,60 +214,81 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		if($internalPlan->getPeriodUnit() != PlanPeriodUnit::day) {
+			$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		
+		$today = new DateTime();
+		$today->setTimezone(new DateTimeZone(config::$timezone));
+		$today->setTime(0, 0, 0);
+		
 		if($start_date == NULL) {
 			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
+			$start_date->add(new DateInterval("P1D"));
 		}
-		$end_date = NULL;
-		switch($internalPlan->getPeriodUnit()) {
-			case PlanPeriodUnit::day :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));//fix first day must be taken in account
-				//DO NOT FORCE ANYMORE AS RECOMMENDED BY Niji
-				//$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			default :
-				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
+		$start_date->setTimezone(new DateTimeZone(config::$timezone));
+		
+		$end_date = clone $start_date;
+		
+		$to_be_updated = false;
+		
+		while($end_date < $today) {
+			$to_be_updated = true;
+			$start_date = clone $end_date;
+			$end_date->add(new DateInterval("P".($internalPlan->getPeriodLength() - 1)."D"));
 		}
-		$subscription->setSubPeriodStartedDate($start_date);
-		$subscription->setSubPeriodEndsDate($end_date);
-		$subscription->setSubStatus('active');
-		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			BillingsSubscriptionDAO::updateSubStartedDate($subscription);
-			BillingsSubscriptionDAO::updateSubEndsDate($subscription);
-			BillingsSubscriptionDAO::updateSubStatus($subscription);
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
+		//done
+		$start_date->setTime(0, 0, 0);//force start_date to beginning of the day
+		if($to_be_updated) {
+			$subscription->setSubPeriodStartedDate($start_date);
+			$subscription->setSubPeriodEndsDate($end_date);
+			$subscription->setSubStatus('active');
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				BillingsSubscriptionDAO::updateSubStartedDate($subscription);
+				BillingsSubscriptionDAO::updateSubEndsDate($subscription);
+				BillingsSubscriptionDAO::updateSubStatus($subscription);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 		}
 		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
 	}
 		
 	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+		$doIt = false;
 		if($is_a_request == true) {
 			if($subscription->getSubStatus() == "pending_active") {
 				$msg = "cannot cancel because of the current_status=".$subscription->getSubStatus();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
+			}
+			if(
+					$subscription->getSubStatus() == "canceled"
+					||
+					$subscription->getSubStatus() == "requesting_canceled"
+					||
+					$subscription->getSubStatus() == "pending_canceled"
+			)
+			{
+				//nothing todo : already done or in process
+				$doIt = false;
+			} else {
+				$doIt = true;
+			}
+		} else {
+			//do it only if not already canceled
+			if($subscription->getSubStatus() != "canceled") {
+				$doIt = true;
 			}
 		}
-		if(
-				$subscription->getSubStatus() == "canceled"
-				||
-				$subscription->getSubStatus() == "requesting_canceled"
-				||
-				$subscription->getSubStatus() == "pending_canceled"
-		)
-		{
-			//nothing todo : already done or in process
-		} else {
+		if($doIt == true) {
 			$subscription->setSubCanceledDate($cancel_date);
 			if($is_a_request == true) {
 				$subscription->setSubStatus('requesting_canceled');

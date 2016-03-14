@@ -35,7 +35,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				exit;
 			}
 			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_renew');
-			$now = new DateTime(NULL, new DateTimeZone(self::$timezone));
+			$now = (new DateTime())->setTimezone(new DateTimeZone(self::$timezone));
 			$lastAttemptDate = clone $now;
 			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
 			if($lastAttemptDate > $now) {
@@ -194,8 +194,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$fields = array();
-			$fields[] = (new DateTime(NULL, new DateTimeZone(self::$timezone)))->format("dmY");//current Day// was : (new DateTime($subscription->getSubPeriodEndsDate()))->format("dmY");//DATE DDMMYYYY
-			$fields[] = (new DateTime($subscription->getSubPeriodEndsDate(), new DateTimeZone(self::$timezone)))->format("His");//TIME HHMMSS
+			$day = new DateTime();
+			$day->setTimezone(new DateTimeZone(self::$timezone));
+			$day_str = $day->format("dmY");
+			$fields[] = $day_str;
+			$time = new DateTime($subscription->getSubPeriodEndsDate());
+			$time->setTimezone(new DateTimeZone(self::$timezone));
+			$time_str = $time->format("His");
+			$fields[] = $time_str;
 			$fields[] = getEnv("BOUYGUES_SERVICEID");//ServiceId
 			$fields[] = $subscription->getSubscriptionBillingUuid();//SubscriptionServiceId
 			$fields[] = $subscription->getSubUid();//SubscriptionId
@@ -269,7 +275,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				exit;
 			}
 			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_cancel');
-			$now = new DateTime(NULL, new DateTimeZone(self::$timezone));
+			$now = (new DateTime())->setTimezone(new DateTimeZone(self::$timezone));
 			$lastAttemptDate = clone $now;
 			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
 			if($lastAttemptDate > $now) {
@@ -418,8 +424,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}*/
 			$fields = array();
-			$fields[] = (new DateTime($subscription->getSubCanceledDate(), new DateTimeZone(self::$timezone)))->format("dmY");//must be in the past//DATE DDMMYYYY
-			$fields[] = (new DateTime($subscription->getSubCanceledDate(), new DateTimeZone(self::$timezone)))->format("His");//TIME HHMMSS
+			$day = new DateTime($subscription->getSubCanceledDate());
+			$day->setTimezone(new DateTimeZone(self::$timezone));
+			$day_str = $day->format("dmY");
+			$fields[] = $day_str;
+			$time = new DateTime($subscription->getSubCanceledDate());
+			$time->setTimezone(new DateTimeZone(self::$timezone));
+			$time_str = $time->format("His");
+			$fields[] = $time_str;
 			$fields[] = getEnv("BOUYGUES_SERVICEID");//ServiceId
 			$fields[] = $subscription->getSubscriptionBillingUuid();//SubscriptionServiceId
 			$fields[] = $subscription->getSubUid();//SubscriptionId
@@ -451,7 +463,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_renew', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
-				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling bypassed - already done today -");
+				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal bypassed - already done today -");
 				exit;
 			}
 			
@@ -692,7 +704,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_cancel', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
-				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions cancelling bypassed - already done today -");
+				ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions cancelling bypassed - already done today -");
 				exit;
 			}
 			

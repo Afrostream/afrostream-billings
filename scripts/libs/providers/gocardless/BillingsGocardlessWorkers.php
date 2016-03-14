@@ -35,9 +35,8 @@ class BillingsGocardlessWorkers extends BillingsWorkers {
 			//
 			$offset = 0;
 			$limit = 100;
-			//will select all day strictly before tommorrow (the reason why DateInterval is +1 DAY)
+			//will select all day strictly before today
 			$sub_period_ends_date = clone $this->today;
-			$sub_period_ends_date->add(new DateInterval("P1D"));
 			$sub_period_ends_date->setTime(0, 0, 0);
 			//
 			$status_array = array('active');
