@@ -263,8 +263,8 @@ class UserOptsDAO {
 				$query.= " VALUES ($1, $2, $3) RETURNING _id";
 				$result = pg_query_params(config::getDbConn(), $query,
 						array($user_opts->getUserId(),
-								$k,
-								$v));
+								trim($k),
+								trim($v)));
 			}
 		}
 		return(self::getUserOptsByUserId($user_opts->getUserId()));
@@ -273,7 +273,7 @@ class UserOptsDAO {
 	public static function updateUserOptsKey($userid, $key, $value) {
 		$query = "UPDATE billing_users_opts SET value = $3 WHERE userid = $1 AND key = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
-				array($userid, $key, $value));
+				array($userid, $key, trim($value)));
 		return($result);
 	}
 	
@@ -289,8 +289,8 @@ class UserOptsDAO {
 		$query.= " VALUES ($1, $2, $3) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array($userid,
-						$key,
-						$value));
+						trim($key),
+						trim($value)));
 		return($result);
 	}
 	
@@ -629,8 +629,8 @@ class InternalPlanOptsDAO {
 				$query.= " VALUES ($1, $2, $3) RETURNING _id";
 				$result = pg_query_params(config::getDbConn(), $query,
 						array($internalplan_opts->getInternalPlanId(),
-								$k,
-								$v));
+								trim($k),
+								trim($v)));
 			}
 		}
 		return(self::getInternalPlanOptsByInternalPlanId($internalplan_opts->getInternalPlanId()));
@@ -639,7 +639,7 @@ class InternalPlanOptsDAO {
 	public static function updateInternalPlanOptsKey($internalplanid, $key, $value) {
 		$query = "UPDATE billing_internal_plans_opts SET value = $3 WHERE internalplanid = $1 AND key = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
-			array($internalplanid, $key, $value));
+			array($internalplanid, $key, trim($value)));
 		return($result);
 	}
 	
@@ -655,8 +655,8 @@ class InternalPlanOptsDAO {
 		$query.= " VALUES ($1, $2, $3) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array($internalplanid,
-						$key,
-						$value));
+						trim($key),
+						trim($value)));
 		return($result);
 	}
 	
@@ -1608,8 +1608,8 @@ class BillingsSubscriptionOptsDAO {
 				$query.= " VALUES ($1, $2, $3) RETURNING _id";
 				$result = pg_query_params(config::getDbConn(), $query,
 						array($billingsSubscriptionOpts->getSubId(),
-								$k,
-								$v));
+								trim($k),
+								trim($v)));
 			}
 		}
 		return(self::getBillingsSubscriptionOptsBySubId($billingsSubscriptionOpts->getSubId()));
@@ -1618,7 +1618,7 @@ class BillingsSubscriptionOptsDAO {
 	public static function updateBillingsSubscriptionOptsKey($subid, $key, $value) {
 		$query = "UPDATE billing_subscriptions_opts SET value = $3 WHERE subid = $1 AND key = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
-				array($subid, $key, $value));
+				array($subid, $key, trim($value)));
 		return($result);
 	}
 
@@ -1634,8 +1634,8 @@ class BillingsSubscriptionOptsDAO {
 		$query.= " VALUES ($1, $2, $3) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array($subid,
-						$key,
-						$value));
+						trim($key),
+						trim($value)));
 		return($result);
 	}
 
@@ -2498,7 +2498,7 @@ class CouponDAO {
 	}
 	
 	public static function getCoupon($providerId, $couponCode) {
-		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE providerid = $1 AND code = $2";
+		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE providerid = $1 AND lower(code) = lower($2)";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $couponCode));
 		
 		$out = null;
