@@ -135,7 +135,7 @@ class UsersController extends BillingsController {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$user_opts_array = $data['userOpts'];
-				$user = $usersHandler->doUpdateUserPlanOpts($userBillingUuid, $user_opts_array);
+				$user = $usersHandler->doUpdateUserOpts($userBillingUuid, $user_opts_array);
 			}
 			if($user == NULL) {
 				//NO UPDATE, JUST SEND BACK THE CURRENT USER
