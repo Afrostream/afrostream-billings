@@ -502,7 +502,7 @@ class SubscriptionsHandler {
 			}
 			if($subscription_is_new_event == true || $subscription_is_canceled_event == true) {
 				config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", ...");
-				if(getEnv('EVENT_EMAIL_ACTIVATED') == true) {
+				if(getEnv('EVENT_EMAIL_ACTIVATED') == 1) {
 					$eventEmailProvidersExceptionArray = explode(";", getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION'));
 					$provider = ProviderDAO::getProviderById($subscription_after_update->getProviderId());
 					if($provider == NULL) {
