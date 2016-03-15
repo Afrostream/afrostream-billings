@@ -569,7 +569,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		
 		$today = new DateTime();
 		$today->setTimezone(new DateTimeZone(config::$timezone));
-		$today->setTime(0, 0, 0);
+		$today->setTime(23, 59, 59);//consider all the day
 		
 		if($start_date == NULL) {
 			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
