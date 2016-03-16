@@ -202,7 +202,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
 		}
-		if($subscription->getSubStatus() != "active" || $subscription->getSubStatus() != "pending_active") {
+		if($subscription->getSubStatus() != "active" && $subscription->getSubStatus() != "pending_active") {
 			$msg = "cannot renew because of the current_status=".$subscription->getSubStatus();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
