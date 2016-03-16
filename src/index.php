@@ -105,7 +105,7 @@ $app->get("/billings/api/users/", function ($request, $response, $args) {
 /*
 	sample call :
 	
-	POST GET /billings/api/users/
+	POST /billings/api/users/
 	
 	BODY :
 	
@@ -150,11 +150,49 @@ $app->post("/billings/api/users/", function ($request, $response, $args) {
 	return($usersController->create($request, $response, $args));
 });
 
-//update
+//update : one specific userBillingUuid (not recommended)
 	
 $app->put("/billings/api/users/{userBillingUuid}", function ($request, $response, $args) {
 	$usersController = new UsersController();
 	return($usersController->update($request, $response, $args));
+});
+
+//update : email, firstName, lastName linked to the same userReferenceUuid. Changes are propagated to providers.
+
+/*
+	sample call :
+	
+	PUT /billings/api/users/?userReferenceUuid=afrostreamUUID
+	
+	BODY :
+	
+	{
+    	"userOpts" : {
+        	"email" : "email@domain.com",
+        	"firstName" : "myFirstName",
+        	"lastName" : "myLastName"
+    	}
+   	}
+    
+    sample answer :
+    
+    {
+  		"status": "done",
+  		"statusMessage": "success",
+  		"statusCode": 0,
+  		"response": {
+    		"users": [
+    			{...},
+    			{...}
+    		]
+  		}
+  	}
+	
+ */
+
+$app->put("/billings/api/users/", function ($request, $response, $args) {
+	$usersController = new UsersController();
+	return($usersController->updateUsers($request, $response, $args));
 });
 
 //Subscriptions

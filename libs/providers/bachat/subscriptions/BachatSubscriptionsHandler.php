@@ -196,8 +196,13 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		$subscription->setIsActive($is_active);
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL) {
-		if($subscription->getSubStatus() == "pending_canceled") {
+	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+		if($end_date != NULL) {
+			$msg = "renewing a bachat subscription does not support that end_date is already set";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
+		}
+		if($subscription->getSubStatus() != "active" && $subscription->getSubStatus() != "pending_active") {
 			$msg = "cannot renew because of the current_status=".$subscription->getSubStatus();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
