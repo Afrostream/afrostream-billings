@@ -152,9 +152,11 @@ class GocardlessWebHooksHandler {
 					//nothing to do
 					break;
 				case 'customer_approval_denied' :
-					//sub_expires_date
+					//sub_expires_date = sub_canceled_date
 					$db_subscription->setSubExpiresDate(new DateTime($notification_as_array['created_at']));
+					$db_subscription->setSubCanceledDate(new DateTime($notification_as_array['created_at']));
 					$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+					$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
 					break;
 				case 'payment_created' :
 					//nothing to do
@@ -168,9 +170,11 @@ class GocardlessWebHooksHandler {
 						//STATUS IS CHANGED IN updateDbSubscriptionFromApiSubscription
 					} else {
 						config::getLogger()->addInfo('Processing gocardless hook subscription, subscription expired, cause='.$notification_as_array['details']['cause']);
-						//sub_expires_date
+						//sub_expires_date = sub_canceled_date
 						$db_subscription->setSubExpiresDate(new DateTime($notification_as_array['created_at']));
+						$db_subscription->setSubCanceledDate(new DateTime($notification_as_array['created_at']));
 						$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+						$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
 						//STATUS IS NOT CHANGED IN updateDbSubscriptionFromApiSubscription
 						///!\VERIFY STATUS BEFORE FORCING TO EXPIRED/!\
 						if($api_subscription->status == 'cancelled') {
@@ -193,10 +197,12 @@ class GocardlessWebHooksHandler {
 				$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);			
 			}
 			if($db_subscription->getSubStatus() == 'expired' && $db_subscription->getSubExpiresDate() == NULL) {
-				//sub_expires_date
+				//sub_expires_date = sub_canceled_date
 				config::getLogger()->addInfo('Processing gocardless hook subscription, forcing expired date');
 				$db_subscription->setSubExpiresDate(new DateTime($notification_as_array['created_at']));
-				$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);				
+				$db_subscription->setSubCanceledDate(new DateTime($notification_as_array['created_at']));
+				$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+				$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
 			}
 			//COMMIT
 			pg_query("COMMIT");
