@@ -17,7 +17,7 @@ class dbStats {
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
 		$query.= " INNER JOIN billing_users_opts BUO";
-		$query.= " ON (BUO.key = 'email' AND BUO.value not like '%yopmail.com' AND BUO.deleted = 'no')";
+		$query.= " ON (BS.userid = BUO.userid AND BUO.key = 'email' AND BUO.value not like '%yopmail.com' AND BUO.deleted = 'no')";
 		$query.= " WHERE";
 		$query.= " (CAST(BS.sub_status as varchar) like '%active' AND BP.name = 'recurly')";
 		$query.= " OR";
@@ -43,7 +43,7 @@ class dbStats {
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
 		$query.= " INNER JOIN billing_users_opts BUO";
-		$query.= " ON (BUO.key = 'email' AND BUO.value not like '%yopmail.com' AND BUO.deleted = 'no')";
+		$query.= " ON (BS.userid = BUO.userid AND BUO.key = 'email' AND BUO.value not like '%yopmail.com' AND BUO.deleted = 'no')";
 		$query.= " WHERE";
 		$query.= " BS.sub_status <> 'future'";
 		$query.= " AND";
@@ -70,7 +70,7 @@ class dbStats {
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
 		$query.= " INNER JOIN billing_users_opts BUO";
-		$query.= " ON (BUO.key = 'email' AND BUO.value not like '%yopmail.com' AND BUO.deleted = 'no')";
+		$query.= " ON (BS.userid = BUO.userid AND BUO.key = 'email' AND BUO.value not like '%yopmail.com' AND BUO.deleted = 'no')";
 		$query.= " WHERE";
 		$query.= " BS.sub_status = 'expired'";
 		$query.= " AND";
@@ -102,7 +102,7 @@ class dbStats {
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
 		$query.= " INNER JOIN billing_users_opts BUO";
-		$query.= " ON (BUO.key = 'email' AND BUO.value not like '%yopmail.com' AND BUO.deleted = 'no')";
+		$query.= " ON (BS.userid = BUO.userid AND BUO.key = 'email' AND BUO.value not like '%yopmail.com' AND BUO.deleted = 'no')";
 		$query.= " WHERE";
 		$query.= " BS.sub_status = 'canceled'";
 		$query.= " AND";
