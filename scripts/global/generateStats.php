@@ -18,18 +18,19 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
+sendMessage("*** TOTAL ***");
+
 $numberOfSubscriptions = dbStats::getNumberOfSubscriptions();
 
-print_r("total=".$numberOfSubscriptions['total']."\n");
+sendMessage("total=".$numberOfSubscriptions['total']);
 
 if($numberOfSubscriptions['total']) {
 
 	$numberOfSubscriptionsByProvider = $numberOfSubscriptions['providers'];
 	
 	foreach ($numberOfSubscriptionsByProvider as $provider_name => $counters) {
-		print_r("details : ".$provider_name."=".$counters['total']."\n");
+		sendMessage("details : ".$provider_name."=".$counters['total']);
 	}
-
 }
 
 $minusOneDay = new DateInterval("P1D");
@@ -39,45 +40,57 @@ $yesterday = new DateTime();
 $yesterday->setTimezone(new DateTimeZone(config::$timezone));
 $yesterday->add($minusOneDay);
 
+sendMessage("*** ACTIVATED YESTERDAY ***");
+
 $numberOfActivatedSubscriptions = dbStats::getNumberOfActivatedSubscriptions($yesterday);
 
-print_r("activated=".$numberOfActivatedSubscriptions['total']."\n");
+sendMessage("activated=".$numberOfActivatedSubscriptions['total']);
 
 if($numberOfActivatedSubscriptions['total'] > 0) {
-
+	sendMessage("details :");
 	$numberOfActivatedSubscriptionsByProvider = $numberOfActivatedSubscriptions['providers'];
 
 	foreach ($numberOfActivatedSubscriptionsByProvider as $provider_name => $counters) {
-		print_r("details : ".$provider_name."=".$counters['total']."\n");
+		sendMessage($provider_name."=".$counters['total']);
 	}
 }
+
+sendMessage("*** EXPIRED YESTERDAY ***");
 
 $numberOfExpiredSubscriptions = dbStats::getNumberOfExpiredSubscriptions($yesterday);
 
-print_r("expired=".$numberOfExpiredSubscriptions['total']."\n");
+sendMessage("expired=".$numberOfExpiredSubscriptions['total']);
 
 if($numberOfExpiredSubscriptions['total'] > 0) {
-	print_r("expired_cause_pb=".$numberOfExpiredSubscriptions['expired_cause_pb']."\n");
-	print_r("expired_cause_ended=".$numberOfExpiredSubscriptions['expired_cause_ended']."\n");
+	sendMessage("details :");
+	sendMessage("expired_cause_pb=".$numberOfExpiredSubscriptions['expired_cause_pb']);
+	sendMessage("expired_cause_ended=".$numberOfExpiredSubscriptions['expired_cause_ended']);
 }
+
+sendMessage("*** CANCELED (human action) YESTERDAY ***");
 
 $numberOfCanceledSubscriptions = dbStats::getNumberOfCanceledSubscriptions($yesterday);
 
-print_r("canceled=".$numberOfCanceledSubscriptions['total']."\n");
+sendMessage("canceled=".$numberOfCanceledSubscriptions['total']);
 
 if($numberOfCanceledSubscriptions['total'] > 0) {
-
+	sendMessage("details :");
 	$numberOfCanceledSubscriptionsByProvider = $numberOfCanceledSubscriptions['providers'];
 
 	foreach ($numberOfCanceledSubscriptionsByProvider as $provider_name => $counters) {
-		print_r("details : ".$provider_name."=".$counters['total']."\n");
+		sendMessage($provider_name."=".$counters['total']);
 	}
 }
 
-/*$slackHandler = new SlackHandler();
-
-$slackHandler->sendMessage('test-channel', 'ceci est encore un test');*/
-
 print_r("processing done\n");
+
+function sendMessage($msg) {
+	print_r($msg.PHP_EOL);
+	if(getEnv('SLACK_STATS_ACTIVATED') == 1) {
+		$slackHandler = new SlackHandler();
+		$slackHandler->sendMessage(getEnv('SLACK_STATS_CHANNEL'), $msg);
+	}
+}
+
 
 ?>
