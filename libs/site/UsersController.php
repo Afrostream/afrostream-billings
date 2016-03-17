@@ -157,6 +157,56 @@ class UsersController extends BillingsController {
 		}
 	}
 	
+	public function updateUsers(Request $request, Response $response, array $args) {
+		try {
+			$query_params = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
+			if(!isset($query_params['userReferenceUuid'])) {
+				//exception
+				$msg = "field 'userReferenceUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$userReferenceUuid = $query_params['userReferenceUuid'];
+			$usersHandler = new UsersHandler();
+			$users = NULL;
+			if(isset($data['userOpts'])) {
+				if(!is_array($data['userOpts'])) {
+					//exception
+					$msg = "field 'userOpts' must be an array";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$user_opts_array = $data['userOpts'];
+				$users_to_update = $usersHandler->doGetUsers($userReferenceUuid);
+				if(count($users_to_update) == 0) {
+					return($this->returnNotFoundAsJson($response));
+				}
+				$users = array();
+				foreach($users_to_update as $user) {
+					$users[] = $usersHandler->doUpdateUserOpts($user->getUserBillingUuid(), $user_opts_array);
+				}
+			}
+			if($users == NULL) {
+				//NO UPDATE, JUST SEND BACK THE CURRENT USER
+				$users = $usersHandler->doGetUsers($userReferenceUuid);
+			}
+			return($this->returnObjectAsJson($response, 'users', $users));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while updating an user, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while updating an user, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
 }
 
 ?>
