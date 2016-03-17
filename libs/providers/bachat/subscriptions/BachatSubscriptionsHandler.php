@@ -25,6 +25,11 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			if(getEnv('BOUYGUES_BHA_ACTIVATED') != 1) {
+				$msg = "BACHAT is not activated";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			}
 			//
 			$requestId = $subOpts->getOpts()['requestId'];
 			$idSession = $subOpts->getOpts()['idSession'];

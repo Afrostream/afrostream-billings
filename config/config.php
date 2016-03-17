@@ -145,6 +145,10 @@ if(getEnv('SLACK_STATS_CHANNEL') === false) {
 	putEnv('SLACK_STATS_CHANNEL=growth');
 }
 
+if(getEnv('BOUYGUES_BHA_ACTIVATED') === false) {
+	putEnv('BOUYGUES_BHA_ACTIVATED=0');
+}
+
 #logger, #db_conn, ...
 
 class config {
