@@ -558,7 +558,7 @@ class SubscriptionsHandler {
 					   	if($internalPlan->getVatRate() == NULL) {
 					   		$substitions['%vat%'] = 'N/A'; 
 					   	} else {
-					   		$substitions['%vat%'] = $internalPlan->getVatRate().'%';
+					   		$substitions['%vat%'] = number_format($internalPlan->getVatRate(), 2, ',', '').'%';
 					   	}
 					   	$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
 					   	$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
