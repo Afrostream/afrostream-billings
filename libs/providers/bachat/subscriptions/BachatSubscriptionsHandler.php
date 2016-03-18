@@ -25,6 +25,11 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			if(getEnv('BOUYGUES_BHA_ACTIVATED') != 1) {
+				$msg = "BACHAT is not activated";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			}
 			//
 			$requestId = $subOpts->getOpts()['requestId'];
 			$idSession = $subOpts->getOpts()['idSession'];
@@ -196,8 +201,13 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		$subscription->setIsActive($is_active);
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL) {
-		if($subscription->getSubStatus() == "pending_canceled") {
+	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+		if($end_date != NULL) {
+			$msg = "renewing a bachat subscription does not support that end_date is already set";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
+		}
+		if($subscription->getSubStatus() != "active" && $subscription->getSubStatus() != "pending_active") {
 			$msg = "cannot renew because of the current_status=".$subscription->getSubStatus();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -222,7 +232,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		
 		$today = new DateTime();
 		$today->setTimezone(new DateTimeZone(config::$timezone));
-		$today->setTime(0, 0, 0);
+		$today->setTime(23, 59, 59);//consider all the day
 		
 		if($start_date == NULL) {
 			$start_date = new DateTime($subscription->getSubPeriodEndsDate());

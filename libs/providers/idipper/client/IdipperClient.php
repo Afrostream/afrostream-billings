@@ -96,6 +96,7 @@ class UtilisateurReponse {
 			$rubrique->setDuree($rubriqueElement['Duree']);
 			$rubrique->setAbonne($rubriqueElement['Abonne']);
 			$rubrique->setCreditExpiration($rubriqueElement['CreditExpiration']);
+			$rubrique->setCreditExpirationWithGracePeriod($rubriqueElement['CreditExpirationWithGracePeriod']);
 			$rubrique->setURLDesabonnement($rubriqueElement['URLDesabonnement']);
 			$this->addRubrique($rubrique);
 		}
@@ -126,6 +127,7 @@ class Rubrique {
 	private $Duree;
 	private $Abonne;
 	private $CreditExpiration;
+	private $CreditExpirationWithGracePeriod;
 	private $URLDesabonnement;
 	
 	public function setIDRubrique($id) {
@@ -166,6 +168,14 @@ class Rubrique {
 	
 	public function getCreditExpiration() {
 		return($this->CreditExpiration);
+	}
+	
+	public function setCreditExpirationWithGracePeriod($date) {
+		$this->CreditExpirationWithGracePeriod = $date;
+	}
+	
+	public function getCreditExpirationWithGracePeriod() {
+		return($this->CreditExpirationWithGracePeriod);
 	}
 	
 	public function setURLDesabonnement($url) {

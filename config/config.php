@@ -135,6 +135,20 @@ if(getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION') === false) {
 	putEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION=recurly');
 }
 
+#Slack / Stats
+
+if(getEnv('SLACK_STATS_ACTIVATED') === false) {
+	putEnv('SLACK_STATS_ACTIVATED=0');
+}
+
+if(getEnv('SLACK_STATS_CHANNEL') === false) {
+	putEnv('SLACK_STATS_CHANNEL=growth');
+}
+
+if(getEnv('BOUYGUES_BHA_ACTIVATED') === false) {
+	putEnv('BOUYGUES_BHA_ACTIVATED=0');
+}
+
 #logger, #db_conn, ...
 
 class config {
