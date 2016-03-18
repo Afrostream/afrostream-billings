@@ -309,9 +309,11 @@ class GocardlessWebHooksHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					//
+					$metadata = $api_subscription->metadata;
+					$metadata['status'] = 'expired';
 					$sub_params = ['params' =>
 							[
-									'metadata' => ['status' => 'expired']
+									'metadata' => $metadata
 							]
 					];
 					$subscription = $client->subscriptions()->update($api_subscription->id, $sub_params);
