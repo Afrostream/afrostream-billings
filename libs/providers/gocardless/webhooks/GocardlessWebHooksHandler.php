@@ -308,12 +308,15 @@ class GocardlessWebHooksHandler {
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
-					//
-					$metadata = $api_subscription->metadata;
-					$metadata['status'] = 'expired';
+					//GOCARDLESS DO NOT KEEP METADATA ALREADY SET
+					$metadata_array = array();
+					foreach ($api_subscription->metadata as $key => $value) {
+						$metadata_array[$key] = $value;
+					}
+					$metadata_array['status'] = 'expired';
 					$sub_params = ['params' =>
 							[
-									'metadata' => $metadata
+									'metadata' => $metadata_array
 							]
 					];
 					$subscription = $client->subscriptions()->update($api_subscription->id, $sub_params);
