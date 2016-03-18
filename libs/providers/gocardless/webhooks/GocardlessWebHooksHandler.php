@@ -281,7 +281,7 @@ class GocardlessWebHooksHandler {
 					config::getLogger()->addInfo('Processing gocardless hook payment, getting api_payment done successfully');
 					//
 					config::getLogger()->addInfo('Processing gocardless hook payment, getting api_subscription...');
-					$api_subscription = $client->subscriptions()->get($api_payment['links']['subscription']);
+					$api_subscription = $client->subscriptions()->get($api_payment->links->subscription);
 					config::getLogger()->addInfo('Processing gocardless hook payment, getting api_subscription done successfully');
 					//
 				} catch (GoCardlessProException $e) {
