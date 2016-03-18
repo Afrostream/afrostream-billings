@@ -81,6 +81,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('active');
 		$start_date = new DateTime();
+		$start_date->setTimezone(new DateTimeZone(config::$timezone));
 		$api_subscription->setSubActivatedDate($start_date);
 		$api_subscription->setSubPeriodStartedDate($start_date);
 		$end_date = NULL;
