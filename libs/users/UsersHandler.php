@@ -91,7 +91,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting/creating...");
-			checkUserOptsArray($user_opts_array);
+			checkUserOptsArray($user_opts_array, $provider_name);
 			$provider = ProviderDAO::getProviderByName($provider_name);
 				
 			if($provider == NULL) {
@@ -183,7 +183,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user creating...");
-			checkUserOptsArray($user_opts_array);
+			checkUserOptsArray($user_opts_array, $provider_name);
 			$provider = ProviderDAO::getProviderByName($provider_name);
 			
 			if($provider == NULL) {
