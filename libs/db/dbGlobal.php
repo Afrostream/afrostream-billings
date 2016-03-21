@@ -542,6 +542,14 @@ class InternalPlan implements JsonSerializable {
 		}
 	}
 	
+	public function getAmountExclTax() {
+		if($this->vatRate == NULL) {
+			return($this->amount_in_cents / 100);
+		} else {
+			return(($this->amount_in_cents / (1 + $this->vatRate / 100)) / 100);
+		}
+	}
+	
 	public function setThumbId($thumbId) {
 		$this->thumbId = $thumbId;
 	}
@@ -557,8 +565,10 @@ class InternalPlan implements JsonSerializable {
 				'name' => $this->name,
 				'description' => $this->description,
 				'amountInCents' => $this->amount_in_cents,
+				'amount' => (string) number_format((float) $this->amount_in_cents / 100, 2, ',', ''),//Forced to French Locale
 				'amountInCentsExclTax' => (string) $this->getAmountInCentsExclTax(),
-				'vatRate' => ($this->vatRate == NULL) ? NULL : (string) number_format($this->vatRate, 2, ',', ' '),//Forced to French Locale
+				'amountExclTax' => number_format((float) $this->getAmountExclTax(), 5, ',', ''),//Forced to French Locale
+				'vatRate' => ($this->vatRate == NULL) ? NULL : (string) number_format((float) $this->vatRate, 2, ',', ''),//Forced to French Locale
 				'currency' => $this->currency,
 				'cycle' => $this->cycle,
 				'periodUnit' => $this->periodUnit,

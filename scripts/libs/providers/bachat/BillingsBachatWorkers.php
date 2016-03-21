@@ -205,7 +205,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$fields[] = getEnv("BOUYGUES_SERVICEID");//ServiceId
 			$fields[] = $subscription->getSubscriptionBillingUuid();//SubscriptionServiceId
 			$fields[] = $subscription->getSubUid();//SubscriptionId
-			$fields[] = (string) number_format($internalPlan->getVatRate(), 2, '.', ' ');//VAT
+			$fields[] = (string) number_format($internalPlan->getVatRate(), 2, '.', '');//VAT : "." for BACHAT not ","
 			fputcsv($current_par_ren_file_res, $fields);
 			ScriptsConfig::getLogger()->addInfo("preparing bachat subscription renewal for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()." done successfully");
 		} catch(Exception $e) {
@@ -653,7 +653,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
-				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL);
+				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
 				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT

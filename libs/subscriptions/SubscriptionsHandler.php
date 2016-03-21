@@ -284,7 +284,7 @@ class SubscriptionsHandler {
 		}
 	}
 	
-	public function doRenewSubscriptionByUuid($subscriptionBillingUuid, DateTime $start_date = NULL) {
+	public function doRenewSubscriptionByUuid($subscriptionBillingUuid, DateTime $start_date = NULL, DateTime $end_date = NULL) {
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription renewing for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
@@ -308,7 +308,7 @@ class SubscriptionsHandler {
 					break;
 				case 'gocardless' :
 					$gocardlessSubscriptionsHandler = new GoCardlessSubscriptionsHandler();
-					$db_subscription = $gocardlessSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date);
+					$db_subscription = $gocardlessSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
 					break;
 				case 'celery' :
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -317,7 +317,11 @@ class SubscriptionsHandler {
 					break;
 				case 'bachat' :
 					$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
-					$db_subscription = $bachatSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date);
+					$db_subscription = $bachatSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
+					break;
+				case 'idipper' :
+					$idipperSubscriptionHandler = new IdipperSubscriptionsHandler();
+					$db_subscription = $idipperSubscriptionHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -554,7 +558,7 @@ class SubscriptionsHandler {
 					   	if($internalPlan->getVatRate() == NULL) {
 					   		$substitions['%vat%'] = 'N/A'; 
 					   	} else {
-					   		$substitions['%vat%'] = $internalPlan->getVatRate().'%';
+					   		$substitions['%vat%'] = number_format($internalPlan->getVatRate(), 2, ',', '').'%';
 					   	}
 					   	$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
 					   	$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
