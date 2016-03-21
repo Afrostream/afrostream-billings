@@ -20,7 +20,7 @@ class RecurlyUsersHandler {
 				$account = Recurly_Account::get($user_provider_uuid);
 			} else {
 				//
-				checkUserOptsArray($user_opts_array);
+				checkUserOptsArray($user_opts_array, 'recurly');
 				//
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
@@ -59,7 +59,7 @@ class RecurlyUsersHandler {
 		try {
 			config::getLogger()->addInfo("recurly user data updating...");
 			//
-			checkUserOptsArray($user_opts_array);
+			checkUserOptsArray($user_opts_array, 'recurly');
 			//
 			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
