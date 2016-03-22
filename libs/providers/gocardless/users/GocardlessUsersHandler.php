@@ -30,7 +30,7 @@ class GocardlessUsersHandler {
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//
-				checkUserOptsArray($user_opts_array);
+				checkUserOptsArray($user_opts_array, 'gocardless');
 				//
 				$customer = $client->customers()->create(
 						['params' => 
@@ -63,7 +63,7 @@ class GocardlessUsersHandler {
 		try {
 			config::getLogger()->addInfo("gocardless user data updating...");
 			//
-			checkUserOptsArray($user_opts_array);
+			checkUserOptsArray($user_opts_array, 'gocardless');
 			//
 			$client = new Client(array(
 					'access_token' => getEnv('GOCARDLESS_API_KEY'),
