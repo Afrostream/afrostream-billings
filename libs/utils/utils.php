@@ -60,32 +60,47 @@ function checkUserOptsKeys(array $user_opts_as_array, $providerName) {
 }
 
 function checkUserOptsValues(array $user_opts_as_array, $providerName) {
-	if(array_key_exists('email', $user_opts_as_array)) {
-		$email = $user_opts_as_array['email'];
-		if(strlen(trim($email)) == 0) {
-			//exception
-			$msg = "'email' value is empty";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-	}
-	if(array_key_exists('firstName', $user_opts_as_array)) {
-		$firstName = $user_opts_as_array['firstName'];
-		if(strlen(trim($firstName)) == 0) {
-			//exception
-			$msg = "'firstName' value is empty";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-	}
-	if(array_key_exists('lastName', $user_opts_as_array)) {
-		$lastName = $user_opts_as_array['lastName'];
-		if(strlen(trim($lastName)) == 0) {
-			//exception
-			$msg = "'lastName' value is empty";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
+	switch ($providerName) {
+		case 'afr' :
+			if(array_key_exists('email', $user_opts_as_array)) {
+				$email = $user_opts_as_array['email'];
+				if(strlen(trim($email)) == 0) {
+					//exception
+					$msg = "'email' value is empty";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}			
+			break;
+		default :
+			if(array_key_exists('email', $user_opts_as_array)) {
+				$email = $user_opts_as_array['email'];
+				if(strlen(trim($email)) == 0) {
+					//exception
+					$msg = "'email' value is empty";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
+			if(array_key_exists('firstName', $user_opts_as_array)) {
+				$firstName = $user_opts_as_array['firstName'];
+				if(strlen(trim($firstName)) == 0) {
+					//exception
+					$msg = "'firstName' value is empty";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
+			if(array_key_exists('lastName', $user_opts_as_array)) {
+				$lastName = $user_opts_as_array['lastName'];
+				if(strlen(trim($lastName)) == 0) {
+					//exception
+					$msg = "'lastName' value is empty";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
+			break;
 	}
 }
 

@@ -570,12 +570,18 @@ class SubscriptionsHandler {
 					   	//user : nothing
 					   	//userOpts
 					   	$substitions['%email%'] = $userOpts->getOpts()['email'];
-					   	$firstname = $userOpts->getOpts()['firstName'];
+					   	$firstname = '';
+					   	if(array_key_exists('firstName', $userOpts->getOpts())) {
+					   		$firstname = $userOpts->getOpts()['firstName'];
+					   	}
 					   	if($firstname == 'firstNameValue') {
 					   		$firstname = '';
 					   	}
 					   	$substitions['%firstname%'] = $firstname;
-					   	$lastname = $userOpts->getOpts()['lastName'];
+					   	$lastname = '';
+					   	if(array_key_exists('lastName', $userOpts->getOpts())) {
+					   		$lastname = $userOpts->getOpts()['lastName'];
+					   	}
 					   	if($lastname == 'lastNameValue') {
 					   		$lastname = '';
 					   	}
