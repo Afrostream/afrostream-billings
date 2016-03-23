@@ -17,8 +17,20 @@ class GocardlessWebHooksHandler {
 			config::getLogger()->addInfo("processing gocardless webHook with id=".$billingsWebHook->getId()."...");
 			$notifications_as_array = json_decode($billingsWebHook->getPostData(), true);
 			$events_as_array = $notifications_as_array['events'];
+			$exception = NULL;
 			foreach($events_as_array as $key => $event_as_array) {
-				$this->doProcessNotification($event_as_array, $update_type, $billingsWebHook->getId());
+				try {
+					$this->doProcessNotification($event_as_array, $update_type, $billingsWebHook->getId());
+				} catch(Exception $e) {
+					$msg = "an unknown exception occurred while processing gocardless notifications with webHook id=".$billingsWebHook->getId().", message=".$e->getMessage();
+					config::getLogger()->addError("processing gocardless notifications with webHook id=".$billingsWebHook->getId()." failed : ". $msg);
+					if($exception == NULL) {
+						$exception = $e;//only throw 1st one, later, so continue anyway. For others => see logs
+					}
+				}
+			}
+			if(isset($exception)) {
+				throw $exception;
 			}
 			config::getLogger()->addInfo("processing gocardless webHook with id=".$billingsWebHook->getId()." done successfully");
 		} catch(Exception $e) {

@@ -28,6 +28,7 @@ function checkUserOptsArray(array $user_opts_as_array, $providerName) {
 
 function checkUserOptsKeys(array $user_opts_as_array, $providerName) {
 	switch ($providerName) {
+		case 'bachat' :
 		case 'afr' :
 			if(!array_key_exists('email', $user_opts_as_array)) {
 				//exception
@@ -61,6 +62,7 @@ function checkUserOptsKeys(array $user_opts_as_array, $providerName) {
 
 function checkUserOptsValues(array $user_opts_as_array, $providerName) {
 	switch ($providerName) {
+		case 'bachat' :
 		case 'afr' :
 			if(array_key_exists('email', $user_opts_as_array)) {
 				$email = $user_opts_as_array['email'];
