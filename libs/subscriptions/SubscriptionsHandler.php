@@ -558,7 +558,7 @@ class SubscriptionsHandler {
 					   	if($internalPlan->getVatRate() == NULL) {
 					   		$substitions['%vat%'] = 'N/A'; 
 					   	} else {
-					   		$substitions['%vat%'] = $internalPlan->getVatRate().'%';
+					   		$substitions['%vat%'] = number_format($internalPlan->getVatRate(), 2, ',', '').'%';
 					   	}
 					   	$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
 					   	$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
@@ -570,12 +570,18 @@ class SubscriptionsHandler {
 					   	//user : nothing
 					   	//userOpts
 					   	$substitions['%email%'] = $userOpts->getOpts()['email'];
-					   	$firstname = $userOpts->getOpts()['firstName'];
+					   	$firstname = '';
+					   	if(array_key_exists('firstName', $userOpts->getOpts())) {
+					   		$firstname = $userOpts->getOpts()['firstName'];
+					   	}
 					   	if($firstname == 'firstNameValue') {
 					   		$firstname = '';
 					   	}
 					   	$substitions['%firstname%'] = $firstname;
-					   	$lastname = $userOpts->getOpts()['lastName'];
+					   	$lastname = '';
+					   	if(array_key_exists('lastName', $userOpts->getOpts())) {
+					   		$lastname = $userOpts->getOpts()['lastName'];
+					   	}
 					   	if($lastname == 'lastNameValue') {
 					   		$lastname = '';
 					   	}

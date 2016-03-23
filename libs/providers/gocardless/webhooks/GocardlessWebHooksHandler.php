@@ -281,7 +281,7 @@ class GocardlessWebHooksHandler {
 					config::getLogger()->addInfo('Processing gocardless hook payment, getting api_payment done successfully');
 					//
 					config::getLogger()->addInfo('Processing gocardless hook payment, getting api_subscription...');
-					$api_subscription = $client->subscriptions()->get($api_payment['links']['subscription']);
+					$api_subscription = $client->subscriptions()->get($api_payment->links->subscription);
 					config::getLogger()->addInfo('Processing gocardless hook payment, getting api_subscription done successfully');
 					//
 				} catch (GoCardlessProException $e) {
@@ -308,10 +308,15 @@ class GocardlessWebHooksHandler {
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
-					//
+					//GOCARDLESS DO NOT KEEP METADATA ALREADY SET
+					$metadata_array = array();
+					foreach ($api_subscription->metadata as $key => $value) {
+						$metadata_array[$key] = $value;
+					}
+					$metadata_array['status'] = 'expired';
 					$sub_params = ['params' =>
 							[
-									'metadata' => ['status' => 'expired']
+									'metadata' => $metadata_array
 							]
 					];
 					$subscription = $client->subscriptions()->update($api_subscription->id, $sub_params);

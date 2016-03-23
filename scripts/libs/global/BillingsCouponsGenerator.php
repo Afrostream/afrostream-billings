@@ -39,7 +39,7 @@ class BillingsCouponsGenerator {
 	}
 	
 	public function getRandomString($length) {
-		$strAlphaNumericString = '23456789abcdefghjkmnpqrstuvwxyz';
+		$strAlphaNumericString = '23456789bcdfghjkmnpqrstvwxz';
 		$strReturnString = '';
 		for ($intCounter = 0; $intCounter < $length; $intCounter++) {
 			$strReturnString .= $strAlphaNumericString[rand(0, strlen($strAlphaNumericString) - 1)];
