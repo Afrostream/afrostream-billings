@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/recurly/webhooks/RecurlyWebHooksHandler.php';
 require_once __DIR__ . '/../providers/gocardless/webhooks/GocardlessWebHooksHandler.php';
+require_once __DIR__ . '/../providers/cashway/webhooks/CashwayWebHooksHandler.php';
 
 class WebHooksHander {
 	
@@ -49,13 +50,12 @@ class WebHooksHander {
 					$recurlyWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
 					break;
 				case 'gocardless' :
-					$gocardlessUsersHandler = new GocardlessWebHooksHandler();
-					$gocardlessUsersHandler->doProcessWebHook($billingsWebHook, $update_type);
+					$gocardlessWebHooksHandler = new GocardlessWebHooksHandler();
+					$gocardlessWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
 					break;
-				case 'celery' :
-					$msg = "unsupported feature for provider named : ".$provider_name;
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				case 'cashway' :
+					$cashwayWebHooksHandler = new CashwayWebHooksHandler();
+					$cashwayWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider_name;
