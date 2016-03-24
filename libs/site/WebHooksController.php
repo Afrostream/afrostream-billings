@@ -224,7 +224,7 @@ class WebHooksController extends BillingsController {
 			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
 			config::getLogger()->addInfo('Processing cashway webhook done successfully, id='.$billingsWebHook->getId().'...');
 		
-			config::getLogger()->addInfo('Treating cashway webhook done successfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Treating cashway webhook done successfully, id='.$billingsWebHook->getId());
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while treating a cashway webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
