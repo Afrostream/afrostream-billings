@@ -210,8 +210,7 @@ class WebHooksController extends BillingsController {
 			header('HTTP/1.0 400 '.$result[1]);
 			die ("Bad Request");
 		}
-		//$event = $result[1];//not needed
-		$post_data  = $result[2];
+		$post_data = file_get_contents('php://input');
 		try {
 			config::getLogger()->addInfo('Treating cashway webhook...');
 		
