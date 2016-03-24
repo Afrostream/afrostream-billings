@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ .'/BillingsController.php';
 require_once __DIR__ . '/../webhooks/WebHooksHandler.php';
 require_once __DIR__ . '/../providers/cashway/client/cashway_lib.php';
+require_once __DIR__ . '/../providers/cashway/client/compat.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -203,9 +204,7 @@ class WebHooksController extends BillingsController {
 	
 	public function cashwayWebHooksPosting(Request $request, Response $response, array $args) {
 		config::getLogger()->addInfo('Receiving cashway webhook...');
-		config::getLogger()->addInfo('Receiving cashway webhook...headers='.var_export($request->getHeaders(), true));
-		config::getLogger()->addInfo('Receiving cashway webhook...body='.var_export($request->getBody(), true));
-		$result = API::receiveNotification($request->getBody(), $request->getHeaders(), getEnv('CASHWAY_WH_SECRET'));
+		$result = API::receiveNotification($request->getBody(), getallheaders(), getEnv('CASHWAY_WH_SECRET'));
 		if ($result[0] === false) {
 			config::getLogger()->addError('Receiving cashway webhook failed, message='.$result[1]);
 			header('HTTP/1.0 400 '.$result[1]);
