@@ -23,6 +23,7 @@ class BillingsCouponsGenerator {
 			ScriptsConfig::getLogger()->addInfo("generating ".$coupon_counter_missing." missing coupons out of ".$coupon_total_number." for couponcampaignuuid=".$couponcampaignuuid."...");
 			while($coupon_counter < $coupon_total_number) {
 				$coupon = new Coupon();
+				$coupon->setCouponBillingUuid(guid());
 				$coupon->setCouponCampaignId($coupon_campaign->getId());
 				$coupon->setProviderId($coupon_campaign->getProviderId());
 				$coupon->setProviderPlanId($coupon_campaign->getProviderPlanId());
