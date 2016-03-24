@@ -83,14 +83,14 @@ class CashwayCouponsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$code = $result['barcode'];
+			$coupon_provider_uuid = $result['barcode'];
 			//
 			$coupon = new Coupon();
 			$coupon->setCouponBillingUuid($coupon_billing_uuid);
 			$coupon->setCouponCampaignId($couponCampaign->getId());
 			$coupon->setProviderId($couponCampaign->getProviderId());
 			$coupon->setProviderPlanId($couponCampaign->getProviderPlanId());
-			$coupon->setCode($code);
+			$coupon->setCode($coupon_provider_uuid);
 			$coupon->setExpiresDate($expires_date);
 			CouponDAO::addCoupon($coupon);
 			//

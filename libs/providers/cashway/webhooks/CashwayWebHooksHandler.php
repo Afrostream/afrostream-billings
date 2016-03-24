@@ -23,12 +23,12 @@ class CashwayWebHooksHandler {
 	private function doProcessNotification($post_data, $update_type, $updateId) {
 		config::getLogger()->addInfo('Processing cashway hook notification...');
 		$data = json_decode($post_data, true);
-		switch($data->event) {
+		switch($data['event']) {
 			case 'transaction_paid' :
-				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data->event.'...');
-				$coupon = CouponDAO::getCouponByCouponBillingUuid($data->order_id);
+				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].'...');
+				$coupon = CouponDAO::getCouponByCouponBillingUuid($data['order_id']);
 				if($coupon == NULL) {
-					$msg = "no coupon found with coupon_billing_uuid=".$data->order_id;
+					$msg = "no coupon found with coupon_billing_uuid=".$data['order_id'];
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);					
 				}
@@ -45,13 +45,13 @@ class CashwayWebHooksHandler {
 					pg_query("ROLLBACK");
 					throw $e;
 				}
-				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data->event.' done successfully');
+				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].' done successfully');
 				break;
 			case 'transaction_expired' :
-				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data->event.'...');
-				$coupon = CouponDAO::getCouponByCouponBillingUuid($data->order_id);
+				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].'...');
+				$coupon = CouponDAO::getCouponByCouponBillingUuid($data['order_id']);
 				if($coupon == NULL) {
-					$msg = "no coupon found with coupon_billing_uuid=".$data->order_id;
+					$msg = "no coupon found with coupon_billing_uuid=".$data['order_id'];
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
@@ -68,10 +68,10 @@ class CashwayWebHooksHandler {
 					pg_query("ROLLBACK");
 					throw $e;
 				}
-				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data->event.' done successfully');
+				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].' done successfully');
 				break;
 			default :
-				config::getLogger()->addWarning('event : '. $data->event. ' is not yet implemented');
+				config::getLogger()->addWarning('event : '.$data['event']. ' is not yet implemented');
 				break;	
 		}
 		config::getLogger()->addInfo('Processing cashway hook notification done successfully');
