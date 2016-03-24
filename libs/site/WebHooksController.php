@@ -203,7 +203,8 @@ class WebHooksController extends BillingsController {
 	
 	public function cashwayWebHooksPosting(Request $request, Response $response, array $args) {
 		config::getLogger()->addInfo('Receiving cashway webhook...');
-		
+		config::getLogger()->addInfo('Receiving cashway webhook...headers='.var_export($request->getHeaders(), true));
+		config::getLogger()->addInfo('Receiving cashway webhook...body='.var_export($request->getBody(), true));
 		$result = API::receiveNotification($request->getBody(), $request->getHeaders(), getEnv('CASHWAY_WH_SECRET'));
 		if ($result[0] === false) {
 			config::getLogger()->addError('Receiving cashway webhook failed, message='.$result[1]);
