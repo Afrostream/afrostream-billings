@@ -2592,7 +2592,7 @@ class CouponDAO {
 		return($out);
 	}
 	
-	public function updateStatus(Coupon $coupon) {
+	public static function updateStatus(Coupon $coupon) {
 		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, coupon_status = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$coupon->getStatus(),
@@ -2600,7 +2600,7 @@ class CouponDAO {
 		return(self::getCouponById($coupon->getId()));
 	}
 	
-	public function updateRedeemedDate(Coupon $coupon) {
+	public static function updateRedeemedDate(Coupon $coupon) {
 		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, redeemed_date = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	dbGlobal::toISODate($coupon->getRedeemedDate()),
@@ -2608,7 +2608,7 @@ class CouponDAO {
 		return(self::getCouponById($coupon->getId()));
 	}
 	
-	public function updateExpiresDate(Coupon $coupon) {
+	public static function updateExpiresDate(Coupon $coupon) {
 		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, expires_date = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	dbGlobal::toISODate($coupon->getExpiresDate()),
@@ -2616,7 +2616,7 @@ class CouponDAO {
 		return(self::getCouponById($coupon->getId()));
 	}
 
-	public function updateSubId(Coupon $coupon) {
+	public static function updateSubId(Coupon $coupon) {
 		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, subid = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$coupon->getSubId(),
@@ -2624,7 +2624,7 @@ class CouponDAO {
 		return(self::getCouponById($coupon->getId()));		
 	}
 	
-	public function updateUserId(Coupon $coupon) {
+	public static function updateUserId(Coupon $coupon) {
 		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, userid = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$coupon->getUserId(),
