@@ -69,7 +69,7 @@ class WebHooksHander {
 			$billingsWebHookLog->setMessage('');
 			$billingsWebHookLog = BillingsWebHookLogDAO::updateBillingsWebHookLogProcessingStatus($billingsWebHookLog);
 			//
-			config::getLogger()->addInfo("processing WebHook with id=".$id." done successully");
+			config::getLogger()->addInfo("processing webHook with id=".$id." done successfully");
 		
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while processing webHook with id=".$id.", error_code=".$e->getCode().", error_message=".$e->getMessage();

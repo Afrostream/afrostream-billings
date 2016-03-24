@@ -12,7 +12,7 @@ class CashwayWebHooksHandler {
 		try {
 			config::getLogger()->addInfo("processing cashway webHook with id=".$billingsWebHook->getId()."...");
 			$this->doProcessNotification($billingsWebHook->getPostData(), $update_type, $billingsWebHook->getId());
-			config::getLogger()->addInfo("processing cashway webHook with id=".$billingsWebHook->getId()." done successully");
+			config::getLogger()->addInfo("processing cashway webHook with id=".$billingsWebHook->getId()." done successfully");
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while processing cashway webHook with id=".$billingsWebHook->getId().", message=".$e->getMessage();
 			config::getLogger()->addError("processing cashway webHook with id=".$billingsWebHook->getId()." failed : ". $msg);
