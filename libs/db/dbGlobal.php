@@ -2476,7 +2476,7 @@ class Coupon implements JsonSerializable {
 	
 	public function jsonSerialize() {
 		$return = [
-				'coupon_billing_uuid' => $this->couponBillingUuid,
+				'couponBillingUuid' => $this->couponBillingUuid,
 				'code' => $this->code,
 				'status' => $this->status,
 				'campaign' => CouponCampaignDAO::getCouponCampaignById($this->couponcampaignid)->jsonSerialize(),
@@ -2547,9 +2547,17 @@ class CouponDAO {
 		return($out);
 	}
 	
-	public static function getCoupon($providerId, $couponCode) {
-		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE providerid = $1 AND lower(code) = lower($2)";
-		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $couponCode));
+	public static function getCoupon($providerId, $couponCode, $userId = NULL) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE providerid = $1 AND lower(code) = lower($2)";						
+		if(isset($userId)) {
+			$query.= " AND userid = $3";
+		}
+		$query_params = array($providerId, $couponCode);
+		if(isset($userId)) {
+			array_push($query_params, $userId);
+		}
+		
+		$result = pg_query_params(config::getDbConn(), $query, $query_params);
 		
 		$out = null;
 		
@@ -2563,15 +2571,16 @@ class CouponDAO {
 	}
 	
 	public static function addCoupon(Coupon $coupon) {
-		$query = "INSERT INTO billing_coupons (coupon_billing_uuid, couponscampaignsid, providerid, providerplanid, code, expires_date)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6) RETURNING _id";
+		$query = "INSERT INTO billing_coupons (coupon_billing_uuid, couponscampaignsid, providerid, providerplanid, code, expires_date, userid)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$coupon->getCouponBillingUuid(),
 						$coupon->getCouponCampaignId(),
 						$coupon->getProviderId(),
 						$coupon->getProviderPlanId(),
 						$coupon->getCode(),
-						dbGlobal::toISODate($coupon->getExpiresDate())
+						dbGlobal::toISODate($coupon->getExpiresDate()),
+						$coupon->getUserId()
 				));
 		$row = pg_fetch_row($result);
 		return(self::getCouponById($row[0]));

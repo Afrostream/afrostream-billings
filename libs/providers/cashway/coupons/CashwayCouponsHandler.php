@@ -92,6 +92,7 @@ class CashwayCouponsHandler {
 			$coupon->setProviderPlanId($couponCampaign->getProviderPlanId());
 			$coupon->setCode($coupon_provider_uuid);
 			$coupon->setExpiresDate($expires_date);
+			$coupon->setUserId($user->getId());
 			CouponDAO::addCoupon($coupon);
 			//
 			config::getLogger()->addInfo("cashway coupon creation done successfully, coupon_provider_uuid=".$coupon_provider_uuid);
@@ -111,7 +112,35 @@ class CashwayCouponsHandler {
 		//LATER : cashway do not allow yet to have a status from an unique transaction
 		return(CouponDAO::getCouponByCouponBillingUuid($coupon_billing_uuid));
 	}
-
+	
+	public function doGetCoupon(User $user = NULL, UserOpts $userOpts = NULL, $couponCode) {
+		$db_coupon = NULL;
+		try {
+			if($user == NULL) {
+				$msg = "unsupported feature for provider named : cashway, user has to be provided";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//provider
+			$provider = ProviderDAO::getProviderByName('cashway');
+			if($provider == NULL) {
+				$msg = "provider named 'cashway' not found";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$db_coupon = CouponDAO::getCoupon($provider->getId(), $couponCode, $user->getId());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while getting a cashway coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("cashway coupon getting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting a cashway coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("cashway coupon getting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
+		}
+		return($db_coupon);
+	}	
+	
 }
 
 ?>
