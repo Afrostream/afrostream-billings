@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
+require_once __DIR__ . '/../subscriptions/CashwaySubscriptionsHandler.php';
 
 class CashwayWebHooksHandler {
 	
@@ -32,18 +33,40 @@ class CashwayWebHooksHandler {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);					
 				}
-				try {
-					//START TRANSACTION
-					pg_query("BEGIN");
-					$coupon->setStatus("redeemed");
-					$coupon = CouponDAO::updateStatus($coupon);
-					$coupon->setRedeemedDate(new DateTime());
-					$coupon = CouponDAO::updateRedeemedDate($coupon);
-					//COMMIT
-					pg_query("COMMIT");
-				} catch(Exception $e) {
-					pg_query("ROLLBACK");
-					throw $e;
+				$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($coupon->getSubId());
+				if($db_subscription == NULL) {
+					//Exception
+				}
+				$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
+				if($provider == NULL) {
+					//exception
+				}
+				$user = UserDAO::getUserById($db_subscription->getUserId());
+				if($user == NULL) {
+					//exception
+				}
+				$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+				$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
+				$db_subscription_before_update = clone $db_subscription;
+				$api_subscription = $db_subscription;
+				if($coupon->getStatus() == 'waiting') {					
+					try {
+						$now = new DateTime();
+						//START TRANSACTION
+						pg_query("BEGIN");
+						$api_subscription->setSubStatus('active');
+						$api_subscription->setSubPeriodStartedDate($now);
+						$db_subscription = $cashwaySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription_before_update, $update_type, $updateId);
+						$coupon->setStatus("redeemed");
+						$coupon = CouponDAO::updateStatus($coupon);
+						$coupon->setRedeemedDate($now);
+						$coupon = CouponDAO::updateRedeemedDate($coupon);
+						//COMMIT
+						pg_query("COMMIT");
+					} catch(Exception $e) {
+						pg_query("ROLLBACK");
+						throw $e;
+					}
 				}
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].' done successfully');
 				break;
@@ -55,18 +78,21 @@ class CashwayWebHooksHandler {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				try {
-					//START TRANSACTION
-					pg_query("BEGIN");
-					$coupon->setStatus("expired");
-					$coupon = CouponDAO::updateStatus($coupon);
-					$coupon->setExpiresDate(new DateTime());
-					$coupon = CouponDAO::updateExpiresDate($coupon);
-					//COMMIT
-					pg_query("COMMIT");
-				} catch(Exception $e) {
-					pg_query("ROLLBACK");
-					throw $e;
+				if($coupon->getStatus() == 'waiting') {
+					//TODO : may expire the subscription
+					try {
+						//START TRANSACTION
+						pg_query("BEGIN");
+						$coupon->setStatus("expired");
+						$coupon = CouponDAO::updateStatus($coupon);
+						$coupon->setExpiresDate(new DateTime());
+						$coupon = CouponDAO::updateExpiresDate($coupon);
+						//COMMIT
+						pg_query("COMMIT");
+					} catch(Exception $e) {
+						pg_query("ROLLBACK");
+						throw $e;
+					}
 				}
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].' done successfully');
 				break;

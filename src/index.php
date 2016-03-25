@@ -561,8 +561,8 @@ $app->put("/billings/api/internalplans/{internalPlanUuid}/addtoprovider/{provide
 /*
 	sample call :
 	
-	GET /billings/api/coupons/?providerName=afr&couponCode=prefix-1111
-	
+	GET /billings/api/coupons/?providerName=afr&couponCode=prefix-1111&userBillingUuid=UserBillingUUID
+	userBillingUuid is not necessary for 'afr', it is mandatory for 'cashway'
 	sample answer :
 	
 {
@@ -571,6 +571,7 @@ $app->put("/billings/api/internalplans/{internalPlanUuid}/addtoprovider/{provide
   "statusCode": 0,
   "response": {
     "coupon": {
+      "couponBillingUuid": "11111111-1111-1111-1111-1111111",
       "code": "prefix-1111",
       "status": "waiting",
       "campaign": {
