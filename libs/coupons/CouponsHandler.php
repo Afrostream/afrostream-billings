@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
+require_once __DIR__ . '/../providers/afr/coupons/AfrCouponsHandler.php';
 require_once __DIR__ . '/../providers/cashway/coupons/CashwayCouponsHandler.php';
 
 class CouponsHandler {
@@ -9,7 +10,7 @@ class CouponsHandler {
 	public function __construct() {
 	}
 	
-	public function doGetCoupon($providerName, $couponCode) {
+	public function doGetCoupon($providerName, $couponCode, $userBillingUuid = NULL) {
 		$db_coupon = NULL;
 		try {
 			config::getLogger()->addInfo("coupon getting, couponCode=".$couponCode."....");
@@ -21,8 +22,37 @@ class CouponsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_coupon = CouponDAO::getCoupon($provider->getId(), $couponCode);
-			//
+			$user = NULL;
+			$userOpts = NULL;
+			if(isset($userBillingUuid)) {
+				$user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
+				if($user == NULL) {
+					$msg = "unknown user_billing_uuid : ".$userBillingUuid;
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($user->getProviderId() != $provider->getId()) {
+					$msg = "providers do not match beetween the user with user_billing_uuid=".$userBillingUuid." and the providerName=".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);					
+				}
+				$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+			}
+			switch($provider->getName()) {
+				case 'afr' :
+					$afrCouponsHandler = new AfrCouponsHandler();
+					$db_coupon = $afrCouponsHandler->doGetCoupon($user, $userOpts, $couponCode);
+					break;
+				case 'cashway' :
+					$cashwayCouponsHandler = new CashwayCouponsHandler();
+					$db_coupon = $cashwayCouponsHandler->doGetCoupon($user, $userOpts, $couponCode);
+					break;
+				default :
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
 			config::getLogger()->addInfo("coupon getting, providerName=".$providerName.", couponCode=".$couponCode." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting a coupon for couponCode=".$couponCode.", error_code=".$e->getCode().", error_message=".$e->getMessage();
