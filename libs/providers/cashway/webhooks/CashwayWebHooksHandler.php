@@ -24,39 +24,76 @@ class CashwayWebHooksHandler {
 	private function doProcessNotification($post_data, $update_type, $updateId) {
 		config::getLogger()->addInfo('Processing cashway hook notification...');
 		$data = json_decode($post_data, true);
+		$db_subscription_before_update = NULL;
+		$db_subscription = NULL;
 		switch($data['event']) {
 			case 'transaction_paid' :
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].'...');
+				
+				$provider_name = "cashway";
+				
+				$provider = ProviderDAO::getProviderByName($provider_name);
+				if($provider == NULL) {
+					$msg = "unknown provider named : ".$provider_name;
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
 				$coupon = CouponDAO::getCouponByCouponBillingUuid($data['order_id']);
 				if($coupon == NULL) {
 					$msg = "no coupon found with coupon_billing_uuid=".$data['order_id'];
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);					
 				}
-				$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($coupon->getSubId());
-				if($db_subscription == NULL) {
-					//Exception
+				$db_subscription = NULL;
+				$user = NULL;
+				$userOpts = NULL;
+				$internalPlan = NULL;
+				$internalPlanOpts = NULL;
+				$plan = NULL;
+				$planOpts = NULL;
+				if($coupon->getSubId() != NULL) {
+					$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($coupon->getSubId());
+					if($db_subscription == NULL) {
+						$msg = "subscription with id=".$coupon->getSubId();
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					$user = UserDAO::getUserById($db_subscription->getUserId());
+					if($user == NULL) {
+						$msg = "user with id=".$db_subscription->getUserId();
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+					$plan = PlanDAO::getPlanById($db_subscription->getPlanId());
+					if($plan == NULL) {
+						$msg = "unknown plan with id : ".$db_subscription->getPlanId();
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
+					$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+					if($internalPlan == NULL) {
+						$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 				}
-				$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
-				if($provider == NULL) {
-					//exception
-				}
-				$user = UserDAO::getUserById($db_subscription->getUserId());
-				if($user == NULL) {
-					//exception
-				}
-				$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 				$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
-				$db_subscription_before_update = clone $db_subscription;
-				$api_subscription = $db_subscription;
-				if($coupon->getStatus() == 'waiting') {					
+				if($coupon->getStatus() == 'pending') {
 					try {
 						$now = new DateTime();
 						//START TRANSACTION
 						pg_query("BEGIN");
-						$api_subscription->setSubStatus('active');
-						$api_subscription->setSubPeriodStartedDate($now);
-						$db_subscription = $cashwaySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription_before_update, $update_type, $updateId);
+						if($db_subscription != NULL) {
+							$db_subscription_before_update = clone $db_subscription;
+							$api_subscription = $db_subscription;							
+							$api_subscription->setSubStatus('active');
+							$api_subscription->setSubActivatedDate($now);
+							$api_subscription->setSubPeriodStartedDate($now);
+							$db_subscription = $cashwaySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription_before_update, $update_type, $updateId);							
+						}
 						$coupon->setStatus("redeemed");
 						$coupon = CouponDAO::updateStatus($coupon);
 						$coupon->setRedeemedDate($now);
@@ -68,6 +105,9 @@ class CashwayWebHooksHandler {
 						throw $e;
 					}
 				}
+				if(isset($db_subscription)) {
+					$cashwaySubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+				}
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].' done successfully');
 				break;
 			case 'transaction_expired' :
@@ -78,8 +118,8 @@ class CashwayWebHooksHandler {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				if($coupon->getStatus() == 'waiting') {
-					//TODO : may expire the subscription
+				if($coupon->getStatus() == 'waiting' || $coupon->getStatus() == 'pending') {
+					//TODO : may expire the subscription : not for the moment
 					try {
 						//START TRANSACTION
 						pg_query("BEGIN");

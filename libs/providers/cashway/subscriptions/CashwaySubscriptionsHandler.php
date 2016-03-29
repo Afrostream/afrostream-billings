@@ -47,17 +47,17 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
 			}
 			if($coupon->getUserId() == NULL) {
-				$msg = "coupon : TODO";
+				$msg = "coupon : code=".$couponCode." is linked to nobody";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
 			}
 			if($coupon->getUserId() != $user->getId()) {
-				$msg = "coupon : TODO";
+				$msg = "coupon : code=".$couponCode." is not linked to the current user";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
 			}
 			if($coupon->getSubId() != NULL) {
-				$msg = "coupon : TODO";
+				$msg = "coupon : code=".$couponCode." is already linked to another subscription";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -68,6 +68,11 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 			}
 			if($coupon->getStatus() == 'expired') {
 				$msg = "coupon : code=".$couponCode." expired";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($coupon->getStatus() == 'pending') {
+				$msg = "coupon : code=".$couponCode." pending";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -95,34 +100,6 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 		$api_subscription = new BillingsSubscription();
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('future');
-		$created_date = new DateTime();
-		$created_date->setTimezone(new DateTimeZone(config::$timezone));
-		$api_subscription->setSubActivatedDate($created_date);
-		//$api_subscription->setSubPeriodStartedDate($start_date);
-		//$end_date = NULL;
-		/*switch($internalPlan->getPeriodUnit()) {
-			case PlanPeriodUnit::day :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::month :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::year :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			default :
-				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
-		}
-		$api_subscription->setSubPeriodEndsDate($end_date);*/
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $api_subscription, $update_type, $updateId));
 	}
 	
@@ -201,8 +178,9 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//COUPON
 		if(isset($coupon)) {
-			/*$coupon->setStatus("redeemed");
+			$coupon->setStatus("pending");
 			$coupon = CouponDAO::updateStatus($coupon);
+			/*
 			$coupon->setRedeemedDate(new DateTime());
 			$coupon = CouponDAO::updateRedeemedDate($coupon);*/
 			$coupon->setSubId($db_subscription->getId());
