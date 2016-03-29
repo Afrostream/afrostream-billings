@@ -56,11 +56,6 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
 			}
-			if($coupon->getSubId() != NULL) {
-				$msg = "coupon : code=".$couponCode." is already linked to another subscription";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
 			if($coupon->getStatus() == 'redeemed') {
 				$msg = "coupon : code=".$couponCode." already redeemed";
 				config::getLogger()->addError($msg);
@@ -78,6 +73,11 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 			}
 			if($coupon->getStatus() != 'waiting') {
 				$msg = "coupon : code=".$couponCode." cannot be used";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($coupon->getSubId() != NULL) {
+				$msg = "coupon : code=".$couponCode." is already linked to another subscription";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -273,6 +273,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$start_date = $api_subscription->getSubPeriodStartedDate();
 		$db_subscription->setSubPeriodStartedDate($start_date);
+		
 		$end_date = NULL;
 		switch($internalPlan->getPeriodUnit()) {
 			case PlanPeriodUnit::day :
@@ -298,11 +299,11 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 		}
 		$api_subscription->setSubPeriodEndsDate($end_date);
 		//
-		//$db_subscription->setSubPeriodStartedDate($api_subscription->getSubPeriodStartedDate());
-		//$db_subscription = BillingsSubscriptionDAO::updateSubStartedDate($db_subscription);
+		$db_subscription->setSubPeriodStartedDate($api_subscription->getSubPeriodStartedDate());
+		$db_subscription = BillingsSubscriptionDAO::updateSubStartedDate($db_subscription);
 		//
-		//$db_subscription->setSubPeriodEndsDate($api_subscription->getSubPeriodEndsDate());
-		//$db_subscription = BillingsSubscriptionDAO::updateSubEndsDate($db_subscription);
+		$db_subscription->setSubPeriodEndsDate($api_subscription->getSubPeriodEndsDate());
+		$db_subscription = BillingsSubscriptionDAO::updateSubEndsDate($db_subscription);
 		//
 		/*switch ($api_subscription->collection_mode) {
 			case 'automatic' :
