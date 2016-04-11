@@ -321,21 +321,23 @@ class GocardlessWebHooksHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					//GOCARDLESS DO NOT KEEP METADATA ALREADY SET
-					$metadata_array = array();
-					foreach ($api_subscription->metadata as $key => $value) {
-						$metadata_array[$key] = $value;
+					if($api_subscription->status == 'active') {
+						$metadata_array = array();
+						foreach ($api_subscription->metadata as $key => $value) {
+							$metadata_array[$key] = $value;
+						}
+						$metadata_array['status'] = 'expired';
+						$sub_params = ['params' =>
+								[
+										'metadata' => $metadata_array
+								]
+						];
+						$api_subscription = $client->subscriptions()->update($api_subscription->id, $sub_params);
+						//
+						$subscriptionsHandler = new SubscriptionsHandler();
+						$cancel_date = new DateTime();
+						$subscriptionsHandler->doCancelSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), $cancel_date, false);
 					}
-					$metadata_array['status'] = 'expired';
-					$sub_params = ['params' =>
-							[
-									'metadata' => $metadata_array
-							]
-					];
-					$subscription = $client->subscriptions()->update($api_subscription->id, $sub_params);
-					//
-					$subscriptionsHandler = new SubscriptionsHandler();
-					$cancel_date = new DateTime();
-					$subscriptionsHandler->doCancelSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), $cancel_date, false);
 				}
 				config::getLogger()->addInfo('Processing gocardless hook payment, action='.$notification_as_array['action'].' done successfully');
 				break;
