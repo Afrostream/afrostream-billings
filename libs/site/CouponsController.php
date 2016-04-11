@@ -12,6 +12,7 @@ class CouponsController extends BillingsController {
 	public function get(Request $request, Response $response, array $args) {
 		try {
 			$data = $request->getQueryParams();
+			$userBillingUuid = NULL;
 			$providerName = NULL;
 			$couponCode = NULL;
 			if(!isset($data['providerName'])) {
@@ -26,11 +27,14 @@ class CouponsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			if(isset($data['userBillingUuid'])) {
+				$userBillingUuid = $data['userBillingUuid'];
+			}
 			$providerName = $data['providerName'];
 			$couponCode = $data['couponCode'];
 			//
 			$couponsHandler = new CouponsHandler();
-			$coupon = $couponsHandler->doGetCoupon($providerName, $couponCode);
+			$coupon = $couponsHandler->doGetCoupon($providerName, $couponCode, $userBillingUuid);
 			if($coupon == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {
@@ -44,6 +48,44 @@ class CouponsController extends BillingsController {
 			//
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while getting a coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function create(Request $request, Response $response, array $args) {
+		try {
+			$data = json_decode($request->getBody(), true);
+			$userBillingUuid = NULL;
+			$couponCampaignBillingUuid = NULL;
+			if(!isset($data['userBillingUuid'])) {
+				//exception
+				$msg = "field 'userBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!isset($data['couponCampaignBillingUuid'])) {
+				//exception
+				$msg = "field 'couponCampaignBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$userBillingUuid = $data['userBillingUuid'];
+			$couponCampaignBillingUuid = $data['couponCampaignBillingUuid'];
+			//
+			$couponsHandler = new CouponsHandler();
+			$coupon = $couponsHandler->doCreateCoupon($userBillingUuid, $couponCampaignBillingUuid);
+			return($this->returnObjectAsJson($response, 'coupon', $coupon));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while creating a coupon, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while creating a coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));
