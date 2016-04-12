@@ -29,7 +29,10 @@ function checkUserOptsArray(array $user_opts_as_array, $providerName) {
 function checkUserOptsKeys(array $user_opts_as_array, $providerName) {
 	switch ($providerName) {
 		case 'bachat' :
+			//email, firstName, lastName are optional
+			break;
 		case 'afr' :
+			//firstName, lastName are optional
 			if(!array_key_exists('email', $user_opts_as_array)) {
 				//exception
 				$msg = "userOpts field 'email' is missing";
@@ -63,7 +66,10 @@ function checkUserOptsKeys(array $user_opts_as_array, $providerName) {
 function checkUserOptsValues(array $user_opts_as_array, $providerName) {
 	switch ($providerName) {
 		case 'bachat' :
+			//email, firstName, lastName are optional
+			break;
 		case 'afr' :
+			//firstName, lastName are optional
 			if(array_key_exists('email', $user_opts_as_array)) {
 				$email = $user_opts_as_array['email'];
 				if(strlen(trim($email)) == 0) {
