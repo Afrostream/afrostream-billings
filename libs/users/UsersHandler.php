@@ -7,6 +7,7 @@ require_once __DIR__ . '/../providers/gocardless/users/GocardlessUsersHandler.ph
 require_once __DIR__ . '/../providers/bachat/users/BachatUsersHandler.php';
 require_once __DIR__ . '/../providers/idipper/users/IdipperUsersHandler.php';
 require_once __DIR__ . '/../providers/afr/users/AfrUsersHandler.php';
+require_once __DIR__ . '/../providers/cashway/users/CashwayUsersHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/utils.php';
 
@@ -91,7 +92,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting/creating...");
-			checkUserOptsArray($user_opts_array);
+			checkUserOptsArray($user_opts_array, $provider_name);
 			$provider = ProviderDAO::getProviderByName($provider_name);
 				
 			if($provider == NULL) {
@@ -183,7 +184,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user creating...");
-			checkUserOptsArray($user_opts_array);
+			checkUserOptsArray($user_opts_array, $provider_name);
 			$provider = ProviderDAO::getProviderByName($provider_name);
 			
 			if($provider == NULL) {
@@ -216,6 +217,10 @@ class UsersHandler {
 				case 'afr' :
 					$afrUsersHandler = new AfrUsersHandler();
 					$user_provider_uuid = $afrUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					break;
+				case 'cashway' :
+					$cashwayUsersHandler = new CashwayUsersHandler();
+					$user_provider_uuid = $cashwayUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider_name;

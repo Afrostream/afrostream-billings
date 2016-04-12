@@ -384,6 +384,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setSubActivatedDate(new DateTime($api_subscription->created_at));
 		//
 		$start_date = new DateTime($api_subscription->created_at);
+		$start_date->setTimezone(new DateTimeZone(config::$timezone));
 		$end_date = NULL;
 		switch($internalPlan->getPeriodUnit()) {
 			case PlanPeriodUnit::day :

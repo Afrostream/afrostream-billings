@@ -4,9 +4,13 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ .'/BillingsController.php';
 require_once __DIR__ . '/../webhooks/WebHooksHandler.php';
+require_once __DIR__ . '/../providers/cashway/client/cashway_lib.php';
+require_once __DIR__ . '/../providers/cashway/client/compat.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
+
+use CashWay\API;
 
 class WebHooksController extends BillingsController {
 	
@@ -112,7 +116,7 @@ class WebHooksController extends BillingsController {
 		}
 		
 		if (!$validated) {
-			config::getLogger()->addError('Receiving gocardless webhook failed, Invalid valid');
+			config::getLogger()->addError('Receiving gocardless webhook failed, Invalid token');
 			header('HTTP/1.0 498 Invalid token');
 			die ("Not authorized");
 		}
@@ -196,6 +200,41 @@ class WebHooksController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e, 500));
 		}
 		config::getLogger()->addInfo('Receiving bachat webhook done successfully');
+	}
+	
+	public function cashwayWebHooksPosting(Request $request, Response $response, array $args) {
+		config::getLogger()->addInfo('Receiving cashway webhook...');
+		$result = API::receiveNotification($request->getBody(), getallheaders(), getEnv('CASHWAY_WH_SECRET'));
+		if ($result[0] === false) {
+			config::getLogger()->addError('Receiving cashway webhook failed, message='.$result[1]);
+			header('HTTP/1.0 400 '.$result[1]);
+			die ("Bad Request");
+		}
+		$post_data = file_get_contents('php://input');
+		try {
+			config::getLogger()->addInfo('Treating cashway webhook...');
+		
+			$webHooksHander = new WebHooksHander();
+		
+			config::getLogger()->addInfo('Saving cashway webhook...');
+			$billingsWebHook = $webHooksHander->doSaveWebHook('cashway', $post_data);
+			config::getLogger()->addInfo('Saving cashway webhook done successfully');
+		
+			config::getLogger()->addInfo('Processing cashway webhook, id='.$billingsWebHook->getId().'...');
+			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
+			config::getLogger()->addInfo('Processing cashway webhook done successfully, id='.$billingsWebHook->getId().'...');
+		
+			config::getLogger()->addInfo('Treating cashway webhook done successfully, id='.$billingsWebHook->getId());
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while treating a cashway webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnBillingsExceptionAsJson($response, $e, 500));
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while treating a cashway webhook, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnExceptionAsJson($response, $e, 500));
+		}
+		config::getLogger()->addInfo('Receiving cashway webhook done successfully');
 	}
 	
 }

@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 
-class AfrSubscriptionsHandler extends SubscriptionsHandler {
+class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function __construct() {
 	}
@@ -14,11 +14,11 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
-			config::getLogger()->addInfo("afr subscription creation...");
+			config::getLogger()->addInfo("cashway subscription creation...");
 			//pre-requisite
-			checkSubOptsArray($subOpts->getOpts(), 'afr');
+			checkSubOptsArray($subOpts->getOpts(), 'cashway');
 			if(isset($subscription_provider_uuid)) {
-				$msg = "unsupported feature for provider named afr, subscriptionProviderUuid has NOT to be provided";
+				$msg = "unsupported feature for provider named cashway, subscriptionProviderUuid has NOT to be provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -37,7 +37,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 			}
 			$couponInternalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($couponProviderPlan->getId()));
 			if($couponInternalPlan == NULL) {
-				$msg = "coupon plan with uuid=".$couponProviderPlan->getPlanUuid()." for provider afr is not linked to an internal plan";
+				$msg = "coupon plan with uuid=".$couponProviderPlan->getPlanUuid()." for provider cashway is not linked to an internal plan";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);		
 			}
@@ -45,6 +45,16 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				$msg = "coupon : code=".$couponCode." cannot be used with internalPlan with uuid=".$internalPlan->getInternalPlanUuid();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
+			}
+			if($coupon->getUserId() == NULL) {
+				$msg = "coupon : code=".$couponCode." is linked to nobody";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			}
+			if($coupon->getUserId() != $user->getId()) {
+				$msg = "coupon : code=".$couponCode." is not linked to the current user";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
 			}
 			if($coupon->getStatus() == 'redeemed') {
 				$msg = "coupon : code=".$couponCode." already redeemed";
@@ -56,21 +66,31 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			if($coupon->getStatus() == 'pending') {
+				$msg = "coupon : code=".$couponCode." pending";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			if($coupon->getStatus() != 'waiting') {
 				$msg = "coupon : code=".$couponCode." cannot be used";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			if($coupon->getSubId() != NULL) {
+				$msg = "coupon : code=".$couponCode." is already linked to another subscription";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			//OK
 			$sub_uuid = guid();
-			config::getLogger()->addInfo("afr subscription creation done successfully, afr_subscription_uuid=".$sub_uuid);
+			config::getLogger()->addInfo("cashway subscription creation done successfully, cashway_subscription_uuid=".$sub_uuid);
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while creating a afr subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("afr subscription creation failed : ".$msg);
+			$msg = "a billings exception occurred while creating a cashway subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("cashway subscription creation failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while creating a afr subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("afr subscription creation failed : ".$msg);
+			$msg = "an unknown exception occurred while creating a cashway subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("cashway subscription creation failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($sub_uuid);
@@ -79,40 +99,12 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $sub_uuid, $update_type, $updateId) {
 		$api_subscription = new BillingsSubscription();
 		$api_subscription->setSubUid($sub_uuid);
-		$api_subscription->setSubStatus('active');
-		$start_date = new DateTime();
-		$start_date->setTimezone(new DateTimeZone(config::$timezone));
-		$api_subscription->setSubActivatedDate($start_date);
-		$api_subscription->setSubPeriodStartedDate($start_date);
-		$end_date = NULL;
-		switch($internalPlan->getPeriodUnit()) {
-			case PlanPeriodUnit::day :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::month :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::year :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			default :
-				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
-		}
-		$api_subscription->setSubPeriodEndsDate($end_date);
+		$api_subscription->setSubStatus('future');
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $api_subscription, $update_type, $updateId));
 	}
 	
 	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingsSubscription $api_subscription, $update_type, $updateId) {
-		config::getLogger()->addInfo("afr dbsubscription creation for userid=".$user->getId().", afr_subscription_uuid=".$api_subscription->getSubUid()."...");
+		config::getLogger()->addInfo("cashway dbsubscription creation for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->getSubUid()."...");
 		//CREATE
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setSubscriptionBillingUuid(guid());
@@ -186,17 +178,18 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//COUPON
 		if(isset($coupon)) {
-			$coupon->setStatus("redeemed");
+			$coupon->setStatus("pending");
 			$coupon = CouponDAO::updateStatus($coupon);
+			/*
 			$coupon->setRedeemedDate(new DateTime());
-			$coupon = CouponDAO::updateRedeemedDate($coupon);
+			$coupon = CouponDAO::updateRedeemedDate($coupon);*/
 			$coupon->setSubId($db_subscription->getId());
 			$coupon = CouponDAO::updateSubId($coupon);
-			$coupon->setUserId($user->getId());
-			$coupon = CouponDAO::updateUserId($coupon);
+			/*$coupon->setUserId($user->getId());
+			$coupon = CouponDAO::updateUserId($coupon);*/
 		}
 		//<-- DATABASE -->
-		config::getLogger()->addInfo("afr dbsubscription creation for userid=".$user->getId().", afr_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
+		config::getLogger()->addInfo("cashway dbsubscription creation for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
 		return($db_subscription);
 	}
 	
@@ -234,10 +227,106 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 			default :
 				$is_active = 'no';
-				config::getLogger()->addWarning("afr dbsubscription unknown subStatus=".$subscription->getSubStatus().", afr_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
+				config::getLogger()->addWarning("cashway dbsubscription unknown subStatus=".$subscription->getSubStatus().", cashway_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;
 		}
 		$subscription->setIsActive($is_active);
+	}
+	
+	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
+		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()."...");
+		//UPDATE
+		//$db_subscription->setProviderId($provider->getId());//STATIC
+		//$db_subscription->setUserId($user->getId());//STATIC
+		$db_subscription->setPlanId($plan->getId());
+		$db_subscription = BillingsSubscriptionDAO::updatePlanId($db_subscription);
+		//$db_subscription->setSubUid($subscription_uuid);//STATIC
+		switch ($api_subscription->getSubStatus()) {
+			case 'active' :
+				$db_subscription->setSubStatus('active');
+				break;
+			case 'canceled' :
+				$db_subscription->setSubStatus('canceled');
+				break;
+			case 'future' :
+				$db_subscription->setSubStatus('future');
+				break;
+			case 'expired' :
+				$db_subscription->setSubStatus('expired');
+				break;
+			default :
+				$msg = "unknown subscription state : ".$api_subscription->getSubStatus();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				//break;
+		}
+		$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
+		//
+		$db_subscription->setSubActivatedDate($api_subscription->getSubActivatedDate());
+		$db_subscription = BillingsSubscriptionDAO::updateSubActivatedDate($db_subscription);
+		//
+		$db_subscription->setSubCanceledDate($api_subscription->getSubCanceledDate());
+		$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
+		//
+		$db_subscription->setSubExpiresDate($api_subscription->getSubExpiresDate());
+		$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+		//
+		$start_date = $api_subscription->getSubPeriodStartedDate();
+		$db_subscription->setSubPeriodStartedDate($start_date);
+		
+		$end_date = NULL;
+		switch($internalPlan->getPeriodUnit()) {
+			case PlanPeriodUnit::day :
+				$end_date = clone $start_date;
+				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				break;
+			case PlanPeriodUnit::month :
+				$end_date = clone $start_date;
+				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
+				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				break;
+			case PlanPeriodUnit::year :
+				$end_date = clone $start_date;
+				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
+				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				break;
+			default :
+				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				break;
+		}
+		$api_subscription->setSubPeriodEndsDate($end_date);
+		//
+		$db_subscription->setSubPeriodStartedDate($api_subscription->getSubPeriodStartedDate());
+		$db_subscription = BillingsSubscriptionDAO::updateSubStartedDate($db_subscription);
+		//
+		$db_subscription->setSubPeriodEndsDate($api_subscription->getSubPeriodEndsDate());
+		$db_subscription = BillingsSubscriptionDAO::updateSubEndsDate($db_subscription);
+		//
+		/*switch ($api_subscription->collection_mode) {
+			case 'automatic' :
+				$db_subscription->setSubCollectionMode('automatic');
+				break;
+			case 'manual' :
+				$db_subscription->setSubCollectionMode('manual');
+				break;
+			default :
+				$db_subscription->setSubCollectionMode('manual');//it is the default says recurly
+				break;
+		}
+		$db_subscription = BillingsSubscriptionDAO::updateSubCollectionMode($db_subscription);*/
+		//
+		$db_subscription->setUpdateType($update_type);
+		$db_subscription = BillingsSubscriptionDAO::updateUpdateType($db_subscription);
+		//
+		$db_subscription->setUpdateId($updateId);
+		$db_subscription = BillingsSubscriptionDAO::updateUpdateId($db_subscription);
+		//$db_subscription->setDeleted('false');//STATIC
+		//
+		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()." done successfully");
+		return($db_subscription);
 	}
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {

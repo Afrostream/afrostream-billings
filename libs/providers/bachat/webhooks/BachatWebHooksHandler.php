@@ -14,7 +14,7 @@ class BachatWebHooksHandler {
 			config::getLogger()->addInfo("processing bachat webHook with id=".$billingsWebHook->getId()."...");
 			//TODO
 			$this->doProcessNotification($notification, $update_type, $billingsWebHook->getId());
-			config::getLogger()->addInfo("processing bachat webHook with id=".$billingsWebHook->getId()." done successully");
+			config::getLogger()->addInfo("processing bachat webHook with id=".$billingsWebHook->getId()." done successfully");
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while processing bachat webHook with id=".$billingsWebHook->getId().", message=".$e->getMessage();
 			config::getLogger()->addError("processing bachat webHook with id=".$billingsWebHook->getId()." failed : ". $msg);

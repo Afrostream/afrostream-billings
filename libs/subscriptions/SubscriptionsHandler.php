@@ -9,6 +9,7 @@ require_once __DIR__ . '/../providers/gocardless/subscriptions/GocardlessSubscri
 require_once __DIR__ . '/../providers/bachat/subscriptions/BachatSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/idipper/subscriptions/IdipperSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/afr/subscriptions/AfrSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/cashway/subscriptions/CashwaySubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 
 class SubscriptionsHandler {
@@ -130,7 +131,7 @@ class SubscriptionsHandler {
 						$sub_uuid = $gocardlessSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
 						break;
 					case 'celery' :
-						$msg = "unsupported feature for provider named : ".$provider_name;
+						$msg = "unsupported feature for provider named : ".$provider->getName();
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						break;
@@ -146,8 +147,12 @@ class SubscriptionsHandler {
 						$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
 						$sub_uuid = $afrSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);						
 						break;
+					case 'cashway' :
+						$cashSubscriptionsHandler = new CashwaySubscriptionsHandler();
+						$sub_uuid = $cashSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						break;
 					default:
-						$msg = "unsupported feature for provider named : ".$provider_name;
+						$msg = "unsupported feature for provider named : ".$provider->getName();
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						break;
@@ -169,7 +174,7 @@ class SubscriptionsHandler {
 							$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
 						case 'celery' :
-							$msg = "unsupported feature for provider named : ".$provider_name;
+							$msg = "unsupported feature for provider named : ".$provider->getName();
 							config::getLogger()->addError($msg);
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 							break;
@@ -185,8 +190,12 @@ class SubscriptionsHandler {
 							$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
 							$db_subscription = $afrSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
+						case 'cashway' :
+							$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
+							$db_subscription = $cashwaySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							break;
 						default:
-							$msg = "unsupported feature for provider named : ".$provider_name;
+							$msg = "unsupported feature for provider named : ".$provider->getName();
 							config::getLogger()->addError($msg);
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 							break;
@@ -266,6 +275,9 @@ class SubscriptionsHandler {
 					//TODO
 					break;
 				case 'afr' :
+					//nothing to do (owned)
+					break;
+				case 'cashway' :
 					//nothing to do (owned)
 					break;
 				default:
@@ -450,6 +462,10 @@ class SubscriptionsHandler {
 				$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
 				$afrSubscriptionsHandler->doFillSubscription($subscription);				
 				break;
+			case 'cashway' :
+				$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
+				$cashwaySubscriptionsHandler->doFillSubscription($subscription);
+				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
 				config::getLogger()->addError($msg);
@@ -558,7 +574,7 @@ class SubscriptionsHandler {
 					   	if($internalPlan->getVatRate() == NULL) {
 					   		$substitions['%vat%'] = 'N/A'; 
 					   	} else {
-					   		$substitions['%vat%'] = $internalPlan->getVatRate().'%';
+					   		$substitions['%vat%'] = number_format($internalPlan->getVatRate(), 2, ',', '').'%';
 					   	}
 					   	$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
 					   	$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
@@ -570,12 +586,18 @@ class SubscriptionsHandler {
 					   	//user : nothing
 					   	//userOpts
 					   	$substitions['%email%'] = $userOpts->getOpts()['email'];
-					   	$firstname = $userOpts->getOpts()['firstName'];
+					   	$firstname = '';
+					   	if(array_key_exists('firstName', $userOpts->getOpts())) {
+					   		$firstname = $userOpts->getOpts()['firstName'];
+					   	}
 					   	if($firstname == 'firstNameValue') {
 					   		$firstname = '';
 					   	}
 					   	$substitions['%firstname%'] = $firstname;
-					   	$lastname = $userOpts->getOpts()['lastName'];
+					   	$lastname = '';
+					   	if(array_key_exists('lastName', $userOpts->getOpts())) {
+					   		$lastname = $userOpts->getOpts()['lastName'];
+					   	}
 					   	if($lastname == 'lastNameValue') {
 					   		$lastname = '';
 					   	}

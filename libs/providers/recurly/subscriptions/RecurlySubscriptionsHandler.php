@@ -72,31 +72,38 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				$subscription->create();
 				//<-- POSTPONING -->
 				if(getenv('RECURLY_POSTPONE_ACTIVATED') == 1) {
-					//only postpone renewable and montlhy plans
-					if($internalPlan->getCycle() == 'auto' && $internalPlan->getPeriodUnit() == 'month') {
-						$interval = 0;
-						$period_ends_date_ref = clone $subscription->current_period_ends_at;
-						$period_ends_date_new = clone $subscription->current_period_ends_at;
-						$dayOfMonth = $period_ends_date_ref->format('j');
-						
-						if($dayOfMonth >= 1 && $dayOfMonth <= getEnv('RECURLY_POSTPONE_LIMIT_IN')) {
-							$interval = getEnv('RECURLY_POSTPONE_TO') - $dayOfMonth; 
-						} else if($dayOfMonth >= getEnv('RECURLY_POSTPONE_LIMIT_OUT')) {
-							$lastDayOfMonth = $period_ends_date_ref->format('t');
-							$interval = getEnv('RECURLY_POSTPONE_TO') + ($lastDayOfMonth - $dayOfMonth);
+					if($subscription->trial_ends_at == NULL) {
+						//only postpone renewable and montlhy plans
+						if($internalPlan->getCycle() == 'auto' && $internalPlan->getPeriodUnit() == 'month') {
+							$interval = 0;
+							$period_ends_date_ref = clone $subscription->current_period_ends_at;
+							$period_ends_date_new = clone $subscription->current_period_ends_at;
+							$dayOfMonth = $period_ends_date_ref->format('j');
+							
+							if($dayOfMonth >= 1 && $dayOfMonth <= getEnv('RECURLY_POSTPONE_LIMIT_IN')) {
+								config::getLogger()->addInfo("recurly subscription creation...RECURLY_POSTPONE_LIMIT_IN limit");
+								$interval = getEnv('RECURLY_POSTPONE_TO') - $dayOfMonth; 
+							} else if($dayOfMonth >= getEnv('RECURLY_POSTPONE_LIMIT_OUT')) {
+								config::getLogger()->addInfo("recurly subscription creation...RECURLY_POSTPONE_LIMIT_OUT limit");
+								$lastDayOfMonth = $period_ends_date_ref->format('t');
+								$interval = getEnv('RECURLY_POSTPONE_TO') + ($lastDayOfMonth - $dayOfMonth);
+							} else {
+								//nothing to do
+								config::getLogger()->addInfo("recurly subscription creation...no RECURLY_POSTPONE_LIMIT");
+							}
+							if($interval > 0) {
+								$period_ends_date_new->add(new DateInterval("P".$interval."D"));
+								config::getLogger()->addInfo("recurly subscription creation...postponing from : ".dbGlobal::toISODate($period_ends_date_ref)." to ".dbGlobal::toISODate($period_ends_date_new)."...");
+								$subscription->postpone(dbGlobal::toISODate($period_ends_date_new));
+								config::getLogger()->addInfo("recurly subscription creation...postponing from : ".dbGlobal::toISODate($period_ends_date_ref)." to ".dbGlobal::toISODate($period_ends_date_new)." done successfullly");
+							} else {
+								config::getLogger()->addInfo("recurly subscription creation...no postpone needed");
+							}
 						} else {
-							//nothing to do	
-						}
-						if($interval > 0) {
-							config::getLogger()->addInfo("recurly subscription creation...postponing from : ".dbGlobal::toISODate($period_ends_date_ref)." to ".dbGlobal::toISODate($period_ends_date_new)."...");
-							$period_ends_date_new->add(new DateInterval("P".$interval."D"));
-							$subscription->postpone(dbGlobal::toISODate($period_ends_date_new));
-							config::getLogger()->addInfo("recurly subscription creation...postponing from : ".dbGlobal::toISODate($period_ends_date_ref)." to ".dbGlobal::toISODate($period_ends_date_new)." done successfullly");
-						} else {
-							config::getLogger()->addInfo("recurly subscription creation...no postpone needed");
+							config::getLogger()->addInfo("recurly subscription creation...no postpone there");
 						}
 					} else {
-						config::getLogger()->addInfo("recurly subscription creation...no postpone there");
+						config::getLogger()->addInfo("recurly subscription creation...no postpone, trial activated");
 					}
 				} else {
 					config::getLogger()->addInfo("recurly subscription creation...postpone not activated");

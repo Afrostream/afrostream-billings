@@ -38,6 +38,7 @@ if(getEnv('DB_PASSWORD') === false) {
 }
 
 #Billings API
+
 if(getEnv('API_HTTP_AUTH_USER') === false) {
 	putEnv('API_HTTP_AUTH_USER=admin');
 }
@@ -55,6 +56,7 @@ if(getEnv('API_HTTP_SECURE') === false) {
 }
 
 #Recurly API
+
 if(getEnv('RECURLY_API_SUBDOMAIN') === false) {
 	putEnv('RECURLY_API_SUBDOMAIN=johnarch');
 }
@@ -68,11 +70,11 @@ if(getEnv('RECURLY_POSTPONE_ACTIVATED') === false) {
 }
 
 if(getEnv('RECURLY_POSTPONE_LIMIT_IN') === false) {
-	putEnv('RECURLY_POSTPONE_LIMIT_IN=28');
+	putEnv('RECURLY_POSTPONE_LIMIT_IN=7');
 }
 
 if(getEnv('RECURLY_POSTPONE_LIMIT_OUT') === false) {
-	putEnv('RECURLY_POSTPONE_LIMIT_OUT=7');
+	putEnv('RECURLY_POSTPONE_LIMIT_OUT=28');
 }
 
 if(getEnv('RECURLY_POSTPONE_TO') === false) {
@@ -80,6 +82,7 @@ if(getEnv('RECURLY_POSTPONE_TO') === false) {
 }
 
 #Recurly WebHooks
+
 if(getEnv('RECURLY_WH_HTTP_AUTH_USER') === false) {
 	putEnv('RECURLY_WH_HTTP_AUTH_USER=admin');
 }
@@ -88,6 +91,7 @@ if(getEnv('RECURLY_WH_HTTP_AUTH_PWD') === false) {
 }
 
 #Gocardless API
+
 if(getEnv('GOCARDLESS_API_ENV') === false) {
 	putEnv('GOCARDLESS_API_ENV=sandbox');
 }
@@ -127,6 +131,7 @@ if(getEnv('SENDGRID_BCC') === false) {
 }
 
 #Event (MAIL)
+
 if(getEnv('EVENT_EMAIL_ACTIVATED') === false) {
 	putEnv('EVENT_EMAIL_ACTIVATED=1');
 }
@@ -147,6 +152,32 @@ if(getEnv('SLACK_STATS_CHANNEL') === false) {
 
 if(getEnv('BOUYGUES_BHA_ACTIVATED') === false) {
 	putEnv('BOUYGUES_BHA_ACTIVATED=0');
+}
+
+#Cashway
+
+if(getEnv('CASHWAY_API_URL') === false) {
+	putEnv('CASHWAY_API_URL=https://api-staging.cashway.fr/');
+}
+
+if(getEnv('CASHWAY_API_HTTP_AUTH_USER') === false) {
+	putEnv('CASHWAY_API_HTTP_AUTH_USER=73123a828c94b4b1f2b4e4669a5cae6e187090ff7ba510d6de449d707e980951');
+}
+
+if(getEnv('CASHWAY_API_HTTP_AUTH_PWD') === false) {
+	putEnv('CASHWAY_API_HTTP_AUTH_PWD=81c2c892f30d8304c6af90a387001765132a2887b76a7bdbe39af9131f1be9b9');
+}
+
+if(getEnv('CASHWAY_USER_AGENT') === false) {
+	putEnv('CASHWAY_USER_AGENT=afrbillingsapi');
+}
+
+if(getEnv('CASHWAY_USE_STAGING') === false) {
+	putEnv('CASHWAY_USE_STAGING=1');
+}
+
+if(getEnv('CASHWAY_WH_SECRET') === false) {
+	putEnv('CASHWAY_WH_SECRET=DakUdoycsOctoaphObyo');
 }
 
 #logger, #db_conn, ...

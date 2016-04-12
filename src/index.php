@@ -7,6 +7,7 @@ require_once __DIR__ . '/../libs/site/SubscriptionsController.php';
 require_once __DIR__ . '/../libs/site/InternalPlansController.php';
 require_once __DIR__ . '/../libs/site/CouponsController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
+require_once __DIR__ . '/../libs/site/CouponsCampaignsController.php';
 //require_once __DIR__ . '/test.php';
 
 use \Slim\Http\Request;
@@ -561,8 +562,8 @@ $app->put("/billings/api/internalplans/{internalPlanUuid}/addtoprovider/{provide
 /*
 	sample call :
 	
-	GET /billings/api/coupons/?providerName=afr&couponCode=prefix-1111
-	
+	GET /billings/api/coupons/?providerName=afr&couponCode=prefix-1111&userBillingUuid=UserBillingUUID
+	userBillingUuid is not necessary for 'afr', it is mandatory for 'cashway'
 	sample answer :
 	
 {
@@ -571,10 +572,11 @@ $app->put("/billings/api/internalplans/{internalPlanUuid}/addtoprovider/{provide
   "statusCode": 0,
   "response": {
     "coupon": {
+      "couponBillingUuid": "11111111-1111-1111-1111-1111111",
       "code": "prefix-1111",
       "status": "waiting",
-      "campaign": {
-        "couponCampaignBillingUuid": "11111111-1111-1111-1111-1111111",
+      "couponsCampaign": {
+        "couponsCampaignBillingUuid": "11111111-1111-1111-1111-1111111",
         "creationDate": "2016-01-01 00:00:00.00000+01",
         "name": "campaign_name",
         "description": "campaign_desc",
@@ -598,6 +600,57 @@ $app->get("/billings/api/coupons/", function ($request, $response, $args) {
 	return($couponsController->get($request, $response, $args));
 });
 
+//create coupon
+	
+/*
+	sample call :
+	
+	POST /billings/api/coupons/
+	
+	BODY :
+	
+	{
+		"userBillingUuid" : "UserBillingUUID",
+		"couponsCampaignBillingUuid": "11111111-1111-1111-1111-1111111"
+	}
+	
+*/
+
+$app->post("/billings/api/coupons/", function ($request, $response, $args) {
+	$couponsController = new CouponsController();
+	return($couponsController->create($request, $response, $args));
+});
+
+//get InternalPlans
+	
+/*
+ sample call :
+	
+ GET /billings/api/couponscampaigns/?providerName=cashway
+
+ "providerName" : "cashway" (optional) Retrieve internalplans available only to that provider
+	
+ sample answer :
+	
+{
+ 	"status": "done",
+ 	"statusMessage": "success",
+	"statusCode": 0,
+	"response": {
+		"internalPlans": [
+	 		{...},
+	 		{...}
+	 	]
+	 }
+}
+	
+*/
+
+$app->get("/billings/api/couponscampaigns/", function ($request, $response, $args) {
+	$couponsCampaignsController = new CouponsCampaignsController();
+	return($couponsCampaignsController->getMulti($request, $response, $args));
+});
+
 //WebHooks
 
 //WebHooks - Recurly
@@ -619,6 +672,13 @@ $app->post("/billings/providers/gocardless/webhooks/", function ($request, $resp
 $app->post("/billings/providers/bachat/webhooks/", function ($request, $response, $args) {
 	$webHooksController = new WebHooksController();
 	return($webHooksController->bachatWebHooksPosting($request, $response, $args));
+});
+
+//WebHooks - Cashway
+
+$app->post("/billings/providers/cashway/webhooks/", function ($request, $response, $args) {
+	$webHooksController = new WebHooksController();
+	return($webHooksController->cashwayWebHooksPosting($request, $response, $args));
 });
 
 //Testing purpose
