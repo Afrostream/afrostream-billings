@@ -13,11 +13,11 @@ class CashwayCouponsHandler {
 	public function __construct() {
 	}
 		
-	public function doCreateCoupon(User $user, UserOpts $userOpts, CouponCampaign $couponCampaign, $coupon_billing_uuid) {
+	public function doCreateCoupon(User $user, UserOpts $userOpts, CouponsCampaign $couponsCampaign, $coupon_billing_uuid) {
 		try {
 			config::getLogger()->addInfo("cashway coupon creation...");
 			//
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($couponCampaign->getProviderPlanId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($couponsCampaign->getProviderPlanId()));
 			//
 			$conf = array (
 					'API_KEY'		=> getEnv('CASHWAY_API_HTTP_AUTH_USER'),
@@ -87,9 +87,9 @@ class CashwayCouponsHandler {
 			//
 			$coupon = new Coupon();
 			$coupon->setCouponBillingUuid($coupon_billing_uuid);
-			$coupon->setCouponCampaignId($couponCampaign->getId());
-			$coupon->setProviderId($couponCampaign->getProviderId());
-			$coupon->setProviderPlanId($couponCampaign->getProviderPlanId());
+			$coupon->setCouponsCampaignId($couponsCampaign->getId());
+			$coupon->setProviderId($couponsCampaign->getProviderId());
+			$coupon->setProviderPlanId($couponsCampaign->getProviderPlanId());
 			$coupon->setCode($coupon_provider_uuid);
 			$coupon->setExpiresDate($expires_date);
 			$coupon->setUserId($user->getId());
@@ -108,7 +108,7 @@ class CashwayCouponsHandler {
 		return($coupon_provider_uuid);
 	}
 	
-	public function createDbCouponFromApiCouponUuid(User $user,  UserOpts $userOpts, CouponCampaign $couponCampaign, $coupon_billing_uuid, $coupon_provider_uuid) {
+	public function createDbCouponFromApiCouponUuid(User $user,  UserOpts $userOpts, CouponsCampaign $couponsCampaign, $coupon_billing_uuid, $coupon_provider_uuid) {
 		//LATER : cashway do not allow yet to have a status from an unique transaction
 		return(CouponDAO::getCouponByCouponBillingUuid($coupon_billing_uuid));
 	}

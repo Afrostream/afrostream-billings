@@ -2194,7 +2194,7 @@ class ThumbDAO {
 	
 }
 
-class CouponCampaign implements JsonSerializable {
+class CouponsCampaign implements JsonSerializable {
 	
 	private $_id;
 	private $uuid;
@@ -2289,7 +2289,7 @@ class CouponCampaign implements JsonSerializable {
 	
 	public function jsonSerialize() {
 		$return = [
-			'couponCampaignBillingUuid' => $this->uuid,
+			'couponsCampaignBillingUuid' => $this->uuid,
 			'creationDate' => $this->creation_date,
 			'name' => $this->name,
 			'description' => $this->description,
@@ -2303,12 +2303,12 @@ class CouponCampaign implements JsonSerializable {
 	
 }
 
-class CouponCampaignDAO {
+class CouponsCampaignDAO {
 	
 	private static $sfields = "_id, coupons_campaigns_uuid, creation_date, name, description, providerid, providerplanid, prefix, generated_code_length, total_number";
 	
-	private static function getCouponCampaignFromRow($row) {
-		$out = new CouponCampaign();
+	private static function getCouponsCampaignFromRow($row) {
+		$out = new CouponsCampaign();
 		$out->setId($row["_id"]);
 		$out->setUuid($row["coupons_campaigns_uuid"]);
 		$out->setCreationDate($row["creation_date"]);
@@ -2322,14 +2322,14 @@ class CouponCampaignDAO {
 		return($out);
 	}
 	
-	public static function getCouponCampaignById($id) {
+	public static function getCouponsCampaignById($id) {
 		$query = "SELECT ".self::$sfields." FROM billing_coupons_campaigns WHERE _id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
 		
 		$out = null;
 		
 		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getCouponCampaignFromRow($row);
+			$out = self::getCouponsCampaignFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -2337,14 +2337,14 @@ class CouponCampaignDAO {
 		return($out);		
 	}
 	
-	public static function getCouponCampaignByUuid($uuid) {
+	public static function getCouponsCampaignByUuid($uuid) {
 		$query = "SELECT ".self::$sfields." FROM billing_coupons_campaigns WHERE coupons_campaigns_uuid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($uuid));
 	
 		$out = null;
 	
 		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getCouponCampaignFromRow($row);
+			$out = self::getCouponsCampaignFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -2352,13 +2352,33 @@ class CouponCampaignDAO {
 		return($out);
 	}
 	
+	public static function getCouponsCampaigns($providerId = NULL) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons_campaigns";
+		$params = array();
+	
+		$out = array();
+	
+		if(isset($providerId)) {
+			$query.= " WHERE providerid = $1";
+			$params[] = $providerId;
+		}
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+	
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getCouponsCampaignFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
 }
 
 class Coupon implements JsonSerializable {
 	
 	private $_id;
 	private $couponBillingUuid;
-	private $couponcampaignid;
+	private $couponscampaignid;
 	private $providerid;
 	private $providerplanid;
 	private $code;
@@ -2386,12 +2406,12 @@ class Coupon implements JsonSerializable {
 		return($this->couponBillingUuid);
 	}
 	
-	public function getCouponCampaignId() {
-		return($this->couponcampaignid);
+	public function getCouponsCampaignId() {
+		return($this->couponscampaignid);
 	}
 	
-	public function setCouponCampaignId($id) {
-		$this->couponcampaignid = $id;
+	public function setCouponsCampaignId($id) {
+		$this->couponscampaignid = $id;
 	}
 	
 	public function setProviderId($id) {
@@ -2479,7 +2499,7 @@ class Coupon implements JsonSerializable {
 				'couponBillingUuid' => $this->couponBillingUuid,
 				'code' => $this->code,
 				'status' => $this->status,
-				'campaign' => CouponCampaignDAO::getCouponCampaignById($this->couponcampaignid)->jsonSerialize(),
+				'couponsCampaign' => CouponsCampaignDAO::getCouponsCampaignById($this->couponscampaignid)->jsonSerialize(),
 				'provider' => ProviderDAO::getProviderById($this->providerid)->jsonSerialize()
 		];
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->providerplanid));
@@ -2503,7 +2523,7 @@ class CouponDAO {
 		$out = new Coupon();
 		$out->setId($row["_id"]);
 		$out->setCouponBillingUuid($row['coupon_billing_uuid']);
-		$out->setCouponCampaignId($row["couponscampaignsid"]);
+		$out->setCouponsCampaignId($row["couponscampaignsid"]);
 		$out->setProviderId($row["providerid"]);
 		$out->setProviderPlanId($row["providerplanid"]);
 		$out->setCode($row["code"]);
@@ -2575,7 +2595,7 @@ class CouponDAO {
 		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$coupon->getCouponBillingUuid(),
-						$coupon->getCouponCampaignId(),
+						$coupon->getCouponsCampaignId(),
 						$coupon->getProviderId(),
 						$coupon->getProviderPlanId(),
 						$coupon->getCode(),
@@ -2586,7 +2606,7 @@ class CouponDAO {
 		return(self::getCouponById($row[0]));
 	}
 	
-	public static function getCouponsTotalNumberByCouponCampaignId($couponscampaignsid) {
+	public static function getCouponsTotalNumberByCouponsCampaignId($couponscampaignsid) {
 		$query = "SELECT count(*) as counter FROM billing_coupons WHERE couponscampaignsid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($couponscampaignsid));
 		
