@@ -7,6 +7,7 @@ require_once __DIR__ . '/../libs/site/SubscriptionsController.php';
 require_once __DIR__ . '/../libs/site/InternalPlansController.php';
 require_once __DIR__ . '/../libs/site/CouponsController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
+require_once __DIR__ . '/../libs/site/CouponsCampaignsController.php';
 //require_once __DIR__ . '/test.php';
 
 use \Slim\Http\Request;
@@ -574,8 +575,8 @@ $app->put("/billings/api/internalplans/{internalPlanUuid}/addtoprovider/{provide
       "couponBillingUuid": "11111111-1111-1111-1111-1111111",
       "code": "prefix-1111",
       "status": "waiting",
-      "campaign": {
-        "couponCampaignBillingUuid": "11111111-1111-1111-1111-1111111",
+      "couponsCampaign": {
+        "couponsCampaignBillingUuid": "11111111-1111-1111-1111-1111111",
         "creationDate": "2016-01-01 00:00:00.00000+01",
         "name": "campaign_name",
         "description": "campaign_desc",
@@ -610,7 +611,7 @@ $app->get("/billings/api/coupons/", function ($request, $response, $args) {
 	
 	{
 		"userBillingUuid" : "UserBillingUUID",
-		"couponCampaignBillingUuid": "11111111-1111-1111-1111-1111111"
+		"couponsCampaignBillingUuid": "11111111-1111-1111-1111-1111111"
 	}
 	
 */
@@ -618,6 +619,36 @@ $app->get("/billings/api/coupons/", function ($request, $response, $args) {
 $app->post("/billings/api/coupons/", function ($request, $response, $args) {
 	$couponsController = new CouponsController();
 	return($couponsController->create($request, $response, $args));
+});
+
+//get InternalPlans
+	
+/*
+ sample call :
+	
+ GET /billings/api/couponscampaigns/?providerName=cashway
+
+ "providerName" : "cashway" (optional) Retrieve internalplans available only to that provider
+	
+ sample answer :
+	
+{
+ 	"status": "done",
+ 	"statusMessage": "success",
+	"statusCode": 0,
+	"response": {
+		"internalPlans": [
+	 		{...},
+	 		{...}
+	 	]
+	 }
+}
+	
+*/
+
+$app->get("/billings/api/couponscampaigns/", function ($request, $response, $args) {
+	$couponsCampaignsController = new CouponsCampaignsController();
+	return($couponsCampaignsController->getMulti($request, $response, $args));
 });
 
 //WebHooks

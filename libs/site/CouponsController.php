@@ -59,24 +59,24 @@ class CouponsController extends BillingsController {
 		try {
 			$data = json_decode($request->getBody(), true);
 			$userBillingUuid = NULL;
-			$couponCampaignBillingUuid = NULL;
+			$couponsCampaignBillingUuid = NULL;
 			if(!isset($data['userBillingUuid'])) {
 				//exception
 				$msg = "field 'userBillingUuid' is missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(!isset($data['couponCampaignBillingUuid'])) {
+			if(!isset($data['couponsCampaignBillingUuid'])) {
 				//exception
-				$msg = "field 'couponCampaignBillingUuid' is missing";
+				$msg = "field 'couponsCampaignBillingUuid' is missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$userBillingUuid = $data['userBillingUuid'];
-			$couponCampaignBillingUuid = $data['couponCampaignBillingUuid'];
+			$couponsCampaignBillingUuid = $data['couponsCampaignBillingUuid'];
 			//
 			$couponsHandler = new CouponsHandler();
-			$coupon = $couponsHandler->doCreateCoupon($userBillingUuid, $couponCampaignBillingUuid);
+			$coupon = $couponsHandler->doCreateCoupon($userBillingUuid, $couponsCampaignBillingUuid);
 			return($this->returnObjectAsJson($response, 'coupon', $coupon));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while creating a coupon, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();

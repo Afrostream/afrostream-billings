@@ -483,6 +483,7 @@ class SubscriptionsHandler {
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid()."...");
 			$subscription_is_new_event = false;
 			$subscription_is_canceled_event = false;
+			$subscription_is_expired_event = false;
 			$sendgrid_tepmplate_id = NULL;
 			$event = NULL;
 			//check subscription_is_new_event
@@ -503,6 +504,7 @@ class SubscriptionsHandler {
 				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID');
 				$event = "subscription_is_new";
 			}
+			//check subscription_is_canceled_event
 			if($subscription_before_update == NULL) {
 				if($subscription_after_update->getSubStatus() == 'canceled') {
 					$subscription_is_canceled_event = true;
@@ -520,9 +522,27 @@ class SubscriptionsHandler {
 				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
 				$event = "subscription_is_canceled";
 			}
-			if($subscription_is_new_event == true || $subscription_is_canceled_event == true) {
+			//check subscription_is_expired_event
+			if($subscription_before_update == NULL) {
+				if($subscription_after_update->getSubStatus() == 'expired') {
+					$subscription_is_expired_event = true;
+				}
+			} else {
+				if(
+						($subscription_before_update->getSubStatus() != 'expired')
+						&&
+						($subscription_after_update->getSubStatus() == 'expired')
+						) {
+							$subscription_is_expired_event = true;
+						}
+			}
+			if($subscription_is_expired_event == true) {
+				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID');
+				$event = "subscription_is_expired";
+			}
+			if($subscription_is_new_event == true || $subscription_is_canceled_event == true || $subscription_is_expired_event == true) {
 				config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", ...");
-				if(getEnv('EVENT_EMAIL_ACTIVATED') == 1) {
+				if(getEnv('EVENT_EMAIL_ACTIVATED') == 1 && !empty($sendgrid_tepmplate_id)) {
 					$eventEmailProvidersExceptionArray = explode(";", getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION'));
 					$provider = ProviderDAO::getProviderById($subscription_after_update->getProviderId());
 					if($provider == NULL) {
