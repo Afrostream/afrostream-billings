@@ -55,16 +55,16 @@ sendMessage("*** ACTIVATED YESTERDAY ***");
 
 sendMessage("total activated=".$numberOfActivatedSubscriptionsYesterday['total']);
 
+sendMessage("new activated=".$numberOfActivatedSubscriptionsYesterday['new']);
+sendMessage("Re activated=".$numberOfActivatedSubscriptionsYesterday['returning']);
+
 if($numberOfActivatedSubscriptionsYesterday['total'] > 0) {
 	sendMessage("total activated details :");
 	$numberOfActivatedSubscriptionsYesterdayByProvider = $numberOfActivatedSubscriptionsYesterday['providers'];
 	foreach ($numberOfActivatedSubscriptionsYesterdayByProvider as $provider_name => $counters) {
 		sendMessage($provider_name."=".$counters['total']);
-	}	
+	}
 }
-
-sendMessage("new activated=".$numberOfActivatedSubscriptionsYesterday['new']);
-sendMessage("Re activated=".$numberOfActivatedSubscriptionsYesterday['returning']);
 
 sendMessage("*** EXPIRED YESTERDAY ***");
 
@@ -74,7 +74,7 @@ if($numberOfExpiredSubscriptionsYesterday['total'] > 0) {
 	sendMessage("expired reasons :");
 	sendMessage("Not active - payement issue=".$numberOfExpiredSubscriptionsYesterday['expired_cause_pb']);
 	sendMessage("Churn - no access=".$numberOfExpiredSubscriptionsYesterday['expired_cause_ended']);
-	sendMessage("total expired details:");
+	sendMessage("total expired details :");
 	$numberOfExpiredSubscriptionsYesterdayByProvider = $numberOfExpiredSubscriptionsYesterday['providers'];
 	foreach ($numberOfExpiredSubscriptionsYesterdayByProvider as $provider_name => $counters) {
 		sendMessage($provider_name." : total expired=".$counters['total']);
@@ -88,8 +88,8 @@ sendMessage("*** CANCELED (human action) YESTERDAY ***");
 sendMessage("canceled=".$numberOfCanceledSubscriptionsYesterday['total']);
 
 if($numberOfCanceledSubscriptionsYesterday['total'] > 0) {
-	sendMessage("details :");
-	$numberOfCanceledSubscriptionsYesterdayByProvider = $numberOfCanceledSubscriptions['providers'];
+	sendMessage("total canceled details :");
+	$numberOfCanceledSubscriptionsYesterdayByProvider = $numberOfCanceledSubscriptionsYesterday['providers'];
 	foreach ($numberOfCanceledSubscriptionsYesterdayByProvider as $provider_name => $counters) {
 		sendMessage($provider_name."=".$counters['total']);
 	}
