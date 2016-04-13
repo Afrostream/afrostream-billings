@@ -19,7 +19,8 @@ class dbStats {
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
-		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.value not like '%yopmail.com' AND BUO.deleted = 'no')";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
+		$query.= " WHERE BUO.value not like '%yopmail.com'";
 		$query.= " GROUP BY BP._id";
 		$result = pg_query(config::getDbConn(), $query);
 		$total = 0;
@@ -45,13 +46,15 @@ class dbStats {
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
-		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.value not like '%yopmail.com' AND BUO.deleted = 'no')";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
 		$query.= " WHERE";
-		$query.= " (CAST(BS.sub_status as varchar) like '%active' AND BP.name = 'recurly')";
+		$query.= " BUO.value not like '%yopmail.com'";
+		$query.= " AND";
+		$query.= " ((CAST(BS.sub_status as varchar) like '%active' AND BP.name = 'recurly')";
 		$query.= " OR";
 		$query.= " (CAST(BS.sub_status as varchar) like '%active' AND BP.name <> 'recurly' AND sub_period_ends_date > date(CURRENT_TIMESTAMP))";
 		$query.= " OR";
-		$query.= " (CAST(BS.sub_status as varchar) like '%canceled' AND sub_period_ends_date > date(CURRENT_TIMESTAMP))";
+		$query.= " (CAST(BS.sub_status as varchar) like '%canceled' AND sub_period_ends_date > date(CURRENT_TIMESTAMP)))";
 		$query.= " GROUP BY BP._id";
 		$result = pg_query(config::getDbConn(), $query);
 		$total = 0;
@@ -73,10 +76,11 @@ class dbStats {
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
-		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.value not like '%yopmail.com' AND BUO.deleted = 'no')";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
 		$query.= " LEFT JOIN billing_users BUB ON (BU.user_reference_uuid = BUB.user_reference_uuid)";
 		$query.= " LEFT JOIN  billing_subscriptions BSB ON (BSB.userid = BUB._id AND BSB._id < BS._id )";
-		$query.= " WHERE";
+		$query.= " WHERE BUO.value not like '%yopmail.com'";
+		$query.= " AND";
 		$query.= " BS.sub_status <> 'future'";
 		$query.= " AND";
 		$query.= " date(BS.sub_activated_date AT TIME ZONE 'Europe/Paris') = date('".$date_as_str."')";
@@ -115,9 +119,11 @@ class dbStats {
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
-		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.value not like '%yopmail.com' AND BUO.deleted = 'no')";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
 		$query.= " WHERE";
-		$query.= " (BS.sub_status = 'expired'";
+		$query.= " BUO.value not like '%yopmail.com'";
+		$query.= " AND";
+		$query.= " ((BS.sub_status = 'expired'";
 		if(isset($date_as_str)) {
 			$query.= " AND";
 			$query.= " date(BS.sub_expires_date AT TIME ZONE 'Europe/Paris') = date('".$date_as_str."')";
@@ -129,7 +135,7 @@ class dbStats {
 			$query.= " AND";
 			$query.= " date(BS.sub_period_ends_date AT TIME ZONE 'Europe/Paris') = date('".$date_as_str."')";
 		}
-		$query.= " )";
+		$query.= " ))";
 		$query.= " GROUP BY BP._id";
 		$result = pg_query(config::getDbConn(), $query);
 		$total = 0;
@@ -159,8 +165,10 @@ class dbStats {
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
-		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.value not like '%yopmail.com' AND BUO.deleted = 'no')";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
 		$query.= " WHERE";
+		$query.= " BUO.value not like '%yopmail.com'";
+		$query.= " AND";
 		$query.= " BS.sub_status = 'canceled'";
 		$query.= " AND";
 		$query.= " date(BS.sub_canceled_date AT TIME ZONE 'Europe/Paris') = date('".$date_as_str."')";
