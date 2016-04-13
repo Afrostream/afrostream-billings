@@ -2499,7 +2499,7 @@ class Coupon implements JsonSerializable {
 				'couponBillingUuid' => $this->couponBillingUuid,
 				'code' => $this->code,
 				'status' => $this->status,
-				'couponsCampaign' => CouponsCampaignDAO::getCouponsCampaignById($this->couponscampaignid)->jsonSerialize(),
+				'campaign' => CouponsCampaignDAO::getCouponsCampaignById($this->couponscampaignid)->jsonSerialize(),
 				'provider' => ProviderDAO::getProviderById($this->providerid)->jsonSerialize()
 		];
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->providerplanid));
