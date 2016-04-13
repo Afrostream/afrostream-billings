@@ -43,10 +43,10 @@ sendMessage("total inactive=".$numberOfExpiredSubscriptions['expired_cause_pb'])
 
 sendMessage("total churn=".$numberOfExpiredSubscriptions['expired_cause_ended']);
 
-if($numberOfSubscriptions['total'] > 0) {
+if($numberOfActiveSubscriptions['total'] > 0) {
 	sendMessage("total active details :");
-	$numberOfSubscriptionsByProvider = $numberOfSubscriptions['providers'];
-	foreach ($numberOfSubscriptionsByProvider as $provider_name => $counters) {
+	$numberOfActiveSubscriptionsByProvider = $numberOfActiveSubscriptions['providers'];
+	foreach ($numberOfActiveSubscriptionsByProvider as $provider_name => $counters) {
 		sendMessage($provider_name."=".$counters['total']);
 	}
 }
