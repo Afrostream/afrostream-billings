@@ -173,17 +173,32 @@ class GocardlessWebHooksHandler {
 							//nothing to do
 							break;
 						case 'customer_approval_denied' :
-							//sub_expires_date = sub_canceled_date
-							$db_subscription->setSubExpiresDate(new DateTime($notification_as_array['created_at']));
-							$db_subscription->setSubCanceledDate(new DateTime($notification_as_array['created_at']));
-							$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
-							$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
+							//? HOW TO CHECK ?
+							$subscriptionsHandler = new SubscriptionsHandler();
+							$expires_date = new DateTime($notification_as_array['created_at']);
+							$subscriptionsHandler->doExpireSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), $expires_date, false);
 							break;
 						case 'payment_created' :
 							//nothing to do
 							break;
 						case 'cancelled' :
-							if($notification_as_array['details']['cause'] == 'subscription_cancelled') {
+							/* NEW */
+							if($api_subscription->status == 'cancelled') {//CHECK
+								if(isset($api_subscription->metadata->status)
+										&&
+										$api_subscription->metadata->status == 'expired')
+								{
+									$subscriptionsHandler = new SubscriptionsHandler();
+									$expires_date = new DateTime($notification_as_array['created_at']);
+									$subscriptionsHandler->doExpireSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), $expires_date, false);
+								} else {
+									$subscriptionsHandler = new SubscriptionsHandler();
+									$cancel_date = new DateTime($notification_as_array['created_at']);
+									$subscriptionsHandler->doCancelSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), $cancel_date, false);
+								}
+							}
+							/* OLD */
+							/*if($notification_as_array['details']['cause'] == 'subscription_cancelled') {
 								if(isset($api_subscription->metadata->status) 
 										&&
 										$api_subscription->metadata->status == 'expired')
@@ -218,7 +233,7 @@ class GocardlessWebHooksHandler {
 									$db_subscription->setSubStatus('expired');
 									$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
 								}
-							}
+							}*/
 							break;
 						default :
 							$msg = "unknown action : ".$notification_as_array['action'];
@@ -226,21 +241,22 @@ class GocardlessWebHooksHandler {
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 							//break;
 					}
+					/* OLD */
 					//In order to be sure to have a date anyway
-					if($db_subscription->getSubStatus() == 'canceled' && $db_subscription->getSubCanceledDate() == NULL) {
+					/*if($db_subscription->getSubStatus() == 'canceled' && $db_subscription->getSubCanceledDate() == NULL) {
 						//sub_canceled_date
 						config::getLogger()->addInfo('Processing gocardless hook subscription, forcing canceled date');
 						$db_subscription->setSubCanceledDate(new DateTime($notification_as_array['created_at']));
 						$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);			
-					}
-					if($db_subscription->getSubStatus() == 'expired' && $db_subscription->getSubExpiresDate() == NULL) {
+					}*/
+					/*if($db_subscription->getSubStatus() == 'expired' && $db_subscription->getSubExpiresDate() == NULL) {
 						//sub_expires_date = sub_canceled_date
 						config::getLogger()->addInfo('Processing gocardless hook subscription, forcing expired date');
 						$db_subscription->setSubExpiresDate(new DateTime($notification_as_array['created_at']));
 						$db_subscription->setSubCanceledDate(new DateTime($notification_as_array['created_at']));
 						$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
 						$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);				
-					}
+					}*/
 					//COMMIT
 					pg_query("COMMIT");
 				} catch(Exception $e) {
@@ -321,7 +337,10 @@ class GocardlessWebHooksHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					//GOCARDLESS DO NOT KEEP METADATA ALREADY SET
-					if($api_subscription->status == 'active') {
+					$subscriptionsHandler = new SubscriptionsHandler();
+					$expires_date = new DateTime($notification_as_array['created_at']);
+					$subscriptionsHandler->doExpireSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), $expires_date, false);
+					/*if($api_subscription->status == 'active') {
 						$metadata_array = array();
 						foreach ($api_subscription->metadata as $key => $value) {
 							$metadata_array[$key] = $value;
@@ -337,7 +356,9 @@ class GocardlessWebHooksHandler {
 						$subscriptionsHandler = new SubscriptionsHandler();
 						$cancel_date = new DateTime();
 						$subscriptionsHandler->doCancelSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), $cancel_date, false);
-					}
+					} else if($api_subscription->status == 'cancelled') {
+						//TODO
+					}*/
 				}
 				config::getLogger()->addInfo('Processing gocardless hook payment, action='.$notification_as_array['action'].' done successfully');
 				break;
