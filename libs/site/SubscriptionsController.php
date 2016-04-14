@@ -3,7 +3,8 @@
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../users/UsersHandler.php';
 require_once __DIR__ . '/../subscriptions/SubscriptionsHandler.php';
-require_once __DIR__ .'/BillingsController.php';
+require_once __DIR__ . '/BillingsController.php';
+require_once __DIR__ . '/../db/dbGlobal.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -305,7 +306,7 @@ class SubscriptionsController extends BillingsController {
 		//more recent firt
 		usort($subscriptions, 
 				function(BillingsSubscription $a, BillingsSubscription $b) {
-					return(strcmp($b->getSubActivatedDate(), $a->getSubActivatedDate()));
+					return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), dbGlobal::toISODate($a->getSubActivatedDate())));
 				}
 		);
 	}
