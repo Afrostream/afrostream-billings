@@ -492,7 +492,14 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				{
 					$db_subscription->setSubStatus('expired');
 				} else {
-					$db_subscription->setSubStatus('canceled');
+					if($db_subscription->getSubStatus() == 'expired')
+					{
+						//if expired, stay expired
+						$db_subscription->setSubStatus('expired');
+					} else {
+						//canceled
+						$db_subscription->setSubStatus('canceled');
+					}
 				}
 				break;
 			case 'pending_customer_approval' :
@@ -717,12 +724,13 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				if($subscription->getSubStatus() == "canceled") {
 					//already cancelled, nothing can be done in gocardless side
 				} else {
-					if($is_a_request == true) {
-						$client = new Client(array(
-								'access_token' => getEnv('GOCARDLESS_API_KEY'),
-								'environment' => getEnv('GOCARDLESS_API_ENV')
-						));
-						$api_subscription = $client->subscriptions()->get($subscription->getSubUid());
+					$client = new Client(array(
+							'access_token' => getEnv('GOCARDLESS_API_KEY'),
+							'environment' => getEnv('GOCARDLESS_API_ENV')
+					));
+					$api_subscription = $client->subscriptions()->get($subscription->getSubUid());
+					if($is_a_request == true || $api_subscription->status != 'cancelled') {
+						//anyway
 						$metadata_array = array();
 						foreach ($api_subscription->metadata as $key => $value) {
 							$metadata_array[$key] = $value;
@@ -736,8 +744,8 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 						$api_subscription = $client->subscriptions()->update($api_subscription->id, $sub_params);
 						//
 						$client->subscriptions()->cancel($api_subscription->id);
+						$subscription->setSubCanceledDate($expires_date);
 					}
-					$subscription->setSubCanceledDate($expires_date);
 				}
 				$subscription->setSubExpiresDate($expires_date);
 				$subscription->setSubStatus('expired');
