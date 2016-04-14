@@ -208,6 +208,7 @@ class WebHooksController extends BillingsController {
 		if ($result[0] === false) {
 			config::getLogger()->addError('Receiving cashway webhook failed, message='.$result[1]);
 			header('HTTP/1.0 400 '.$result[1]);
+			header('User-Agent: '.getEnv('CASHWAY_USER_AGENT'));
 			die ("Bad Request");
 		}
 		$post_data = file_get_contents('php://input');
@@ -225,6 +226,17 @@ class WebHooksController extends BillingsController {
 			config::getLogger()->addInfo('Processing cashway webhook done successfully, id='.$billingsWebHook->getId().'...');
 		
 			config::getLogger()->addInfo('Treating cashway webhook done successfully, id='.$billingsWebHook->getId());
+			//Asked By Romain d'Alverny From CASHWAY, should be only for 'status_check' event but I do prefer not do specific coding : so same for all
+			$json_as_array = array();
+			$json_as_array['status'] = 'ok';
+			$json_as_array['message'] = '';
+			$json_as_array['agent'] = getEnv('CASHWAY_USER_AGENT');
+			$json = json_encode($json_as_array);
+			$response = $response->withHeader('User-Agent', getEnv('CASHWAY_USER_AGENT'));
+			$response = $response->withStatus(200);
+			$response = $response->withHeader('Content-Type', 'application/json');
+			$response->getBody()->write($json);
+			return($response);
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while treating a cashway webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);

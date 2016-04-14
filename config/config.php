@@ -173,7 +173,7 @@ if(getEnv('CASHWAY_API_HTTP_AUTH_PWD') === false) {
 }
 
 if(getEnv('CASHWAY_USER_AGENT') === false) {
-	putEnv('CASHWAY_USER_AGENT=afrbillingsapi');
+	putEnv('CASHWAY_USER_AGENT=afrbillingsapi/1.0');
 }
 
 if(getEnv('CASHWAY_USE_STAGING') === false) {
