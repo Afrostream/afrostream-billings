@@ -184,8 +184,8 @@ class IdipperSubscriptionsHandler extends SubscriptionsHandler {
 			return;
 		}
 		$is_active = NULL;
-		$periodStartedDate = (new DateTime($subscription->getSubPeriodStartedDate()))->setTimezone(new DateTimeZone(config::$timezone));
-		$periodEndsDate = (new DateTime($subscription->getSubPeriodEndsDate()))->setTimezone(new DateTimeZone(config::$timezone));
+		$periodStartedDate = $subscription->getSubPeriodStartedDate()->setTimezone(new DateTimeZone(config::$timezone));
+		$periodEndsDate = $subscription->getSubPeriodEndsDate()->setTimezone(new DateTimeZone(config::$timezone));
 		$periodEndsDate->setTime(23, 59, 59);
 		$periodeGraceEndsDate = clone $periodEndsDate;
 		$periodeGraceEndsDate->add(new DateInterval("P7D"));//7 full days of grace period
@@ -234,7 +234,7 @@ class IdipperSubscriptionsHandler extends SubscriptionsHandler {
 		}
 	
 		if($start_date == NULL) {
-			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
+			$start_date = $subscription->getSubPeriodEndsDate();
 		}
 		$start_date->setTimezone(new DateTimeZone(config::$timezone));
 		$end_date->setTimezone(new DateTimeZone(config::$timezone));

@@ -58,7 +58,7 @@ class WebHooksHander {
 					$cashwayWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
 					break;
 				default:
-					$msg = "unsupported feature for provider named : ".$provider_name;
+					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;

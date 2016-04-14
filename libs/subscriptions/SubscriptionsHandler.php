@@ -420,6 +420,51 @@ class SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
+	public function doExpireSubscriptionByUuid($subscriptionBillingUuid, DateTime $expires_date, $is_a_request = true) {
+		$db_subscription = NULL;
+		try {
+			config::getLogger()->addInfo("dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			if($db_subscription == NULL) {
+				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
+			if($provider == NULL) {
+				$msg = "unknown provider with id : ".$user->getProviderId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$db_subscription_before_update = clone $db_subscription;
+			switch($provider->getName()) {
+				case 'gocardless' :
+					$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
+					$db_subscription = $gocardlessSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				default:
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
+			//
+			$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			//
+			$this->doFillSubscription($db_subscription);
+			//
+			config::getLogger()->addInfo("dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscription expiring failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscription expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_subscription);
+	}
 	
 	protected function doFillSubscriptions($subscriptions) {
 		foreach($subscriptions as $subscription) {
@@ -483,6 +528,7 @@ class SubscriptionsHandler {
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid()."...");
 			$subscription_is_new_event = false;
 			$subscription_is_canceled_event = false;
+			$subscription_is_expired_event = false;
 			$sendgrid_tepmplate_id = NULL;
 			$event = NULL;
 			//check subscription_is_new_event
@@ -503,6 +549,7 @@ class SubscriptionsHandler {
 				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID');
 				$event = "subscription_is_new";
 			}
+			//check subscription_is_canceled_event
 			if($subscription_before_update == NULL) {
 				if($subscription_after_update->getSubStatus() == 'canceled') {
 					$subscription_is_canceled_event = true;
@@ -520,9 +567,27 @@ class SubscriptionsHandler {
 				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
 				$event = "subscription_is_canceled";
 			}
-			if($subscription_is_new_event == true || $subscription_is_canceled_event == true) {
+			//check subscription_is_expired_event
+			if($subscription_before_update == NULL) {
+				if($subscription_after_update->getSubStatus() == 'expired') {
+					$subscription_is_expired_event = true;
+				}
+			} else {
+				if(
+						($subscription_before_update->getSubStatus() != 'expired')
+						&&
+						($subscription_after_update->getSubStatus() == 'expired')
+						) {
+							$subscription_is_expired_event = true;
+						}
+			}
+			if($subscription_is_expired_event == true) {
+				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID');
+				$event = "subscription_is_expired";
+			}
+			if($subscription_is_new_event == true || $subscription_is_canceled_event == true || $subscription_is_expired_event == true) {
 				config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", ...");
-				if(getEnv('EVENT_EMAIL_ACTIVATED') == 1) {
+				if(getEnv('EVENT_EMAIL_ACTIVATED') == 1 && !empty($sendgrid_tepmplate_id)) {
 					$eventEmailProvidersExceptionArray = explode(";", getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION'));
 					$provider = ProviderDAO::getProviderById($subscription_after_update->getProviderId());
 					if($provider == NULL) {
@@ -531,110 +596,112 @@ class SubscriptionsHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					if(!in_array($provider->getName(), $eventEmailProvidersExceptionArray)) {
-						config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail...");
-					    //DATA -->
-					    $providerPlan = PlanDAO::getPlanById($subscription_after_update->getPlanId());
-					    if($providerPlan == NULL) {
-					    	$msg = "unknown plan with id : ".$subscription_after_update->getPlanId();
-					    	config::getLogger()->addError($msg);
-					    	throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					    }
-					    $internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
-					    if($internalPlan == NULL) {
-					    	$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
-					    	config::getLogger()->addError($msg);
-					    	throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					    }
-					    $internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
-					    $user = UserDAO::getUserById($subscription_after_update->getUserId());
-					    if($user == NULL) {
-					    	$msg = "unknown user with id : ".$subscription_after_update->getUserId();
-					    	config::getLogger()->addError($msg);
-					    	throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					    }
-					    $userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-					    //DATA <--
-					    //DATA SUBSTITUTION -->
-					    setlocale(LC_MONETARY, 'fr_FR.utf8');//TODO : Forced to French Locale for "," in floats...
-					   	$substitions = array();
-					   	//user
-					   	$substitions['%userreferenceuuid%'] = $user->getUserReferenceUuid();
-					   	$substitions['%userbillinguuid%'] = $user->getUserBillingUuid();
-					   	//provider : nothing
-					   	//providerPlan : nothing
-					   	//internalPlan :
-					   	$substitions['%internalplanname%'] = $internalPlan->getName();
-					   	$substitions['%internalplandesc%'] = $internalPlan->getDescription(); 
-					   	$substitions['%amountincents%'] = $internalPlan->getAmountInCents();
-					   	$amountInMoney = new Money((integer) $internalPlan->getAmountInCents(), new Currency($internalPlan->getCurrency()));
-					   	$substitions['%amount%'] = money_format('%!.2n', $amountInMoney->getConvertedAmount());
-					   	$substitions['%amountincentsexcltax%'] = $internalPlan->getAmountInCentsExclTax();
-					   	$amountExclTaxInMoney = new Money((integer) $internalPlan->getAmountInCentsExclTax(), new Currency($internalPlan->getCurrency()));
-					   	$substitions['%amountexcltax%'] = money_format('%!.2n', $amountExclTaxInMoney->getConvertedAmount());
-					   	if($internalPlan->getVatRate() == NULL) {
-					   		$substitions['%vat%'] = 'N/A'; 
-					   	} else {
-					   		$substitions['%vat%'] = number_format($internalPlan->getVatRate(), 2, ',', '').'%';
-					   	}
-					   	$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
-					   	$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
-					   	$substitions['%amounttax%'] = money_format('%!.2n', $amountTaxInMoney->getConvertedAmount());
-					   	$substitions['%currency%'] = $internalPlan->getCurrency();
-					   	$substitions['%cycle%'] = $internalPlan->getCycle();
-					   	$substitions['%periodunit%'] = $internalPlan->getPeriodUnit();
-					   	$substitions['%periodlength%'] = $internalPlan->getPeriodLength();
-					   	//user : nothing
-					   	//userOpts
-					   	$substitions['%email%'] = $userOpts->getOpts()['email'];
-					   	$firstname = '';
-					   	if(array_key_exists('firstName', $userOpts->getOpts())) {
-					   		$firstname = $userOpts->getOpts()['firstName'];
-					   	}
-					   	if($firstname == 'firstNameValue') {
-					   		$firstname = '';
-					   	}
-					   	$substitions['%firstname%'] = $firstname;
-					   	$lastname = '';
-					   	if(array_key_exists('lastName', $userOpts->getOpts())) {
-					   		$lastname = $userOpts->getOpts()['lastName'];
-					   	}
-					   	if($lastname == 'lastNameValue') {
-					   		$lastname = '';
-					   	}
-					   	$substitions['%lastname%'] = $lastname;
-					   	$username = $firstname;
-					   	if($username == '') {
-					   		$username = explode('@', $substitions['email'])[0];
-					   	}
-					   	$substitions['%username%'] = $username;
-					   	$fullname = trim($firstname." ".$lastname);
-					   	$substitions['%fullname%'] = $fullname;
-					   	//subscription
-					   	$substitions['%subscriptionbillinguuid%'] = $subscription_after_update->getSubscriptionBillingUuid();
-					   	//DATA SUBSTITUTION <--
-						$emailTo = $substitions['%email%'];
-						$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
-						$email = new SendGrid\Email();
-						$email
-						->addTo($emailTo)
-						->setFrom(getEnv('SENDGRID_FROM'))
-						->setFromName(getEnv('SENDGRID_FROM_NAME'))
-						->setSubject(' ')
-						->setText(' ')
-						->setHtml(' ')
-						->setTemplateId($sendgrid_tepmplate_id);
-						if( (null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
-							$email->setBcc(getEnv('SENDGRID_BCC'));
-							foreach($substitions as $var => $val) {
-								$email->addSubstitution($var, array($val, $val));//same value twice (To + Bcc)
-							}
-						} else {
-							foreach($substitions as $var => $val) {
-								$email->addSubstitution($var, array($val));//once (To)
-							}	
+						$user = UserDAO::getUserById($subscription_after_update->getUserId());
+						if($user == NULL) {
+							$msg = "unknown user with id : ".$subscription_after_update->getUserId();
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						}
-						$sendgrid->send($email);
-						config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");
+						$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+						if(array_key_exists('email', $userOpts->getOpts())) {
+							config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail...");
+						    //DATA -->
+						    $providerPlan = PlanDAO::getPlanById($subscription_after_update->getPlanId());
+						    if($providerPlan == NULL) {
+						    	$msg = "unknown plan with id : ".$subscription_after_update->getPlanId();
+						    	config::getLogger()->addError($msg);
+						    	throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						    }
+						    $internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
+						    if($internalPlan == NULL) {
+						    	$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+						    	config::getLogger()->addError($msg);
+						    	throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						    }
+						    $internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
+						    //DATA <--
+						    //DATA SUBSTITUTION -->
+						    setlocale(LC_MONETARY, 'fr_FR.utf8');//TODO : Forced to French Locale for "," in floats...
+						   	$substitions = array();
+						   	//user
+						   	$substitions['%userreferenceuuid%'] = $user->getUserReferenceUuid();
+						   	$substitions['%userbillinguuid%'] = $user->getUserBillingUuid();
+						   	//provider : nothing
+						   	//providerPlan : nothing
+						   	//internalPlan :
+						   	$substitions['%internalplanname%'] = $internalPlan->getName();
+						   	$substitions['%internalplandesc%'] = $internalPlan->getDescription(); 
+						   	$substitions['%amountincents%'] = $internalPlan->getAmountInCents();
+						   	$amountInMoney = new Money((integer) $internalPlan->getAmountInCents(), new Currency($internalPlan->getCurrency()));
+						   	$substitions['%amount%'] = money_format('%!.2n', $amountInMoney->getConvertedAmount());
+						   	$substitions['%amountincentsexcltax%'] = $internalPlan->getAmountInCentsExclTax();
+						   	$amountExclTaxInMoney = new Money((integer) $internalPlan->getAmountInCentsExclTax(), new Currency($internalPlan->getCurrency()));
+						   	$substitions['%amountexcltax%'] = money_format('%!.2n', $amountExclTaxInMoney->getConvertedAmount());
+						   	if($internalPlan->getVatRate() == NULL) {
+						   		$substitions['%vat%'] = 'N/A'; 
+						   	} else {
+						   		$substitions['%vat%'] = number_format($internalPlan->getVatRate(), 2, ',', '').'%';
+						   	}
+						   	$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
+						   	$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
+						   	$substitions['%amounttax%'] = money_format('%!.2n', $amountTaxInMoney->getConvertedAmount());
+						   	$substitions['%currency%'] = $internalPlan->getCurrency();
+						   	$substitions['%cycle%'] = $internalPlan->getCycle();
+						   	$substitions['%periodunit%'] = $internalPlan->getPeriodUnit();
+						   	$substitions['%periodlength%'] = $internalPlan->getPeriodLength();
+						   	//user : nothing
+						   	//userOpts
+						   	$substitions['%email%'] = $userOpts->getOpts()['email'];
+						   	$firstname = '';
+						   	if(array_key_exists('firstName', $userOpts->getOpts())) {
+						   		$firstname = $userOpts->getOpts()['firstName'];
+						   	}
+						   	if($firstname == 'firstNameValue') {
+						   		$firstname = '';
+						   	}
+						   	$substitions['%firstname%'] = $firstname;
+						   	$lastname = '';
+						   	if(array_key_exists('lastName', $userOpts->getOpts())) {
+						   		$lastname = $userOpts->getOpts()['lastName'];
+						   	}
+						   	if($lastname == 'lastNameValue') {
+						   		$lastname = '';
+						   	}
+						   	$substitions['%lastname%'] = $lastname;
+						   	$username = $firstname;
+						   	if($username == '') {
+						   		$username = explode('@', $substitions['email'])[0];
+						   	}
+						   	$substitions['%username%'] = $username;
+						   	$fullname = trim($firstname." ".$lastname);
+						   	$substitions['%fullname%'] = $fullname;
+						   	//subscription
+						   	$substitions['%subscriptionbillinguuid%'] = $subscription_after_update->getSubscriptionBillingUuid();
+						   	//DATA SUBSTITUTION <--
+							$emailTo = $substitions['%email%'];
+							$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
+							$email = new SendGrid\Email();
+							$email
+							->addTo($emailTo)
+							->setFrom(getEnv('SENDGRID_FROM'))
+							->setFromName(getEnv('SENDGRID_FROM_NAME'))
+							->setSubject(' ')
+							->setText(' ')
+							->setHtml(' ')
+							->setTemplateId($sendgrid_tepmplate_id);
+							if( (null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
+								$email->setBcc(getEnv('SENDGRID_BCC'));
+								foreach($substitions as $var => $val) {
+									$email->addSubstitution($var, array($val, $val));//same value twice (To + Bcc)
+								}
+							} else {
+								foreach($substitions as $var => $val) {
+									$email->addSubstitution($var, array($val));//once (To)
+								}	
+							}
+							$sendgrid->send($email);
+							config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");
+						}
 					}
 				}
 				config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", done successfully");

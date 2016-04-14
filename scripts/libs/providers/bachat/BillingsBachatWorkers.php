@@ -198,7 +198,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$day->setTimezone(new DateTimeZone(self::$timezone));
 			$day_str = $day->format("dmY");
 			$fields[] = $day_str;
-			$time = new DateTime($subscription->getSubPeriodEndsDate());
+			$time = $subscription->getSubPeriodEndsDate();
 			$time->setTimezone(new DateTimeZone(self::$timezone));
 			$time_str = $time->format("His");
 			$fields[] = $time_str;
@@ -424,11 +424,11 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}*/
 			$fields = array();
-			$day = new DateTime($subscription->getSubCanceledDate());
+			$day = $subscription->getSubCanceledDate();
 			$day->setTimezone(new DateTimeZone(self::$timezone));
 			$day_str = $day->format("dmY");
 			$fields[] = $day_str;
-			$time = new DateTime($subscription->getSubCanceledDate());
+			$time = $subscription->getSubCanceledDate();
 			$time->setTimezone(new DateTimeZone(self::$timezone));
 			$time_str = $time->format("His");
 			$fields[] = $time_str;

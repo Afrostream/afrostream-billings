@@ -21,17 +21,8 @@ print_r("processing...\n");
 sendMessage("*** TOTAL ***");
 
 $numberOfSubscriptions = dbStats::getNumberOfSubscriptions();
-
-sendMessage("total=".$numberOfSubscriptions['total']);
-
-if($numberOfSubscriptions['total']) {
-
-	$numberOfSubscriptionsByProvider = $numberOfSubscriptions['providers'];
-	
-	foreach ($numberOfSubscriptionsByProvider as $provider_name => $counters) {
-		sendMessage("details : ".$provider_name."=".$counters['total']);
-	}
-}
+$numberOfActiveSubscriptions = dbStats::getNumberOfActiveSubscriptions();
+$numberOfExpiredSubscriptions = dbStats::getNumberOfExpiredSubscriptions(NULL);
 
 $minusOneDay = new DateInterval("P1D");
 $minusOneDay->invert = 1;
@@ -40,44 +31,66 @@ $yesterday = new DateTime();
 $yesterday->setTimezone(new DateTimeZone(config::$timezone));
 $yesterday->add($minusOneDay);
 
+$numberOfActivatedSubscriptionsYesterday = dbStats::getNumberOfActivatedSubscriptions($yesterday);
+$numberOfExpiredSubscriptionsYesterday = dbStats::getNumberOfExpiredSubscriptions($yesterday);
+$numberOfCanceledSubscriptionsYesterday = dbStats::getNumberOfCanceledSubscriptions($yesterday);
+
+sendMessage("total since launch=".$numberOfSubscriptions['total']);
+
+sendMessage("total active=".$numberOfActiveSubscriptions['total']);
+
+sendMessage("total inactive=".$numberOfExpiredSubscriptions['expired_cause_pb']);
+
+sendMessage("total churn=".$numberOfExpiredSubscriptions['expired_cause_ended']);
+
+if($numberOfActiveSubscriptions['total'] > 0) {
+	sendMessage("total active details :");
+	$numberOfActiveSubscriptionsByProvider = $numberOfActiveSubscriptions['providers'];
+	foreach ($numberOfActiveSubscriptionsByProvider as $provider_name => $counters) {
+		sendMessage($provider_name."=".$counters['total']);
+	}
+}
+
 sendMessage("*** ACTIVATED YESTERDAY ***");
 
-$numberOfActivatedSubscriptions = dbStats::getNumberOfActivatedSubscriptions($yesterday);
+sendMessage("total activated=".$numberOfActivatedSubscriptionsYesterday['total']);
 
-sendMessage("activated=".$numberOfActivatedSubscriptions['total']);
+sendMessage("new activated=".$numberOfActivatedSubscriptionsYesterday['new']);
+sendMessage("Re activated=".$numberOfActivatedSubscriptionsYesterday['returning']);
 
-if($numberOfActivatedSubscriptions['total'] > 0) {
-	sendMessage("details :");
-	$numberOfActivatedSubscriptionsByProvider = $numberOfActivatedSubscriptions['providers'];
-
-	foreach ($numberOfActivatedSubscriptionsByProvider as $provider_name => $counters) {
+if($numberOfActivatedSubscriptionsYesterday['total'] > 0) {
+	sendMessage("total activated details :");
+	$numberOfActivatedSubscriptionsYesterdayByProvider = $numberOfActivatedSubscriptionsYesterday['providers'];
+	foreach ($numberOfActivatedSubscriptionsYesterdayByProvider as $provider_name => $counters) {
 		sendMessage($provider_name."=".$counters['total']);
 	}
 }
 
 sendMessage("*** EXPIRED YESTERDAY ***");
 
-$numberOfExpiredSubscriptions = dbStats::getNumberOfExpiredSubscriptions($yesterday);
+sendMessage("total expired=".$numberOfExpiredSubscriptionsYesterday['total']);
 
-sendMessage("expired=".$numberOfExpiredSubscriptions['total']);
-
-if($numberOfExpiredSubscriptions['total'] > 0) {
-	sendMessage("details :");
-	sendMessage("expired_cause_pb=".$numberOfExpiredSubscriptions['expired_cause_pb']);
-	sendMessage("expired_cause_ended=".$numberOfExpiredSubscriptions['expired_cause_ended']);
+if($numberOfExpiredSubscriptionsYesterday['total'] > 0) {
+	sendMessage("expired reasons :");
+	sendMessage("Not active - payement issue=".$numberOfExpiredSubscriptionsYesterday['expired_cause_pb']);
+	sendMessage("Churn - no access=".$numberOfExpiredSubscriptionsYesterday['expired_cause_ended']);
+	sendMessage("total expired details :");
+	$numberOfExpiredSubscriptionsYesterdayByProvider = $numberOfExpiredSubscriptionsYesterday['providers'];
+	foreach ($numberOfExpiredSubscriptionsYesterdayByProvider as $provider_name => $counters) {
+		sendMessage($provider_name." : total expired=".$counters['total']);
+		sendMessage($provider_name." : Not active - payement issue=".$counters['expired_cause_pb']);
+		sendMessage($provider_name." : Churn - no access=".$counters['expired_cause_ended']);
+	}
 }
 
 sendMessage("*** CANCELED (human action) YESTERDAY ***");
 
-$numberOfCanceledSubscriptions = dbStats::getNumberOfCanceledSubscriptions($yesterday);
+sendMessage("canceled=".$numberOfCanceledSubscriptionsYesterday['total']);
 
-sendMessage("canceled=".$numberOfCanceledSubscriptions['total']);
-
-if($numberOfCanceledSubscriptions['total'] > 0) {
-	sendMessage("details :");
-	$numberOfCanceledSubscriptionsByProvider = $numberOfCanceledSubscriptions['providers'];
-
-	foreach ($numberOfCanceledSubscriptionsByProvider as $provider_name => $counters) {
+if($numberOfCanceledSubscriptionsYesterday['total'] > 0) {
+	sendMessage("total canceled details :");
+	$numberOfCanceledSubscriptionsYesterdayByProvider = $numberOfCanceledSubscriptionsYesterday['providers'];
+	foreach ($numberOfCanceledSubscriptionsYesterdayByProvider as $provider_name => $counters) {
 		sendMessage($provider_name."=".$counters['total']);
 	}
 }

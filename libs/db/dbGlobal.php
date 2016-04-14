@@ -1060,16 +1060,16 @@ class BillingsSubscriptionDAO {
 		$out->setProviderId($row["providerid"]);
 		$out->setUserId($row["userid"]);
 		$out->setPlanId($row["planid"]);
-		$out->setCreationDate($row["creation_date"]);
-		$out->setUpdatedDate($row["updated_date"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		$out->setUpdatedDate($row["updated_date"] == NULL ? NULL : new DateTime($row["updated_date"]));
 		$out->setSubUid($row["sub_uuid"]);
 		$out->setSubStatus($row["sub_status"]);
-		$out->setSubActivatedDate($row["sub_activated_date"]);
-		$out->setSubCanceledDate($row["sub_canceled_date"]);
-		$out->setSubExpiresDate($row["sub_expires_date"]);
+		$out->setSubActivatedDate($row["sub_activated_date"] == NULL ? NULL : new DateTime($row["sub_activated_date"]));
+		$out->setSubCanceledDate($row["sub_canceled_date"] == NULL ? NULL : new DateTime($row["sub_canceled_date"]));
+		$out->setSubExpiresDate($row["sub_expires_date"] == NULL ? NULL : new DateTime($row["sub_expires_date"]));
 		$out->setSubCollectionMode($row["sub_collection_mode"]);
-		$out->setSubPeriodStartedDate($row["sub_period_started_date"]);
-		$out->setSubPeriodEndsDate($row["sub_period_ends_date"]);
+		$out->setSubPeriodStartedDate($row["sub_period_started_date"] == NULL ? NULL : new DateTime($row["sub_period_started_date"]));
+		$out->setSubPeriodEndsDate($row["sub_period_ends_date"] == NULL ? NULL : new DateTime($row["sub_period_ends_date"]));
 		$out->setUpdateType($row["update_type"]);
 		$out->setUpdateId($row["updateid"]);
 		$out->setDeleted($row["deleted"]);
@@ -1549,14 +1549,14 @@ class BillingsSubscription implements JsonSerializable {
 			'isActive' => $this->is_active,
 			'user' =>	((UserDAO::getUserById($this->userid)->jsonSerialize())),
 			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
-			'creationDate' => $this->creation_date,
-			'updatedDate' => $this->updated_date,
+			'creationDate' => dbGlobal::toISODate($this->creation_date),
+			'updatedDate' => dbGlobal::toISODate($this->updated_date),
 			'subStatus' => $this->sub_status,
-			'subActivatedDate' => $this->sub_activated_date,
-			'subCanceledDate' => $this->sub_canceled_date,
-			'subExpiresDate' => $this->sub_expires_date,
-			'subPeriodStartedDate' => $this->sub_period_started_date,
-			'subPeriodEndsDate' => $this->sub_period_ends_date,
+			'subActivatedDate' => dbGlobal::toISODate($this->sub_activated_date),
+			'subCanceledDate' => dbGlobal::toISODate($this->sub_canceled_date),
+			'subExpiresDate' => dbGlobal::toISODate($this->sub_expires_date),
+			'subPeriodStartedDate' => dbGlobal::toISODate($this->sub_period_started_date),
+			'subPeriodEndsDate' => dbGlobal::toISODate($this->sub_period_ends_date),
 			'subOpts' => (BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($this->_id)->jsonSerialize())
 		];
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->planid));
@@ -2499,7 +2499,7 @@ class Coupon implements JsonSerializable {
 				'couponBillingUuid' => $this->couponBillingUuid,
 				'code' => $this->code,
 				'status' => $this->status,
-				'couponsCampaign' => CouponsCampaignDAO::getCouponsCampaignById($this->couponscampaignid)->jsonSerialize(),
+				'campaign' => CouponsCampaignDAO::getCouponsCampaignById($this->couponscampaignid)->jsonSerialize(),
 				'provider' => ProviderDAO::getProviderById($this->providerid)->jsonSerialize()
 		];
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->providerplanid));

@@ -486,7 +486,21 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$db_subscription->setSubStatus('active');
 				break;
 			case 'cancelled' :
-				$db_subscription->setSubStatus('canceled');
+				if(isset($api_subscription->metadata->status)
+				&&
+				$api_subscription->metadata->status == 'expired')
+				{
+					$db_subscription->setSubStatus('expired');
+				} else {
+					if($db_subscription->getSubStatus() == 'expired')
+					{
+						//if expired, stay expired
+						$db_subscription->setSubStatus('expired');
+					} else {
+						//canceled
+						$db_subscription->setSubStatus('canceled');
+					}
+				}
 				break;
 			case 'pending_customer_approval' :
 				$db_subscription->setSubStatus('future');
@@ -583,7 +597,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		$today->setTime(23, 59, 59);//consider all the day
 		
 		if($start_date == NULL) {
-			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
+			$start_date = $subscription->getSubPeriodEndsDate();
 		}
 		$start_date->setTimezone(new DateTimeZone(config::$timezone));
 		
@@ -656,14 +670,14 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				//nothing todo : already done or in process
 			} else {
 				//
-				//
-				$client = new Client(array(
-						'access_token' => getEnv('GOCARDLESS_API_KEY'),
-						'environment' => getEnv('GOCARDLESS_API_ENV')
-				));
-				//
-				$client->subscriptions()->cancel($subscription->getSubUid());
-				//
+				if($is_a_request == true) {
+					$client = new Client(array(
+							'access_token' => getEnv('GOCARDLESS_API_KEY'),
+							'environment' => getEnv('GOCARDLESS_API_ENV')
+					));
+					//
+					$client->subscriptions()->cancel($subscription->getSubUid());
+				}
 				$subscription->setSubCanceledDate($cancel_date);
 				$subscription->setSubStatus('canceled');
 				//
@@ -697,6 +711,76 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		}
 	}
 	
+	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+		try {
+			config::getLogger()->addInfo("gocardless subscription expiring...");
+			if(
+					$subscription->getSubStatus() == "expired"
+			)
+			{
+				//nothing todo : already done or in process
+			} else {
+				//
+				if($subscription->getSubStatus() == "canceled") {
+					//already cancelled, nothing can be done in gocardless side
+				} else {
+					$client = new Client(array(
+							'access_token' => getEnv('GOCARDLESS_API_KEY'),
+							'environment' => getEnv('GOCARDLESS_API_ENV')
+					));
+					$api_subscription = $client->subscriptions()->get($subscription->getSubUid());
+					if($is_a_request == true || $api_subscription->status != 'cancelled') {
+						//anyway
+						$metadata_array = array();
+						foreach ($api_subscription->metadata as $key => $value) {
+							$metadata_array[$key] = $value;
+						}
+						$metadata_array['status'] = 'expired';
+						$sub_params = ['params' =>
+								[
+										'metadata' => $metadata_array
+								]
+						];
+						$api_subscription = $client->subscriptions()->update($api_subscription->id, $sub_params);
+						//
+						$client->subscriptions()->cancel($api_subscription->id);
+					}
+					$subscription->setSubCanceledDate($expires_date);
+				}
+				$subscription->setSubExpiresDate($expires_date);
+				$subscription->setSubStatus('expired');
+				//
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			}
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("gocardless subscription expiring done successfully for gocardless_subscription_uuid=".$subscription->getSubUid());
+			return($subscription);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while expiring a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("gocardless subscription expiring failed : ".$msg);
+			throw $e;
+		} catch (GoCardlessProException $e) {
+			$msg = "a GoCardlessProException occurred while expiring a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("gocardless subscription expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while expiring a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("gocardless subscription cancelling failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+	}
+	
 	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
 		if($subscription == NULL) {
 			return;
@@ -708,9 +792,9 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < new DateTime($subscription->getSubPeriodEndsDate()))
+						($now < $subscription->getSubPeriodEndsDate())
 								&&
-						($now >= new DateTime($subscription->getSubPeriodStartedDate()))
+						($now >= $subscription->getSubPeriodStartedDate())
 				) {
 					//inside the period
 					$is_active = 'yes';
