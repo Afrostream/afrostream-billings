@@ -714,7 +714,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				//nothing todo : already done or in process
 			} else {
 				//
-				if($subscription->getSubStatus() == "cancelled") {
+				if($subscription->getSubStatus() == "canceled") {
 					//already cancelled, nothing can be done in gocardless side
 				} else {
 					if($is_a_request == true) {
