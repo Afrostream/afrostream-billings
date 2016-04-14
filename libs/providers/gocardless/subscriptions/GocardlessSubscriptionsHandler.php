@@ -590,7 +590,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		$today->setTime(23, 59, 59);//consider all the day
 		
 		if($start_date == NULL) {
-			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
+			$start_date = $subscription->getSubPeriodEndsDate();
 		}
 		$start_date->setTimezone(new DateTimeZone(config::$timezone));
 		
@@ -784,9 +784,9 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < new DateTime($subscription->getSubPeriodEndsDate()))
+						($now < $subscription->getSubPeriodEndsDate())
 								&&
-						($now >= new DateTime($subscription->getSubPeriodStartedDate()))
+						($now >= $subscription->getSubPeriodStartedDate())
 				) {
 					//inside the period
 					$is_active = 'yes';

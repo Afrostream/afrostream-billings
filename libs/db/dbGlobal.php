@@ -1549,14 +1549,14 @@ class BillingsSubscription implements JsonSerializable {
 			'isActive' => $this->is_active,
 			'user' =>	((UserDAO::getUserById($this->userid)->jsonSerialize())),
 			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
-			'creationDate' => $this->creation_date,
-			'updatedDate' => $this->updated_date,
+			'creationDate' => dbGlobal::toISODate($this->creation_date),
+			'updatedDate' => dbGlobal::toISODate($this->updated_date),
 			'subStatus' => $this->sub_status,
-			'subActivatedDate' => $this->sub_activated_date,
-			'subCanceledDate' => $this->sub_canceled_date,
-			'subExpiresDate' => $this->sub_expires_date,
-			'subPeriodStartedDate' => $this->sub_period_started_date,
-			'subPeriodEndsDate' => $this->sub_period_ends_date,
+			'subActivatedDate' => dbGlobal::toISODate($this->sub_activated_date),
+			'subCanceledDate' => dbGlobal::toISODate($this->sub_canceled_date),
+			'subExpiresDate' => dbGlobal::toISODate($this->sub_expires_date),
+			'subPeriodStartedDate' => dbGlobal::toISODate($this->sub_period_started_date),
+			'subPeriodEndsDate' => dbGlobal::toISODate($this->sub_period_ends_date),
 			'subOpts' => (BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($this->_id)->jsonSerialize())
 		];
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->planid));
