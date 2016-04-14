@@ -744,8 +744,8 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 						$api_subscription = $client->subscriptions()->update($api_subscription->id, $sub_params);
 						//
 						$client->subscriptions()->cancel($api_subscription->id);
-						$subscription->setSubCanceledDate($expires_date);
 					}
+					$subscription->setSubCanceledDate($expires_date);
 				}
 				$subscription->setSubExpiresDate($expires_date);
 				$subscription->setSubStatus('expired');
