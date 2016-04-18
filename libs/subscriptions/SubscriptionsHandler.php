@@ -438,9 +438,34 @@ class SubscriptionsHandler {
 			}
 			$db_subscription_before_update = clone $db_subscription;
 			switch($provider->getName()) {
+				case 'celery' :
+					$celerySubscriptionsHandler = new CelerySubscriptionsHandler();
+					$db_subscription = $celerySubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'recurly' :
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
 				case 'gocardless' :
 					$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
 					$db_subscription = $gocardlessSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'bachat' :
+					$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
+					$db_subscription = $bachatSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'idipper' :
+					$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
+					$db_subscription = $idipperSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'afr' :
+					$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
+					$db_subscription = $gocardlessSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'cashway' :
+					$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
+					$db_subscription = $cashwaySubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
