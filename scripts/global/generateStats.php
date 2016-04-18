@@ -5,7 +5,7 @@ require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/db/dbStats.php';
 require_once __DIR__ . '/../../libs/slack/SlackHandler.php';
 
-print_r("starting tool ...\n");
+print_r("starting tool to generate Stats...\n");
 
 foreach ($argv as $arg) {
 	$e=explode("=",$arg);

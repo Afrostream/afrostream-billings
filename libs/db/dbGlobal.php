@@ -1279,10 +1279,15 @@ class BillingsSubscriptionDAO {
 		return($result);
 	}
 	
-	public static function getEndingBillingsSubscriptions($limit = 0, $offset = 0, $providerId = NULL, DateTime $sub_period_ends_date, $status_array = array('active')) {
+	public static function getEndingBillingsSubscriptions($limit = 0, $offset = 0, $providerId = NULL, DateTime $sub_period_ends_date, $status_array = array('active'), $cycle_array = NULL, $providerIdsToIgnore_array = NULL) {
 		$params = array();
 		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
+		if(isset($cycle_array)) {
+			$query.= " INNER JOIN billing_plans BP ON (BS.planid = BP._id)";
+			$query.= " INNER JOIN billing_internal_plans_links BIPL ON (BIPL.provider_plan_id = BP._id)";
+			$query.= " INNER JOIN billing_internal_plans BIP ON (BIPL.internal_plan_id = BIP._id)";
+		}
 		$query.= " WHERE BU.deleted = false AND BS.deleted = false";
 		$query.= " AND BS.sub_status in (";
 		$firstLoop = true;
@@ -1299,6 +1304,34 @@ class BillingsSubscriptionDAO {
 		if(isset($providerId)) {
 			$params[] = $providerId;
 			$query.= " AND BU.providerid = $".(count($params));
+		}
+		if(isset($providerIdsToIgnore_array) && count($providerIdsToIgnore_array) > 0) {
+			$firstLoop = true;
+			$query.= " AND BU.providerid not in (";
+			foreach($providerIdsToIgnore_array as $providerIdToIgnore) {
+				$params[] = $providerIdToIgnore;
+				if($firstLoop) {
+					$firstLoop = false;
+					$query .= "$".(count($params));
+				} else {
+					$query .= ", $".(count($params));
+				}
+			}
+			$query.= ")";
+		}
+		if(isset($cycle_array)) {
+			$firstLoop = true;
+			$query.= " AND BIP.cycle in (";
+			foreach($cycle_array as $cycle) {
+				$params[] = $cycle;
+				if($firstLoop) {
+					$firstLoop = false;
+					$query .= "$".(count($params));
+				} else {
+					$query .= ", $".(count($params));
+				}
+			}
+			$query.= ")";	
 		}
 		$sub_period_ends_date_str = dbGlobal::toISODate($sub_period_ends_date);
 		$query.= " AND BS.sub_period_ends_date < '".$sub_period_ends_date_str."'";//STRICT
@@ -2106,12 +2139,18 @@ class ProcessingLogDAO {
 		return($out);
 	}
 	
-	public static function getProcessingLogByDay($providerid, $processing_type, Datetime $day) {
+	public static function getProcessingLogByDay($providerid = NULL, $processing_type, Datetime $day) {
 		$dayStr = dbGlobal::toISODate($day);
-		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE providerid = $1 AND processing_type = $2";
+		$params = array();
+		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE processing_type = $1";
+		$params[] = $processing_type;
+		if(isset($providerid)) {
+			$query.= " AND providerid = $2";
+			$params[] = $providerid;
+		}
 		$query.= " AND date(started_date AT TIME ZONE 'Europe/Paris') = date('".$dayStr."')";
 		// /!\ Querying with dbGlobal::toISODate($day) in the pg_query_params DOES NOT WORK !!!
-		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $processing_type));
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
 		$out = array();
 		
