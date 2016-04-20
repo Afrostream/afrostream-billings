@@ -554,7 +554,7 @@ class SubscriptionsHandler {
 			$subscription_is_new_event = false;
 			$subscription_is_canceled_event = false;
 			$subscription_is_expired_event = false;
-			$sendgrid_tepmplate_id = NULL;
+			$sendgrid_template_id = NULL;
 			$event = NULL;
 			//check subscription_is_new_event
 			if($subscription_before_update == NULL) {
@@ -571,7 +571,7 @@ class SubscriptionsHandler {
 				}
 			}
 			if($subscription_is_new_event == true) {
-				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID');
+				$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID');
 				$event = "subscription_is_new";
 			}
 			//check subscription_is_canceled_event
@@ -589,7 +589,7 @@ class SubscriptionsHandler {
 					}
 			}
 			if($subscription_is_canceled_event == true) {
-				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
+				$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
 				$event = "subscription_is_canceled";
 			}
 			//check subscription_is_expired_event
@@ -607,12 +607,16 @@ class SubscriptionsHandler {
 						}
 			}
 			if($subscription_is_expired_event == true) {
-				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID');
+				if($subscription_after_update->getSubExpiresDate() == $subscription_after_update->getSubCanceledDate()) {
+					$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_FP_ID');//FP = FAILED PAYMENT
+				} else {
+					$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID');
+				}
 				$event = "subscription_is_expired";
 			}
 			if($subscription_is_new_event == true || $subscription_is_canceled_event == true || $subscription_is_expired_event == true) {
 				config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", ...");
-				if(getEnv('EVENT_EMAIL_ACTIVATED') == 1 && !empty($sendgrid_tepmplate_id)) {
+				if(getEnv('EVENT_EMAIL_ACTIVATED') == 1 && !empty($sendgrid_template_id)) {
 					$eventEmailProvidersExceptionArray = explode(";", getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION'));
 					$provider = ProviderDAO::getProviderById($subscription_after_update->getProviderId());
 					if($provider == NULL) {
@@ -713,7 +717,7 @@ class SubscriptionsHandler {
 							->setSubject(' ')
 							->setText(' ')
 							->setHtml(' ')
-							->setTemplateId($sendgrid_tepmplate_id);
+							->setTemplateId($sendgrid_template_id);
 							if( (null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
 								$email->setBcc(getEnv('SENDGRID_BCC'));
 								foreach($substitions as $var => $val) {
