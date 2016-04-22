@@ -20,7 +20,7 @@ class dbStats {
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
 		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
-		$query.= " WHERE BUO.value not like '%yopmail.com'";
+		$query.= " WHERE (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " GROUP BY BP._id";
 		$result = pg_query(config::getDbConn(), $query);
 		$total = 0;
@@ -48,7 +48,7 @@ class dbStats {
 		$query.= " LEFT JOIN billing_users_opts BUO";
 		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
 		$query.= " WHERE";
-		$query.= " BUO.value not like '%yopmail.com'";
+		$query.= " (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " AND";
 		$query.= " ((CAST(BS.sub_status as varchar) like '%active' AND BP.name = 'recurly')";
 		$query.= " OR";
@@ -79,7 +79,7 @@ class dbStats {
 		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
 		$query.= " LEFT JOIN billing_users BUB ON (BU.user_reference_uuid = BUB.user_reference_uuid)";
 		$query.= " LEFT JOIN  billing_subscriptions BSB ON (BSB.userid = BUB._id AND BSB._id < BS._id )";
-		$query.= " WHERE BUO.value not like '%yopmail.com'";
+		$query.= " WHERE (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " AND";
 		$query.= " BS.sub_status <> 'future'";
 		$query.= " AND";
@@ -121,7 +121,7 @@ class dbStats {
 		$query.= " LEFT JOIN billing_users_opts BUO";
 		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
 		$query.= " WHERE";
-		$query.= " BUO.value not like '%yopmail.com'";
+		$query.= " (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " AND";
 		$query.= " ((BS.sub_status = 'expired'";
 		if(isset($date_as_str)) {
@@ -167,7 +167,7 @@ class dbStats {
 		$query.= " LEFT JOIN billing_users_opts BUO";
 		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
 		$query.= " WHERE";
-		$query.= " BUO.value not like '%yopmail.com'";
+		$query.= " (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " AND";
 		$query.= " BS.sub_status = 'canceled'";
 		$query.= " AND";
