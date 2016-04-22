@@ -58,7 +58,7 @@ class InternalPlansController extends BillingsController {
 			if(isset($data['isVisible'])) {
 				$isVisible = $data['isVisible'];
 				if(empty($isVisible)) {
-					$isVisible = true;//empty => by default
+					$isVisible = NULL;//empty = ALL
 				}
 			}
 			$filtered_array = array_filter($data, 
