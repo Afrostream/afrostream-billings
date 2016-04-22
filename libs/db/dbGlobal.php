@@ -424,7 +424,7 @@ class InternalPlanDAO {
 		
 		$query.= $where;
 		if(isset($contextId)) {
-			$query.= " ORDER BY BIPBC.index DESC";
+			$query.= " ORDER BY BIPBC.index ASC";
 		}
 		//echo $query;
 		$result = pg_query_params(config::getDbConn(), $query, $params);
