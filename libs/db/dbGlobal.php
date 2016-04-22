@@ -304,7 +304,13 @@ class UserOptsDAO {
 
 class InternalPlanDAO {
 	
-	private static $sfields = "BIP._id, BIP.internal_plan_uuid, BIP.name, BIP.description, BIP.amount_in_cents, BIP.currency, BIP.cycle, BIP.period_unit, BIP.period_length, BIP.thumbid, BIP.vat_rate";
+	private static $sfields = NULL;
+	
+	public static function init() {
+		InternalPlanDAO::$sfields = "BIP._id, BIP.internal_plan_uuid, BIP.name, BIP.description,".
+			" BIP.amount_in_cents, BIP.currency, BIP.cycle, BIP.period_unit, BIP.period_length, BIP.thumbid, BIP.vat_rate,".
+			" BIP.trial_enabled, BIP.trial_period_length, BIP.trial_period_unit, BIP.is_visible";
+	}
 	
 	private static function getInternalPlanFromRow($row) {
 		$out = new InternalPlan();
@@ -319,6 +325,10 @@ class InternalPlanDAO {
 		$out->setPeriodLength($row["period_length"]);
 		$out->setThumbId($row["thumbid"]);
 		$out->setVatRate($row["vat_rate"]);
+		$out->setTrialEnabled($row["trial_enabled"]);
+		$out->setTrialPeriodLength($row["trial_period_length"]);
+		$out->setTrialPeriodUnit($row["trial_period_unit"] == NULL ? NULL : new TrialPeriodUnit($row["trial_period_unit"]));
+		$out->setIsVisible($row["is_visible"]);
 		return($out);
 	}
 	
@@ -367,7 +377,7 @@ class InternalPlanDAO {
 		return($out);
 	}
 	
-	public static function getInternalPlans($providerId = NULL) {
+	public static function getInternalPlans($providerId = NULL, $contextId = NULL, $isVisible = NULL) {
 		$query = "SELECT ".self::$sfields." FROM billing_internal_plans BIP";
 		$params = array();
 		
@@ -376,9 +386,47 @@ class InternalPlanDAO {
 		if(isset($providerId)) {
 			$query.= " INNER JOIN billing_internal_plans_links BIPL ON (BIP._id = BIPL.internal_plan_id)";
 			$query.= " INNER JOIN billing_plans BP ON (BIPL.provider_plan_id = BP._id)";
-			$query.= " WHERE BP.providerid = $1";
-			$params[] = $providerId;
 		}
+		
+		if(isset($contextId)) {
+			$query.= " INNER JOIN billing_internal_plans_by_context BIPBC ON (BIPBC.internal_plan_id = BIP._id)";
+		}
+		$where = ""; 
+		if(isset($providerId)) {
+			$params[] = $providerId;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "BP.providerid = $".(count($params));
+		}
+		
+		if(isset($contextId)) {
+			$params[] = $contextId;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "BIPBC.context_id = $".(count($params));			
+		}
+		
+		if(isset($isVisible)) {
+			$params[] = $isVisible;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "BIP.is_visible = $".(count($params));
+		}
+		
+		$query.= $where;
+		if(isset($contextId)) {
+			$query.= " ORDER BY BIPBC.index DESC";
+		}
+		//echo $query;
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
@@ -409,6 +457,8 @@ class InternalPlanDAO {
 	
 }
 
+InternalPlanDAO::init();
+
 class PlanCycle extends Enum implements JsonSerializable {
 	
 	const once = 'once';
@@ -431,6 +481,17 @@ class PlanPeriodUnit extends Enum implements JsonSerializable {
 	
 }
 
+class TrialPeriodUnit extends Enum implements JsonSerializable {
+	
+	const day = 'day';
+	const month = 'month';
+	
+	public function jsonSerialize() {
+		return $this->getValue();
+	}
+	
+}
+
 class InternalPlan implements JsonSerializable {
 	
 	private $_id;
@@ -445,6 +506,10 @@ class InternalPlan implements JsonSerializable {
 	private $showProviderPlans = true;
 	private $vatRate = 20;
 	private $thumbId;
+	private $trialEnabled;
+	private $trialPeriodLength;
+	private $trialPeriodUnit;
+	private $isVisible;
 
 	public function getId() {
 		return($this->_id);
@@ -562,6 +627,38 @@ class InternalPlan implements JsonSerializable {
 		return($this->thumbId);
 	}
 	
+	public function setTrialEnabled($trialEnabled) {
+		$this->trialEnabled = $trialEnabled;
+	}
+	
+	public function getTrialEnabled() {
+		return($this->trialEnabled);
+	}
+	
+	public function setTrialPeriodLength($trialPeriodLength) {
+		$this->trialPeriodLength = $trialPeriodLength;
+	}
+	
+	public function getTrialPeriodLength() {
+		return($this->trialPeriodLength);
+	}
+	
+	public function setTrialPeriodUnit(TrialPeriodUnit $trialPeriodUnit = NULL) {
+		$this->trialPeriodUnit = $trialPeriodUnit;
+	}
+	
+	public function getTrialPeriodUnit() {
+		return($this->trialPeriodUnit);
+	}
+	
+	public function setIsVisible($isVisible) {
+		$this->isVisible = $isVisible;
+	}
+	
+	public function getIsVisible() {
+		return($this->isVisible);
+	}
+	
 	public function jsonSerialize() {
 		$return =
 			[
@@ -578,7 +675,11 @@ class InternalPlan implements JsonSerializable {
 				'periodUnit' => $this->periodUnit,
 				'periodLength' => $this->periodLength,
 				'internalPlanOpts' => (InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($this->_id)->jsonSerialize()),
-				'thumb' => ThumbDAO::getThumbById($this->thumbId)
+				'thumb' => ThumbDAO::getThumbById($this->thumbId),
+				'trialEnabled' => $this->trialEnabled == 't' ? true : false,
+				'trialPeriodUnit' => $this->trialPeriodUnit,
+				'trialPeriodLength' => $this->trialPeriodLength,
+				'isVisible' => $this->isVisible == 't' ? true : false
 		];
 		if($this->showProviderPlans) {
 			$return['providerPlans'] = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id));
@@ -1270,6 +1371,23 @@ class BillingsSubscriptionDAO {
 		pg_free_result($result);
 		
 		return($out);
+	}
+	
+	public static function getBillingsSubscripionByUserReferenceUuid($userReferenceUuid) {
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS";
+		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
+		$query.= " WHERE BS.deleted = false AND BU.deleted = false AND BU.user_reference_uuid = $1 ORDER BY BS.sub_activated_date DESC";
+		$result = pg_query_params(config::getDbConn(), $query, array($userReferenceUuid));
+		
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getBillingsSubscriptionFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);		
 	}
 	
 	public static function deleteBillingsSubscriptionById($id) {
@@ -2703,6 +2821,77 @@ class CouponDAO {
 }
 
 CouponDAO::init();
+
+class Context {
+	
+	private $_id;
+	private $context_uuid;
+	private $name;
+	private $description;
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getContextUuid() {
+		return($this->context_uuid);
+	}
+	
+	public function setContextUuid($uuid) {
+		$this->context_uuid = $uuid;
+	}
+	
+	public function getName() {
+		return($this->name);
+	}
+	
+	public function setName($name) {
+		$this->name = $name;
+	}
+	
+	public function getDescription() {
+		return($this->description);
+	}
+	
+	public function setDescription($desc) {
+		$this->description = $desc;
+	}
+	
+}
+
+class ContextDAO {
+	
+	private static $sfields = "_id, context_uuid, name, description";
+	
+	private static function getContextFromRow($row) {
+		$out = new Context();
+		$out->setId($row["_id"]);
+		$out->setContextUuid($row["context_uuid"]);
+		$out->setName($row["name"]);
+		$out->setDescription($row["description"]);
+		return($out);
+	}
+	
+	public static function getContextByUuid($context_uuid) {
+		$query = "SELECT ".self::$sfields." FROM billing_contexts WHERE context_uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($context_uuid));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getContextFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+}
 
 class UtilsDAO {
 	

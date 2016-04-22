@@ -244,6 +244,24 @@ class SubscriptionsHandler {
 		return($subscriptions);
 	}
 	
+	public function doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid) {
+		try {
+			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid."...");
+			$subscriptions = BillingsSubscriptionDAO::getBillingsSubscripionByUserReferenceUuid($userReferenceUuid);
+			$this->doFillSubscriptions($subscriptions);
+			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while getting subscriptions for userReferenceUuid=".$userReferenceUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("subscriptions getting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting subscriptions for userReferenceUuid=".$userReferenceUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("subscriptions getting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($subscriptions);		
+	}
+	
 	public function doUpdateUserSubscriptionsByUser(User $user) {
 		try {
 			config::getLogger()->addInfo("dbsubscriptions updating for userid=".$user->getId()."...");
