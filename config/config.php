@@ -122,6 +122,10 @@ if(getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID') === false) {
 	putEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID=51b5b68f-3fc2-4fb3-b274-ec90d9ccfc20');
 }
 
+if(getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_FP_ID') === false) {
+	putEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_FP_ID=835e891b-c196-486e-8f0a-64394e62f737');
+}
+
 if(getEnv('SENDGRID_FROM') === false) {
 	putEnv('SENDGRID_FROM=abonnement@afrostream.tv');
 }
@@ -173,7 +177,7 @@ if(getEnv('CASHWAY_API_HTTP_AUTH_PWD') === false) {
 }
 
 if(getEnv('CASHWAY_USER_AGENT') === false) {
-	putEnv('CASHWAY_USER_AGENT=afrbillingsapi');
+	putEnv('CASHWAY_USER_AGENT=afrbillingsapi/1.0');
 }
 
 if(getEnv('CASHWAY_USE_STAGING') === false) {

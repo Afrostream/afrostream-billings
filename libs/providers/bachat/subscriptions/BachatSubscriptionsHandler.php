@@ -161,8 +161,8 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			return;
 		}
 		$is_active = NULL;
-		$periodStartedDate = (new DateTime($subscription->getSubPeriodStartedDate()))->setTimezone(new DateTimeZone(config::$timezone));
-		$periodEndsDate = (new DateTime($subscription->getSubPeriodEndsDate()))->setTimezone(new DateTimeZone(config::$timezone));
+		$periodStartedDate = $subscription->getSubPeriodStartedDate()->setTimezone(new DateTimeZone(config::$timezone));
+		$periodEndsDate = $subscription->getSubPeriodEndsDate()->setTimezone(new DateTimeZone(config::$timezone));
 		$periodEndsDate->setTime(23, 59, 59);
 		$periodeGraceEndsDate = clone $periodEndsDate;
 		$periodeGraceEndsDate->add(new DateInterval("P3D"));//3 full days of grace period
@@ -235,7 +235,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		$today->setTime(23, 59, 59);//consider all the day
 		
 		if($start_date == NULL) {
-			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
+			$start_date = $subscription->getSubPeriodEndsDate();
 			$start_date->add(new DateInterval("P1D"));
 		}
 		$start_date->setTimezone(new DateTimeZone(config::$timezone));
@@ -318,6 +318,57 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			}
 		}
 		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+		try {
+			config::getLogger()->addInfo("bachat subscription expiring...");
+			if(
+					$subscription->getSubStatus() == "expired"
+			)
+			{
+				//nothing todo : already done or in process
+			} else {
+				//
+				if($subscription->getSubStatus() != "canceled") {
+					//exception
+					$msg = "cannot expire a subscription that has not been canceled";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($subscription->getSubPeriodEndsDate() >= $expires_date) {
+					//exception
+					$msg = "cannot expire a subscription that has not ended yet";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$subscription->setSubExpiresDate($expires_date);
+				$subscription->setSubStatus("expired");
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			}
+			//
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("bachat subscription expiring done successfully for bachat_subscription_uuid=".$subscription->getSubUid());
+			return($subscription);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while expiring a bachat subscription for bachat_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("bachat subscription expiring failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while expiring a bachat subscription for bachat_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("bachat subscription expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
 	}
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {

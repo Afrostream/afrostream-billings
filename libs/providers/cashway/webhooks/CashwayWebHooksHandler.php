@@ -136,6 +136,11 @@ class CashwayWebHooksHandler {
 				}
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].' done successfully');
 				break;
+			case 'status_check' :
+				//nothing to do
+				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].'...');
+				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].' done successfully');
+				break;
 			default :
 				config::getLogger()->addWarning('event : '.$data['event']. ' is not yet implemented');
 				break;	

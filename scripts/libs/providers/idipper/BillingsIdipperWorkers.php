@@ -143,7 +143,7 @@ class BillingsIdipperWorkers extends BillingsWorkers {
 					if($grace_date > $now) {
 						//RENEW
 						$to_be_renewed = true;
-						$renewed_start_date = new DateTime($subscription->getSubPeriodStartedDate());//KEEP
+						$renewed_start_date = $subscription->getSubPeriodStartedDate();//KEEP
 						$renewed_until_date = $now->add(new DateInterval("P1D"));//give 1 more day
 					} else {
 						//CANCEL

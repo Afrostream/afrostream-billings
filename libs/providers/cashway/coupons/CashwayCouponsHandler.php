@@ -28,6 +28,7 @@ class CashwayCouponsHandler {
 			$cashwayApi = new API($conf);
 			$cashwayApi->order = array (
 					'id' => $coupon_billing_uuid,
+					'description' => $internalPlan->getName(),
 					'at' => dbGlobal::toISODate(new DateTime()),
 					'currency' => $internalPlan->getCurrency(),
 					'total' =>  (string) number_format($internalPlan->getAmount(), 2, '.', '')

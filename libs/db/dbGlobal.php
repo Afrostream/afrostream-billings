@@ -1060,16 +1060,16 @@ class BillingsSubscriptionDAO {
 		$out->setProviderId($row["providerid"]);
 		$out->setUserId($row["userid"]);
 		$out->setPlanId($row["planid"]);
-		$out->setCreationDate($row["creation_date"]);
-		$out->setUpdatedDate($row["updated_date"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		$out->setUpdatedDate($row["updated_date"] == NULL ? NULL : new DateTime($row["updated_date"]));
 		$out->setSubUid($row["sub_uuid"]);
 		$out->setSubStatus($row["sub_status"]);
-		$out->setSubActivatedDate($row["sub_activated_date"]);
-		$out->setSubCanceledDate($row["sub_canceled_date"]);
-		$out->setSubExpiresDate($row["sub_expires_date"]);
+		$out->setSubActivatedDate($row["sub_activated_date"] == NULL ? NULL : new DateTime($row["sub_activated_date"]));
+		$out->setSubCanceledDate($row["sub_canceled_date"] == NULL ? NULL : new DateTime($row["sub_canceled_date"]));
+		$out->setSubExpiresDate($row["sub_expires_date"] == NULL ? NULL : new DateTime($row["sub_expires_date"]));
 		$out->setSubCollectionMode($row["sub_collection_mode"]);
-		$out->setSubPeriodStartedDate($row["sub_period_started_date"]);
-		$out->setSubPeriodEndsDate($row["sub_period_ends_date"]);
+		$out->setSubPeriodStartedDate($row["sub_period_started_date"] == NULL ? NULL : new DateTime($row["sub_period_started_date"]));
+		$out->setSubPeriodEndsDate($row["sub_period_ends_date"] == NULL ? NULL : new DateTime($row["sub_period_ends_date"]));
 		$out->setUpdateType($row["update_type"]);
 		$out->setUpdateId($row["updateid"]);
 		$out->setDeleted($row["deleted"]);
@@ -1279,10 +1279,15 @@ class BillingsSubscriptionDAO {
 		return($result);
 	}
 	
-	public static function getEndingBillingsSubscriptions($limit = 0, $offset = 0, $providerId = NULL, DateTime $sub_period_ends_date, $status_array = array('active')) {
+	public static function getEndingBillingsSubscriptions($limit = 0, $offset = 0, $providerId = NULL, DateTime $sub_period_ends_date, $status_array = array('active'), $cycle_array = NULL, $providerIdsToIgnore_array = NULL) {
 		$params = array();
 		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
+		if(isset($cycle_array)) {
+			$query.= " INNER JOIN billing_plans BP ON (BS.planid = BP._id)";
+			$query.= " INNER JOIN billing_internal_plans_links BIPL ON (BIPL.provider_plan_id = BP._id)";
+			$query.= " INNER JOIN billing_internal_plans BIP ON (BIPL.internal_plan_id = BIP._id)";
+		}
 		$query.= " WHERE BU.deleted = false AND BS.deleted = false";
 		$query.= " AND BS.sub_status in (";
 		$firstLoop = true;
@@ -1299,6 +1304,34 @@ class BillingsSubscriptionDAO {
 		if(isset($providerId)) {
 			$params[] = $providerId;
 			$query.= " AND BU.providerid = $".(count($params));
+		}
+		if(isset($providerIdsToIgnore_array) && count($providerIdsToIgnore_array) > 0) {
+			$firstLoop = true;
+			$query.= " AND BU.providerid not in (";
+			foreach($providerIdsToIgnore_array as $providerIdToIgnore) {
+				$params[] = $providerIdToIgnore;
+				if($firstLoop) {
+					$firstLoop = false;
+					$query .= "$".(count($params));
+				} else {
+					$query .= ", $".(count($params));
+				}
+			}
+			$query.= ")";
+		}
+		if(isset($cycle_array)) {
+			$firstLoop = true;
+			$query.= " AND BIP.cycle in (";
+			foreach($cycle_array as $cycle) {
+				$params[] = $cycle;
+				if($firstLoop) {
+					$firstLoop = false;
+					$query .= "$".(count($params));
+				} else {
+					$query .= ", $".(count($params));
+				}
+			}
+			$query.= ")";	
 		}
 		$sub_period_ends_date_str = dbGlobal::toISODate($sub_period_ends_date);
 		$query.= " AND BS.sub_period_ends_date < '".$sub_period_ends_date_str."'";//STRICT
@@ -1549,14 +1582,14 @@ class BillingsSubscription implements JsonSerializable {
 			'isActive' => $this->is_active,
 			'user' =>	((UserDAO::getUserById($this->userid)->jsonSerialize())),
 			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
-			'creationDate' => $this->creation_date,
-			'updatedDate' => $this->updated_date,
+			'creationDate' => dbGlobal::toISODate($this->creation_date),
+			'updatedDate' => dbGlobal::toISODate($this->updated_date),
 			'subStatus' => $this->sub_status,
-			'subActivatedDate' => $this->sub_activated_date,
-			'subCanceledDate' => $this->sub_canceled_date,
-			'subExpiresDate' => $this->sub_expires_date,
-			'subPeriodStartedDate' => $this->sub_period_started_date,
-			'subPeriodEndsDate' => $this->sub_period_ends_date,
+			'subActivatedDate' => dbGlobal::toISODate($this->sub_activated_date),
+			'subCanceledDate' => dbGlobal::toISODate($this->sub_canceled_date),
+			'subExpiresDate' => dbGlobal::toISODate($this->sub_expires_date),
+			'subPeriodStartedDate' => dbGlobal::toISODate($this->sub_period_started_date),
+			'subPeriodEndsDate' => dbGlobal::toISODate($this->sub_period_ends_date),
 			'subOpts' => (BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($this->_id)->jsonSerialize())
 		];
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->planid));
@@ -2106,12 +2139,18 @@ class ProcessingLogDAO {
 		return($out);
 	}
 	
-	public static function getProcessingLogByDay($providerid, $processing_type, Datetime $day) {
+	public static function getProcessingLogByDay($providerid = NULL, $processing_type, Datetime $day) {
 		$dayStr = dbGlobal::toISODate($day);
-		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE providerid = $1 AND processing_type = $2";
+		$params = array();
+		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE processing_type = $1";
+		$params[] = $processing_type;
+		if(isset($providerid)) {
+			$query.= " AND providerid = $2";
+			$params[] = $providerid;
+		}
 		$query.= " AND date(started_date AT TIME ZONE 'Europe/Paris') = date('".$dayStr."')";
 		// /!\ Querying with dbGlobal::toISODate($day) in the pg_query_params DOES NOT WORK !!!
-		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $processing_type));
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
 		$out = array();
 		
