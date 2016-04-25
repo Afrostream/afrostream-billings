@@ -4,7 +4,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../libs/site/UsersController.php';
 require_once __DIR__ . '/../libs/site/SubscriptionsController.php';
-require_once __DIR__ . '/../libs/site/InternalPlansController.php';
+require_once __DIR__ . '/../libs/site/InternalPlansFilteredController.php';
 require_once __DIR__ . '/../libs/site/CouponsController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
 require_once __DIR__ . '/../libs/site/CouponsCampaignsController.php';
@@ -456,7 +456,7 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/renew", functio
 	*/
 
 $app->get("/billings/api/internalplans/{internalPlanUuid}", function ($request, $response, $args) {
-	$internalPlansController = new InternalPlansController();
+	$internalPlansController = new InternalPlansFilteredController();
 	return($internalPlansController->getOne($request, $response, $args));
 });
 
@@ -486,7 +486,7 @@ $app->get("/billings/api/internalplans/{internalPlanUuid}", function ($request, 
  */
 
 $app->get("/billings/api/internalplans/", function ($request, $response, $args) {
-	$internalPlansController = new InternalPlansController();
+	$internalPlansController = new InternalPlansFilteredController();
 	return($internalPlansController->getMulti($request, $response, $args));
 });
 
@@ -539,21 +539,21 @@ $app->get("/billings/api/internalplans/", function ($request, $response, $args) 
 */
 
 $app->post("/billings/api/internalplans/", function ($request, $response, $args) {
-	$internalPlansController = new InternalPlansController();
+	$internalPlansController = new InternalPlansFilteredController();
 	return($internalPlansController->create($request, $response, $args));
 });
 
 //update
 
 $app->put("/billings/api/internalplans/{internalPlanUuid}", function ($request, $response, $args) {
-	$internalPlansController = new InternalPlansController();
+	$internalPlansController = new InternalPlansFilteredController();
 	return($internalPlansController->update($request, $response, $args));
 });
 
 //actions to internalPlan : addtoprovider
 
 $app->put("/billings/api/internalplans/{internalPlanUuid}/addtoprovider/{providerName}", function ($request, $response, $args) {
-	$internalPlansController = new InternalPlansController();
+	$internalPlansController = new InternalPlansFilteredController();
 	return($internalPlansController->addToProvider($request, $response, $args));
 });
 

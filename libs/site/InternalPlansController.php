@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../vendor/autoload.php';
-require_once __DIR__ . '/../internalplans/InternalPlansHandler.php';
+require_once __DIR__ . '/../internalplans/InternalPlansFilteredHandler.php';
 require_once __DIR__ .'/BillingsController.php';
 
 use \Slim\Http\Request;
@@ -20,7 +20,7 @@ class InternalPlansController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanUuid = $args['internalPlanUuid'];
-			$internalPlansHandler = new InternalPlansHandler();
+			$internalPlansHandler = new InternalPlansFilteredHandler();
 			$internalPlan = $internalPlansHandler->doGetInternalPlan($internalPlanUuid);
 			
 			if($internalPlan == NULL) {
@@ -50,8 +50,23 @@ class InternalPlansController extends BillingsController {
 			if(isset($data['providerName'])) {
 				$provider_name = $data['providerName'];
 			}
-			$internalPlansHandler = new InternalPlansHandler();
-			$internalPlans = $internalPlansHandler->doGetInternalPlans($provider_name);
+			$contextBillingUuid = NULL;
+			if(isset($data['contextBillingUuid'])) {
+				$contextBillingUuid = $data['contextBillingUuid'];
+			}
+			$isVisible = true;//by default isVisible only
+			if(isset($data['isVisible'])) {
+				$isVisible = $data['isVisible'];
+				if(empty($isVisible)) {
+					$isVisible = NULL;//empty = ALL
+				}
+			}
+			$filtered_array = array_filter($data, 
+				function($k) {
+					return strpos($k, "filter") === 0;
+				}, ARRAY_FILTER_USE_KEY);
+			$internalPlansHandler = new InternalPlansFilteredHandler();
+			$internalPlans = $internalPlansHandler->doGetInternalPlans($provider_name, $contextBillingUuid, $isVisible, $filtered_array);
 			return($this->returnObjectAsJson($response, 'internalPlans', $internalPlans));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while getting Internal Plans, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -141,7 +156,7 @@ class InternalPlansController extends BillingsController {
 				}
 			}
 			$internalplan_opts_array = $data['internalPlanOpts'];
-			$internalPlansHandler = new InternalPlansHandler();
+			$internalPlansHandler = new InternalPlansFilteredHandler();
 			$internalPlan = $internalPlansHandler->doCreate(
 					$internalPlanUuid,
 					$name,
@@ -192,7 +207,7 @@ class InternalPlansController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$internalPlansHandler = new InternalPlansHandler();
+			$internalPlansHandler = new InternalPlansFilteredHandler();
 			$internalPlan = $internalPlansHandler->doAddToProvider($internalPlanUuid, $provider);
 			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
 		} catch(BillingsException $e) {
@@ -220,7 +235,7 @@ class InternalPlansController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanUuid = $args['internalPlanUuid'];
-			$internalPlansHandler = new InternalPlansHandler();
+			$internalPlansHandler = new InternalPlansFilteredHandler();
 			$internalPlan = NULL;
 			if(isset($data['internalPlanOpts'])) {
 				if(!is_array($data['internalPlanOpts'])) {
