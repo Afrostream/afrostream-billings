@@ -148,15 +148,21 @@ if(getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION') === false) {
 	putEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION=recurly');
 }
 
-#Slack / Stats
+#Slack
 
-if(getEnv('SLACK_STATS_ACTIVATED') === false) {
-	putEnv('SLACK_STATS_ACTIVATED=0');
+if(getEnv('SLACK_ACTIVATED') === false) {
+	putEnv('SLACK_ACTIVATED=0');
+}
+
+if(getEnv('SLACK_GROWTH_CHANNEL') === false) {
+	putEnv('SLACK_GROWTH_CHANNEL=growth');
 }
 
 if(getEnv('SLACK_STATS_CHANNEL') === false) {
-	putEnv('SLACK_STATS_CHANNEL=growth');
+	putEnv('SLACK_STATS_CHANNEL=stats');
 }
+
+#Bouygues
 
 if(getEnv('BOUYGUES_BHA_ACTIVATED') === false) {
 	putEnv('BOUYGUES_BHA_ACTIVATED=0');
