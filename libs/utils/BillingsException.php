@@ -4,12 +4,18 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 
 use MyCLabs\Enum\Enum;
 
- class ExceptionType extends Enum {
+class ExceptionType extends Enum {
 	
  	const internal = 'internal';
 	const provider = 'provider';
 	
  }
+
+class ExceptionError extends Enum {
+	
+	const CONTEXT_NOT_FOUND = 100; 	
+
+}
 
 class BillingsException extends Exception {
 	

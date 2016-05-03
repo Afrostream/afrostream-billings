@@ -1,7 +1,7 @@
 <?php
 
-use SebastianBergmann\Money\Money;
-use SebastianBergmann\Money\Currency;
+use Money\Money;
+use Money\Currency;
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../providers/celery/subscriptions/CelerySubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/recurly/subscriptions/RecurlySubscriptionsHandler.php';
