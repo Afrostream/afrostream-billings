@@ -54,6 +54,10 @@ class InternalPlansController extends BillingsController {
 			if(isset($data['contextBillingUuid'])) {
 				$contextBillingUuid = $data['contextBillingUuid'];
 			}
+			$contextCountry = NULL;
+			if(isset($data['contextCountry'])) {
+				$contextCountry = $data['contextCountry'];
+			}
 			$isVisible = true;//by default isVisible only
 			if(isset($data['isVisible'])) {
 				$isVisible = $data['isVisible'];
@@ -65,8 +69,12 @@ class InternalPlansController extends BillingsController {
 				function($k) {
 					return strpos($k, "filter") === 0;
 				}, ARRAY_FILTER_USE_KEY);
+			$country = NULL;
+			if(isset($data['country'])) {
+				$country = $data['country'];
+			}
 			$internalPlansHandler = new InternalPlansFilteredHandler();
-			$internalPlans = $internalPlansHandler->doGetInternalPlans($provider_name, $contextBillingUuid, $isVisible, $filtered_array);
+			$internalPlans = $internalPlansHandler->doGetInternalPlans($provider_name, $contextBillingUuid, $contextCountry, $isVisible, $country, $filtered_array);
 			return($this->returnObjectAsJson($response, 'internalPlans', $internalPlans));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while getting Internal Plans, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -260,6 +268,156 @@ class InternalPlansController extends BillingsController {
 			//
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while updating an internal plan, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function addToCountry(Request $request, Response $response, array $args) {
+		try {
+			if(!isset($args['internalPlanUuid'])) {
+				//exception
+				$msg = "field 'internalPlanUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanUuid = $args['internalPlanUuid'];
+			if(!isset($args['country'])) {
+				//exception
+				$msg = "field 'country' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$country = $args['country'];
+			$internalPlansHandler = new InternalPlansFilteredHandler();
+			$internalPlan = $internalPlansHandler->doAddToCountry($internalPlanUuid, $country);
+			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while linking an internal plan to a country, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while linking an internal plan to a country, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function removeFromCountry(Request $request, Response $response, array $args) {
+		try {
+			if(!isset($args['internalPlanUuid'])) {
+				//exception
+				$msg = "field 'internalPlanUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanUuid = $args['internalPlanUuid'];
+			if(!isset($args['country'])) {
+				//exception
+				$msg = "field 'country' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$country = $args['country'];
+			$internalPlansHandler = new InternalPlansFilteredHandler();
+			$internalPlan = $internalPlansHandler->doRemoveFromCountry($internalPlanUuid, $country);
+			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while removing an internal plan from a country, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while removing an internal plan from a country, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function addToContext(Request $request, Response $response, array $args) {
+		try {
+			if(!isset($args['internalPlanUuid'])) {
+				//exception
+				$msg = "field 'internalPlanUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanUuid = $args['internalPlanUuid'];
+			if(!isset($args['contextBillingUuid'])) {
+				//exception
+				$msg = "field 'contextBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$contextBillingUuid = $args['contextBillingUuid'];
+			if(!isset($args['contextCountry'])) {
+				//exception
+				$msg = "field 'contextCountry' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$contextCountry = $args['contextCountry'];
+			$internalPlansHandler = new InternalPlansFilteredHandler();
+			$internalPlan = $internalPlansHandler->doAddToContext($internalPlanUuid, $contextBillingUuid, $contextCountry);
+			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while linking an internal plan to a context, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while linking an internal plan to a context, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function removeFromContext(Request $request, Response $response, array $args) {
+		try {
+			if(!isset($args['internalPlanUuid'])) {
+				//exception
+				$msg = "field 'internalPlanUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanUuid = $args['internalPlanUuid'];
+			if(!isset($args['contextBillingUuid'])) {
+				//exception
+				$msg = "field 'contextBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$contextBillingUuid = $args['contextBillingUuid'];
+			if(!isset($args['contextCountry'])) {
+				//exception
+				$msg = "field 'contextCountry' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$contextCountry = $args['contextCountry'];
+			$internalPlansHandler = new InternalPlansFilteredHandler();
+			$internalPlan = $internalPlansHandler->doRemoveFromContext($internalPlanUuid, $contextBillingUuid, $contextCountry);
+			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while removing an internal plan from a context, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while removing an internal plan from a context, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));

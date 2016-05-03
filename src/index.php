@@ -8,6 +8,7 @@ require_once __DIR__ . '/../libs/site/InternalPlansFilteredController.php';
 require_once __DIR__ . '/../libs/site/CouponsController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
 require_once __DIR__ . '/../libs/site/CouponsCampaignsController.php';
+require_once __DIR__ . '/../libs/site/ContextsController.php';
 //require_once __DIR__ . '/test.php';
 
 use \Slim\Http\Request;
@@ -89,7 +90,7 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
   		}
   	}
 	
- */
+*/
 
 $app->get("/billings/api/users/{userBillingUuid}", function ($request, $response, $args) {
 	$usersController = new UsersController();
@@ -144,7 +145,7 @@ $app->get("/billings/api/users/", function ($request, $response, $args) {
   		}
   	}
 	
- */
+*/
 
 $app->post("/billings/api/users/", function ($request, $response, $args) {
 	$usersController = new UsersController();
@@ -189,7 +190,7 @@ $app->put("/billings/api/users/{userBillingUuid}", function ($request, $response
   		}
   	}
 	
- */
+*/
 
 $app->put("/billings/api/users/", function ($request, $response, $args) {
 	$usersController = new UsersController();
@@ -233,11 +234,24 @@ $app->put("/billings/api/users/", function ($request, $response, $args) {
         			"providerName": "recurly"
       			},
       			"internalPlan": {
-        			"internalPlanUuid": "InternalPlanUuid",
-        			"name": "InternalPlanName",
-        			"description": "InternalPlanDescription",
-        			"internalPlanOpts": {
-        			}
+	      			"internalPlanUuid": "InternalPlanUuid",
+	      			"name": "name",
+	      			"description": "description",
+	      			"amount_in_cents": "1000",
+	      			"currency": "EUR",
+	      			"cycle": "once",
+	      			"periodUnit": "month",
+	      			"periodLength" : "1",
+					"internalPlanOpts": {
+	        			"internalMaxScreens" : "2",
+	        			"key1" : "value1",
+	        			"key2" : "value2"
+	        		},
+					"thumb": "https://mydomain.com/jpeg.jpg",
+					"trialEnabled": true,
+					"trialPeriodUnit": "day",
+					"trialPeriodLength": "7",
+					"isVisible": true
       			},
       			"creationDate": "2015-12-25 12:00:00+00",
       			"updatedDate": "2015-12-25 12:00:00+00",
@@ -309,11 +323,24 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
         			"providerName": "recurly"
       			},
       			"internalPlan": {
-        			"internalPlanUuid": "InternalPlanUuid",
-        			"name": "InternalPlanName",
-        			"description": "InternalPlanDescription",
-        			"internalPlanOpts": {
-        			}
+	      			"internalPlanUuid": "InternalPlanUuid",
+	      			"name": "name",
+	      			"description": "description",
+	      			"amount_in_cents": "1000",
+	      			"currency": "EUR",
+	      			"cycle": "once",
+	      			"periodUnit": "month",
+	      			"periodLength" : "1",
+					"internalPlanOpts": {
+	        			"internalMaxScreens" : "2",
+	        			"key1" : "value1",
+	        			"key2" : "value2"
+	        		},
+					"thumb": "https://mydomain.com/jpeg.jpg",
+					"trialEnabled": true,
+					"trialPeriodUnit": "day",
+					"trialPeriodLength": "7",
+					"isVisible": true
       			},
       			"creationDate": "2015-12-25 12:00:00+00",
       			"updatedDate": "2015-12-25 12:00:00+00",
@@ -429,7 +456,7 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/renew", functio
 
 //get one InternalPlan
 
-	/*
+/*
 	 
 	 sample call :
 	
@@ -443,17 +470,29 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/renew", functio
   		"statusCode": 0,
   		"response": {
       		"internalPlan": {
-        		"internalPlanUuid": "InternalPlanUuid",
-        		"name": "InternalPlanName",
-        		"description": "InternalPlanDescription",
-        		"internalPlanOpts": {
-        			"internalMaxScreens" : "2"
-        		}
+      			"internalPlanUuid": "InternalPlanUuid",
+      			"name": "name",
+      			"description": "description",
+      			"amount_in_cents": "1000",
+      			"currency": "EUR",
+      			"cycle": "once",
+      			"periodUnit": "month",
+      			"periodLength" : "1",
+				"internalPlanOpts": {
+        			"internalMaxScreens" : "2",
+        			"key1" : "value1",
+        			"key2" : "value2"
+        		},
+				"thumb": "https://mydomain.com/jpeg.jpg",
+				"trialEnabled": true,
+				"trialPeriodUnit": "day",
+				"trialPeriodLength": "7",
+				"isVisible": true
       		}		
     	}
     }
 	
-	*/
+*/
 
 $app->get("/billings/api/internalplans/{internalPlanUuid}", function ($request, $response, $args) {
 	$internalPlansController = new InternalPlansFilteredController();
@@ -531,7 +570,12 @@ $app->get("/billings/api/internalplans/", function ($request, $response, $args) 
         			"internalMaxScreens" : "2",
         			"key1" : "value1",
         			"key2" : "value2"
-        		}
+        		},
+				"thumb": "https://mydomain.com/jpeg.jpg",
+				"trialEnabled": true,
+				"trialPeriodUnit": "day",
+				"trialPeriodLength": "7",
+				"isVisible": true
     		}
   		}
   	}
@@ -557,6 +601,34 @@ $app->put("/billings/api/internalplans/{internalPlanUuid}/addtoprovider/{provide
 	return($internalPlansController->addToProvider($request, $response, $args));
 });
 
+//actions to internalPlan : addotocountry
+
+$app->put("/billings/api/internalplans/{internalPlanUuid}/addtocountry/{country}", function ($request, $response, $args) {
+	$internalPlansController = new InternalPlansFilteredController();
+	return($internalPlansController->addToCountry($request, $response, $args));
+});
+
+//actions to internalPlan : removefromcountry
+
+$app->put("/billings/api/internalplans/{internalPlanUuid}/removefromcountry/{country}", function ($request, $response, $args) {
+	$internalPlansController = new InternalPlansFilteredController();
+	return($internalPlansController->removeFromCountry($request, $response, $args));
+});
+
+//actions to internalPlan : addtocontext
+
+$app->put("/billings/api/internalplans/{internalPlanUuid}/addtocontext/{contextBillingUuid}/{contextCountry}", function ($request, $response, $args) {
+	$internalPlansController = new InternalPlansFilteredController();
+	return($internalPlansController->addToContext($request, $response, $args));
+});
+
+//actions to internalPlan : removefromcontext
+
+$app->put("/billings/api/internalplans/{internalPlanUuid}/removefromcontext/{contextBillingUuid}/{contextCountry}", function ($request, $response, $args) {
+	$internalPlansController = new InternalPlansFilteredController();
+	return($internalPlansController->removeFromContext($request, $response, $args));
+});
+
 //get coupon
 	
 /*
@@ -566,32 +638,32 @@ $app->put("/billings/api/internalplans/{internalPlanUuid}/addtoprovider/{provide
 	userBillingUuid is not necessary for 'afr', it is mandatory for 'cashway'
 	sample answer :
 	
-{
-  "status": "done",
-  "statusMessage": "success",
-  "statusCode": 0,
-  "response": {
-    "coupon": {
-      "couponBillingUuid": "11111111-1111-1111-1111-1111111",
-      "code": "prefix-1111",
-      "status": "waiting",
-      "couponsCampaign": {
-        "couponsCampaignBillingUuid": "11111111-1111-1111-1111-1111111",
-        "creationDate": "2016-01-01 00:00:00.00000+01",
-        "name": "campaign_name",
-        "description": "campaign_desc",
-        "provider": {
-          "providerName": "afr"
-        },
-        "internalPlan": {...}
-      },
-      "provider": {
-        "providerName": "afr"
-      },
-      "internalPlan": {..}
-    }
-  }
-}
+	{
+	  "status": "done",
+	  "statusMessage": "success",
+	  "statusCode": 0,
+	  "response": {
+	    "coupon": {
+	      "couponBillingUuid": "11111111-1111-1111-1111-1111111",
+	      "code": "prefix-1111",
+	      "status": "waiting",
+	      "couponsCampaign": {
+	        "couponsCampaignBillingUuid": "11111111-1111-1111-1111-1111111",
+	        "creationDate": "2016-01-01 00:00:00.00000+01",
+	        "name": "campaign_name",
+	        "description": "campaign_desc",
+	        "provider": {
+	          "providerName": "afr"
+	        },
+	        "internalPlan": {...}
+	      },
+	      "provider": {
+	        "providerName": "afr"
+	      },
+	      "internalPlan": {..}
+	    }
+	  }
+	}
 	
 */
 
@@ -624,31 +696,128 @@ $app->post("/billings/api/coupons/", function ($request, $response, $args) {
 //get InternalPlans
 	
 /*
- sample call :
-	
- GET /billings/api/couponscampaigns/?providerName=cashway
 
- "providerName" : "cashway" (optional) Retrieve internalplans available only to that provider
+	sample call :
 	
- sample answer :
+	GET /billings/api/couponscampaigns/?providerName=cashway
+
+ 	"providerName" : "cashway" (optional) Retrieve internalplans available only to that provider
 	
-{
- 	"status": "done",
- 	"statusMessage": "success",
-	"statusCode": 0,
-	"response": {
-		"internalPlans": [
-	 		{...},
-	 		{...}
-	 	]
-	 }
-}
+ 	sample answer :
+	
+	{
+	 	"status": "done",
+	 	"statusMessage": "success",
+		"statusCode": 0,
+		"response": {
+			"internalPlans": [
+		 		{...},
+		 		{...}
+		 	]
+		 }
+	}
 	
 */
 
 $app->get("/billings/api/couponscampaigns/", function ($request, $response, $args) {
 	$couponsCampaignsController = new CouponsCampaignsController();
 	return($couponsCampaignsController->getMulti($request, $response, $args));
+});
+
+//contexts
+
+//get one context
+	
+/*
+	
+	sample call :
+	
+	GET /billings/api/contexts/common/FR
+	
+	sample answer :
+	
+	{
+		"status": "done",
+		"statusMessage": "success",
+		"statusCode": 0,
+		"response": {
+		    "context": {
+      			"contextBillingUuid": "common",
+      			"contextCountry": "FR",
+      			"name": "common",
+      			"description": "common",
+				"internalPlans": [
+	 				{...},
+	 				{...}
+	 			]
+	
+			}
+		}
+	}
+	
+*/
+
+$app->get("/billings/api/contexts/{contextBillingUuid}/{contextCountry}", function ($request, $response, $args) {
+	$contextsController = new ContextsController();
+	return($contextsController->getOne($request, $response, $args));
+});
+
+//get contexts
+	
+/*
+	
+	sample call :
+	
+	GET /billings/api/contexts/?contextCountry=FR
+	
+	contextCountry=FR	:	contexts available in a given country (optional)
+	
+	sample answer :
+	
+	{
+		"status": "done",
+		"statusMessage": "success",
+		"statusCode": 0,
+		"response": {
+			"contexts": [
+				{...},
+				{...}
+			]
+	
+		}
+	}
+	
+*/
+
+$app->get("/billings/api/contexts/", function ($request, $response, $args) {
+	$contextsController = new ContextsController();
+	return($contextsController->getMulti($request, $response, $args));
+});
+
+$app->post("/billings/api/contexts/", function ($request, $response, $args) {
+	$contextsController = new ContextsController();
+	return($contextsController->create($request, $response, $args));
+});
+
+//actions to context : addinternalplan
+	
+$app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/addinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
+	$contextsController = new ContextsController();
+	return($contextsController->AddInternalPlanToContext($request, $response, $args));
+});
+	
+//actions to context : removeinternalplan
+
+$app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/removeinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
+	$contextsController = new ContextsController();
+	return($contextsController->RemoveInternalPlanFromContext($request, $response, $args));
+});
+
+//actions to context : moveinternalplan
+
+$app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/moveinternalplan/{internalPlanUuid}/{index}", function ($request, $response, $args) {
+	$contextsController = new ContextsController();
+	return($contextsController->setInternalPlanIndexInContext($request, $response, $args));
 });
 
 //WebHooks
