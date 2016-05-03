@@ -194,6 +194,10 @@ if(getEnv('CASHWAY_WH_SECRET') === false) {
 	putEnv('CASHWAY_WH_SECRET=DakUdoycsOctoaphObyo');
 }
 
+if(getEnv('CASHWAY_COUPON_URL') === false) {
+	putEnv('CASHWAY_COUPON_URL=https://staging-payments-afrostream.cashway.fr/1/b/');
+}
+
 #logger, #db_conn, ...
 
 class config {
