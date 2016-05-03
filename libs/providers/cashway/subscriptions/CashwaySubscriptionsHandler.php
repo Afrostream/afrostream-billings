@@ -167,6 +167,8 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			//ADD CouponCode URL
+			$subOpts->setOpt('couponCodeUrl', getEnv('CASHWAY_COUPON_URL').$couponCode.".h");
 		}
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
