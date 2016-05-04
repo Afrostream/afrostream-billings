@@ -131,7 +131,10 @@ class CashwayWebHooksHandler {
 						$coupon->setExpiresDate(new DateTime());
 						$coupon = CouponDAO::updateExpiresDate($coupon);
 						//
-						$subscriptionsHandler->doDeleteSubscriptionByUuid($db_subscription->getSubUid(), false);
+						$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($coupon->getSubId());
+						if(isset($db_subscription)) {
+							$subscriptionsHandler->doDeleteSubscriptionByUuid($db_subscription->getSubUid(), false);
+						}
 						//COMMIT
 						pg_query("COMMIT");
 					} catch(Exception $e) {
