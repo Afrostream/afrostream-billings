@@ -27,6 +27,9 @@ class CashwayWebHooksHandler {
 		$data = json_decode($post_data, true);
 		$db_subscription_before_update = NULL;
 		$db_subscription = NULL;
+		//TODO : Merge to be done later
+		$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
+		$subscriptionsHandler = new SubscriptionsHandler();
 		switch($data['event']) {
 			case 'transaction_paid' :
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].'...');
@@ -81,9 +84,6 @@ class CashwayWebHooksHandler {
 					}
 					$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 				}
-				//TODO : Merge to be done later
-				$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
-				$subscriptionsHandler = new SubscriptionsHandler();
 				if($coupon->getStatus() == 'pending') {
 					try {
 						$now = new DateTime();
