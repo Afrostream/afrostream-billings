@@ -133,7 +133,7 @@ class CashwayWebHooksHandler {
 						//
 						$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($coupon->getSubId());
 						if(isset($db_subscription)) {
-							$subscriptionsHandler->doDeleteSubscriptionByUuid($db_subscription->getSubUid(), false);
+							$subscriptionsHandler->doDeleteSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), false);
 						}
 						//COMMIT
 						pg_query("COMMIT");
