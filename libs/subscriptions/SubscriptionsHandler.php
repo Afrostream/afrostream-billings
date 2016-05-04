@@ -680,10 +680,10 @@ class SubscriptionsHandler {
 						   	$substitions['%internalplandesc%'] = $internalPlan->getDescription(); 
 						   	$substitions['%amountincents%'] = $internalPlan->getAmountInCents();
 						   	$amountInMoney = new Money((integer) $internalPlan->getAmountInCents(), new Currency($internalPlan->getCurrency()));
-						   	$substitions['%amount%'] = money_format('%!.2n', $amountInMoney->getConvertedAmount());
+						   	$substitions['%amount%'] = money_format('%!.2n', (float) ($amountInMoney->getAmount() / 100));
 						   	$substitions['%amountincentsexcltax%'] = $internalPlan->getAmountInCentsExclTax();
 						   	$amountExclTaxInMoney = new Money((integer) $internalPlan->getAmountInCentsExclTax(), new Currency($internalPlan->getCurrency()));
-						   	$substitions['%amountexcltax%'] = money_format('%!.2n', $amountExclTaxInMoney->getConvertedAmount());
+						   	$substitions['%amountexcltax%'] = money_format('%!.2n', (float) ($amountExclTaxInMoney->getAmount() / 100));
 						   	if($internalPlan->getVatRate() == NULL) {
 						   		$substitions['%vat%'] = 'N/A'; 
 						   	} else {
@@ -691,7 +691,7 @@ class SubscriptionsHandler {
 						   	}
 						   	$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
 						   	$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
-						   	$substitions['%amounttax%'] = money_format('%!.2n', $amountTaxInMoney->getConvertedAmount());
+						   	$substitions['%amounttax%'] = money_format('%!.2n', (float) ($amountTaxInMoney->getAmount() / 100));
 						   	$substitions['%currency%'] = $internalPlan->getCurrency();
 						   	$substitions['%cycle%'] = $internalPlan->getCycle();
 						   	$substitions['%periodunit%'] = $internalPlan->getPeriodUnit();
