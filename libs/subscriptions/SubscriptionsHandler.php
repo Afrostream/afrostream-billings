@@ -1,7 +1,7 @@
 <?php
 
-use SebastianBergmann\Money\Money;
-use SebastianBergmann\Money\Currency;
+use Money\Money;
+use Money\Currency;
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../providers/celery/subscriptions/CelerySubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/recurly/subscriptions/RecurlySubscriptionsHandler.php';
@@ -244,6 +244,24 @@ class SubscriptionsHandler {
 		return($subscriptions);
 	}
 	
+	public function doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid) {
+		try {
+			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid."...");
+			$subscriptions = BillingsSubscriptionDAO::getBillingsSubscripionByUserReferenceUuid($userReferenceUuid);
+			$this->doFillSubscriptions($subscriptions);
+			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while getting subscriptions for userReferenceUuid=".$userReferenceUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("subscriptions getting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting subscriptions for userReferenceUuid=".$userReferenceUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("subscriptions getting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($subscriptions);		
+	}
+	
 	public function doUpdateUserSubscriptionsByUser(User $user) {
 		try {
 			config::getLogger()->addInfo("dbsubscriptions updating for userid=".$user->getId()."...");
@@ -438,9 +456,34 @@ class SubscriptionsHandler {
 			}
 			$db_subscription_before_update = clone $db_subscription;
 			switch($provider->getName()) {
+				case 'celery' :
+					$celerySubscriptionsHandler = new CelerySubscriptionsHandler();
+					$db_subscription = $celerySubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'recurly' :
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
 				case 'gocardless' :
 					$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
 					$db_subscription = $gocardlessSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'bachat' :
+					$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
+					$db_subscription = $bachatSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'idipper' :
+					$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
+					$db_subscription = $idipperSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'afr' :
+					$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
+					$db_subscription = $gocardlessSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'cashway' :
+					$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
+					$db_subscription = $cashwaySubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -529,7 +572,7 @@ class SubscriptionsHandler {
 			$subscription_is_new_event = false;
 			$subscription_is_canceled_event = false;
 			$subscription_is_expired_event = false;
-			$sendgrid_tepmplate_id = NULL;
+			$sendgrid_template_id = NULL;
 			$event = NULL;
 			//check subscription_is_new_event
 			if($subscription_before_update == NULL) {
@@ -546,7 +589,7 @@ class SubscriptionsHandler {
 				}
 			}
 			if($subscription_is_new_event == true) {
-				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID');
+				$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID');
 				$event = "subscription_is_new";
 			}
 			//check subscription_is_canceled_event
@@ -564,7 +607,7 @@ class SubscriptionsHandler {
 					}
 			}
 			if($subscription_is_canceled_event == true) {
-				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
+				$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
 				$event = "subscription_is_canceled";
 			}
 			//check subscription_is_expired_event
@@ -582,12 +625,16 @@ class SubscriptionsHandler {
 						}
 			}
 			if($subscription_is_expired_event == true) {
-				$sendgrid_tepmplate_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID');
+				if($subscription_after_update->getSubExpiresDate() == $subscription_after_update->getSubCanceledDate()) {
+					$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_FP_ID');//FP = FAILED PAYMENT
+				} else {
+					$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID');
+				}
 				$event = "subscription_is_expired";
 			}
 			if($subscription_is_new_event == true || $subscription_is_canceled_event == true || $subscription_is_expired_event == true) {
 				config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", ...");
-				if(getEnv('EVENT_EMAIL_ACTIVATED') == 1 && !empty($sendgrid_tepmplate_id)) {
+				if(getEnv('EVENT_EMAIL_ACTIVATED') == 1 && !empty($sendgrid_template_id)) {
 					$eventEmailProvidersExceptionArray = explode(";", getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION'));
 					$provider = ProviderDAO::getProviderById($subscription_after_update->getProviderId());
 					if($provider == NULL) {
@@ -633,10 +680,10 @@ class SubscriptionsHandler {
 						   	$substitions['%internalplandesc%'] = $internalPlan->getDescription(); 
 						   	$substitions['%amountincents%'] = $internalPlan->getAmountInCents();
 						   	$amountInMoney = new Money((integer) $internalPlan->getAmountInCents(), new Currency($internalPlan->getCurrency()));
-						   	$substitions['%amount%'] = money_format('%!.2n', $amountInMoney->getConvertedAmount());
+						   	$substitions['%amount%'] = money_format('%!.2n', (float) ($amountInMoney->getAmount() / 100));
 						   	$substitions['%amountincentsexcltax%'] = $internalPlan->getAmountInCentsExclTax();
 						   	$amountExclTaxInMoney = new Money((integer) $internalPlan->getAmountInCentsExclTax(), new Currency($internalPlan->getCurrency()));
-						   	$substitions['%amountexcltax%'] = money_format('%!.2n', $amountExclTaxInMoney->getConvertedAmount());
+						   	$substitions['%amountexcltax%'] = money_format('%!.2n', (float) ($amountExclTaxInMoney->getAmount() / 100));
 						   	if($internalPlan->getVatRate() == NULL) {
 						   		$substitions['%vat%'] = 'N/A'; 
 						   	} else {
@@ -644,7 +691,7 @@ class SubscriptionsHandler {
 						   	}
 						   	$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
 						   	$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
-						   	$substitions['%amounttax%'] = money_format('%!.2n', $amountTaxInMoney->getConvertedAmount());
+						   	$substitions['%amounttax%'] = money_format('%!.2n', (float) ($amountTaxInMoney->getAmount() / 100));
 						   	$substitions['%currency%'] = $internalPlan->getCurrency();
 						   	$substitions['%cycle%'] = $internalPlan->getCycle();
 						   	$substitions['%periodunit%'] = $internalPlan->getPeriodUnit();
@@ -688,7 +735,7 @@ class SubscriptionsHandler {
 							->setSubject(' ')
 							->setText(' ')
 							->setHtml(' ')
-							->setTemplateId($sendgrid_tepmplate_id);
+							->setTemplateId($sendgrid_template_id);
 							if( (null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
 								$email->setBcc(getEnv('SENDGRID_BCC'));
 								foreach($substitions as $var => $val) {

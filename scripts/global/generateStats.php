@@ -5,7 +5,7 @@ require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/db/dbStats.php';
 require_once __DIR__ . '/../../libs/slack/SlackHandler.php';
 
-print_r("starting tool ...\n");
+print_r("starting tool to generate Stats...\n");
 
 foreach ($argv as $arg) {
 	$e=explode("=",$arg);
@@ -99,9 +99,9 @@ print_r("processing done\n");
 
 function sendMessage($msg) {
 	print_r($msg.PHP_EOL);
-	if(getEnv('SLACK_STATS_ACTIVATED') == 1) {
+	if(getEnv('SLACK_ACTIVATED') == 1) {
 		$slackHandler = new SlackHandler();
-		$slackHandler->sendMessage(getEnv('SLACK_STATS_CHANNEL'), $msg);
+		$slackHandler->sendMessage(getEnv('SLACK_GROWTH_CHANNEL'), $msg);
 	}
 }
 
