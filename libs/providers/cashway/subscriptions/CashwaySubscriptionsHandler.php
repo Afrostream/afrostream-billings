@@ -376,6 +376,43 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 		}
 	}
 	
+	public function doDeleteSubscription(BillingsSubscription $subscription, $is_a_request = true) {
+		try {
+			config::getLogger()->addInfo("cashway subscription deleting...");
+			if(
+					$subscription->getDeleted() == true
+			)
+			{
+				//nothing todo : already done or in process
+			} else {
+				//
+				$subscription->setDeleted(true);
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateDeleted($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			}
+			//
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("cashway subscription deleting done successfully for cashway_subscription_uuid=".$subscription->getSubUid());
+			return($subscription);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while deleting a cashway subscription for cashway_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("cashway subscription deleting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while deleting a cashway subscription for cashway_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("cashway subscription deleting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+	}
+	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
 		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
 	}

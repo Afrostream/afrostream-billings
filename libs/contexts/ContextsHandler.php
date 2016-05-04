@@ -207,7 +207,17 @@ class ContextsHandler {
 			}
 			if($internalPlanContext->getIndex() != $index) {
 				$internalPlanContext->setIndex($index);
-				$internalPlanContext = InternalPlanContextDAO::updateIndex($internalPlanContext);
+				//NC : To be done in a transaction, as updateIndex is doing multiple calls
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					$internalPlanContext = InternalPlanContextDAO::updateIndex($internalPlanContext);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
 			}
 			//Done
 			$context = ContextDAO::getContextById($context->getId());
