@@ -2841,6 +2841,27 @@ class CouponDAO {
 						$coupon->getId()));
 		return(self::getCouponById($coupon->getId()));		
 	}
+
+	public static function getCouponsByUserId($userid, $couponscampaignsid = NULL) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE userid = $1";
+		$params = array();
+		$params[] = $userid;
+		if(isset($couponscampaignsid)) {
+			$query.= " AND couponscampaignsid= $2";
+			$params[] = $couponscampaignsid;
+		}
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getCouponFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
 	
 }
 

@@ -198,6 +198,10 @@ if(getEnv('CASHWAY_COUPON_URL') === false) {
 	putEnv('CASHWAY_COUPON_URL=https://staging-payments-afrostream.cashway.fr/1/b/');
 }
 
+if(getEnv('CASHWAY_COUPON_ONE_BY_USER_FOR_EACH_CAMPAIGN_ACTIVATED') === false) {
+	putEnv('CASHWAY_COUPON_ONE_BY_USER_FOR_EACH_CAMPAIGN_ACTIVATED=0');
+}
+
 #logger, #db_conn, ...
 
 class config {

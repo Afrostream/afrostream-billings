@@ -122,7 +122,6 @@ class CashwayWebHooksHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				if($coupon->getStatus() == 'waiting' || $coupon->getStatus() == 'pending') {
-					//TODO : may delete the subscription : not for the moment
 					try {
 						//START TRANSACTION
 						pg_query("BEGIN");
