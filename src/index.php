@@ -247,7 +247,10 @@ $app->put("/billings/api/users/", function ($request, $response, $args) {
 	        			"key1" : "value1",
 	        			"key2" : "value2"
 	        		},
-					"thumb": "https://mydomain.com/jpeg.jpg",
+					"thumb": {
+						"path": "/path/jpeg.jpg",
+						"imgix": "https://mydomain.com/path/jpeg.jpg"
+					},
 					"trialEnabled": true,
 					"trialPeriodUnit": "day",
 					"trialPeriodLength": "7",
@@ -336,7 +339,10 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
 	        			"key1" : "value1",
 	        			"key2" : "value2"
 	        		},
-					"thumb": "https://mydomain.com/jpeg.jpg",
+					"thumb": {
+						"path": "/path/jpeg.jpg",
+						"imgix": "https://mydomain.com/path/jpeg.jpg"
+					},
 					"trialEnabled": true,
 					"trialPeriodUnit": "day",
 					"trialPeriodLength": "7",
@@ -483,7 +489,10 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/renew", functio
         			"key1" : "value1",
         			"key2" : "value2"
         		},
-				"thumb": "https://mydomain.com/jpeg.jpg",
+				"thumb": {
+					"path": "/path/jpeg.jpg",
+					"imgix": "https://mydomain.com/path/jpeg.jpg"
+				},
 				"trialEnabled": true,
 				"trialPeriodUnit": "day",
 				"trialPeriodLength": "7",
@@ -571,11 +580,28 @@ $app->get("/billings/api/internalplans/", function ($request, $response, $args) 
         			"key1" : "value1",
         			"key2" : "value2"
         		},
-				"thumb": "https://mydomain.com/jpeg.jpg",
+				"thumb": {
+					"path": "/path/jpeg.jpg",
+					"imgix": "https://mydomain.com/path/jpeg.jpg"
+				},
 				"trialEnabled": true,
 				"trialPeriodUnit": "day",
 				"trialPeriodLength": "7",
-				"isVisible": true
+				"isVisible": true,
+				"countries": [
+			     	{
+			        	"country": "FR"
+			        },
+			       	{
+			       		"country": "ES"
+			        },
+			        {
+			        	"country": "EP"
+			        },
+			       	{
+			        	"country": "PT"
+			        }
+			    ]
     		}
   		}
   	}
