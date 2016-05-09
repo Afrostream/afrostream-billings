@@ -70,6 +70,9 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 							config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because there is old subscriptions for userReferenceUuid=".$userReferenceUuid);
 						}
 					}
+				} else {
+					$contextBillingUuid = 'common';
+					config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because no userReferenceUuid was given");					
 				}
 			} else {
 				config::getLogger()->addInfo("no contextBillingUuid, filter NOT enabled");
