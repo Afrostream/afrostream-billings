@@ -78,10 +78,8 @@ class dbStats {
 		$query.= " LEFT JOIN billing_users_opts BUO";
 		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
 		$query.= " LEFT JOIN billing_users BUB ON (BU.user_reference_uuid = BUB.user_reference_uuid)";
-		$query.= " LEFT JOIN  billing_subscriptions BSB ON (BSB.userid = BUB._id AND BSB._id < BS._id )";
+		$query.= " LEFT JOIN billing_subscriptions BSB ON (BSB.userid = BUB._id AND BSB._id < BS._id )";
 		$query.= " WHERE (BUO.value not like '%yopmail.com' OR BUO.value is null)";
-		$query.= " AND";
-		$query.= " BS.sub_status <> 'future'";
 		$query.= " AND";
 		$query.= " date(BS.sub_activated_date AT TIME ZONE 'Europe/Paris') = date('".$date_as_str."')";
 		$query.= " GROUP BY BP._id";
@@ -101,6 +99,39 @@ class dbStats {
 		$out['total'] = $total;
 		$out['returning'] = $total_returning;
 		$out['new'] = $total_new;
+		return($out);
+	}
+	
+	public static function getActivatedSubscriptions(DateTime $date_start, DateTime $date_end) {
+		$date_start->setTimezone(new DateTimeZone(config::$timezone));
+		$date_start_str = dbGlobal::toISODate($date_start);
+		$date_end->setTimezone(new DateTimeZone(config::$timezone));
+		$date_end_str = dbGlobal::toISODate($date_end);
+		$query = "SELECT BU._id as userid, (CASE WHEN BUO.value is null THEN 'unknown@domain.com' ELSE BUO.value END) as email, BIPL.name as internal_plan_name, BP.name as provider_name FROM billing_subscriptions BS";
+		$query.= " INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)";
+		$query.= " INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)";
+		$query.= " INNER JOIN billing_internal_plans BIPL ON (BIPLL.internal_plan_id = BIPL._id)";
+		$query.= " INNER JOIN billing_providers BP";
+		$query.= " ON (BS.providerid = BP._id)";
+		$query.= " INNER JOIN billing_users BU";
+		$query.= " ON (BS.userid = BU._id)";
+		$query.= " LEFT JOIN billing_users_opts BUO";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
+		$query.= " WHERE (BUO.value not like '%yopmail.com' OR BUO.value is null)";
+		$query.= " AND";
+		$query.= " (BS.sub_activated_date AT TIME ZONE 'Europe/Paris') >= '".$date_start_str."'";
+		$query.= " AND";
+		$query.= " (BS.sub_activated_date AT TIME ZONE 'Europe/Paris') < '".$date_end_str."'";
+		$result = pg_query(config::getDbConn(), $query);
+		$out = array();
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$sub = array();
+			$sub['userid'] = $row['userid'];
+			$sub['email'] = $row['email'];
+			$sub['internal_plan_name'] = $row['internal_plan_name'];
+			$sub['provider_name'] = $row['provider_name'];
+			$out[] = $sub;
+		}
 		return($out);
 	}
 	

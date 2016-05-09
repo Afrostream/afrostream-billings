@@ -17,6 +17,17 @@ class CashwayCouponsHandler {
 		try {
 			config::getLogger()->addInfo("cashway coupon creation...");
 			//
+			if(getEnv('CASHWAY_COUPON_ONE_BY_USER_FOR_EACH_CAMPAIGN_ACTIVATED') == 1) {
+				$couponsByUserForOneCampaign = CouponDAO::getCouponsByUserId($user->getId(), $couponsCampaign->getId());
+				foreach ($couponsByUserForOneCampaign as $coupon) {
+					if($coupon->getStatus() == 'pending') {
+						//exception
+						$msg = "there's already a coupon waiting for payment";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::CASHWAY_COUPON_ONE_BY_USER_FOR_EACH_CAMPAIGN);						
+					}
+				}
+			}
 			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($couponsCampaign->getProviderPlanId()));
 			//
 			$conf = array (

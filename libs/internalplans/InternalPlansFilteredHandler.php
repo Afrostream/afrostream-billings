@@ -11,69 +11,106 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 		parent::__construct();
 	}
 	
-	public function doGetInternalPlan($internalPlanUuid) {
-		return(parent::doGetInternalPlan($internalPlanUuid));
-	}
-	
-	public function doGetInternalPlans($provider_name = NULL, $contextBillingUuid = NULL, $isVisible = NULL, $filtered_array = NULL) {
-		$contextBillingUuid = $this->selectContextBillingUuid($contextBillingUuid);
-		$internalPlans = parent::doGetInternalPlans($provider_name, $contextBillingUuid, $isVisible);
+	public function doGetInternalPlans($provider_name = NULL, $contextBillingUuid = NULL, $contextCountry = NULL, $isVisible = NULL, $country = NULL, $filtered_array = NULL) {
+		$contextBillingUuid = $this->selectContextBillingUuid($contextBillingUuid, $filtered_array);
+		$contextCountry = $this->selectContextCountry($contextCountry, $filtered_array);
+		$internalPlans = parent::doGetInternalPlans($provider_name, $contextBillingUuid, $contextCountry, $isVisible, $country);
 		$internalPlansFiltered = array();
-		//TODO : LATER
-		/*if(isset($filtered_array)) {
+		if(isset($filtered_array)) {
 			$filterEnabled = false;
 			if(array_key_exists('filterEnabled', $filtered_array)) {
-				$filterEnabled = (boolval($filtered_array['filterEnabled'])) == 1 ? true : false;
+				$filterEnabled = $filtered_array['filterEnabled'] === 'true' ? true : false;
 			}
 			if($filterEnabled === true) {
 				foreach ($internalPlans as $internalPlan) {
-					//TODO	
+					if(!$this->isFiltered($internalPlan, $filtered_array)) {
+						$internalPlansFiltered[] = $internalPlan;
+					}
 				}
 			} else {
 				$internalPlansFiltered = $internalPlans;
 			}
 		} else {
 			$internalPlansFiltered = $internalPlans;
-		}*/
-		$internalPlansFiltered = $internalPlans;
+		}
 		return($internalPlansFiltered);
-	}
-	
-	public function doCreate($internalPlanUuid,	$name, $description, $amount_in_cents, $currency, $cycle, $period_unit_str, $period_length, $internalplan_opts_array) {
-		return(parent::doCreate($internalPlanUuid, $name, $description, $amount_in_cents, $currency, $cycle, $period_unit_str, $period_length, $internalplan_opts_array));
-	}
-	
-	public function doAddToProvider($internalPlanUuid, Provider $provider) {
-		return(parent::doAddToProvider($internalPlanUuid, $provider));
-	}
-	
-	public function doUpdateInternalPlanOpts($internalPlanUuid, array $internalplan_opts_array) {
-		return(parent::doUpdateInternalPlanOpts($internalPlanUuid, $internalplan_opts_array));
 	}
 	
 	private function selectContextBillingUuid($currentContextBillingUuid = NULL, $filtered_array = NULL) {
 		$contextBillingUuid = NULL;
 		if(isset($currentContextBillingUuid)) {
 			$contextBillingUuid = $currentContextBillingUuid;
-		} 
-		//TODO : LATER
-		/*else if(isset($filtered_array)) {
-			$userReferenceUuid = NULL;
-			if(array_key_exists('filterUserReferenceUuid', $filtered_array)) {
-				$userReferenceUuid = $filtered_array['filterUserReferenceUuid'];
+			config::getLogger()->addInfo("contextBillingUuid set to : ".$contextBillingUuid);
+		} else if(isset($filtered_array)) {
+			$filterEnabled = false;
+			if(array_key_exists('filterEnabled', $filtered_array)) {
+				$filterEnabled = $filtered_array['filterEnabled'] === 'true' ? true : false;
 			}
-			if(isset($userReferenceUuid)) {
-				$subscriptionsHandler = new SubscriptionsHandler();
-				$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid);
-				if(count($subscriptions) == 0) {
-					$contextBillingUuid = 'common';
-				} else {
-					$contextBillingUuid = 'returning';
+			if($filterEnabled === true) {
+				$userReferenceUuid = NULL;
+				if(array_key_exists('filterUserReferenceUuid', $filtered_array)) {
+					$userReferenceUuid = $filtered_array['filterUserReferenceUuid'];
 				}
+				if(isset($userReferenceUuid)) {
+					$subscriptionsHandler = new SubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid);
+					if(count($subscriptions) == 0) {
+						$contextBillingUuid = 'common';
+						config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because no subscription was found for userReferenceUuid=".$userReferenceUuid);
+					} else {
+						$lastSubscription = $subscriptions[0];
+						if(	$lastSubscription->getSubStatus() == 'expired'
+							&& 
+							$lastSubscription->getSubExpiresDate() == $lastSubscription->getSubCanceledDate()) 
+						{
+							$contextBillingUuid = 'reactivation';
+							config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because last subscription expired because of failed payment for userReferenceUuid=".$userReferenceUuid);
+						} else {
+							$contextBillingUuid = 'returning';
+							config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because there is old subscriptions for userReferenceUuid=".$userReferenceUuid);
+						}
+					}
+				} else {
+					$contextBillingUuid = 'common';
+					config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because no userReferenceUuid was given");					
+				}
+			} else {
+				config::getLogger()->addInfo("no contextBillingUuid, filter NOT enabled");
 			}
-		}*/
+		} else {
+			config::getLogger()->addInfo("no contextBillingUuid");
+		}
 		return($contextBillingUuid);
 	}
+
+	private function selectContextCountry($currentContextCountry = NULL, $filtered_array = NULL) {
+		$contextCountry = NULL;
+		if(isset($currentContextCountry)) {
+			$contextCountry = $currentContextCountry;
+			config::getLogger()->addInfo("contextCountry set to : ".$contextCountry);
+		} else if(isset($filtered_array)) {
+			$filterEnabled = false;
+			if(array_key_exists('filterEnabled', $filtered_array)) {
+				$filterEnabled = $filtered_array['filterEnabled'] === 'true' ? true : false;
+			}
+			if($filterEnabled === true) {
+				if(array_key_exists('filterCountry', $filtered_array)) {
+					$contextCountry = $filtered_array['filterCountry'];
+				}
+			} else {
+				config::getLogger()->addInfo("no contextCountry, filter NOT enabled");
+			}
+		} else {
+			config::getLogger()->addInfo("no contextCountry");
+		}
+		return($contextCountry);
+	}
+	
+	private function isFiltered(InternalPlan $internalPlan, array $filtered_array) {
+		//no FILTER (for the moment)
+		return(false);
+	}
+
 }
 
 ?>

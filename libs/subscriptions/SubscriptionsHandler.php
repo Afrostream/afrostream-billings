@@ -1,7 +1,7 @@
 <?php
 
-use SebastianBergmann\Money\Money;
-use SebastianBergmann\Money\Currency;
+use Money\Money;
+use Money\Currency;
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../providers/celery/subscriptions/CelerySubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/recurly/subscriptions/RecurlySubscriptionsHandler.php';
@@ -509,6 +509,52 @@ class SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
+	public function doDeleteSubscriptionByUuid($subscriptionBillingUuid, $is_a_request = true) {
+		$db_subscription = NULL;
+		try {
+			config::getLogger()->addInfo("dbsubscription deleting for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			if($db_subscription == NULL) {
+				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
+			if($provider == NULL) {
+				$msg = "unknown provider with id : ".$user->getProviderId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$db_subscription_before_update = clone $db_subscription;
+			switch($provider->getName()) {
+				case 'cashway' :
+					$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
+					$db_subscription = $cashwaySubscriptionsHandler->doDeleteSubscription($db_subscription, $is_a_request);
+					break;
+				default:
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
+			//
+			$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			//
+			$this->doFillSubscription($db_subscription);
+			//
+			config::getLogger()->addInfo("dbsubscription deleting for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while dbsubscription deleting for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscription deleting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while dbsubscription deleting for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscription deleting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_subscription);
+	}
+	
 	protected function doFillSubscriptions($subscriptions) {
 		foreach($subscriptions as $subscription) {
 			$this->doFillSubscription($subscription);
@@ -680,10 +726,10 @@ class SubscriptionsHandler {
 						   	$substitions['%internalplandesc%'] = $internalPlan->getDescription(); 
 						   	$substitions['%amountincents%'] = $internalPlan->getAmountInCents();
 						   	$amountInMoney = new Money((integer) $internalPlan->getAmountInCents(), new Currency($internalPlan->getCurrency()));
-						   	$substitions['%amount%'] = money_format('%!.2n', $amountInMoney->getConvertedAmount());
+						   	$substitions['%amount%'] = money_format('%!.2n', (float) ($amountInMoney->getAmount() / 100));
 						   	$substitions['%amountincentsexcltax%'] = $internalPlan->getAmountInCentsExclTax();
 						   	$amountExclTaxInMoney = new Money((integer) $internalPlan->getAmountInCentsExclTax(), new Currency($internalPlan->getCurrency()));
-						   	$substitions['%amountexcltax%'] = money_format('%!.2n', $amountExclTaxInMoney->getConvertedAmount());
+						   	$substitions['%amountexcltax%'] = money_format('%!.2n', (float) ($amountExclTaxInMoney->getAmount() / 100));
 						   	if($internalPlan->getVatRate() == NULL) {
 						   		$substitions['%vat%'] = 'N/A'; 
 						   	} else {
@@ -691,7 +737,7 @@ class SubscriptionsHandler {
 						   	}
 						   	$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
 						   	$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
-						   	$substitions['%amounttax%'] = money_format('%!.2n', $amountTaxInMoney->getConvertedAmount());
+						   	$substitions['%amounttax%'] = money_format('%!.2n', (float) ($amountTaxInMoney->getAmount() / 100));
 						   	$substitions['%currency%'] = $internalPlan->getCurrency();
 						   	$substitions['%cycle%'] = $internalPlan->getCycle();
 						   	$substitions['%periodunit%'] = $internalPlan->getPeriodUnit();

@@ -148,15 +148,21 @@ if(getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION') === false) {
 	putEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION=recurly');
 }
 
-#Slack / Stats
+#Slack
 
-if(getEnv('SLACK_STATS_ACTIVATED') === false) {
-	putEnv('SLACK_STATS_ACTIVATED=0');
+if(getEnv('SLACK_ACTIVATED') === false) {
+	putEnv('SLACK_ACTIVATED=0');
+}
+
+if(getEnv('SLACK_GROWTH_CHANNEL') === false) {
+	putEnv('SLACK_GROWTH_CHANNEL=growth');
 }
 
 if(getEnv('SLACK_STATS_CHANNEL') === false) {
-	putEnv('SLACK_STATS_CHANNEL=growth');
+	putEnv('SLACK_STATS_CHANNEL=stats');
 }
+
+#Bouygues
 
 if(getEnv('BOUYGUES_BHA_ACTIVATED') === false) {
 	putEnv('BOUYGUES_BHA_ACTIVATED=0');
@@ -186,6 +192,14 @@ if(getEnv('CASHWAY_USE_STAGING') === false) {
 
 if(getEnv('CASHWAY_WH_SECRET') === false) {
 	putEnv('CASHWAY_WH_SECRET=DakUdoycsOctoaphObyo');
+}
+
+if(getEnv('CASHWAY_COUPON_URL') === false) {
+	putEnv('CASHWAY_COUPON_URL=https://staging-payments-afrostream.cashway.fr/1/b/');
+}
+
+if(getEnv('CASHWAY_COUPON_ONE_BY_USER_FOR_EACH_CAMPAIGN_ACTIVATED') === false) {
+	putEnv('CASHWAY_COUPON_ONE_BY_USER_FOR_EACH_CAMPAIGN_ACTIVATED=0');
 }
 
 #logger, #db_conn, ...

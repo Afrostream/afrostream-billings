@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/CashwaySubscriptionsHandler.php';
+require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 
 class CashwayWebHooksHandler {
 	
@@ -26,6 +27,9 @@ class CashwayWebHooksHandler {
 		$data = json_decode($post_data, true);
 		$db_subscription_before_update = NULL;
 		$db_subscription = NULL;
+		//TODO : Merge to be done later
+		$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
+		$subscriptionsHandler = new SubscriptionsHandler();
 		switch($data['event']) {
 			case 'transaction_paid' :
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].'...');
@@ -80,7 +84,6 @@ class CashwayWebHooksHandler {
 					}
 					$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 				}
-				$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
 				if($coupon->getStatus() == 'pending') {
 					try {
 						$now = new DateTime();
@@ -92,7 +95,7 @@ class CashwayWebHooksHandler {
 							$api_subscription->setSubStatus('active');
 							$api_subscription->setSubActivatedDate($now);
 							$api_subscription->setSubPeriodStartedDate($now);
-							$db_subscription = $cashwaySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription_before_update, $update_type, $updateId);							
+							$db_subscription = $cashwaySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription_before_update, $update_type, $updateId);		
 						}
 						$coupon->setStatus("redeemed");
 						$coupon = CouponDAO::updateStatus($coupon);
@@ -106,7 +109,7 @@ class CashwayWebHooksHandler {
 					}
 				}
 				if(isset($db_subscription)) {
-					$cashwaySubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+					$subscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 				}
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].' done successfully');
 				break;
@@ -119,7 +122,6 @@ class CashwayWebHooksHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				if($coupon->getStatus() == 'waiting' || $coupon->getStatus() == 'pending') {
-					//TODO : may expire the subscription : not for the moment
 					try {
 						//START TRANSACTION
 						pg_query("BEGIN");
@@ -127,6 +129,11 @@ class CashwayWebHooksHandler {
 						$coupon = CouponDAO::updateStatus($coupon);
 						$coupon->setExpiresDate(new DateTime());
 						$coupon = CouponDAO::updateExpiresDate($coupon);
+						//
+						$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($coupon->getSubId());
+						if(isset($db_subscription)) {
+							$subscriptionsHandler->doDeleteSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), false);
+						}
 						//COMMIT
 						pg_query("COMMIT");
 					} catch(Exception $e) {
