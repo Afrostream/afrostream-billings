@@ -509,6 +509,52 @@ class SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
+	public function doDeleteSubscriptionByUuid($subscriptionBillingUuid, $is_a_request = true) {
+		$db_subscription = NULL;
+		try {
+			config::getLogger()->addInfo("dbsubscription deleting for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			if($db_subscription == NULL) {
+				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
+			if($provider == NULL) {
+				$msg = "unknown provider with id : ".$user->getProviderId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$db_subscription_before_update = clone $db_subscription;
+			switch($provider->getName()) {
+				case 'cashway' :
+					$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
+					$db_subscription = $cashwaySubscriptionsHandler->doDeleteSubscription($db_subscription, $is_a_request);
+					break;
+				default:
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
+			//
+			$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			//
+			$this->doFillSubscription($db_subscription);
+			//
+			config::getLogger()->addInfo("dbsubscription deleting for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while dbsubscription deleting for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscription deleting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while dbsubscription deleting for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscription deleting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_subscription);
+	}
+	
 	protected function doFillSubscriptions($subscriptions) {
 		foreach($subscriptions as $subscription) {
 			$this->doFillSubscription($subscription);

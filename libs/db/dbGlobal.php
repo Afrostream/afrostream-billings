@@ -28,7 +28,7 @@ class UserDAO {
 		$out->setProviderId($row["providerid"]);
 		$out->setUserReferenceUuid($row["user_reference_uuid"]);
 		$out->setUserProviderUuid($row["user_provider_uuid"]);
-		$out->setDeleted($row["deleted"]);
+		$out->setDeleted($row["deleted"] == 't' ? true : false);
 		return($out);
 	}
 	
@@ -325,10 +325,10 @@ class InternalPlanDAO {
 		$out->setPeriodLength($row["period_length"]);
 		$out->setThumbId($row["thumbid"]);
 		$out->setVatRate($row["vat_rate"]);
-		$out->setTrialEnabled($row["trial_enabled"]);
+		$out->setTrialEnabled($row["trial_enabled"] == 't' ? true : false);
 		$out->setTrialPeriodLength($row["trial_period_length"]);
 		$out->setTrialPeriodUnit($row["trial_period_unit"] == NULL ? NULL : new TrialPeriodUnit($row["trial_period_unit"]));
-		$out->setIsVisible($row["is_visible"]);
+		$out->setIsVisible($row["is_visible"] == 't' ? true : false);
 		return($out);
 	}
 	
@@ -691,7 +691,7 @@ class InternalPlan implements JsonSerializable {
 				'periodLength' => $this->periodLength,
 				'internalPlanOpts' => (InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($this->_id)->jsonSerialize()),
 				'thumb' => ThumbDAO::getThumbById($this->thumbId),
-				'trialEnabled' => $this->trialEnabled == 't' ? true : false,
+				'trialEnabled' => $this->trialEnabled,
 				'trialPeriodUnit' => $this->trialPeriodUnit,
 				'trialPeriodLength' => $this->trialPeriodLength,
 				'isVisible' => $this->isVisible == 't' ? true : false,
@@ -1189,7 +1189,7 @@ class BillingsSubscriptionDAO {
 		$out->setSubPeriodEndsDate($row["sub_period_ends_date"] == NULL ? NULL : new DateTime($row["sub_period_ends_date"]));
 		$out->setUpdateType($row["update_type"]);
 		$out->setUpdateId($row["updateid"]);
-		$out->setDeleted($row["deleted"]);
+		$out->setDeleted($row["deleted"] == 't' ? true : false);
 		$out->setBillingsSubscriptionOpts(BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($row["_id"]));
 		return($out);
 	}
@@ -1370,6 +1370,15 @@ class BillingsSubscriptionDAO {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, updateid = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$subscription->getUpdateId(),
+						$subscription->getId()));
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//updateDeleted
+	public static function updateDeleted(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, deleted = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getDeleted(),
 						$subscription->getId()));
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
@@ -1557,12 +1566,12 @@ class BillingsSubscription implements JsonSerializable {
 		$this->_id = $id;
 	}
 	
-	public function setSubscriptionBillingUuid($uuid) {
-		$this->subscription_billing_uuid = $uuid;
-	}
-	
 	public function getSubscriptionBillingUuid() {
 		return($this->subscription_billing_uuid);
+	}
+	
+	public function setSubscriptionBillingUuid($uuid) {
+		$this->subscription_billing_uuid = $uuid;
 	}
 	
 	public function getProviderId() {
@@ -1693,20 +1702,20 @@ class BillingsSubscription implements JsonSerializable {
 		$this->deleted = $bool;
 	}
 	
-	public function setIsActive($bool) {
-		$this->is_active = $bool;
-	}
-	
 	public function getIsActive() {
 		return($this->is_active);
 	}
 	
-	public function setBillingsSubscriptionOpts($billingsSubscriptionOpts) {
-		$this->billingsSubscriptionOpts = $billingsSubscriptionOpts;
+	public function setIsActive($bool) {
+		$this->is_active = $bool;
 	}
 	
 	public function getBillingsSubscriptionOpts() {
 		return($this->billingsSubscriptionOpts);
+	}
+	
+	public function setBillingsSubscriptionOpts($billingsSubscriptionOpts) {
+		$this->billingsSubscriptionOpts = $billingsSubscriptionOpts;
 	}
 	
 	public function jsonSerialize() {
@@ -2832,6 +2841,27 @@ class CouponDAO {
 				array(	$coupon->getUserId(),
 						$coupon->getId()));
 		return(self::getCouponById($coupon->getId()));		
+	}
+
+	public static function getCouponsByUserId($userid, $couponscampaignsid = NULL) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE userid = $1";
+		$params = array();
+		$params[] = $userid;
+		if(isset($couponscampaignsid)) {
+			$query.= " AND couponscampaignsid= $2";
+			$params[] = $couponscampaignsid;
+		}
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getCouponFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
 	}
 	
 }

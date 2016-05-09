@@ -100,7 +100,7 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 		} else {
 			config::getLogger()->addInfo("no contextCountry");
 		}
-		return($contextBillingUuid);
+		return($contextCountry);
 	}
 	
 	private function isFiltered(InternalPlan $internalPlan, array $filtered_array) {
