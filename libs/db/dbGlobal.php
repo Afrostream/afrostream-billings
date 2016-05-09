@@ -694,7 +694,8 @@ class InternalPlan implements JsonSerializable {
 				'trialEnabled' => $this->trialEnabled == 't' ? true : false,
 				'trialPeriodUnit' => $this->trialPeriodUnit,
 				'trialPeriodLength' => $this->trialPeriodLength,
-				'isVisible' => $this->isVisible == 't' ? true : false
+				'isVisible' => $this->isVisible == 't' ? true : false,
+				'countries' => InternalPlanCountryDAO::getInternalPlanCountries($this->_id)
 		];
 		if($this->showProviderPlans) {
 			$return['providerPlans'] = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id));
@@ -2983,7 +2984,7 @@ class ContextDAO {
 	
 }
 
-class InternalPlanCountry {
+class InternalPlanCountry implements JsonSerializable {
 	
 	private $_id;
 	private $internalPlanId;
@@ -3011,6 +3012,14 @@ class InternalPlanCountry {
 	
 	public function getCountry() {
 		return($this->country);
+	}
+	
+	public function jsonSerialize() {
+		$return =
+			[
+				'country' => $this->country
+		];
+		return($return);
 	}
 	
 }
@@ -3042,9 +3051,9 @@ class InternalPlanCountryDAO {
 		return($out);
 	}
 	
-	public static function getInternalPlanCountry($internalPlanId, $country) {
+	public static function getInternalPlanCountry($internalplanid, $country) {
 		$query = "SELECT ".self::$sfields." FROM billing_internal_plans_by_country WHERE internal_plan_id = $1 AND country = $2";
-		$result = pg_query_params(config::getDbConn(), $query, array($internalPlanId, $country));
+		$result = pg_query_params(config::getDbConn(), $query, array($internalplanid, $country));
 		
 		$out = null;
 		
@@ -3074,6 +3083,21 @@ class InternalPlanCountryDAO {
 		$result = pg_query_params(config::getDbConn(), $query,
 				array($id));		
 		return($result);
+	}
+	
+	public static function getInternalPlanCountries($internalplanid) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans_by_country WHERE internal_plan_id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalplanid));
+		
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getInternalPlanCountryFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
 	}
 	
 }
