@@ -85,9 +85,9 @@ class WebHooksController extends BillingsController {
 		
 			config::getLogger()->addInfo('Processing recurly webhook, id='.$billingsWebHook->getId().'...');
 			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
-			config::getLogger()->addInfo('Processing recurly webhook done successfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Processing recurly webhook done successfully, id='.$billingsWebHook->getId());
 		
-			config::getLogger()->addInfo('Treating recurly webhook done successfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Treating recurly webhook done successfully, id='.$billingsWebHook->getId());
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while treating a recurly webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
@@ -132,9 +132,9 @@ class WebHooksController extends BillingsController {
 		
 			config::getLogger()->addInfo('Processing gocardless webhook, id='.$billingsWebHook->getId().'...');
 			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
-			config::getLogger()->addInfo('Processing gocardless webhook done successfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Processing gocardless webhook done successfully, id='.$billingsWebHook->getId());
 		
-			config::getLogger()->addInfo('Treating gocardless webhook done successfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Treating gocardless webhook done successfully, id='.$billingsWebHook->getId());
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while treating a gocardless webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
@@ -187,9 +187,9 @@ class WebHooksController extends BillingsController {
 	
 			config::getLogger()->addInfo('Processing bachat webhook, id='.$billingsWebHook->getId().'...');
 			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
-			config::getLogger()->addInfo('Processing bachat webhook done successfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Processing bachat webhook done successfully, id='.$billingsWebHook->getId());
 	
-			config::getLogger()->addInfo('Treating bachat webhook done successfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Treating bachat webhook done successfully, id='.$billingsWebHook->getId());
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while treating a bachat webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
@@ -223,7 +223,7 @@ class WebHooksController extends BillingsController {
 		
 			config::getLogger()->addInfo('Processing cashway webhook, id='.$billingsWebHook->getId().'...');
 			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
-			config::getLogger()->addInfo('Processing cashway webhook done successfully, id='.$billingsWebHook->getId().'...');
+			config::getLogger()->addInfo('Processing cashway webhook done successfully, id='.$billingsWebHook->getId());
 		
 			config::getLogger()->addInfo('Treating cashway webhook done successfully, id='.$billingsWebHook->getId());
 			//Asked By Romain d'Alverny From CASHWAY, should be only for 'status_check' event but I do prefer not do specific coding : so same for all
