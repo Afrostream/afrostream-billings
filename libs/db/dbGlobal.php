@@ -509,6 +509,10 @@ class TrialPeriodUnit extends Enum implements JsonSerializable {
 
 class InternalPlan implements JsonSerializable {
 	
+	private static $curenciesForDisplay = array(
+		'XOF' => 'FCFA'
+	);
+	
 	private $_id;
 	private $internal_plan_uuid;
 	private $name;
@@ -571,6 +575,13 @@ class InternalPlan implements JsonSerializable {
 	}
 	
 	public function getCurrency() {
+		return($this->currency);
+	}
+	
+	public function getCurrencyForDisplay() {
+		if(array_key_exists($this->currency, self::$curenciesForDisplay)) {
+			return(self::$curenciesForDisplay[$this->currency]);
+		}
 		return($this->currency);
 	}
 	
