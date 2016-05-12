@@ -202,6 +202,42 @@ if(getEnv('CASHWAY_COUPON_ONE_BY_USER_FOR_EACH_CAMPAIGN_ACTIVATED') === false) {
 	putEnv('CASHWAY_COUPON_ONE_BY_USER_FOR_EACH_CAMPAIGN_ACTIVATED=0');
 }
 
+#OrangeTV
+
+if(getEnv('ORANGE_TV_API_URL') === false) {
+	putEnv('ORANGE_TV_API_URL=https://iosw3sn-ba-rest.orange.com:8443/OTP/API_OTVP_Partners-1/user/v1');
+}
+
+if(getEnv('ORANGE_TV_HTTP_AUTH_USER') === false) {
+	putEnv('ORANGE_TV_HTTP_AUTH_USER=OTP-OTP_AFR');
+}
+
+if(getEnv('ORANGE_TV_HTTP_AUTH_PWD') === false) {
+	putEnv('ORANGE_TV_HTTP_AUTH_PWD=a]ar[9vU');
+}
+
+if(getEnv('ORANGE_SUBSCRIPTION_PERIOD_LENGTH') === false) {
+	putEnv('ORANGE_SUBSCRIPTION_PERIOD_LENGTH=1');
+}
+
+#proxy
+
+if(getEnv('PROXY_HOST') === false) {
+	putEnv('PROXY_HOST=proxy.adm.afrostream.net');
+}
+
+if(getEnv('PROXY_PORT') === false) {
+	putEnv('PROXY_PORT=3128');
+}
+
+if(getEnv('PROXY_USER') === false) {
+	putEnv('PROXY_USER=afrostream');
+}
+
+if(getEnv('PROXY_PWD') === false) {
+	putEnv('PROXY_PWD=afrostream77');
+}
+
 #logger, #db_conn, ...
 
 class config {
@@ -218,7 +254,7 @@ class config {
 	public static function getLogger() {
 		if(self::$logger == NULL) {
 			self::$logger = new Logger('afrostream-billings');
-			self::$logger->pushHandler(new StreamHandler('php://stderr', Logger::INFO));
+			self::$logger->pushHandler(new StreamHandler('/Users/nelsounet/dev/php_logger_logs.log', Logger::INFO));
 		}
 		return(self::$logger);
 	}
