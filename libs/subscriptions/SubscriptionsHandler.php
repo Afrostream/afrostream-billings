@@ -808,7 +808,7 @@ class SubscriptionsHandler {
 						   	$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
 						   	$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
 						   	$substitions['%amounttax%'] = money_format('%!.2n', (float) ($amountTaxInMoney->getAmount() / 100));
-						   	$substitions['%currency%'] = $internalPlan->getCurrency();
+						   	$substitions['%currency%'] = $internalPlan->getCurrencyForDisplay();
 						   	$substitions['%cycle%'] = $internalPlan->getCycle();
 						   	$substitions['%periodunit%'] = $internalPlan->getPeriodUnit();
 						   	$substitions['%periodlength%'] = $internalPlan->getPeriodLength();
