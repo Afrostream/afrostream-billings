@@ -153,8 +153,9 @@ class SubscriptionsHandler {
 						$sub_uuid = $cashwaySubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
 						break;
 					case 'orange' :
-						$orangeSubscriptionsHandler = new OrangeSubscriptionsHandler();
-						$sub_uuid = $orangeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						$msg = "unsupported feature for provider named : ".$provider->getName();
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						break;
 					default:
 						$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -285,6 +286,9 @@ class SubscriptionsHandler {
 					break;
 			}
 			$this->doFillSubscriptions($subscriptions);
+			$usersRequestsLog = new UsersRequestsLog();
+			$usersRequestsLog->setUserId($user->getId());
+			$usersRequestsLog = UsersRequestsLogDAO::addUsersRequestsLog($usersRequestsLog);
 			config::getLogger()->addInfo("subscriptions getting for userid=".$user->getId()." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting subscriptions for userid=".$user->getId().", error_code=".$e->getCode().", error_message=".$e->getMessage();

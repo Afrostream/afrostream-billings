@@ -3312,6 +3312,95 @@ class InternalPlanContextDAO {
 
 }
 
+class UsersRequestsLog {
+	
+	private $id;
+	private $userid;
+	private $creation_date;
+	
+	public function setId($id) {
+		$this->id = $id;
+	}
+	
+	public function getId() {
+		return($this->id);
+	}
+	
+	public function setUserId($userid) {
+		$this->userid = $userid;
+	}
+	
+	public function getUserId() {
+		return($this->userid);
+	}	
+	
+	public function getCreationDate() {
+		return($this->creation_date);
+	}
+	
+	public function setCreationDate($date) {
+		$this->creation_date = $date;
+	}
+	
+}
+
+class UsersRequestsLogDAO {
+	
+	private static $sfields = "_id, userid, creation_date";
+	
+	private static function getUsersRequestsLogFromRow($row) {
+		$out = new UsersRequestsLog();
+		$out->setId($row["_id"]);
+		$out->setUserId($row["userid"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		return($out);
+	}
+	
+	public static function getUsersRequestsLogById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_users_requests_logs WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getUsersRequestsLogFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);		
+	}
+	
+	public static function addUsersRequestsLog(UsersRequestsLog $usersRequestsLog) {
+		$query = "INSERT INTO billing_users_requests_logs (userid)";
+		$query.= " VALUES ($1) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($usersRequestsLog->getUserId()));
+		$row = pg_fetch_row($result);
+		return(self::getUsersRequestsLogById($row[0]));
+	}
+	
+	//more recent FIRST
+	public static function getLastUsersRequestsLogsByUserId($userid, $limit = 10) {
+		$query = "SELECT ".self::$sfields." FROM billing_users_requests_logs WHERE userid = $1";
+		if($limit > 0) {
+			$query.= " ORDER BY _id DESC LIMIT ".$limit;
+		}
+		$result = pg_query_params(config::getDbConn(), $query, array($userid));
+		
+		$out = array();
+		
+		while($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getUsersRequestsLogFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+}
+
 class UtilsDAO {
 	
 

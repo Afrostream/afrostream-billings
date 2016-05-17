@@ -574,7 +574,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		if($subscription->getSubStatus() != "active" && $subscription->getSubStatus() != "pending_active") {
+		if($subscription->getSubStatus() != "active") {
 			$msg = "cannot renew because of the current_status=".$subscription->getSubStatus();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -641,13 +641,11 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		if($to_be_updated) {
 			$subscription->setSubPeriodStartedDate($start_date);
 			$subscription->setSubPeriodEndsDate($end_date);
-			$subscription->setSubStatus('active');
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				BillingsSubscriptionDAO::updateSubStartedDate($subscription);
 				BillingsSubscriptionDAO::updateSubEndsDate($subscription);
-				BillingsSubscriptionDAO::updateSubStatus($subscription);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch(Exception $e) {

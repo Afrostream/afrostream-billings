@@ -10,11 +10,7 @@ class CelerySubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function __construct() {
 	}
-	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts, BillingsSubscriptionOpts $subOpts) {
-		
-	}
-	
+
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
 		
 	}

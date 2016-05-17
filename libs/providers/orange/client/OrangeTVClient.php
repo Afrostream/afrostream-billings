@@ -5,7 +5,45 @@ class OrangeTVClient {
 	private $orangeAPIToken = null;
 	
 	public function __construct($orangeAPIToken) {
+		self::checkOrangeAPIToken($orangeAPIToken);
 		$this->orangeAPIToken = $orangeAPIToken;
+	}
+	
+	/*	
+	 * sample : B64UydUgJByFfJ6xZkgkJCt9kKQA9hXc6DyDvA4DSDriF6TMtEtuUvUCDXqmsgMZu4gUTEIXLfcuX3lQO81klg90nCoyxmg/zJ/FqufE1Nxvsk=
+	 * |MCO=OFR
+	 * |sau=3
+	 * |ted=1468156418
+	 * |tcd=1462886018
+	 * |f7lul5v/LE+/xOk9gsw406Yx+T4=
+	 * 
+	 */
+	
+	private static function checkOrangeAPIToken($orangeAPIToken) {
+		$exploded_array = explode("|", $orangeAPIToken);
+		$ted = NULL;
+		$tcd = NULL;
+		foreach ($exploded_array as $key_value) {
+			$key_value_array = explode("=", $key_value);
+			if(count($key_value_array) >= 2) {
+				if($key_value_array[0] == "ted") {
+					$ted = $key_value_array[1];
+				} else if($key_value_array[0] == "tcd") {
+					$tcd = $key_value_array[1];
+				}
+			}
+		}
+		if($ted == NULL) {
+			config::getLogger()->addError("OrangeAPIToken malformed, ted parameter was not found");
+			throw new Exception("OrangeAPIToken malformed, ted parameter was not found");
+		}
+		$now = new DateTime();
+		$ted_as_datetime = new DateTime();
+		$ted_as_datetime->setTimestamp($ted);
+		if($ted_as_datetime < $now) {
+			config::getLogger()->addError("OrangeAPIToken has expired");
+			throw new Exception("OrangeAPIToken has expired");			
+		}
 	}
 	
 	public function getSubscriptions($subscriptionID = NULL) {
@@ -44,15 +82,12 @@ class OrangeTVClient {
 			$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
 			$curl_options[CURLOPT_USERPWD] = getEnv('ORANGE_TV_HTTP_AUTH_USER').":".getEnv('ORANGE_TV_HTTP_AUTH_PWD');
 		}
-		$f = fopen("/Users/nelsounet/dev/curl.log", "w+");
-		$curl_options[CURLOPT_STDERR] = $f;;
 		$curl_options[CURLOPT_VERBOSE] = true;
 		$CURL = curl_init();
 		curl_setopt_array($CURL, $curl_options);
 		$content = curl_exec($CURL);
 		$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
 		curl_close($CURL);
-		fclose($f);
 		if($httpCode == 200) {
 			$orangeSubscriptionsResponse = new OrangeSubscriptionsResponse($content);
 		} else {
