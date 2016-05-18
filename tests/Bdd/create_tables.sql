@@ -14,16 +14,9 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: afr-billings-local; Type: COMMENT; Schema: -; Owner: postgres
---
-
-COMMENT ON DATABASE "afr-billings-local" IS 'Bdd billing afrostream';
-
-
---
 -- Name: public; Type: SCHEMA; Schema: -; Owner: postgres
 --
-
+DROP SCHEMA public;
 CREATE SCHEMA public;
 
 

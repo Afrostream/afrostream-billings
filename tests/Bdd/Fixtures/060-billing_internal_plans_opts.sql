@@ -73,3 +73,5 @@ INSERT INTO billing_internal_plans_opts (_id, internalplanid, key, value, delete
 INSERT INTO billing_internal_plans_opts (_id, internalplanid, key, value, deleted) VALUES (67, 18, 'internalVip', 'false', false);
 INSERT INTO billing_internal_plans_opts (_id, internalplanid, key, value, deleted) VALUES (68, 19, 'internalMaxScreens', '1', false);
 INSERT INTO billing_internal_plans_opts (_id, internalplanid, key, value, deleted) VALUES (69, 19, 'internalVip', 'false', false);
+
+SELECT setval('billing_internal_plans_opts__id_seq', (SELECT MAX(_id) FROM billing_internal_plans_opts));

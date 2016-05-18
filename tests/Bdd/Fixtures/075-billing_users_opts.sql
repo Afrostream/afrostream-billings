@@ -14,3 +14,5 @@ INSERT INTO billing_users_opts (_id, userid, key, value, deleted) VALUES (3, 1, 
 INSERT INTO billing_users_opts (_id, userid, key, value, deleted) VALUES (4, 2, 'email', 'email@domain.com', false);
 INSERT INTO billing_users_opts (_id, userid, key, value, deleted) VALUES (5, 2, 'firstName', 'nelson', false);
 INSERT INTO billing_users_opts (_id, userid, key, value, deleted) VALUES (6, 2, 'lastName', 'coelho', false);
+
+SELECT setval('billing_users_opts__id_seq', (SELECT MAX(_id) FROM billing_users_opts));

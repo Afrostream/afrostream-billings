@@ -70,3 +70,5 @@ INSERT INTO billing_internal_plans_by_context (_id, internal_plan_id, context_id
 INSERT INTO billing_internal_plans_by_context (_id, internal_plan_id, context_id, index) VALUES (60, 5, 35, 3);
 INSERT INTO billing_internal_plans_by_context (_id, internal_plan_id, context_id, index) VALUES (61, 15, 36, 1);
 INSERT INTO billing_internal_plans_by_context (_id, internal_plan_id, context_id, index) VALUES (62, 16, 36, 2);
+
+SELECT setval('billing_internal_plans_by_context__id_seq', (SELECT MAX(_id) FROM billing_internal_plans_by_context));

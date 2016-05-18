@@ -18,3 +18,5 @@ INSERT INTO billing_providers (_id, name) VALUES (5, 'idipper');
 INSERT INTO billing_providers (_id, name) VALUES (6, 'afr');
 INSERT INTO billing_providers (_id, name) VALUES (7, 'cashway');
 INSERT INTO billing_providers (_id, name) VALUES (8, 'orange');
+
+SELECT setval('billing_providers__id_seq', 8);

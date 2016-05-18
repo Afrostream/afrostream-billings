@@ -27,3 +27,6 @@ INSERT INTO billing_subscriptions_opts (_id, subid, key, value, deleted) VALUES 
 INSERT INTO billing_subscriptions_opts (_id, subid, key, value, deleted) VALUES (17, 2, 'promoPeriod', '1', false);
 INSERT INTO billing_subscriptions_opts (_id, subid, key, value, deleted) VALUES (18, 2, 'promoDuration', '0', false);
 INSERT INTO billing_subscriptions_opts (_id, subid, key, value, deleted) VALUES (19, 2, 'chargeTransactionId', '1131Ac95aace271da9ddfa18', false);
+
+
+SELECT setval('billing_subscriptions_opts__id_seq', (SELECT MAX(_id) FROM billing_subscriptions_opts));

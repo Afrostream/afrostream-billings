@@ -1,5 +1,10 @@
 <?php
 
+if (getenv('ENVIRONMENT') == 'test') {
+	require_once __DIR__ . '/../config/config_test.php';
+}
+
+
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../libs/site/UsersController.php';

@@ -8,5 +8,6 @@ SET row_security = off;
 
 SET search_path = public, pg_catalog;
 
-INSERT INTO billing_processing_logs (_id, providerid, processing_type, processing_status, started_date, ended_date, message) VALUES (4957, 4, 'subs_response_renew', 'postponed', '2016-03-02 02:21:00.915731+01', '2016-03-02 02:21:01.133098+01', NULL);
+INSERT INTO billing_thumbs (_id, path, imgix) VALUES (1, '/staging/billings/afrolover-504x576.jpg', 'https://afrostream.imgix.net/staging/billings/afrolover-504x576.jpg');
 
+SELECT setval('billing_thumbs__id_seq', 1);

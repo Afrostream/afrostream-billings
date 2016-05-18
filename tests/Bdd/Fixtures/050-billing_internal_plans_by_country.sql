@@ -30,3 +30,5 @@ INSERT INTO billing_internal_plans_by_country (_id, internal_plan_id, country) V
 INSERT INTO billing_internal_plans_by_country (_id, internal_plan_id, country) VALUES (20, 4, 'BE');
 INSERT INTO billing_internal_plans_by_country (_id, internal_plan_id, country) VALUES (21, 5, 'BE');
 INSERT INTO billing_internal_plans_by_country (_id, internal_plan_id, country) VALUES (22, 6, 'BE');
+
+SELECT setval('billing_internal_plans_by_country__id_seq', (SELECT MAX(_id) FROM billing_internal_plans_by_country));

@@ -35,3 +35,5 @@ INSERT INTO billing_contexts (_id, context_uuid, name, description, country) VAL
 INSERT INTO billing_contexts (_id, context_uuid, name, description, country) VALUES (35, 'common-SN', 'common-SN', 'common-SN', 'SN');
 INSERT INTO billing_contexts (_id, context_uuid, name, description, country) VALUES (36, 'returning-SN', 'returning-SN', 'returning-SN', 'SN');
 INSERT INTO billing_contexts (_id, context_uuid, name, description, country) VALUES (37, 'reactivation-SN', 'reactivation-SN', 'reactivation-SN', 'SN');
+
+SELECT setval('billing_contexts__id_seq', 37);

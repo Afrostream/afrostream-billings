@@ -1,0 +1,22 @@
+default:
+    suites:
+        appbundle:
+            paths:
+                - ./tests/features
+            contexts:
+                - Context\BaseContext
+                - Behat\MinkExtension\Context\MinkContext
+
+    extensions:
+        Behat\MinkExtension:
+            base_url: http://test.afrostream-billing.localhost/
+            selenium2: ~
+            show_auto: true
+            show_cmd: firefox %s
+            #default_session: 'symfony2'
+            sessions:
+                default:
+                    goutte: ~
+
+    formatters:
+        pretty: true

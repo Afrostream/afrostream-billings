@@ -31,3 +31,5 @@ INSERT INTO billing_plans (_id, providerid, plan_uuid, name, description) VALUES
 INSERT INTO billing_plans (_id, providerid, plan_uuid, name, description) VALUES (29, 6, 'afr-cfa-2days', 'afr-cfa-2days', 'afr-cfa-2days');
 INSERT INTO billing_plans (_id, providerid, plan_uuid, name, description) VALUES (30, 6, 'afr-cfa-7days', 'afr-cfa-7days', 'afr-cfa-7days');
 INSERT INTO billing_plans (_id, providerid, plan_uuid, name, description) VALUES (31, 6, 'afr-cfa-1month', 'afr-cfa-1month', 'afr-cfa-1month');
+
+SELECT setval('billing_plans__id_seq', 31);

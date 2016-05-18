@@ -29,3 +29,5 @@ INSERT INTO billing_internal_plans_links (_id, internal_plan_id, provider_plan_i
 INSERT INTO billing_internal_plans_links (_id, internal_plan_id, provider_plan_id) VALUES (20, 17, 29);
 INSERT INTO billing_internal_plans_links (_id, internal_plan_id, provider_plan_id) VALUES (21, 18, 30);
 INSERT INTO billing_internal_plans_links (_id, internal_plan_id, provider_plan_id) VALUES (22, 19, 31);
+
+SELECT setval('billing_internal_plans_links__id_seq', (SELECT MAX(_id) FROM billing_internal_plans_links));
