@@ -36,6 +36,10 @@
     "BOUYGUES_PROXY_HOST": "localhost",
     "BOUYGUES_PROXY_PORT": "8080",
     "BOUYGUES_PROXY_USER": "user",
-    "BOUYGUES_PROXY_PWD": "pwd"
+    "BOUYGUES_PROXY_PWD": "pwd",
+    "SLACK_ACTIVATED": 1,
+    "SLACK_GROWTH_CHANNEL": "growth",
+    "SLACK_STATS_CHANNEL": "stats",
+    "SLACK_STATS_COUPONS_CHANNEL": "activation"
   }
 }

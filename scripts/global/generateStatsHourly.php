@@ -55,7 +55,7 @@ foreach ($subscriptions as $subscription) {
 
 //activated coupons
 $couponsActivated = dbStats::getCouponsActivation($start_date, $end_date);
-$channelCoupons = getEnv('SLACK_STATS_COUPONS__CHANNEL');
+$channelCoupons = getEnv('SLACK_STATS_COUPONS_CHANNEL');
 
 sendMessage('---------------------------------------------------', $channelCoupons);
 sendMessage(

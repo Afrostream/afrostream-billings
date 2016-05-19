@@ -162,8 +162,8 @@ if(getEnv('SLACK_STATS_CHANNEL') === false) {
 	putEnv('SLACK_STATS_CHANNEL=test-channel');
 }
 
-if(getEnv('SLACK_STATS_COUPONS__CHANNEL') === false) {
-	putEnv('SLACK_STATS_COUPONS__CHANNEL=activation');
+if(getEnv('SLACK_STATS_COUPONS_CHANNEL') === false) {
+	putEnv('SLACK_STATS_COUPONS_CHANNEL=activation');
 }
 
 #Bouygues
