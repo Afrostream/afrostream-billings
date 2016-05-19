@@ -84,8 +84,6 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 				$shouldUpdate = false;
 			}
 		}
-		//For Tests Purpose for to true
-		$shouldUpdate = true;
 		if($shouldUpdate) {
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 			//NC : DO NOT THROW THE EXCEPTION, JUST LOG IT AS A BEST EFFORT. 
@@ -93,11 +91,9 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 			try {
 				$this->doUpdateUserSubscriptions($user, $userOpts);
 			} catch(BillingsException $e) {
-				//TODO
-				//throw $e;
+				config::getLogger()->addError("Updating Orange Subscriptions for userid=".$user->getId()." failed, message=".$e->getMessage().", code=".$e->getCode());
 			} catch(Exception $e) {
-				//TODO
-				//throw $e;
+				config::getLogger()->addError("Updating Orange Subscriptions for userid=".$user->getId()." failed, message=".$e->getMessage());
 			}
 		}
 		return(BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId()));
