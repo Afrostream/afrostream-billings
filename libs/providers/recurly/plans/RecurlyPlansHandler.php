@@ -48,6 +48,12 @@ class RecurlyPlansHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
+			if ($internalPlan->getTrialEnabled()) {
+				$mappingPeriod = ['month' => 'months', 'day' => 'days'];
+				$plan->trial_interval_length = $internalPlan->getTrialPeriodLength();
+				$plan->trial_interval_unit   = $mappingPeriod[$internalPlan->getTrialPeriodUnit()->getValue()];
+			}
+
 			$plan->create();
 			$provider_plan_uuid = $plan->plan_code;
 			config::getLogger()->addInfo("recurly plan creation done successfully, recurly_plan_uuid=".$provider_plan_uuid);
