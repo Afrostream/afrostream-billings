@@ -149,7 +149,7 @@ if(getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION') === false) {
 }
 
 #Slack
-
+//test channel : test-channel
 if(getEnv('SLACK_ACTIVATED') === false) {
 	putEnv('SLACK_ACTIVATED=0');
 }
@@ -159,7 +159,11 @@ if(getEnv('SLACK_GROWTH_CHANNEL') === false) {
 }
 
 if(getEnv('SLACK_STATS_CHANNEL') === false) {
-	putEnv('SLACK_STATS_CHANNEL=stats');
+	putEnv('SLACK_STATS_CHANNEL=test-channel');
+}
+
+if(getEnv('SLACK_STATS_COUPONS_CHANNEL') === false) {
+	putEnv('SLACK_STATS_COUPONS_CHANNEL=activation');
 }
 
 #Bouygues
