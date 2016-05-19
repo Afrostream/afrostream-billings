@@ -680,6 +680,17 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 		}
+
+		// check if subscriptino still in trial to provide information in boolean mode through inTrial() method
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
+
+		if ($internalPlan->getTrialEnabled() && !is_null($subscription->getSubActivatedDate())) {
+
+			$subscriptionDate = clone $subscription->getSubActivatedDate();
+			$subscriptionDate->modify('+ '.$internalPlan->getTrialPeriodLength().' '.$internalPlan->getTrialPeriodUnit());
+
+			$subscription->setInTrial(($subscriptionDate->getTimestamp() > time()));
+		}
 	}
 	
 	private function checkBillingInfoOptsArray($billing_info_opts_as_array) {
