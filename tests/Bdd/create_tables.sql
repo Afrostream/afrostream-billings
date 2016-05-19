@@ -1693,6 +1693,19 @@ ALTER TABLE ONLY billing_plans_opts
     ADD CONSTRAINT "plans_planId_fkey" FOREIGN KEY (planid) REFERENCES billing_plans(_id);
 
 
+CREATE TABLE billing_users_requests_logs
+(
+ _id serial NOT NULL,
+ userid integer NOT NULL,
+ creation_date timestamp with time zone NOT NULL DEFAULT now(),
+ CONSTRAINT billing_users_requests_logs_pkey PRIMARY KEY (_id),
+ CONSTRAINT "Users_userId_fkey" FOREIGN KEY (userid)
+     REFERENCES billing_users (_id) MATCH SIMPLE
+     ON UPDATE NO ACTION ON DELETE NO ACTION
+);
+
+ALTER TABLE billing_subscriptions_action_logs ADD COLUMN processing_status_code integer NOT NULL DEFAULT 0;
+
 --
 -- Name: public; Type: ACL; Schema: -; Owner: postgres
 --
