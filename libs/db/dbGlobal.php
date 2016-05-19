@@ -2073,6 +2073,7 @@ class BillingsSubscriptionActionLog {
 	private $started_date;
 	private $ended_date;
 	private $message;
+	private $processing_status_code = 0;//DEFAULT
 	
 	public function getId() {
 		return($this->_id);
@@ -2130,17 +2131,26 @@ class BillingsSubscriptionActionLog {
 		$this->message = $msg;
 	}
 	
+	public function getProcessingStatusCode() {
+		return($this->processing_status_code);
+	}
+	
+	public function setProcessingStatusCode($status_code) {
+		$this->processing_status_code = $status_code;
+	}
+	
 }
 
 class BillingsSubscriptionActionLogDAO {
 
-	private static $sfields = "_id, subid, processing_status, action_type, started_date, ended_date, message";
+	private static $sfields = "_id, subid, processing_status, action_type, started_date, ended_date, message, processing_status_code";
 
 	private static function getBillingsSubscriptionActionLogFromRow($row) {
 		$out = new BillingsSubscriptionActionLog();
 		$out->setId($row["_id"]);
 		$out->setSubId($row["subid"]);
 		$out->setProcessingStatus($row["processing_status"]);
+		$out->setProcessingStatusCode($row["processing_status_code"]);
 		$out->setActionType($row["action_type"]);
 		$out->setStartedDate($row["started_date"]);
 		$out->setEndedDate($row["ended_date"]);
@@ -2156,8 +2166,12 @@ class BillingsSubscriptionActionLogDAO {
 	}
 
 	public static function updateBillingsSubscriptionActionLogProcessingStatus(BillingsSubscriptionActionLog $billingsSubscriptionActionLog) {
-		$query = "UPDATE billing_subscriptions_action_logs SET processing_status = $1, ended_date = CURRENT_TIMESTAMP, message = $2 WHERE _id = $3";
-		$result = pg_query_params(config::getDbConn(), $query, array($billingsSubscriptionActionLog->getProcessingStatus(), $billingsSubscriptionActionLog->getMessage(), $billingsSubscriptionActionLog->getId()));
+		$query = "UPDATE billing_subscriptions_action_logs SET processing_status = $1, ended_date = CURRENT_TIMESTAMP, message = $2, processing_status_code = $3 WHERE _id = $4";
+		$result = pg_query_params(config::getDbConn(), $query, 
+				array($billingsSubscriptionActionLog->getProcessingStatus(), 
+						$billingsSubscriptionActionLog->getMessage(),
+						$billingsSubscriptionActionLog->getProcessingStatusCode(),
+						$billingsSubscriptionActionLog->getId()));
 		$row = pg_fetch_row($result);
 		return(self::getBillingsSubscriptionActionLogById($row[0]));
 	}
@@ -3310,6 +3324,95 @@ class InternalPlanContextDAO {
 		return(self::getInternalPlanContextById($internalPlanContext->getId()));	
 	}
 
+}
+
+class UsersRequestsLog {
+	
+	private $id;
+	private $userid;
+	private $creation_date;
+	
+	public function setId($id) {
+		$this->id = $id;
+	}
+	
+	public function getId() {
+		return($this->id);
+	}
+	
+	public function setUserId($userid) {
+		$this->userid = $userid;
+	}
+	
+	public function getUserId() {
+		return($this->userid);
+	}	
+	
+	public function getCreationDate() {
+		return($this->creation_date);
+	}
+	
+	public function setCreationDate($date) {
+		$this->creation_date = $date;
+	}
+	
+}
+
+class UsersRequestsLogDAO {
+	
+	private static $sfields = "_id, userid, creation_date";
+	
+	private static function getUsersRequestsLogFromRow($row) {
+		$out = new UsersRequestsLog();
+		$out->setId($row["_id"]);
+		$out->setUserId($row["userid"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		return($out);
+	}
+	
+	public static function getUsersRequestsLogById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_users_requests_logs WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getUsersRequestsLogFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);		
+	}
+	
+	public static function addUsersRequestsLog(UsersRequestsLog $usersRequestsLog) {
+		$query = "INSERT INTO billing_users_requests_logs (userid)";
+		$query.= " VALUES ($1) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($usersRequestsLog->getUserId()));
+		$row = pg_fetch_row($result);
+		return(self::getUsersRequestsLogById($row[0]));
+	}
+	
+	//more recent FIRST
+	public static function getLastUsersRequestsLogsByUserId($userid, $limit = 10) {
+		$query = "SELECT ".self::$sfields." FROM billing_users_requests_logs WHERE userid = $1";
+		if($limit > 0) {
+			$query.= " ORDER BY _id DESC LIMIT ".$limit;
+		}
+		$result = pg_query_params(config::getDbConn(), $query, array($userid));
+		
+		$out = array();
+		
+		while($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getUsersRequestsLogFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
 }
 
 class UtilsDAO {

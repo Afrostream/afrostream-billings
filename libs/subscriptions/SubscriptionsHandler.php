@@ -10,6 +10,7 @@ require_once __DIR__ . '/../providers/bachat/subscriptions/BachatSubscriptionsHa
 require_once __DIR__ . '/../providers/idipper/subscriptions/IdipperSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/afr/subscriptions/AfrSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/cashway/subscriptions/CashwaySubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/orange/subscriptions/OrangeSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 
 class SubscriptionsHandler {
@@ -148,8 +149,13 @@ class SubscriptionsHandler {
 						$sub_uuid = $afrSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);						
 						break;
 					case 'cashway' :
-						$cashSubscriptionsHandler = new CashwaySubscriptionsHandler();
-						$sub_uuid = $cashSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
+						$sub_uuid = $cashwaySubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						break;
+					case 'orange' :
+						$msg = "unsupported feature for provider named : ".$provider->getName();
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						break;
 					default:
 						$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -194,6 +200,10 @@ class SubscriptionsHandler {
 							$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
 							$db_subscription = $cashwaySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
+						case 'orange' :
+							$orangeSubscriptionsHandler = new OrangeSubscriptionsHandler();
+							$db_subscription = $orangeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							break;
 						default:
 							$msg = "unsupported feature for provider named : ".$provider->getName();
 							config::getLogger()->addError($msg);
@@ -227,10 +237,58 @@ class SubscriptionsHandler {
 	}
 	
 	public function doGetUserSubscriptionsByUser(User $user) {
+		$subscriptions = NULL;
 		try {
 			config::getLogger()->addInfo("subscriptions getting for userid=".$user->getId()."...");
-			$subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
+			$provider = ProviderDAO::getProviderById($user->getProviderId());
+			if($provider == NULL) {
+				$msg = "unknown provider id : ".$user->getProviderId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			switch($provider->getName()) {
+				case 'celery' :
+					$subscriptionsHandler = new CelerySubscriptionsHandler();			
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'recurly' :
+					$subscriptionsHandler = new RecurlySubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'gocardless' :
+					$subscriptionsHandler = new GocardlessSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'bachat' :
+					$subscriptionsHandler = new BachatSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'idipper' :
+					$subscriptionsHandler = new IdipperSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'afr' :
+					$subscriptionsHandler = new AfrSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'cashway' :
+					$subscriptionsHandler = new CashwaySubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'orange' :
+					$subscriptionsHandler = new OrangeSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				default:
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
 			$this->doFillSubscriptions($subscriptions);
+			$usersRequestsLog = new UsersRequestsLog();
+			$usersRequestsLog->setUserId($user->getId());
+			$usersRequestsLog = UsersRequestsLogDAO::addUsersRequestsLog($usersRequestsLog);
 			config::getLogger()->addInfo("subscriptions getting for userid=".$user->getId()." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting subscriptions for userid=".$user->getId().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -242,6 +300,10 @@ class SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($subscriptions);
+	}
+	
+	protected function doGetUserSubscriptions(User $user) {
+		return(BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId()));
 	}
 	
 	public function doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid) {
@@ -298,6 +360,10 @@ class SubscriptionsHandler {
 				case 'cashway' :
 					//nothing to do (owned)
 					break;
+				case 'orange' :
+					$orangeSubscriptionsHandler = new OrangeSubscriptionsHandler();
+					$orangeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
+					break;
 				default:
 					//nothing to do (unknown)
 					break;
@@ -352,6 +418,10 @@ class SubscriptionsHandler {
 				case 'idipper' :
 					$idipperSubscriptionHandler = new IdipperSubscriptionsHandler();
 					$db_subscription = $idipperSubscriptionHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
+					break;
+				case 'orange' :
+					$orangeSubscriptionHandler = new OrangeSubscriptionsHandler();
+					$db_subscription = $orangeSubscriptionHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -600,6 +670,10 @@ class SubscriptionsHandler {
 				$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
 				$cashwaySubscriptionsHandler->doFillSubscription($subscription);
 				break;
+			case 'orange' :
+				$orangeSubscriptionsHandler = new OrangeSubscriptionsHandler();
+				$orangeSubscriptionsHandler->doFillSubscription($subscription);
+				break;				
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
 				config::getLogger()->addError($msg);

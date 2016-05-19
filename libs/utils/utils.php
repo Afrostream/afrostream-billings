@@ -31,6 +31,15 @@ function checkUserOptsKeys(array $user_opts_as_array, $providerName) {
 		case 'bachat' :
 			//email, firstName, lastName are optional
 			break;
+		case 'orange' :
+			//email, firstName, lastName are optional but OrangeApiToken is mandatory
+			if(!array_key_exists('OrangeApiToken', $user_opts_as_array)) {
+				//exception
+				$msg = "userOpts field 'OrangeApiToken' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}			
+			break;
 		case 'afr' :
 			//firstName, lastName are optional
 			if(!array_key_exists('email', $user_opts_as_array)) {
@@ -67,6 +76,18 @@ function checkUserOptsValues(array $user_opts_as_array, $providerName) {
 	switch ($providerName) {
 		case 'bachat' :
 			//email, firstName, lastName are optional
+			break;
+		case 'orange' :
+			//email, firstName, lastName are optional but OrangeApiToken is mandatory
+			if(array_key_exists('OrangeAPIToken', $user_opts_as_array)) {
+				$str = $user_opts_as_array['OrangeAPIToken'];
+				if(strlen(trim($str)) == 0) {
+					//exception
+					$msg = "'OrangeAPIToken' value is empty";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
 			break;
 		case 'afr' :
 			//firstName, lastName are optional
