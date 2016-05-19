@@ -159,7 +159,7 @@ if(getEnv('SLACK_GROWTH_CHANNEL') === false) {
 }
 
 if(getEnv('SLACK_STATS_CHANNEL') === false) {
-	putEnv('SLACK_STATS_CHANNEL=stats');
+	putEnv('SLACK_STATS_CHANNEL=test-channel');
 }
 
 #Bouygues
