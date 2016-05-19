@@ -637,7 +637,7 @@ class SubscriptionsHandler {
 		}
 		$provider = ProviderDAO::getProviderById($subscription->getProviderId());
 		if($provider == NULL) {
-			$msg = "unknown provider with id : ".$user->getProviderId();
+			$msg = "unknown provider with id : ".$subscription->getProviderId();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
