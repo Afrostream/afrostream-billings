@@ -150,6 +150,16 @@ class InternalPlansController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$periodLength = $data["periodLength"];
+
+			if (!isset($data['vatRate']) || !is_numeric($data['vatRate'])) {
+				//exception
+				$msg = "field 'vatRate' is missing or is not a numeric value";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+
+			$vatRate = floatval($data['vatRate']);
+
 			if(!isset($data['internalPlanOpts'])) {
 				//exception
 				$msg = "field 'internalPlanOpts' is missing";
@@ -163,6 +173,28 @@ class InternalPlansController extends BillingsController {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 			}
+
+			$trialEnabled = (!empty($data['trialEnabled']));
+			$trialPeriodLength = null;
+			$trialPeriodUnit = null;
+			if ($trialEnabled) {
+				if (empty($data['trialPeriodLength']) || !is_numeric($data['trialPeriodLength']) || $data['trialPeriodLength'] < 1) {
+					$msg = "field trialPeriodLength can't be less than 1 when trial is enabled";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+
+				if (empty($data['trialPeriodUnit']) || !in_array($data['trialPeriodUnit'], ['day', 'month'])) {
+					$msg = "field trialPeriodUnit can't be empty or must match day or week";
+					config::getLogger()->addError($msg);
+
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+
+				$trialPeriodLength = $data['trialPeriodLength'];
+				$trialPeriodUnit   = $data['trialPeriodUnit'];
+			}
+
 			$internalplan_opts_array = $data['internalPlanOpts'];
 			$internalPlansHandler = new InternalPlansFilteredHandler();
 			$internalPlan = $internalPlansHandler->doCreate(
@@ -174,7 +206,11 @@ class InternalPlansController extends BillingsController {
 					$cycle,
 					$periodUnitStr,
 					$periodLength,
-					$internalplan_opts_array
+					$vatRate,
+					$internalplan_opts_array,
+					$trialEnabled,
+					$trialPeriodLength,
+					$trialPeriodUnit
 					);
 			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
 		} catch(BillingsException $e) {
