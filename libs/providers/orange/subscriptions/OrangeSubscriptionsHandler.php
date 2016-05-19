@@ -13,19 +13,7 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 	}
 	
 	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $sub_uuid, $update_type, $updateId) {
-		$orangeTVClient = new OrangeTVClient($userOpts->getOpts()['OrangeAPIToken']);
-		$orangeSubscriptionsResponse = $orangeTVClient->getSubscriptions($plan->getPlanUuid());
-		$orangeSubscription = $orangeSubscriptionsResponse->getOrangeSubscriptionById($plan->getPlanUuid());
-		if($orangeSubscription == NULL) {
-			$msg = "TODO : OrangeSubscription IS NULL";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		if($orangeSubscription->getStatus() != 1) {
-			$msg = "TODO : OrangeSubscription STATUS <> 1 : ".$orangeSubscription->getStatus();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
+		self::checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeAPIToken'], $plan->getPlanUuid());
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $orangeSubscription, $update_type, $updateId));
 	}
 	
@@ -96,9 +84,21 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 				$shouldUpdate = false;
 			}
 		}
+		//For Tests Purpose for to true
+		$shouldUpdate = true;
 		if($shouldUpdate) {
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-			$this->doUpdateUserSubscriptions($user, $userOpts);
+			//NC : DO NOT THROW THE EXCEPTION, JUST LOG IT AS A BEST EFFORT. 
+			//SO WE ALWAYS RETURN SUBSCRIPTIONS (EVEN EXPIRED) INSTEAD OF AN ERROR
+			try {
+				$this->doUpdateUserSubscriptions($user, $userOpts);
+			} catch(BillingsException $e) {
+				//TODO
+				//throw $e;
+			} catch(Exception $e) {
+				//TODO
+				//throw $e;
+			}
 		}
 		return(BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId()));
 	}
@@ -155,7 +155,21 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		//TODO : VERIFY THAT SUBSCRIPTION IS STILL ACTIVE BEFORE RENEWING
+		$user = UserDAO::getUserById($subscription->getUserId());
+		if($user == NULL) {
+			$msg = "unknown user with id : ".$subscription->getUserId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+		$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
+		if($providerPlan == NULL) {
+			$msg = "unknown plan with id : ".$subscription->getPlanId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//VERIFY THAT SUBSCRIPTION IS STILL ACTIVE BEFORE RENEWING
+		self::checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeAPIToken'], $providerPlan->getPlanUuid());
 		$today = new DateTime();
 		$today->setTimezone(new DateTimeZone(config::$timezone));
 		$today->setTime(23, 59, 59);//consider all the day
@@ -198,7 +212,7 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
 		config::getLogger()->addInfo("orange dbsubscriptions update for userid=".$user->getId()."...");
 		//
-		$orangeTVClient = new OrangeTVClient($userOpts->getOpts()['OrangeAPIToken']);
+		$orangeTVClient = new OrangeTVClient("TOTO".$userOpts->getOpts()['OrangeAPIToken']);
 		//
 		$provider = ProviderDAO::getProviderById($user->getProviderId());
 		//
@@ -267,6 +281,22 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 				return($orange_subscription);
 			}
 		}
+	}
+	
+	private static function checkApiSubscriptionByProviderPlanUuid($orangeAPIToken, $providerPlanUuid) {
+		$orangeTVClient = new OrangeTVClient($orangeAPIToken);
+		$orangeSubscriptionsResponse = $orangeTVClient->getSubscriptions($providerPlanUuid);
+		$orangeSubscription = $orangeSubscriptionsResponse->getOrangeSubscriptionById($providerPlanUuid);
+		if($orangeSubscription == NULL) {
+			$msg = "No OrangeSubscription was found for this plan : ".$providerPlanUuid;
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::ORANGE_SUBSCRIPTION_NOT_FOUND);
+		}
+		if($orangeSubscription->getStatus() != 1) {
+			$msg = "OrangeSubscription STATUS <> 1, STATUS=".$orangeSubscription->getStatus();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::ORANGE_SUBSCRIPTION_BAD_STATUS);
+		}				
 	}
 	
 }

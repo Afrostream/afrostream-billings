@@ -2073,6 +2073,7 @@ class BillingsSubscriptionActionLog {
 	private $started_date;
 	private $ended_date;
 	private $message;
+	private $processing_status_code = 0;//DEFAULT
 	
 	public function getId() {
 		return($this->_id);
@@ -2130,17 +2131,26 @@ class BillingsSubscriptionActionLog {
 		$this->message = $msg;
 	}
 	
+	public function getProcessingStatusCode() {
+		return($this->processing_status_code);
+	}
+	
+	public function setProcessingStatusCode($status_code) {
+		$this->processing_status_code = $status_code;
+	}
+	
 }
 
 class BillingsSubscriptionActionLogDAO {
 
-	private static $sfields = "_id, subid, processing_status, action_type, started_date, ended_date, message";
+	private static $sfields = "_id, subid, processing_status, action_type, started_date, ended_date, message, processing_status_code";
 
 	private static function getBillingsSubscriptionActionLogFromRow($row) {
 		$out = new BillingsSubscriptionActionLog();
 		$out->setId($row["_id"]);
 		$out->setSubId($row["subid"]);
 		$out->setProcessingStatus($row["processing_status"]);
+		$out->setProcessingStatusCode($row["processing_status_code"]);
 		$out->setActionType($row["action_type"]);
 		$out->setStartedDate($row["started_date"]);
 		$out->setEndedDate($row["ended_date"]);
@@ -2156,8 +2166,12 @@ class BillingsSubscriptionActionLogDAO {
 	}
 
 	public static function updateBillingsSubscriptionActionLogProcessingStatus(BillingsSubscriptionActionLog $billingsSubscriptionActionLog) {
-		$query = "UPDATE billing_subscriptions_action_logs SET processing_status = $1, ended_date = CURRENT_TIMESTAMP, message = $2 WHERE _id = $3";
-		$result = pg_query_params(config::getDbConn(), $query, array($billingsSubscriptionActionLog->getProcessingStatus(), $billingsSubscriptionActionLog->getMessage(), $billingsSubscriptionActionLog->getId()));
+		$query = "UPDATE billing_subscriptions_action_logs SET processing_status = $1, ended_date = CURRENT_TIMESTAMP, message = $2, processing_status_code = $3 WHERE _id = $4";
+		$result = pg_query_params(config::getDbConn(), $query, 
+				array($billingsSubscriptionActionLog->getProcessingStatus(), 
+						$billingsSubscriptionActionLog->getMessage(),
+						$billingsSubscriptionActionLog->getProcessingStatusCode(),
+						$billingsSubscriptionActionLog->getId()));
 		$row = pg_fetch_row($result);
 		return(self::getBillingsSubscriptionActionLogById($row[0]));
 	}
