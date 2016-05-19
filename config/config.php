@@ -254,7 +254,7 @@ class config {
 	public static function getLogger() {
 		if(self::$logger == NULL) {
 			self::$logger = new Logger('afrostream-billings');
-			self::$logger->pushHandler(new StreamHandler('/Users/nelsounet/dev/php_logger_logs.log', Logger::INFO));
+			self::$logger->pushHandler(new StreamHandler('php://stderr', Logger::INFO));
 		}
 		return(self::$logger);
 	}
