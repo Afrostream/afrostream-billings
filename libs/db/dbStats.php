@@ -214,7 +214,91 @@ class dbStats {
 		$out['total'] = $total;
 		return($out);
 	}
-	
+
+	/**
+	 * Get activated coupons between two supplied dates
+	 * A coupon is activated when it status is 'redeemed'
+	 *
+	 * @param DateTime $dateStart
+	 * @param Datetime $dateEnd
+	 *
+	 * @return array
+	 */
+	public static function getCouponsActivation(DateTime $dateStart, Datetime $dateEnd)
+	{
+		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
+		$date_start_str = dbGlobal::toISODate($dateStart);
+		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
+		$date_end_str = dbGlobal::toISODate($dateEnd);
+
+		$query =<<<EOL
+		SELECT plans.name AS plan_name, bp.name AS provider_name, buo.value AS user_email
+		FROM 
+		billing_coupons AS bc
+		JOIN billing_providers AS bp ON bc.providerid=bp._id
+		JOIN billing_plans AS plans ON bc.providerplanid=plans._id
+		JOIN billing_users AS bu ON bc.userid=bu._id
+		JOIN billing_users_opts AS buo ON bu._id=buo.userid
+		WHERE
+		bc.coupon_status='redeemed'
+		AND (bc.redeemed_date  AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		AND buo.key = 'email'
+		AND buo.deleted=false	
+EOL;
+
+		$query = sprintf($query, $date_start_str, $date_end_str);
+
+		$result = pg_query(config::getDbConn(), $query);
+		$out = array();
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = $row;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Get generated cashway coupons between two supplied dates
+	 * The coupon must belongs to cashway provider and his status is 'pending'
+	 *
+	 * @param DateTime $dateStart
+	 * @param Datetime $dateEnd
+	 *
+	 * @return array
+	 */
+	public static function getCouponsCashwayGenerated(DateTime $dateStart, Datetime $dateEnd)
+	{
+		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
+		$date_start_str = dbGlobal::toISODate($dateStart);
+		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
+		$date_end_str = dbGlobal::toISODate($dateEnd);
+
+		$query =<<<EOL
+		SELECT plans.name AS plan_name, bp.name AS provider_name, buo.value AS user_email
+		FROM 
+		billing_coupons AS bc
+		JOIN billing_providers AS bp ON bc.providerid=bp._id
+		JOIN billing_plans AS plans ON bc.providerplanid=plans._id
+		JOIN billing_users AS bu ON bc.userid=bu._id
+		JOIN billing_users_opts AS buo ON bu._id=buo.userid
+		WHERE
+		bc.coupon_status='pending'
+		AND bp.name='cashway'
+		AND (bc.updated_date  AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		AND buo.key = 'email'
+		AND buo.deleted=false	
+EOL;
+
+		$query = sprintf($query, $date_start_str, $date_end_str);
+
+		$result = pg_query(config::getDbConn(), $query);
+		$out = array();
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = $row;
+		}
+
+		return $out;
+	}
 }
 
 ?>
