@@ -38,22 +38,58 @@ $dateInterval->invert = 1;
 $start_date = $start_date->add($dateInterval);
 
 $subscriptions = dbStats::getActivatedSubscriptions($start_date, $end_date);
+$channelSubscriptions = getEnv('SLACK_STATS_CHANNEL');
+sendMessage("**************************************************", $channelSubscriptions);
 
-sendMessage("**************************************************");
-
-sendMessage(count($subscriptions)." new subscribers between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ");
+sendMessage(
+	count($subscriptions)." new subscribers between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ",
+	$channelSubscriptions
+);
 
 foreach ($subscriptions as $subscription) {
-	sendMessage($subscription['email']." ".$subscription['internal_plan_name']." (".$subscription['provider_name'].')');
+	sendMessage(
+		$subscription['email']." ".$subscription['internal_plan_name']." (".$subscription['provider_name'].')',
+		$channelSubscriptions
+	);
 }
+
+//activated coupons
+$couponsActivated = dbStats::getCouponsActivation($start_date, $end_date);
+$channelCoupons = getEnv('SLACK_STATS_COUPONS_CHANNEL');
+
+sendMessage('---------------------------------------------------', $channelCoupons);
+sendMessage(
+	count($couponsActivated)." activated coupons between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ",
+	$channelCoupons
+);
+
+foreach ($couponsActivated as $coupon) {
+	$msg = sprintf('%s %s (%s)', $coupon['user_email'], $coupon['plan_name'], $coupon['provider_name']);
+	sendMessage($msg, $channelCoupons);
+}
+
+// cahsway coupons in pending status
+$couponsActivated = dbStats::getCouponsCashwayGenerated($start_date, $end_date);
+
+sendMessage('---------------------------------------------------', $channelCoupons);
+sendMessage(
+	count($couponsActivated)." generated cashway coupons between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ",
+	$channelCoupons
+);
+
+foreach ($couponsActivated as $coupon) {
+	$msg = sprintf('%s %s (%s)', $coupon['user_email'], $coupon['plan_name'], $coupon['provider_name']);
+	sendMessage($msg, $channelCoupons);
+}
+
 
 print_r("processing done\n");
 
-function sendMessage($msg) {
+function sendMessage($msg, $channel) {
 	print_r($msg.PHP_EOL);
 	if(getEnv('SLACK_ACTIVATED') == 1) {
 		$slackHandler = new SlackHandler();
-		$slackHandler->sendMessage(getEnv('SLACK_STATS_CHANNEL'), $msg);
+		$slackHandler->sendMessage($channel, $msg);
 	}
 }
 
