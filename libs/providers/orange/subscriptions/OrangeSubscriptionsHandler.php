@@ -208,7 +208,7 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
 		config::getLogger()->addInfo("orange dbsubscriptions update for userid=".$user->getId()."...");
 		//
-		$orangeTVClient = new OrangeTVClient("TOTO".$userOpts->getOpts()['OrangeAPIToken']);
+		$orangeTVClient = new OrangeTVClient($userOpts->getOpts()['OrangeAPIToken']);
 		//
 		$provider = ProviderDAO::getProviderById($user->getProviderId());
 		//
