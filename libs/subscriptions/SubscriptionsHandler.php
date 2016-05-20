@@ -691,6 +691,13 @@ class SubscriptionsHandler {
 
 			$subscription->setInTrial(($subscriptionDate->getTimestamp() > time()));
 		}
+
+		// set cancellable status regarding cycle on internal plan
+		if ($internalPlan->getCycle()->getValue() === PlanCycle::once) {
+			$subscription->setIsCancellable(false);
+		} else {
+			$subscription->setIsCancellable(true);
+		}
 	}
 	
 	private function checkBillingInfoOptsArray($billing_info_opts_as_array) {
