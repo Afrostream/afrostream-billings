@@ -11,6 +11,7 @@ require_once __DIR__ . '/../providers/idipper/subscriptions/IdipperSubscriptions
 require_once __DIR__ . '/../providers/afr/subscriptions/AfrSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/cashway/subscriptions/CashwaySubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/orange/subscriptions/OrangeSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/bouygues/subscriptions/BouyguesSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 
 class SubscriptionsHandler {
@@ -157,6 +158,11 @@ class SubscriptionsHandler {
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						break;
+					case 'bouygues' :
+						$msg = "unsupported feature for provider named : ".$provider->getName();
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						break;
 					default:
 						$msg = "unsupported feature for provider named : ".$provider->getName();
 						config::getLogger()->addError($msg);
@@ -203,6 +209,10 @@ class SubscriptionsHandler {
 						case 'orange' :
 							$orangeSubscriptionsHandler = new OrangeSubscriptionsHandler();
 							$db_subscription = $orangeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							break;
+						case 'bouygues' :
+							$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
+							$db_subscription = $bouyguesSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
 						default:
 							$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -277,6 +287,10 @@ class SubscriptionsHandler {
 					break;
 				case 'orange' :
 					$subscriptionsHandler = new OrangeSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'bouygues' :
+					$subscriptionsHandler = new BouyguesSubscriptionsHandler();
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				default:
@@ -364,6 +378,10 @@ class SubscriptionsHandler {
 					$orangeSubscriptionsHandler = new OrangeSubscriptionsHandler();
 					$orangeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
 					break;
+				case 'bouygues' :
+					$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
+					$bouyguesSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
+					break;				
 				default:
 					//nothing to do (unknown)
 					break;
@@ -422,6 +440,10 @@ class SubscriptionsHandler {
 				case 'orange' :
 					$orangeSubscriptionHandler = new OrangeSubscriptionsHandler();
 					$db_subscription = $orangeSubscriptionHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
+					break;
+				case 'bouygues' :
+					$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
+					$db_subscription = $bouyguesSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -673,7 +695,11 @@ class SubscriptionsHandler {
 			case 'orange' :
 				$orangeSubscriptionsHandler = new OrangeSubscriptionsHandler();
 				$orangeSubscriptionsHandler->doFillSubscription($subscription);
-				break;				
+				break;
+			case 'bouygues' :
+				$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
+				$bouyguesSubscriptionsHandler->doFillSubscription($subscription);				
+				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
 				config::getLogger()->addError($msg);
