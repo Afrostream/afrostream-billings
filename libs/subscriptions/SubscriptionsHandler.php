@@ -870,9 +870,7 @@ class SubscriptionsHandler {
 						   	//DATA SUBSTITUTION <--
 							$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
 							$email = new SendGrid\Email();
-							if(!empty($emailTo)) {
-								$email->addTo($emailTo);
-							}
+							$email->addTo(!empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL'));
 							$email
 							->setFrom(getEnv('SENDGRID_FROM'))
 							->setFromName(getEnv('SENDGRID_FROM_NAME'))
@@ -880,9 +878,7 @@ class SubscriptionsHandler {
 							->setText(' ')
 							->setHtml(' ')
 							->setTemplateId($sendgrid_template_id);
-							$sendIt = false;
 							if((null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
-								$sendIt = true;
 								$email->setBcc(getEnv('SENDGRID_BCC'));
 								foreach($substitions as $var => $val) {
 									$vals = array();
@@ -890,15 +886,12 @@ class SubscriptionsHandler {
 									$vals[] = $val;//Bcc (same value twice (To + Bcc))
 									$email->addSubstitution($var, $vals);
 								}
-							} else if(!empty($emailTo)) {
-								$sendIt = true;
+							} else {
 								foreach($substitions as $var => $val) {
 									$email->addSubstitution($var, array($val));//once (To)
 								}	
 							}
-							if($sendIt) {
-								$sendgrid->send($email);
-							}
+							$sendgrid->send($email);
 							config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");					
 					}
 				}

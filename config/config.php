@@ -138,6 +138,10 @@ if(getEnv('SENDGRID_BCC') === false) {
 	putEnv('SENDGRID_BCC=');
 }
 
+if(getEnv('SENDGRID_TO_IFNULL') === false) {
+	putEnv('SENDGRID_TO_IFNULL=null@afrostream.tv');
+}
+
 #Event (MAIL)
 
 if(getEnv('EVENT_EMAIL_ACTIVATED') === false) {
