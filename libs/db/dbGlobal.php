@@ -454,8 +454,8 @@ class InternalPlanDAO {
 	}
 	
 	public static function addInternalPlan(InternalPlan $internalPlan) {
-		$query = "INSERT INTO billing_internal_plans (internal_plan_uuid, name, description, amount_in_cents, currency, cycle, period_unit, period_length)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING _id";
+		$query = "INSERT INTO billing_internal_plans (internal_plan_uuid, name, description, amount_in_cents, currency, cycle, period_unit, period_length, trial_enabled, trial_period_length, trial_period_unit, vat_rate)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query, 
 				array($internalPlan->getInternalPlanUuid(),
 					$internalPlan->getName(),
@@ -464,7 +464,11 @@ class InternalPlanDAO {
 					$internalPlan->getCurrency(),
 					$internalPlan->getCycle(),
 					$internalPlan->getPeriodUnit(),
-					$internalPlan->getPeriodLength()
+					$internalPlan->getPeriodLength(),
+					$internalPlan->getTrialEnabled(),
+					$internalPlan->getTrialPeriodLength(),
+					$internalPlan->getTrialPeriodUnit(),
+					$internalPlan->getVatRate()
 				));
 		$row = pg_fetch_row($result);
 		return(self::getInternalPlanById($row[0]));
