@@ -693,7 +693,7 @@ class SubscriptionsHandler {
 		}
 
 		// set cancellable status regarding cycle on internal plan
-		if ($internalPlan->getCycle()->getValue() === PlanCycle::once) {
+		if ($internalPlan->getCycle()->getValue() === PlanCycle::once || $subscription->getStatus() != 'active') {
 			$subscription->setIsCancellable(false);
 		} else {
 			$subscription->setIsCancellable(true);
