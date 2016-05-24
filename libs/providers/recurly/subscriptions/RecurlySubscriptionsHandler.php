@@ -298,7 +298,6 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setSubPeriodEndsDate($api_subscription->current_period_ends_at);
 		$db_subscription = BillingsSubscriptionDAO::updateSubEndsDate($db_subscription);
-		$db_subscription = BillingsSubscriptionDAO::updateSubCollectionMode($db_subscription);
 		//
 		$db_subscription->setUpdateType($update_type);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateType($db_subscription);
