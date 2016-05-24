@@ -185,7 +185,7 @@ class InternalPlansController extends BillingsController {
 				}
 
 				if (empty($data['trialPeriodUnit']) || !in_array($data['trialPeriodUnit'], ['day', 'month'])) {
-					$msg = "field trialPeriodUnit can't be empty or must match day or week";
+					$msg = "field trialPeriodUnit can't be empty or must match day or month";
 					config::getLogger()->addError($msg);
 
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
