@@ -454,8 +454,8 @@ class InternalPlanDAO {
 	}
 	
 	public static function addInternalPlan(InternalPlan $internalPlan) {
-		$query = "INSERT INTO billing_internal_plans (internal_plan_uuid, name, description, amount_in_cents, currency, cycle, period_unit, period_length)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING _id";
+		$query = "INSERT INTO billing_internal_plans (internal_plan_uuid, name, description, amount_in_cents, currency, cycle, period_unit, period_length, trial_enabled, trial_period_length, trial_period_unit, vat_rate)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query, 
 				array($internalPlan->getInternalPlanUuid(),
 					$internalPlan->getName(),
@@ -464,7 +464,11 @@ class InternalPlanDAO {
 					$internalPlan->getCurrency(),
 					$internalPlan->getCycle(),
 					$internalPlan->getPeriodUnit(),
-					$internalPlan->getPeriodLength()
+					$internalPlan->getPeriodLength(),
+					$internalPlan->getTrialEnabled(),
+					$internalPlan->getTrialPeriodLength(),
+					$internalPlan->getTrialPeriodUnit(),
+					$internalPlan->getVatRate()
 				));
 		$row = pg_fetch_row($result);
 		return(self::getInternalPlanById($row[0]));
@@ -1178,7 +1182,7 @@ class BillingsSubscriptionDAO {
 	public static function init() {
 		BillingsSubscriptionDAO::$sfields = "BS._id, BS.subscription_billing_uuid, BS.providerid, BS.userid, BS.planid, BS.creation_date, BS.updated_date, BS.sub_uuid, BS.sub_status,".
 			" BS.sub_activated_date, BS.sub_canceled_date, BS.sub_expires_date, BS.sub_period_started_date, BS.sub_period_ends_date,".
-			" BS.sub_collection_mode, BS.update_type, BS.updateid, BS.deleted";		
+			"BS.update_type, BS.updateid, BS.deleted";
 	}
 	
 	private static function getBillingsSubscriptionFromRow($row) {
@@ -1195,7 +1199,6 @@ class BillingsSubscriptionDAO {
 		$out->setSubActivatedDate($row["sub_activated_date"] == NULL ? NULL : new DateTime($row["sub_activated_date"]));
 		$out->setSubCanceledDate($row["sub_canceled_date"] == NULL ? NULL : new DateTime($row["sub_canceled_date"]));
 		$out->setSubExpiresDate($row["sub_expires_date"] == NULL ? NULL : new DateTime($row["sub_expires_date"]));
-		$out->setSubCollectionMode($row["sub_collection_mode"]);
 		$out->setSubPeriodStartedDate($row["sub_period_started_date"] == NULL ? NULL : new DateTime($row["sub_period_started_date"]));
 		$out->setSubPeriodEndsDate($row["sub_period_ends_date"] == NULL ? NULL : new DateTime($row["sub_period_ends_date"]));
 		$out->setUpdateType($row["update_type"]);
@@ -1253,8 +1256,8 @@ class BillingsSubscriptionDAO {
 	public static function addBillingsSubscription(BillingsSubscription $subscription) {
 		$query = "INSERT INTO billing_subscriptions (subscription_billing_uuid, providerid, userid, planid,";
 		$query.= " sub_uuid, sub_status, sub_activated_date, sub_canceled_date, sub_expires_date,";
-		$query.= " sub_period_started_date, sub_period_ends_date, sub_collection_mode, update_type, updateid, deleted)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING _id";
+		$query.= " sub_period_started_date, sub_period_ends_date,  update_type, updateid, deleted)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$subscription->getSubscriptionBillingUuid(),
 						$subscription->getProviderId(),
@@ -1267,7 +1270,6 @@ class BillingsSubscriptionDAO {
 						dbGlobal::toISODate($subscription->getSubExpiresDate()),
 						dbGlobal::toISODate($subscription->getSubPeriodStartedDate()),
 						dbGlobal::toISODate($subscription->getSubPeriodEndsDate()),
-						$subscription->getSubCollectionMode(),
 						$subscription->getUpdateType(),
 						$subscription->getUpdateId(),
 						$subscription->getDeleted()));
@@ -1275,26 +1277,7 @@ class BillingsSubscriptionDAO {
 		return(self::getBillingsSubscriptionById($row[0]));
 	}
 	
-	/*public static function updateBillingsSubscription(BillingsSubscription $subscription) {
-		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, planid = $1, sub_status = $2, sub_activated_date = $3, sub_canceled_date = $4,";
-		$query.= " sub_expires_date = $5, sub_period_started_date = $6, sub_period_ends_date = $7, sub_collection_mode = $8, update_type = $9, updateid = $10";
-		$query.= " WHERE _id = $11";
-		$result = pg_query_params(config::getDbConn(), $query,
-				array(	$subscription->getPlanId(),
-						$subscription->getSubStatus(),
-						dbGlobal::toISODate($subscription->getSubActivatedDate()),
-						dbGlobal::toISODate($subscription->getSubCanceledDate()),
-						dbGlobal::toISODate($subscription->getSubExpiresDate()),
-						dbGlobal::toISODate($subscription->getSubPeriodStartedDate()),
-						dbGlobal::toISODate($subscription->getSubPeriodEndsDate()),
-						$subscription->getSubCollectionMode(),
-						$subscription->getUpdateType(),
-						$subscription->getUpdateId(),
-						$subscription->getId()));
-		$row = pg_fetch_row($result);
-		return(self::getBillingsSubscriptionById($subscription->getId()));
-	}*/
-	
+
 	//planid
 	public static function updatePlanId(BillingsSubscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, planid = $1 WHERE _id = $2";
@@ -1358,15 +1341,7 @@ class BillingsSubscriptionDAO {
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
 	
-	//subCollectionMode
-	public static function updateSubCollectionMode(BillingsSubscription $subscription) {
-		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, sub_collection_mode = $1 WHERE _id = $2";
-		$result = pg_query_params(config::getDbConn(), $query,
-				array(	$subscription->getSubCollectionMode(),
-						$subscription->getId()));
-		return(self::getBillingsSubscriptionById($subscription->getId()));
-	}
-	
+
 	//UpdateType
 	public static function updateUpdateType(BillingsSubscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, update_type = $1 WHERE _id = $2";
@@ -1558,7 +1533,6 @@ class BillingsSubscription implements JsonSerializable {
 	private $sub_activated_date;
 	private $sub_canceled_date;
 	private $sub_expires_date;
-	private $sub_collection_mode;
 	private $sub_period_started_date;
 	private $sub_period_ends_date;
 	private $update_type;
@@ -1568,7 +1542,10 @@ class BillingsSubscription implements JsonSerializable {
 	private $is_active;
 	//
 	private $billingsSubscriptionOpts = NULL;
-	
+	//
+	private $in_trial = false;
+	private $is_cancellable = true;
+
 	public function getId() {
 		return($this->_id);
 	}
@@ -1681,14 +1658,6 @@ class BillingsSubscription implements JsonSerializable {
 		$this->sub_period_ends_date = $date;
 	}
 	
-	public function getSubCollectionMode() {
-		return($this->sub_collection_mode);
-	}
-	
-	public function setSubCollectionMode($str) {
-		$this->sub_collection_mode = $str;
-	}
-	
 	public function getUpdateType() {
 		return($this->update_type);
 	}
@@ -1728,12 +1697,34 @@ class BillingsSubscription implements JsonSerializable {
 	public function setBillingsSubscriptionOpts($billingsSubscriptionOpts) {
 		$this->billingsSubscriptionOpts = $billingsSubscriptionOpts;
 	}
+
+	public function setInTrial($boolean)
+	{
+		$this->in_trial = (boolean) $boolean;
+	}
+
+	public function getInTrial()
+	{
+		return $this->in_trial;
+	}
+
+	public function setIsCancellable($boolean)
+	{
+		$this->is_cancellable = (boolean) $boolean;
+	}
+
+	public function getIsCancellable()
+	{
+		return $this->is_cancellable;
+	}
 	
 	public function jsonSerialize() {
 		$return = [
 			'subscriptionBillingUuid' => $this->subscription_billing_uuid,
 			'subscriptionProviderUuid' => $this->sub_uuid,
 			'isActive' => $this->is_active,
+			'inTrial' => ($this->in_trial) ? 'yes' : 'no',
+			'isCancellable' => ($this->is_cancellable) ? 'yes' : 'no',
 			'user' =>	((UserDAO::getUserById($this->userid)->jsonSerialize())),
 			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
 			'creationDate' => dbGlobal::toISODate($this->creation_date),

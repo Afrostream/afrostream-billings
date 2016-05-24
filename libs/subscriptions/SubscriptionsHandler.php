@@ -659,7 +659,7 @@ class SubscriptionsHandler {
 		}
 		$provider = ProviderDAO::getProviderById($subscription->getProviderId());
 		if($provider == NULL) {
-			$msg = "unknown provider with id : ".$user->getProviderId();
+			$msg = "unknown provider with id : ".$subscription->getProviderId();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -705,6 +705,24 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
+		}
+
+		// check if subscriptino still in trial to provide information in boolean mode through inTrial() method
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
+
+		if ($internalPlan->getTrialEnabled() && !is_null($subscription->getSubActivatedDate())) {
+
+			$subscriptionDate = clone $subscription->getSubActivatedDate();
+			$subscriptionDate->modify('+ '.$internalPlan->getTrialPeriodLength().' '.$internalPlan->getTrialPeriodUnit());
+
+			$subscription->setInTrial(($subscriptionDate->getTimestamp() > time()));
+		}
+
+		// set cancellable status regarding cycle on internal plan
+		if ($internalPlan->getCycle()->getValue() === PlanCycle::once) {
+			$subscription->setIsCancellable(false);
+		} else {
+			$subscription->setIsCancellable(true);
 		}
 	}
 	
@@ -796,7 +814,10 @@ class SubscriptionsHandler {
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						}
 						$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-						if(array_key_exists('email', $userOpts->getOpts())) {
+							$emailTo = NULL;
+							if(array_key_exists('email', $userOpts->getOpts())) {
+								$emailTo = $userOpts->getOpts()['email'];
+							}
 							config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail...");
 						    //DATA -->
 						    $providerPlan = PlanDAO::getPlanById($subscription_after_update->getPlanId());
@@ -844,7 +865,7 @@ class SubscriptionsHandler {
 						   	$substitions['%periodlength%'] = $internalPlan->getPeriodLength();
 						   	//user : nothing
 						   	//userOpts
-						   	$substitions['%email%'] = $userOpts->getOpts()['email'];
+						   	$substitions['%email%'] = ($emailTo == NULL ? '' : $emailTo);
 						   	$firstname = '';
 						   	if(array_key_exists('firstName', $userOpts->getOpts())) {
 						   		$firstname = $userOpts->getOpts()['firstName'];
@@ -863,7 +884,9 @@ class SubscriptionsHandler {
 						   	$substitions['%lastname%'] = $lastname;
 						   	$username = $firstname;
 						   	if($username == '') {
-						   		$username = explode('@', $substitions['email'])[0];
+						   		if(!empty($emailTo)) {
+						   			$username = explode('@', $emailTo)[0];
+						   		}
 						   	}
 						   	$substitions['%username%'] = $username;
 						   	$fullname = trim($firstname." ".$lastname);
@@ -871,21 +894,23 @@ class SubscriptionsHandler {
 						   	//subscription
 						   	$substitions['%subscriptionbillinguuid%'] = $subscription_after_update->getSubscriptionBillingUuid();
 						   	//DATA SUBSTITUTION <--
-							$emailTo = $substitions['%email%'];
 							$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
 							$email = new SendGrid\Email();
+							$email->addTo(!empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL'));
 							$email
-							->addTo($emailTo)
 							->setFrom(getEnv('SENDGRID_FROM'))
 							->setFromName(getEnv('SENDGRID_FROM_NAME'))
 							->setSubject(' ')
 							->setText(' ')
 							->setHtml(' ')
 							->setTemplateId($sendgrid_template_id);
-							if( (null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
+							if((null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
 								$email->setBcc(getEnv('SENDGRID_BCC'));
 								foreach($substitions as $var => $val) {
-									$email->addSubstitution($var, array($val, $val));//same value twice (To + Bcc)
+									$vals = array();
+									if(!empty($emailTo)) { $vals[] = $val; } //To (same value twice (To + Bcc))
+									$vals[] = $val;//Bcc (same value twice (To + Bcc))
+									$email->addSubstitution($var, $vals);
 								}
 							} else {
 								foreach($substitions as $var => $val) {
@@ -893,8 +918,7 @@ class SubscriptionsHandler {
 								}	
 							}
 							$sendgrid->send($email);
-							config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");
-						}
+							config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");					
 					}
 				}
 				config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", done successfully");

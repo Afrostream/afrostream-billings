@@ -410,18 +410,6 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		$db_subscription->setSubPeriodStartedDate($start_date);
 		$db_subscription->setSubPeriodEndsDate($end_date);
-		//The information is in the PLAN
-		/*switch ($api_subscription->collection_mode) {
-			case 'automatic' :
-				$db_subscription->setSubCollectionMode('automatic');
-				break;
-			case 'manual' :
-				$db_subscription->setSubCollectionMode('manual');
-				break;
-			default :
-				$db_subscription->setSubCollectionMode('manual');//it is the default says recurly
-				break;
-		}*/
 		$db_subscription->setUpdateType($update_type);
 		//
 		$db_subscription->setUpdateId($updateId);
@@ -529,18 +517,6 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		//NOT GIVEN : To be calculated from billings api
 		//$db_subscription->setSubPeriodEndsDate(NULL);
 		//NOT GIVEN : collection_mode
-		//The information is in the PLAN
-		/*switch ($api_subscription->collection_mode) {
-			case 'automatic' :
-				$db_subscription->setSubCollectionMode('automatic');
-				break;
-			case 'manual' :
-				$db_subscription->setSubCollectionMode('manual');
-				break;
-			default :
-				$db_subscription->setSubCollectionMode('manual');//it is the default says recurly
-				break;
-		}*/
 		$db_subscription->setUpdateType($update_type);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateType($db_subscription);
 		//

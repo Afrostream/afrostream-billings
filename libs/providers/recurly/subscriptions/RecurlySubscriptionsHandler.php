@@ -238,17 +238,6 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setSubExpiresDate($api_subscription->expires_at);
 		$db_subscription->setSubPeriodStartedDate($api_subscription->current_period_started_at);
 		$db_subscription->setSubPeriodEndsDate($api_subscription->current_period_ends_at);
-		switch ($api_subscription->collection_mode) {
-			case 'automatic' :
-				$db_subscription->setSubCollectionMode('automatic');
-				break;
-			case 'manual' :
-				$db_subscription->setSubCollectionMode('manual');
-				break;
-			default :
-				$db_subscription->setSubCollectionMode('manual');//it is the default says recurly
-				break;
-		}
 		$db_subscription->setUpdateType($update_type);
 		//
 		$db_subscription->setUpdateId($updateId);
@@ -309,18 +298,6 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setSubPeriodEndsDate($api_subscription->current_period_ends_at);
 		$db_subscription = BillingsSubscriptionDAO::updateSubEndsDate($db_subscription);
-		//
-		switch ($api_subscription->collection_mode) {
-			case 'automatic' :
-				$db_subscription->setSubCollectionMode('automatic');
-				break;
-			case 'manual' :
-				$db_subscription->setSubCollectionMode('manual');
-				break;
-			default :
-				$db_subscription->setSubCollectionMode('manual');//it is the default says recurly
-				break;
-		}
 		$db_subscription = BillingsSubscriptionDAO::updateSubCollectionMode($db_subscription);
 		//
 		$db_subscription->setUpdateType($update_type);
