@@ -19,6 +19,7 @@ class BouyguesTVClient {
 				CURLOPT_RETURNTRANSFER => true,
 				CURLOPT_HEADER  => false,
 		);
+		//NC : Does not work (PORT is 20443, may be the reason why)
 		/*if(	null !== (getEnv('PROXY_HOST'))
 				&&
 			null !== (getEnv('PROXY_PORT'))
@@ -73,9 +74,7 @@ class BouyguesSubscriptionResponse {
 		$this->response = json_decode($json, true);
 		$this->bouyguesSubscription = new BouyguesSubscription();
 		$this->bouyguesSubscription->setResult($this->response['result']);
-		$this->bouyguesSubscription->setResultMessage('SubscribedNotCoupled');
-		//TODO : For tests purpose only
-		//$this->bouyguesSubscription->setResultMessage($this->response['resultMessage']);
+		$this->bouyguesSubscription->setResultMessage($this->response['resultMessage']);
 	}
 	
 	public function getBouyguesSubscription() {

@@ -577,6 +577,10 @@ class SubscriptionsHandler {
 					$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
 					$db_subscription = $cashwaySubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
+				case 'bouygues' :
+					$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
+					$db_subscription = $bouyguesSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);

@@ -84,8 +84,6 @@ class BouyguesSubscriptionsHandler extends SubscriptionsHandler {
 				$shouldUpdate = false;
 			}
 		}
-		//TODO : For tests purpose only
-		//$shouldUpdate = true;
 		if($shouldUpdate) {
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 			//NC : DO NOT THROW THE EXCEPTION, JUST LOG IT AS A BEST EFFORT. 
@@ -272,6 +270,58 @@ class BouyguesSubscriptionsHandler extends SubscriptionsHandler {
 		config::getLogger()->addInfo("bouygues dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
 	
+	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+		try {
+			config::getLogger()->addInfo("bouygues subscription expiring...");
+			if(
+					$subscription->getSubStatus() == "expired"
+			)
+			{
+				//nothing todo : already done or in process
+			} else {
+				//
+				if($subscription->getSubPeriodEndsDate() < $expires_date) {
+					$subscription->setSubExpiresDate($expires_date);
+					$subscription->setSubStatus("expired");
+					//NC : We suppose that it was canceled somewhere in the current day, so we take the beginning of the day
+					//NC : Must be different of the expires_date otherwise it will be considered as a payment issue
+					$canceled_date = clone $expires_date;
+					$canceled_date->setTimezone(new DateTimeZone(config::$timezone));
+					$canceled_date->setTime(0, 0, 0);
+					$subscription->setSubCanceledDate($canceled_date);
+				} else {
+					$msg = "cannot expire a subscription that has not ended yet";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			}
+			//
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("bouygues subscription expiring done successfully for bouygues_subscription_uuid=".$subscription->getSubUid());
+			return($subscription);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while expiring a bouygues subscription for bouygues_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("bouygues subscription expiring failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while expiring a bouygues subscription for bouygues_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("bouygues subscription expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+	}
+	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
 		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
 	}
@@ -297,7 +347,7 @@ class BouyguesSubscriptionsHandler extends SubscriptionsHandler {
 		$bouyguesSubscriptionsResponse = $bouyguesTVClient->getSubscription($providerPlanUuid);
 		$bouyguesSubscription = $bouyguesSubscriptionsResponse->getBouyguesSubscription();
 		if($bouyguesSubscription->getResultMessage() != 'SubscribedNotCoupled') {
-			$msg = "BouyguesSubscription Result <> SubscribedNotCoupled, resultMessage=".$bouyguesSubscription->getResultMessage();
+			$msg = "BouyguesSubscription resultMessage != SubscribedNotCoupled, resultMessage=".$bouyguesSubscription->getResultMessage();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::BOUYGUES_SUBSCRIPTION_BAD_STATUS);
 		}
