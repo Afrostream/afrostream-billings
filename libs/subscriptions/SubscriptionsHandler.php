@@ -637,7 +637,7 @@ class SubscriptionsHandler {
 		}
 		$provider = ProviderDAO::getProviderById($subscription->getProviderId());
 		if($provider == NULL) {
-			$msg = "unknown provider with id : ".$user->getProviderId();
+			$msg = "unknown provider with id : ".$subscription->getProviderId();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -679,6 +679,24 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
+		}
+
+		// check if subscriptino still in trial to provide information in boolean mode through inTrial() method
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
+
+		if ($internalPlan->getTrialEnabled() && !is_null($subscription->getSubActivatedDate())) {
+
+			$subscriptionDate = clone $subscription->getSubActivatedDate();
+			$subscriptionDate->modify('+ '.$internalPlan->getTrialPeriodLength().' '.$internalPlan->getTrialPeriodUnit());
+
+			$subscription->setInTrial(($subscriptionDate->getTimestamp() > time()));
+		}
+
+		// set cancellable status regarding cycle on internal plan
+		if ($internalPlan->getCycle()->getValue() === PlanCycle::once) {
+			$subscription->setIsCancellable(false);
+		} else {
+			$subscription->setIsCancellable(true);
 		}
 	}
 	
