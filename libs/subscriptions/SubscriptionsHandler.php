@@ -681,7 +681,7 @@ class SubscriptionsHandler {
 				break;
 		}
 
-		// check if subscriptino still in trial to provide information in boolean mode through inTrial() method
+		// check if subscription still in trial to provide information in boolean mode through inTrial() method
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
 
 		if ($internalPlan->getTrialEnabled() && !is_null($subscription->getSubActivatedDate())) {
@@ -693,7 +693,7 @@ class SubscriptionsHandler {
 		}
 
 		// set cancellable status regarding cycle on internal plan
-		if ($internalPlan->getCycle()->getValue() === PlanCycle::once || $subscription->getStatus() != 'active') {
+		if ($internalPlan->getCycle()->getValue() === PlanCycle::once || $subscription->getSubStatus() != 'active') {
 			$subscription->setIsCancellable(false);
 		} else {
 			$subscription->setIsCancellable(true);
