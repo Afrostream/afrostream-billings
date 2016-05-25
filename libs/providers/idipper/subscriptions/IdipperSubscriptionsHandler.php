@@ -323,12 +323,12 @@ class IdipperSubscriptionsHandler extends SubscriptionsHandler {
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("idipper subscription cancel done successfully for idipper_subscription_uuid=".$subscription->getSubUid());
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while cancelling a idipper subscription for idipper_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("idipper subscription cancelling failed : ".$msg);
+			$msg = "a billings exception occurred while canceling a idipper subscription for idipper_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("idipper subscription canceling failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while cancelling a idipper subscription for idipper_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("idipper subscription cancelling failed : ".$msg);
+			$msg = "an unknown exception occurred while canceling a idipper subscription for idipper_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("idipper subscription canceling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($subscription);
