@@ -671,16 +671,16 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addInfo("gocardless subscription cancel done successfully for gocardless_subscription_uuid=".$subscription->getSubUid());
 			return($subscription);
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while cancelling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("gocardless subscription cancelling failed : ".$msg);
+			$msg = "a billings exception occurred while canceling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("gocardless subscription canceling failed : ".$msg);
 			throw $e;
 		} catch (GoCardlessProException $e) {
-			$msg = "a GoCardlessProException occurred while cancelling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("gocardless subscription cancelling failed : ".$msg);
+			$msg = "a GoCardlessProException occurred while canceling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("gocardless subscription canceling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while cancelling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("gocardless subscription cancelling failed : ".$msg);
+			$msg = "an unknown exception occurred while canceling a gocardless subscription for gocardless_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("gocardless subscription canceling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 	}
