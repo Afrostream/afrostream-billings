@@ -459,6 +459,48 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		return($subscription);
 	}
 	
+	public function doUpdateInternalPlan(BillingsSubscription $subscription, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts) {
+		try {
+			config::getLogger()->addInfo("recurly subscription updating Plan...");
+			//
+			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
+			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			//
+			$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
+			//
+			$api_subscription->plan_code = $plan->getPlanUuid();
+			$api_subscription->updateImmediately();
+			//
+			$subscription->setPlanId($plan->getId());
+			//
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				BillingsSubscriptionDAO::updatePlanId($subscription);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("recurly subscription updating Plan done successfully for recurly_subscription_uuid=".$subscription->getSubUid());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while updating a Plan recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription reactivating failed : ".$msg);
+			throw $e;
+		} catch (Recurly_ValidationError $e) {
+			$msg = "a validation error exception occurred while updating a Plan recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription updating Plan failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while updating a Plan recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription updating Plan failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($subscription);
+	}
+	
 }
 
 ?>

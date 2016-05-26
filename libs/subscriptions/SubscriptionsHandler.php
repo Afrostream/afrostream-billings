@@ -961,6 +961,72 @@ class SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
+	public function doUpdateInternalPlanByUuid($subscriptionBillingUuid, $internalPlanUuid) {
+		$db_subscription = NULL;
+		try {
+			config::getLogger()->addInfo("dbsubscription updating internalPlan for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			if($db_subscription == NULL) {
+				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
+			if($provider == NULL) {
+				$msg = "unknown provider with id : ".$user->getProviderId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			if($internalPlan == NULL) {
+				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
+			$providerPlanId = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internalPlan->getId(), $provider->getId());
+			if($providerPlanId == NULL) {
+				$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$provider->getName();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$providerPlan = PlanDAO::getPlanById($providerPlanId);
+			if($providerPlan == NULL) {
+				$msg = "unknown plan with id : ".$providerPlanId;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$providerPlanOpts = PlanOptsDAO::getPlanOptsByPlanId($providerPlan->getId());
+			$db_subscription_before_update = clone $db_subscription;
+			switch($provider->getName()) {
+				case 'recurly' :
+					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
+					$db_subscription = $recurlySubscriptionsHandler->doUpdateInternalPlan($db_subscription, $internalPlan, $internalPlanOpts, $providerPlan, $providerPlanOpts);
+					break;
+				default:
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
+			//
+			$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			//
+			$this->doFillSubscription($db_subscription);
+			//
+			config::getLogger()->addInfo("dbsubscription updating internalPlan for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while dbsubscription updating internalPlan for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscription updating internalPlan failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while dbsubscription updating internalPlan for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscription updating internalPlan failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_subscription);
+	}
+	
 }
 
 ?>
