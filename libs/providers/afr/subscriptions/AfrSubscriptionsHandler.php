@@ -144,18 +144,6 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setSubExpiresDate($api_subscription->getSubExpiresDate());
 		$db_subscription->setSubPeriodStartedDate($api_subscription->getSubPeriodStartedDate());
 		$db_subscription->setSubPeriodEndsDate($api_subscription->getSubPeriodEndsDate());
-		//The information is in the PLAN
-		/*switch ($api_subscription->collection_mode) {
-			case 'automatic' :
-				$db_subscription->setSubCollectionMode('automatic');
-				break;
-			case 'manual' :
-				$db_subscription->setSubCollectionMode('manual');
-				break;
-			default :
-				$db_subscription->setSubCollectionMode('manual');//it is the default says recurly
-				break;
-		}*/
 		$db_subscription->setUpdateType($update_type);
 		//
 		$db_subscription->setUpdateId($updateId);

@@ -309,6 +309,9 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
       			"subscriptionBillingUuid": "SubscriptionBillingUUID",
       			"subscriptionProviderUuid": "SubscriptionProviderUUID",
       			"isActive": "yes",
+      			"inTrial" : "no",
+      			"isCancellable" : "yes",
+      			"isReactivable" : "no",
       			"user": {
         			"userBillingUuid": "UserBillingUUID",
         			"userReferenceUuid": "afrostreamUUID",
@@ -457,6 +460,21 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/renew", functio
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->renew($request, $response, $args));
 });
+
+//reactivate a subscription
+	
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/reactivate", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->reactivate($request, $response, $args));
+});
+
+//change plan from a subscription
+
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/updateinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->updateInternalPlan($request, $response, $args));
+});
+
 
 //InternalPlans
 
