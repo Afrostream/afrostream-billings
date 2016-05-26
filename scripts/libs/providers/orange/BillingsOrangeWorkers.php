@@ -120,7 +120,6 @@ class BillingsOrangeWorkers extends BillingsWorkers {
 		}
 	}
 	
-	
 }
 
 ?>

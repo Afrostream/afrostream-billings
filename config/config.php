@@ -228,6 +228,16 @@ if(getEnv('ORANGE_SUBSCRIPTION_PERIOD_LENGTH') === false) {
 	putEnv('ORANGE_SUBSCRIPTION_PERIOD_LENGTH=1');
 }
 
+#BouyguesTV
+
+if(getEnv('BOUYGUES_TV_API_URL') === false) {
+	putEnv('BOUYGUES_TV_API_URL=https://idp.bouygtel.fr:20443/federation/eligibility');
+}
+
+if(getEnv('BOUYGUES_SUBSCRIPTION_PERIOD_LENGTH') === false) {
+	putEnv('BOUYGUES_SUBSCRIPTION_PERIOD_LENGTH=1');
+}
+
 #proxy
 
 if(getEnv('PROXY_HOST') === false) {

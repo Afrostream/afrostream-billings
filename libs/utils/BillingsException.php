@@ -27,7 +27,11 @@ class ExceptionError extends Enum {
 	const ORANGE_CALL_API_EXPIRED_TOKEN					=	312;
 	const ORANGE_CALL_API_INVALID_REQUEST				=	315;
 	const ORANGE_CALL_API_UNKNOWN_ERROR					=	319;
-	
+	//Bouygues
+	const BOUYGUES_CALL_API_UNKNOWN_ERROR				=	330;
+	const BOUYGUES_CALL_API_SUBSCRIPTION_NOT_FOUND		=	331;
+	const BOUYGUES_CALL_API_BAD_RESULT					=	335;
+	const BOUYGUES_SUBSCRIPTION_BAD_STATUS				=	340;
 }
 
 class BillingsException extends Exception {
