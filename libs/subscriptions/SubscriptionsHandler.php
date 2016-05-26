@@ -881,9 +881,7 @@ class SubscriptionsHandler {
 							if((null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
 								$email->setBcc(getEnv('SENDGRID_BCC'));
 								foreach($substitions as $var => $val) {
-									$vals = array();
-									if(!empty($emailTo)) { $vals[] = $val; } //To (same value twice (To + Bcc))
-									$vals[] = $val;//Bcc (same value twice (To + Bcc))
+									$vals = array($val, $val);//Bcc (same value twice (To + Bcc))
 									$email->addSubstitution($var, $vals);
 								}
 							} else {
