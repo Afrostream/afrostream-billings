@@ -468,6 +468,14 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/reactivate", fu
 	return($subscriptionsController->reactivate($request, $response, $args));
 });
 
+//change plan from a subscription
+
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/updateinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->updateInternalPlan($request, $response, $args));
+});
+
+
 //InternalPlans
 
 //get one InternalPlan
