@@ -1867,6 +1867,14 @@ class BillingInfoOpts {
 		return($this->opts);
 	}
 
+	public function getOpt($key)
+	{
+		if (array_key_exists($key, $this->opts)) {
+			return $this->opts[$key];
+		}
+
+		return null;
+	}
 }
 
 class BillingsWebHookDAO {
@@ -3423,4 +3431,202 @@ class UtilsDAO {
 
 }
 
-?>
+class UsersIban
+{
+	protected $_id;
+
+	protected $userid;
+
+	protected $iban;
+
+	protected $valid;
+
+	protected $createdDate;
+
+	protected $invalidatedDate;
+
+	public function setId($id)
+	{
+		$this->_id = $id;
+	}
+
+	/**
+	 * @return integer
+	 */
+	public function getId()
+	{
+		return $this->_id;
+	}
+
+	/**
+	 * @return integer
+	 */
+	public function getUserid()
+	{
+		return $this->userid;
+	}
+
+	/**
+	 * @param integer $userid
+	 *
+	 * @return UsersIban
+	 */
+	public function setUserid($userid)
+	{
+		$this->userid = $userid;
+
+		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getIban()
+	{
+		return $this->iban;
+	}
+
+	/**
+	 * @param string $iban
+	 *
+	 * @return UsersIban
+	 */
+	public function setIban($iban)
+	{
+		$this->iban = $iban;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getValid()
+	{
+		return $this->valid;
+	}
+
+	/**
+	 * @param boolean $valid
+	 * @return UsersIban
+	 */
+	public function setValid($valid)
+	{
+		$this->valid = (boolean) $valid;
+
+		return $this;
+	}
+
+	/**
+	 * @return DateTime
+	 */
+	public function getCreatedDate()
+	{
+		return $this->createdDate;
+	}
+
+	/**
+	 * @param string $createdDate
+	 *
+	 * @return UsersIban
+	 */
+	public function setCreatedDate($createdDate)
+	{
+		$this->createdDate = new DateTime($createdDate);
+
+		return $this;
+	}
+
+	/**
+	 * @return DateTime
+	 */
+	public function getInvalidatedDate()
+	{
+		return $this->invalidatedDate;
+	}
+
+	/**
+	 * @param string  $invalidatedDate
+	 *
+	 * @return UsersIban
+	 */
+	public function setInvalidatedDate($invalidatedDate)
+	{
+		$this->invalidatedDate = (empty($invalidatedDate)) ? null : new DateTime($invalidatedDate);
+
+		return $this;
+	}
+}
+
+class UsersIbanDao
+{
+	protected static function getEntityFromRow(array $row)
+	{
+		$entity  = new UsersIban();
+		$entity->setId($row['_id']);
+		$entity->setUserid($row['userid']);
+		$entity->setIban($row['iban']);
+		$entity->setCreatedDate($row['creation_date']);
+		$entity->setInvalidatedDate($row['invalidated_date']);
+
+		return $entity;
+	}
+
+	/**
+	 * @param string $iban
+	 * @param int    $userid
+	 *
+	 * @return UsersIban|null
+	 */
+	public static function getIban($iban, $userid = null)
+	{
+		$query = 'SELECT * FROM billing_users_iban WHERE iban = $1';
+		$params = [$iban];
+
+		if (!is_null($userid)) {
+			$query .= ' AND userid= $2';
+			$params[] = $userid;
+		}
+
+		$query .= ' LIMIT 1';
+
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+
+		$return = [];
+
+		$row = pg_fetch_array($result, null, PGSQL_ASSOC);
+		// free result
+		pg_free_result($result);
+
+		if ($row) {
+			return  self::getEntityFromRow($row);
+		}
+
+		return null;
+	}
+
+	public static function save(UsersIban $userIban)
+	{
+		$query = "INSERT INTO billing_users_iban (userid, iban, valid, creation_date)";
+		$query .= " VALUES ($1, $2, $3, $4) RETURNING _id";
+
+		$data = [
+			$userIban->getUserid(),
+			$userIban->getIban(),
+			$userIban->getValid(),
+			$userIban->getCreatedDate()->format(DateTime::ISO8601)
+		];
+
+		$result = pg_query_params(config::getDbConn(), $query, $data);
+
+		$row = pg_fetch_row($result);
+
+		if (empty($row[0])) {
+			throw new \Exception('Error while recording iban');
+		}
+
+		$userIban->setId($row[0]);
+
+		return $userIban;
+	}
+}

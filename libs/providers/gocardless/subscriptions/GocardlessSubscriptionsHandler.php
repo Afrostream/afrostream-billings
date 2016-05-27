@@ -19,6 +19,12 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
+
+		if (!$this->checkBillingInfos($billingInfoOpts, $user)) {
+
+			return $sub_uuid;
+		}
+
 		try {
 			config::getLogger()->addInfo("gocardless subscription creation...");
 			if(isset($subscription_provider_uuid)) {
@@ -158,59 +164,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addInfo("gocardless subscription creation... subscription creation done successfully, subscription_id=".$subscription->id);
 				$sub_uuid = $subscription->id;	
 			}
-			/** LATER **/
-			/**
-			//<-- FOR TESTING PURPOSE
-			$planOpts->setOpt('gocardless_amount', 10);
-			//FOR TESTING PURPOSE -->
-			//pre-requisite
-			if(!isset($planOpts->getOpts()['gocardless_amount'])) {
-				 $msg = "field 'gocardless_amount' was not provided";
-				 config::getLogger()->addError($msg);
-				 throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				 }
-				 //
-				 $client = new Client(array(
-				 'access_token' => getEnv('GOCARDLESS_API_KEY'),
-				 'environment' => getEnv('GOCARDLESS_API_ENV')
-				 ));
-				 //Create a Bank Account
-				 config::getLogger()->addInfo("gocardless subscription creation... bank account creation...");
-				 $bank_account = $client->customerBankAccounts()->create(
-				 ['params' =>
-				 [
-				 'iban' => 'FR2420041010111224481S03274',
-				 'account_holder_name' => 'COELHO NELSON',//TODO
-				 'country_code' => 'FR',//TODO
-				 'links' => ['customer' => $user->getUserProviderUuid()]
-				 ]
-				 ]);
-				 config::getLogger()->addInfo("gocardless subscription creation... bank account creation done successfully, bank_acccount_id=".$bank_account->id);
-				 //Create a Mandate
-				 config::getLogger()->addInfo("gocardless subscription creation... mandate creation...");
-				 $mandate = $client->mandates()->create(
-				 ['params' =>
-				 [
-				 'links' => ['customer_bank_account' => $bank_account->id],
-				 ]
-				 ]);
-				 config::getLogger()->addInfo("gocardless subscription creation... mandate creation done successfully, mandate_id=".$mandate->id);
-				 //Create a Subscription
-				 config::getLogger()->addInfo("gocardless subscription creation... subscription creation...");
-				 $subscription = $client->subscriptions()->create(
-				 ['params' =>
-				 [
-				 'amount' => $planOpts->getOpts()['gocardless_amount'],
-				 'currency' => 'EUR',//TODO
-				 'name' => $plan->getPlanUuid(),
-				 'interval_unit' => 'monthly', //TODO
-				 'day_of_month' => 1,//TODO
-				 'links' => ['mandate' => $mandate->id]
-				 ]
-				 ]);
-				 config::getLogger()->addInfo("gocardless subscription creation... subscription creation done successfully, subscription_id=".$subscription->id);
-				 $sub_uuid = $subscription->id;
-			 **/
+
 			config::getLogger()->addInfo("gocardless subscription creation done successfully, gocardless_subscription_uuid=".$sub_uuid);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while creating a gocardless subscription for user_reference_uuid=".$user->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -795,7 +749,28 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
 		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
 	}
-	
-}
 
-?>
+	protected function checkBillingInfos(BillingInfoOpts $billingInfoOpts, User $user)
+	{
+		//if no iban suplied, return true
+		if ($billingInfoOpts->getOpt('iban') === null) {
+			return true;
+		}
+
+		$usersIban = UsersIbanDao::getIban($billingInfoOpts->getOpt('iban'));
+
+		if (!is_null($usersIban)) {
+			return $usersIban->getValid();
+		} else {
+			$entity = new UsersIban();
+			$entity->setIban($billingInfoOpts->getOpt('iban'))
+				->setUserid($user->getId())
+				->setCreatedDate('now')
+				->setValid(true);
+
+			UsersIbanDao::save($entity);
+		}
+
+		return true;
+	}
+}

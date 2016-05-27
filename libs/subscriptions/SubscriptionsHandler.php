@@ -13,6 +13,7 @@ require_once __DIR__ . '/../providers/cashway/subscriptions/CashwaySubscriptions
 require_once __DIR__ . '/../providers/orange/subscriptions/OrangeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/bouygues/subscriptions/BouyguesSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
+require_once __DIR__.'/../utils/BillingsException.php';
 
 class SubscriptionsHandler {
 	
@@ -131,6 +132,12 @@ class SubscriptionsHandler {
 					case 'gocardless' :
 						$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
 						$sub_uuid = $gocardlessSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+
+						// if $sub_uuid is null the iban supplied is invalid
+						if (is_null($sub_uuid)) {
+							throw new  BillingsException(new ExceptionType(ExceptionType::internal), 'Supplied iban is invalid');
+						}
+
 						break;
 					case 'celery' :
 						$msg = "unsupported feature for provider named : ".$provider->getName();
