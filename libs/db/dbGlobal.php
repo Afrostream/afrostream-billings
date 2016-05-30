@@ -1544,7 +1544,7 @@ class BillingsSubscription implements JsonSerializable {
 	private $billingsSubscriptionOpts = NULL;
 	//
 	private $in_trial = false;
-	private $is_cancellable = true;
+	private $is_cancelable = true;
 	private $is_reactivable = false;
 
 	public function getId() {
@@ -1709,14 +1709,14 @@ class BillingsSubscription implements JsonSerializable {
 		return $this->in_trial;
 	}
 
-	public function setIsCancellable($boolean)
+	public function setIsCancelable($boolean)
 	{
-		$this->is_cancellable = (boolean) $boolean;
+		$this->is_cancelable = (boolean) $boolean;
 	}
 
-	public function getIsCancellable()
+	public function getIsCancelable()
 	{
-		return $this->is_cancellable;
+		return $this->is_cancelable;
 	}
 	
 	public function setIsReactivable($boolean)
@@ -1735,7 +1735,7 @@ class BillingsSubscription implements JsonSerializable {
 			'subscriptionProviderUuid' => $this->sub_uuid,
 			'isActive' => $this->is_active,
 			'inTrial' => ($this->in_trial) ? 'yes' : 'no',
-			'isCancellable' => ($this->is_cancellable) ? 'yes' : 'no',
+			'isCancelable' => ($this->is_cancelable) ? 'yes' : 'no',
 			'isReactivable' => ($this->is_reactivable) ? 'yes' : 'no',
 			'user' =>	((UserDAO::getUserById($this->userid)->jsonSerialize())),
 			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
