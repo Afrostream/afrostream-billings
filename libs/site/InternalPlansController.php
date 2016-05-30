@@ -115,13 +115,13 @@ class InternalPlansController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$description = $data["description"];
-			if(!isset($data['amount_in_cents'])) {
+			if(!isset($data['amountInCents'])) {
 				//exception
-				$msg = "field 'amount_in_cents' is missing";
+				$msg = "field 'amountInCents' is missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$amount_in_cents = $data["amount_in_cents"];
+			$amountInCents = $data["amountInCents"];
 			if(!isset($data['currency'])) {
 				//exception
 				$msg = "field 'currency' is missing";
@@ -201,7 +201,7 @@ class InternalPlansController extends BillingsController {
 					$internalPlanUuid,
 					$name,
 					$description,
-					$amount_in_cents,
+					$amountInCents,
 					$currency,
 					$cycle,
 					$periodUnitStr,

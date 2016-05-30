@@ -237,7 +237,7 @@ $app->put("/billings/api/users/", function ($request, $response, $args) {
 	      			"internalPlanUuid": "InternalPlanUuid",
 	      			"name": "name",
 	      			"description": "description",
-	      			"amount_in_cents": "1000",
+	      			"amountInCents": "1000",
 	      			"currency": "EUR",
 	      			"cycle": "once",
 	      			"periodUnit": "month",
@@ -310,7 +310,7 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
       			"subscriptionProviderUuid": "SubscriptionProviderUUID",
       			"isActive": "yes",
       			"inTrial" : "no",
-      			"isCancellable" : "yes",
+      			"isCancelable" : "yes",
       			"isReactivable" : "no",
       			"user": {
         			"userBillingUuid": "UserBillingUUID",
@@ -332,7 +332,7 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
 	      			"internalPlanUuid": "InternalPlanUuid",
 	      			"name": "name",
 	      			"description": "description",
-	      			"amount_in_cents": "1000",
+	      			"amountInCents": "1000",
 	      			"currency": "EUR",
 	      			"cycle": "once",
 	      			"periodUnit": "month",
@@ -497,7 +497,7 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/updateinternalp
       			"internalPlanUuid": "InternalPlanUuid",
       			"name": "name",
       			"description": "description",
-      			"amount_in_cents": "1000",
+      			"amountInCents": "1000",
       			"currency": "EUR",
       			"cycle": "once",
       			"periodUnit": "month",
@@ -565,7 +565,7 @@ $app->get("/billings/api/internalplans/", function ($request, $response, $args) 
 		"internalPlanUuid" : "InternalPlanUuid",	//internal plan uuid (should not be changed)
 		"name" : "name",							//internal name (can be changed)
 		"description" : "description",				//internal description (can be changed)
-		"amount_in_cents" : "1000",					//10 Euros
+		"amountInCents" : "1000",					//10 Euros
 		"currency" : "EUR",							//ISO 4217
 		"cycle" : "once",							//	"once", "auto"
 		"periodUnit" : "month",						//	"day", "month", "year"
@@ -588,7 +588,7 @@ $app->get("/billings/api/internalplans/", function ($request, $response, $args) 
       			"internalPlanUuid": "InternalPlanUuid",
       			"name": "name",
       			"description": "description",
-      			"amount_in_cents": "1000",
+      			"amountInCents": "1000",
       			"currency": "EUR",
       			"cycle": "once",
       			"periodUnit": "month",
