@@ -309,6 +309,10 @@ class SubscriptionsHandler {
 					$subscriptionsHandler = new BouyguesSubscriptionsHandler();
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
+				case 'stripe' :
+					$subscriptionsHandler = new StripeSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
