@@ -297,7 +297,9 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
         	"key3": "value3"
       	}
 	}
- 
+ */
+
+/*
  	sample answer :
  	
 	{
@@ -630,8 +632,8 @@ $app->post("/billings/api/internalplans/", function ($request, $response, $args)
 	$internalPlansController = new InternalPlansFilteredController();
 	return($internalPlansController->create($request, $response, $args));
 });
-
 //update
+
 
 $app->put("/billings/api/internalplans/{internalPlanUuid}", function ($request, $response, $args) {
 	$internalPlansController = new InternalPlansFilteredController();

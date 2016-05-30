@@ -256,6 +256,12 @@ if(getEnv('PROXY_PWD') === false) {
 	putEnv('PROXY_PWD=afrostream77');
 }
 
+
+# stripe api key
+if(getEnv('STRIPE_API_KEY') === false) {
+	putEnv('STRIPE_API_KEY=sk_test_VaFvskbZOobGZ1L3x1iGwzOk');
+}
+
 #logger, #db_conn, ...
 
 class config {

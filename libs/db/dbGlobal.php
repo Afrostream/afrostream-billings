@@ -1782,6 +1782,15 @@ class BillingsSubscriptionOpts implements JsonSerializable {
 		return($this->opts);
 	}
 
+	public function getOpt($key)
+	{
+		if (array_key_exists($key, $this->opts)) {
+			return $this->opts[$key];
+		}
+
+		return null;
+	}
+
 	public function jsonSerialize() {
 		return($this->opts);
 	}

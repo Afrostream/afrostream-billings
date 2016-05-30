@@ -10,6 +10,7 @@ require_once __DIR__ . '/../providers/afr/users/AfrUsersHandler.php';
 require_once __DIR__ . '/../providers/cashway/users/CashwayUsersHandler.php';
 require_once __DIR__ . '/../providers/orange/users/OrangeUsersHandler.php';
 require_once __DIR__ . '/../providers/bouygues/users/BouyguesUsersHandler.php';
+require_once __DIR__ . '/../providers/stripe/users/StripeUsersHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/utils.php';
 
@@ -231,7 +232,11 @@ class UsersHandler {
 				case 'bouygues' :
 					$bouyguesUsersHandler = new BouyguesUsersHandler();
 					$user_provider_uuid = $bouyguesUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
-					break;				
+					break;
+				case 'stripe':
+					$stripeUserHandler = new StripeUsersHandler();
+					$user_provider_uuid = $stripeUserHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider_name;
 					config::getLogger()->addError($msg);

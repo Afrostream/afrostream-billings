@@ -12,6 +12,7 @@ require_once __DIR__ . '/../providers/afr/subscriptions/AfrSubscriptionsHandler.
 require_once __DIR__ . '/../providers/cashway/subscriptions/CashwaySubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/orange/subscriptions/OrangeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/bouygues/subscriptions/BouyguesSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/stripe/subscriptions/StripeSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__.'/../utils/BillingsException.php';
 
@@ -139,6 +140,10 @@ class SubscriptionsHandler {
 						}
 
 						break;
+					case 'stripe':
+						$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
+						$billingSubscription = $stripeSubscriptionHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						break;
 					case 'celery' :
 						$msg = "unsupported feature for provider named : ".$provider->getName();
 						config::getLogger()->addError($msg);
@@ -221,8 +226,12 @@ class SubscriptionsHandler {
 							$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 							$db_subscription = $bouyguesSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
+						case 'stripe':
+							$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
+							$db_subscription = $stripeSubscriptionHandler->createDbSubscriptionFromApiSubscription($billingSubscription, $subOpts);
+							break;
 						default:
-							$msg = "unsupported feature for provider named : ".$provider->getName();
+							$msg = "record new: unsupported feature for provider named : ".$provider->getName();
 							config::getLogger()->addError($msg);
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 							break;
@@ -417,7 +426,7 @@ class SubscriptionsHandler {
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$user->getProviderId();
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -486,7 +495,7 @@ class SubscriptionsHandler {
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$user->getProviderId();
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -549,7 +558,7 @@ class SubscriptionsHandler {
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$user->getProviderId();
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -624,7 +633,7 @@ class SubscriptionsHandler {
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$user->getProviderId();
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -710,6 +719,10 @@ class SubscriptionsHandler {
 			case 'bouygues' :
 				$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 				$bouyguesSubscriptionsHandler->doFillSubscription($subscription);				
+				break;
+			case 'stripe':
+				$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
+				$stripeSubscriptionHandler->doFillSubscription($subscription);
 				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -962,7 +975,7 @@ class SubscriptionsHandler {
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$user->getProviderId();
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -1008,7 +1021,7 @@ class SubscriptionsHandler {
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$user->getProviderId();
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -1063,5 +1076,3 @@ class SubscriptionsHandler {
 	}
 	
 }
-
-?>
