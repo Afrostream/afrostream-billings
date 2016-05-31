@@ -729,11 +729,11 @@ class SubscriptionsHandler {
 			$subscription->setInTrial(($subscriptionDate->getTimestamp() > time()));
 		}
 
-		// set cancellable status regarding cycle on internal plan
+		// set cancelable status regarding cycle on internal plan
 		if ($internalPlan->getCycle()->getValue() === PlanCycle::once || $subscription->getSubStatus() != 'active') {
-			$subscription->setIsCancellable(false);
+			$subscription->setIsCancelable(false);
 		} else {
-			$subscription->setIsCancellable(true);
+			$subscription->setIsCancelable(true);
 		}
 	}
 	
