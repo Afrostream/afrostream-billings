@@ -249,6 +249,41 @@ class WebHooksController extends BillingsController {
 		config::getLogger()->addInfo('Receiving cashway webhook done successfully');
 	}
 	
+	public function netsizeWebHooksPosting(Request $request, Response $response, array $args) {
+		config::getLogger()->addInfo('Receiving netsize webhook...');
+		$post_data = file_get_contents('php://input');
+		try {
+			config::getLogger()->addInfo('Treating netsize webhook...');
+		
+			$webHooksHander = new WebHooksHander();
+		
+			config::getLogger()->addInfo('Saving netsize webhook...');
+			$billingsWebHook = $webHooksHander->doSaveWebHook('netsize', $post_data);
+			config::getLogger()->addInfo('Saving netsize webhook done successfully');
+		
+			config::getLogger()->addInfo('Processing netsize webhook, id='.$billingsWebHook->getId().'...');
+			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
+			config::getLogger()->addInfo('Processing netsize webhook done successfully, id='.$billingsWebHook->getId());
+		
+			config::getLogger()->addInfo('Treating netsize webhook done successfully, id='.$billingsWebHook->getId());
+			
+			$xml = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><notification-response version="1.2" xmlns="http://www.netsize.com/ns/pay/event"/>');
+		
+			$response = $response->withStatus(200);
+			$response->getBody()->write($xml->asXML());
+			return($response);
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while treating a netsize webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnBillingsExceptionAsJson($response, $e, 500));
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while treating a netsize webhook, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnExceptionAsJson($response, $e, 500));
+		}
+		config::getLogger()->addInfo('Receiving netsize webhook done successfully');
+	}
+	
 }
 
 ?>

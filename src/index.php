@@ -894,6 +894,13 @@ $app->post("/billings/providers/cashway/webhooks/", function ($request, $respons
 	return($webHooksController->cashwayWebHooksPosting($request, $response, $args));
 });
 
+//WebHooks - Netsize
+	
+$app->post("/billings/providers/netsize/webhooks/", function ($request, $response, $args) {
+	$webHooksController = new WebHooksController();
+	return($webHooksController->netsizeWebHooksPosting($request, $response, $args));
+});
+	
 //Testing purpose
 
 /*$app->get("/billings/api/test/", function ($request, $response, $args) {
