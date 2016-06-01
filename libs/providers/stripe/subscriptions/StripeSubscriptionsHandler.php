@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 
-use Stripe\StripeObject;
+use \Stripe\Subscription;
 
 class StripeSubscriptionsHandler extends SubscriptionsHandler
 {
@@ -49,21 +49,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             $subscription = $this->createSubscription($user, $plan, $subOpts);
         }
 
-        $billingSubscription = new BillingsSubscription();
-        $billingSubscription->setSubscriptionBillingUuid(guid());
-        $billingSubscription->setProviderId($provider->getId());
-        $billingSubscription->setUserId($user->getId());
-        $billingSubscription->setPlanId($plan->getId());
-        $billingSubscription->setSubUid($subscription['id']);
-        $billingSubscription->setSubStatus($this->getStatusFromProvider($subscription));
-        $billingSubscription->setSubActivatedDate($this->createDate($subscription['created']));
-        $billingSubscription->setSubCanceledDate($this->createDate($subscription['canceled_at']));
-        $billingSubscription->setSubExpiresDate(null);
-        $billingSubscription->setSubPeriodStartedDate($this->createDate($subscription['current_period_start']));
-        $billingSubscription->setSubPeriodEndsDate($this->createDate($subscription['current_period_end']));
-        $billingSubscription->setDeleted('false');
-
-        return $billingSubscription;
+        return $this->getNewBillingSubscription($provider, $user, $plan, $subscription);
     }
 
     /**
@@ -94,6 +80,71 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
         }
         return $billingSubscription;
+    }
+
+    /**
+     * Synchronize subscription between afrostream and provider for the given user
+     * 
+     * @param User     $user
+     * @param UserOpts $userOpts
+     *
+     * @throws BillingsException
+     */
+    public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts)
+    {
+        $provider = ProviderDAO::getProviderById($user->getProviderId());
+        if($provider == NULL) {
+            throw new BillingsException(new ExceptionType(ExceptionType::internal), "Unknow provider id {$user->getProviderId()}");
+        }
+
+        $customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
+        if (empty($customer['id'])) {
+            throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow customer');
+        }
+
+        $subscriptionList = $customer['subscriptions']['data'];
+        $recordedSubscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
+
+        foreach ($subscriptionList as $subscription) {
+            $providerPlanId = $subscription['plan']['id'];
+
+            $plan = PlanDAO::getPlanByUuid($provider->getId(), $providerPlanId);
+            if($plan == NULL) {
+                $msg = "plan with uuid=".$providerPlanId." not found";
+                throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+            }
+
+            $planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
+            $internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+            if($internalPlan == NULL) {
+                $msg = "plan with uuid=".$providerPlanId." for provider ".$provider->getName()." is not linked to an internal plan";
+                throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+            }
+
+            $billingSubscription = $this->findRecordedSubscriptionByProviderId($recordedSubscriptions, $subscription['id']);
+
+            // subscriptino not found, so we create it
+            if (is_null($billingSubscription)) {
+                $billingSubscription = $this->getNewBillingSubscription($provider, $user, $plan, $subscription);
+                $this->createDbSubscriptionFromApiSubscription($billingSubscription);
+            } else {
+                // we found one update and record it
+                $billingSubscription->setPlanId($plan->getId());
+                $billingSubscription->setSubStatus($this->getStatusFromProvider($subscription));
+                $billingSubscription->setSubActivatedDate($this->createDate($subscription['created']));
+                $billingSubscription->setSubCanceledDate($this->createDate($subscription['canceled_at']));
+                $billingSubscription->setSubPeriodStartedDate($this->createDate($subscription['current_period_start']));
+                $billingSubscription->setSubPeriodEndsDate($this->createDate($subscription['current_period_end']));
+
+                BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
+            }
+        }
+
+        foreach ($recordedSubscriptions as $billingSubscription) {
+            if (!$this->findProviderSubscriptionById($subscriptionList, $billingSubscription->getSubUid())) {
+                BillingsSubscriptionDAO::deleteBillingsSubscriptionById($billingSubscription->getId());
+            }
+        }
     }
 
     public function doFillSubscription(BillingsSubscription $subscription = NULL)
@@ -148,13 +199,13 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
     /**
      * Get mapped status between stripe and billing
      *
-     * @param StripeObject $subscription
+     * @param Subscription $subscription
      *
      * @throws BillingsException
      *
      * @return string
      */
-    protected function getStatusFromProvider(StripeObject $subscription)
+    protected function getStatusFromProvider(Subscription $subscription)
     {
         switch ($subscription['status']) {
             case 'active':
@@ -182,7 +233,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      *
      * @throws BillingsException If not found
      *
-     * @return string
+     * @return \Stripe\Subscription
      */
     protected function getSubscription($subscriptionProviderUuid, User $user)
     {
@@ -231,4 +282,68 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
 
     }
 
+    /**
+     * @param array  $recorded
+     * @param string $id
+     *
+     * @return BillingsSubscription|null
+     */
+    protected function findRecordedSubscriptionByProviderId(array $recorded, $id)
+    {
+        foreach ($recorded as $subscription) {
+            if ($subscription->getSubUid() == $id) {
+                return $subscription;
+            }
+        }
+    }
+
+    /**
+     * Check if the recorded id is always up on provider side
+     *
+     * @param array  $subscriptionList
+     * @param string $id
+     *
+     * @return bool
+     */
+    protected function findProviderSubscriptionById(array $subscriptionList, $id)
+    {
+        foreach ($subscriptionList as $subscription) {
+            if ($subscription['id'] == $id) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Create new BillingSubscription entity
+     *
+     * @param Provider     $provider
+     * @param User         $user
+     * @param Plan         $plan
+     * @param Subscription $subscription
+     *
+     * @throws BillingsException
+     *
+     * @return BillingsSubscription
+     */
+    protected function getNewBillingSubscription(Provider $provider, User $user, Plan $plan, Subscription $subscription)
+    {
+        $billingSubscription = new BillingsSubscription();
+        $billingSubscription->setSubscriptionBillingUuid(guid());
+        $billingSubscription->setProviderId($provider->getId());
+        $billingSubscription->setUserId($user->getId());
+        $billingSubscription->setPlanId($plan->getId());
+        $billingSubscription->setSubUid($subscription['id']);
+        $billingSubscription->setSubStatus($this->getStatusFromProvider($subscription));
+        $billingSubscription->setSubActivatedDate($this->createDate($subscription['created']));
+        $billingSubscription->setSubCanceledDate($this->createDate($subscription['canceled_at']));
+        $billingSubscription->setSubExpiresDate(null);
+        $billingSubscription->setSubPeriodStartedDate($this->createDate($subscription['current_period_start']));
+        $billingSubscription->setSubPeriodEndsDate($this->createDate($subscription['current_period_end']));
+        $billingSubscription->setDeleted('false');
+
+        return $billingSubscription;
+    }
 }

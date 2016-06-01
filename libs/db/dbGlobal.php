@@ -1276,7 +1276,35 @@ class BillingsSubscriptionDAO {
 		$row = pg_fetch_row($result);
 		return(self::getBillingsSubscriptionById($row[0]));
 	}
-	
+
+	/**
+	 * @param BillingsSubscription $subscription
+	 * 
+	 * @return BillingsSubscription|null
+	 */
+	public static function updateBillingsSubscription(BillingsSubscription $subscription)
+	{
+		$query = 'UPDATE billing_subscriptions 
+		SET planid=$1,
+		sub_status=$2,
+		sub_activated_date=$3,
+		sub_canceled_date=$4,
+		sub_period_started_date=$5,
+		sub_period_ends_date=$6
+		WHERE _id=$7';
+
+		pg_query_params(config::getDbConn(), $query, [
+			$subscription->getPlanId(),
+			$subscription->getSubStatus(),
+			$subscription->getSubActivatedDate(),
+			$subscription->getSubCanceledDate(),
+			$subscription->getSubPeriodStartedDate(),
+			$subscription->getSubPeriodEndsDate(),
+			$subscription->getId()
+		]);
+
+		return self::getBillingsSubscriptionById($subscription->getId());
+	}
 
 	//planid
 	public static function updatePlanId(BillingsSubscription $subscription) {

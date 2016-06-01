@@ -186,7 +186,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			}
 		}
 		//DELETE UNUSED SUBSCRIPTIONS (DELETED FROM THIRD PARTY)
-		foreach ($db_subscriptions as $db_subscription) {
+		foreach ($db_stubscriptions as $db_subscription) {
 			$api_subscription = $this->getApiSubscriptionByUuid($api_subscriptions, $db_subscription->getSubUid());
 			if($api_subscription == NULL) {
 				BillingsSubscriptionDAO::deleteBillingsSubscriptionById($db_subscription->getId());
