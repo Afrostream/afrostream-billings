@@ -1290,7 +1290,8 @@ class BillingsSubscriptionDAO {
 		sub_activated_date=$3,
 		sub_canceled_date=$4,
 		sub_period_started_date=$5,
-		sub_period_ends_date=$6
+		sub_period_ends_date=$6,
+		updated_date = CURRENT_TIMESTAMP
 		WHERE _id=$7';
 
 		pg_query_params(config::getDbConn(), $query, [
