@@ -5,6 +5,7 @@ require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/recurly/webhooks/RecurlyWebHooksHandler.php';
 require_once __DIR__ . '/../providers/gocardless/webhooks/GocardlessWebHooksHandler.php';
 require_once __DIR__ . '/../providers/cashway/webhooks/CashwayWebHooksHandler.php';
+require_once __DIR__ . '/../providers/stripe/webhooks/StripeWebHooksHandler.php';
 
 class WebHooksHander {
 	

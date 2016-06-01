@@ -875,6 +875,13 @@ $app->post("/billings/providers/recurly/webhooks/", function ($request, $respons
 	return($webHooksController->recurlyWebHooksPosting($request, $response, $args));
 });
 
+//WebHooks - Stripe
+
+$app->post("/billings/providers/stripe/webhooks/", function ($request, $response, $args) {
+	$webHooksController = new WebHooksController();
+	return($webHooksController->stripeWebHooksPosting($request, $response, $args));
+});
+
 //WebHooks - Gocardless
 
 $app->post("/billings/providers/gocardless/webhooks/", function ($request, $response, $args) {
