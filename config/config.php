@@ -238,6 +238,24 @@ if(getEnv('BOUYGUES_SUBSCRIPTION_PERIOD_LENGTH') === false) {
 	putEnv('BOUYGUES_SUBSCRIPTION_PERIOD_LENGTH=1');
 }
 
+#Netsize
+
+if(getEnv('NETSIZE_API_URL') === false) {
+	putEnv('NETSIZE_API_URL=http://qa.pay.netsize.com/API/1.2/');
+}
+
+if(getEnv('NETSIZE_API_AUTH_KEY') === false) {
+	putEnv('NETSIZE_API_AUTH_KEY=1234');
+}
+
+if(getEnv('NETSIZE_API_SERVICE_ID') === false) {
+	putEnv('NETSIZE_API_SERVICE_ID=toto');
+}
+
+if(getEnv('NETSIZE_API_PRODUCT_TYPE') === false) {
+	putEnv('NETSIZE_API_PRODUCT_TYPE=121');
+}
+
 #proxy
 
 if(getEnv('PROXY_HOST') === false) {

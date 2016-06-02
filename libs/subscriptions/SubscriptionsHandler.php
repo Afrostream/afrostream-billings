@@ -12,6 +12,7 @@ require_once __DIR__ . '/../providers/afr/subscriptions/AfrSubscriptionsHandler.
 require_once __DIR__ . '/../providers/cashway/subscriptions/CashwaySubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/orange/subscriptions/OrangeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/bouygues/subscriptions/BouyguesSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/netsize/subscriptions/NetsizeSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__.'/../utils/BillingsException.php';
 
@@ -170,6 +171,10 @@ class SubscriptionsHandler {
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						break;
+					case 'netsize' : 
+						$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+						$sub_uuid = $netsizeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						break;						
 					default:
 						$msg = "unsupported feature for provider named : ".$provider->getName();
 						config::getLogger()->addError($msg);
@@ -221,6 +226,10 @@ class SubscriptionsHandler {
 							$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 							$db_subscription = $bouyguesSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
+						case 'netsize' :
+							$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+							$db_subscription = $netsizeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							break;							
 						default:
 							$msg = "unsupported feature for provider named : ".$provider->getName();
 							config::getLogger()->addError($msg);
@@ -298,6 +307,10 @@ class SubscriptionsHandler {
 					break;
 				case 'bouygues' :
 					$subscriptionsHandler = new BouyguesSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'netsize' :
+					$subscriptionsHandler = new NetsizeSubscriptionsHandler();
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				default:
@@ -388,7 +401,11 @@ class SubscriptionsHandler {
 				case 'bouygues' :
 					$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 					$bouyguesSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
-					break;				
+					break;
+				case 'netsize' :
+					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+					$netsizeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
+					break;
 				default:
 					//nothing to do (unknown)
 					break;
@@ -452,6 +469,10 @@ class SubscriptionsHandler {
 					$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 					$db_subscription = $bouyguesSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
 					break;
+				case 'netsize' :
+					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+					$db_subscription = $netsizeSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
@@ -512,6 +533,10 @@ class SubscriptionsHandler {
 				case 'idipper' :
 					$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
 					$db_subscription = $idipperSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
+					break;
+				case 'netsize' :
+					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+					$db_subscription = $netsizeSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -587,6 +612,10 @@ class SubscriptionsHandler {
 				case 'bouygues' :
 					$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 					$db_subscription = $bouyguesSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'netsize' :
+					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+					$db_subscription = $netsizeSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -711,6 +740,10 @@ class SubscriptionsHandler {
 				$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 				$bouyguesSubscriptionsHandler->doFillSubscription($subscription);				
 				break;
+			case 'netsize' :
+				$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+				$netsizeSubscriptionsHandler->doFillSubscription($subscription);
+				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
 				config::getLogger()->addError($msg);
@@ -729,11 +762,11 @@ class SubscriptionsHandler {
 			$subscription->setInTrial(($subscriptionDate->getTimestamp() > time()));
 		}
 
-		// set cancelable status regarding cycle on internal plan
+		// set cancellable status regarding cycle on internal plan
 		if ($internalPlan->getCycle()->getValue() === PlanCycle::once || $subscription->getSubStatus() != 'active') {
-			$subscription->setIsCancelable(false);
+			$subscription->setIsCancellable(false);
 		} else {
-			$subscription->setIsCancelable(true);
+			$subscription->setIsCancellable(true);
 		}
 	}
 	
