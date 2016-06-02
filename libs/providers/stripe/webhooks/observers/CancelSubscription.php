@@ -27,6 +27,8 @@ class CancelSubscription implements HookInterface
         $billingSubscription->setSubStatus('canceled');
         // take care date reflect the date of canceling subscption not the end of access
         $billingSubscription->setSubExpiresDate( new \DateTime(date('c', $subscription['canceled_at'])));
+
+        BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
     }
     
 }
