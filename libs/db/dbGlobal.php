@@ -225,6 +225,25 @@ class UserOpts {
 	public function setOpt($key, $value) {
 		$this->opts[$key] = $value;
 	}
+
+	/**
+	 * Get value for the given option
+	 * If filter is requested (default) the return value will be filtered to avoid bad data (ie. firstNameValue,...)
+	 *
+	 * @param string $key
+	 * @param bool   $filter
+	 *
+	 * @return string|null
+	 */
+	public function getOpt($key, $filter = true)
+	{
+		$badValues = ['firstNameValue', 'lastNameValue'];
+		if (array_key_exists($key, $this->opts) && !in_array($this->opts[$key], $badValues)) {
+			return $this->opts[$key];
+		}
+
+		return null;
+	}
 	
 	public function setOpts($opts) {
 		$this->opts = $opts;

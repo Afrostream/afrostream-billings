@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__.'/observers/HookInterface.php';
 require_once __DIR__.'/observers/CancelSubscription.php';
+require_once __DIR__.'/observers/EmailCanceledSubscription.php';
 
 /**
  * Handler for stripe web hook
@@ -72,6 +73,7 @@ class StripeWebHooksHandler
      */
     public function loadHooks()
     {
-        $this->addHookObserver(new CancelSubscription());
+        $this->addHookObserver(new CancelSubscription())
+            ->addHookObserver(new EmailCanceledSubscription());
     }
 }
