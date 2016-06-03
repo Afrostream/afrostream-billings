@@ -3,24 +3,51 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__.'/observers/HookInterface.php';
+require_once __DIR__.'/observers/CancelSubscription.php';
 
+/**
+ * Handler for stripe web hook
+ *
+ * Web hook are event sent by stripe who reflect the modification on stripe side
+ * like subscriptino updated, customer canceled a subscription,...
+ */
 class StripeWebHooksHandler
 {
+    /**
+     * @var SplObjectStorage
+     */
     protected $observers;
 
+    /**
+     * StripeWebHooksHandler constructor.
+     */
     public function __construct()
     {
         $this->observers = new \SplObjectStorage();
         \Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
-
     }
 
+    /**
+     * Add a hook observer
+     *
+     * @param HookInterface $hookObserver
+     *
+     * @return $this
+     */
     public function addHookObserver(HookInterface $hookObserver)
     {
         $this->observers->attach($hookObserver);
+
+        return $this;
     }
 
-    public function doProcessWebHook(BillingsWebHook $billingsWebHook, $update_type = 'hook')
+    /**
+     * Process the hook sent by stripe
+     *
+     * @param BillingsWebHook $billingsWebHook
+     * @param string          $updateType
+     */
+    public function doProcessWebHook(BillingsWebHook $billingsWebHook, $updateType = 'hook')
     {
         $postedEvent = json_decode($billingsWebHook->getPostData(), true);
 
@@ -28,7 +55,7 @@ class StripeWebHooksHandler
         $event = \Stripe\Event::retrieve($postedEvent['id']);
 
         // bad event, return quietly
-        if (empty($event['id'])) {
+        if (empty($event['id']) || empty($event['data']['object'])) {
             return;
         }
 
@@ -38,5 +65,13 @@ class StripeWebHooksHandler
         foreach ($this->observers as $hookObserver) {
             $hookObserver->event($event, $provider);
         }
+    }
+
+    /**
+     * Load all hook
+     */
+    public function loadHooks()
+    {
+        $this->addHookObserver(new CancelSubscription());
     }
 }

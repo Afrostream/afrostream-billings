@@ -2,10 +2,14 @@
 require_once __DIR__ . '/../../../../../config/config.php';
 require_once __DIR__ . '/../../../../utils/utils.php';
 require_once __DIR__ . '/../../../../utils/BillingsException.php';
+require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__.'/HookInterface.php';
 
 use \Stripe\Event;
 
+/**
+ * Update billing subscription to mark as canceled
+ */
 class CancelSubscription implements HookInterface
 {
     const REQUESTED_HOOK_TYPE = 'customer.subscription.deleted';
@@ -16,7 +20,7 @@ class CancelSubscription implements HookInterface
             return;
         }
 
-        if (empty($event['data']['object']) || ($event['data']['object']['object'] !== 'subscription')) {
+        if ($event['data']['object']['object'] !== 'subscription') {
             return null;
         }
 
@@ -25,8 +29,8 @@ class CancelSubscription implements HookInterface
 
         // update status to cancel
         $billingSubscription->setSubStatus('canceled');
-        // take care date reflect the date of canceling subscption not the end of access
-        $billingSubscription->setSubExpiresDate( new \DateTime(date('c', $subscription['canceled_at'])));
+        // take care date reflect the date of canceling subscription not the end of access
+        $billingSubscription->setSubCanceledDate( new \DateTime(date('c', $subscription['canceled_at'])));
 
         BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
     }

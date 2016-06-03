@@ -58,6 +58,12 @@ class WebHooksHander {
 					$cashwayWebHooksHandler = new CashwayWebHooksHandler();
 					$cashwayWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
 					break;
+				case 'stripe':
+					$stripeWebHookHandler = new StripeWebHooksHandler();
+					$stripeWebHookHandler->loadHooks();
+					
+					$stripeWebHookHandler->doProcessWebHook($billingsWebHook, $update_type);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);

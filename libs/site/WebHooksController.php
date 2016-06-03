@@ -132,11 +132,14 @@ class WebHooksController extends BillingsController {
 			$webHooksHander = new WebHooksHander();
 
 			config::getLogger()->addInfo('Saving stripe webhook...');
-			$billingsWebHook = $webHooksHander->doSaveWebHook('stripe', $post_data);
-			config::getLogger()->addInfo('Saving stripe webhook done successfully');
 
+			$billingsWebHook = $webHooksHander->doSaveWebHook('stripe', $post_data);
+
+			config::getLogger()->addInfo('Saving stripe webhook done successfully');
 			config::getLogger()->addInfo('Processing stripe webhook, id='.$billingsWebHook->getId().'...');
+
 			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
+
 			config::getLogger()->addInfo('Processing stripe webhook done successfully, id='.$billingsWebHook->getId());
 
 			config::getLogger()->addInfo('Treating stripe webhook done successfully, id='.$billingsWebHook->getId());
