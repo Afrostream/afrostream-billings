@@ -1297,10 +1297,10 @@ class BillingsSubscriptionDAO {
 		pg_query_params(config::getDbConn(), $query, [
 			$subscription->getPlanId(),
 			$subscription->getSubStatus(),
-			$subscription->getSubActivatedDate(),
-			$subscription->getSubCanceledDate(),
-			$subscription->getSubPeriodStartedDate(),
-			$subscription->getSubPeriodEndsDate(),
+			dbGlobal::toISODate($subscription->getSubActivatedDate()),
+			dbGlobal::toISODate($subscription->getSubCanceledDate()),
+			dbGlobal::toISODate($subscription->getSubPeriodStartedDate()),
+			dbGlobal::toISODate($subscription->getSubPeriodEndsDate()),
 			$subscription->getId()
 		]);
 
@@ -1315,7 +1315,7 @@ class BillingsSubscriptionDAO {
 						$subscription->getId()));
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
-	
+
 	//subStatus
 	public static function updateSubStatus(BillingsSubscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, sub_status = $1 WHERE _id = $2";
