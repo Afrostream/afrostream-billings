@@ -238,6 +238,11 @@ if(getEnv('BOUYGUES_SUBSCRIPTION_PERIOD_LENGTH') === false) {
 	putEnv('BOUYGUES_SUBSCRIPTION_PERIOD_LENGTH=1');
 }
 
+#If 1, always consider that customer is a subscriber
+if(getEnv('BOUYGUES_TV_HACK_ACTIVATED') === false) {
+	putEnv('BOUYGUES_TV_HACK_ACTIVATED=0');
+}
+
 #proxy
 
 if(getEnv('PROXY_HOST') === false) {
