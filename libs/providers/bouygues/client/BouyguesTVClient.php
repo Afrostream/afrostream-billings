@@ -74,7 +74,13 @@ class BouyguesSubscriptionResponse {
 		$this->response = json_decode($json, true);
 		$this->bouyguesSubscription = new BouyguesSubscription();
 		$this->bouyguesSubscription->setResult($this->response['result']);
-		$this->bouyguesSubscription->setResultMessage($this->response['resultMessage']);
+		if(getEnv('BOUYGUES_TV_HACK_ACTIVATED') == 1) {
+			//HACK : always 'SubscribedNotCoupled' = always a subscriber
+			$this->bouyguesSubscription->setResultMessage('SubscribedNotCoupled');
+		} else {
+			//NO HACK : GET REAL VALUE
+			$this->bouyguesSubscription->setResultMessage($this->response['resultMessage']);
+		}
 	}
 	
 	public function getBouyguesSubscription() {

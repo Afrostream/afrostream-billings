@@ -248,7 +248,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addInfo("netsize subscription expiring...");
 			if(
 					$subscription->getSubStatus() == "expired"
-				)
+			)
 			{
 				//nothing to do : already done or in process
 			} else {
