@@ -39,7 +39,9 @@ class StripeWebHooksHandler
      */
     public function addHookObserver(HookInterface $hookObserver)
     {
-        $this->observers->attach($hookObserver);
+        if (!$this->observers->contains($hookObserver)) {
+            $this->observers->attach($hookObserver);
+        }
 
         return $this;
     }
