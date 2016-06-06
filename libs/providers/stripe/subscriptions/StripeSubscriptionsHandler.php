@@ -147,6 +147,11 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         }
     }
 
+    /**
+     * Fill subscription to set active status
+     *
+     * @param BillingsSubscription|NULL $subscription
+     */
     public function doFillSubscription(BillingsSubscription $subscription = NULL)
     {
         if($subscription == NULL) {
@@ -181,6 +186,63 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         }
     }
 
+    /**
+     * Cancel a subscription
+     *
+     * @param BillingsSubscription $billingSubscription
+     * @param DateTime             $cancelDate
+     */
+    public function doCancelSubscription(BillingsSubscription $billingSubscription, \DateTime $cancelDate)
+    {
+        // already canceled, return gracefully
+        if (in_array($billingSubscription->getSubStatus(), ['canceled', 'expired'])) {
+            return;
+        }
+
+        // get user
+        $user = UserDAO::getUserById($billingSubscription->getUserId());
+
+        $subscription = $this->getSubscription($billingSubscription, $user);
+
+        $subscription->cancel();
+        $subscription->save();
+
+        $billingSubscription->setSubCanceledDate($cancelDate);
+        $billingSubscription->setSubStatus('canceled');
+
+        BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
+    }
+
+
+    /**
+     * Change subscription owned by user
+     *
+     * @param BillingsSubscription $billingSubscription
+     * @param InternalPlan         $internalPlan
+     * @param InternalPlanOpts     $internalPlanOpts
+     * @param Plan                 $plan
+     * @param PlanOpts             $planOpts
+     */
+    public function doUpdateInternalPlan(
+        BillingsSubscription $billingSubscription,
+        InternalPlan $internalPlan,
+        InternalPlanOpts $internalPlanOpts,
+        Plan $plan,
+        PlanOpts $planOpts
+    )
+    {
+        $user = UserDAO::getUserById($billingSubscription->getUserId());
+
+        $subscription = $this->getSubscription($billingSubscription, $user);
+        $subscription->plan = $plan->getPlanUuid();
+
+        $subscription->save();
+
+        $billingSubscription->setPlanId($plan->getId());
+
+        BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
+    }
+    
     /**
      * Return date with the given timestamp
      *

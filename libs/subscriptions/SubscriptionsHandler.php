@@ -401,7 +401,11 @@ class SubscriptionsHandler {
 				case 'bouygues' :
 					$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 					$bouyguesSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
-					break;				
+					break;
+				case 'stripe':
+					$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
+					$stripeSubscriptionHandler->doUpdateUserSubscriptions($user, $userOpts);
+					break;
 				default:
 					//nothing to do (unknown)
 					break;
@@ -504,6 +508,7 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$db_subscription_before_update = clone $db_subscription;
+			$doSendSubscription = true;
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
@@ -526,14 +531,21 @@ class SubscriptionsHandler {
 					$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
 					$db_subscription = $idipperSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
+				case 'stripe':
+					$stripeSubscriptinoHandler = new StripeSubscriptionsHandler();
+					$stripeSubscriptinoHandler->doCancelSubscription($db_subscription, $cancel_date);
+					$doSendSubscription = false; // mail is sent on event notification by stripe
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
-			//
-			$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			 if ($doSendSubscription) {
+				 $this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			 }
+
 			//
 			$this->doFillSubscription($db_subscription);
 			//
@@ -1054,6 +1066,10 @@ class SubscriptionsHandler {
 				case 'recurly' :
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
 					$db_subscription = $recurlySubscriptionsHandler->doUpdateInternalPlan($db_subscription, $internalPlan, $internalPlanOpts, $providerPlan, $providerPlanOpts);
+					break;
+				case 'stripe':
+					$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
+					$stripeSubscriptionHandler->doUpdateInternalPlan($db_subscription, $internalPlan, $internalPlanOpts, $providerPlan, $providerPlanOpts);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();

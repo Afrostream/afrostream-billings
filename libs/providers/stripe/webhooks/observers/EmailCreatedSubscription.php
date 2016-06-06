@@ -6,20 +6,19 @@ require_once __DIR__ . '/../../../../db/dbGlobal.php';
 require_once __DIR__.'/HookInterface.php';
 require_once __DIR__.'/../EmailTrait.php';
 
-use \Stripe\Event;
+use Stripe\Event;
 
-
-class EmailCanceledSubscription implements HookInterface
+class EmailCreatedSubscription implements HookInterface
 {
-    const REQUESTED_HOOK_TYPE = 'customer.subscription.deleted';
+    const REQUESTED_HOOK_TYPE = 'customer.subscription.created';
 
     protected $sendGridTemplateId;
 
     use EmailTrait;
-    
+
     public function __construct()
     {
-        $this->sendGridTemplateId = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
+        $this->sendGridTemplateId = getenv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID');
     }
 
     /**
@@ -38,7 +37,7 @@ class EmailCanceledSubscription implements HookInterface
         }
 
         // check if mail is enbaled
-        if (!getEnv('EVENT_EMAIL_ACTIVATED')) {
+        if (!getenv('EVENT_EMAIL_ACTIVATED')) {
             return;
         }
 
@@ -51,8 +50,7 @@ class EmailCanceledSubscription implements HookInterface
         $userMail = $userOpts->getOpt('email');
         $substitutions = $this->getSendGridSubstitution($user, $userOpts, $billingSubscription);
 
-        
-        
         $this->sendMail($this->sendGridTemplateId, $userMail, $substitutions);
+
     }
 }
