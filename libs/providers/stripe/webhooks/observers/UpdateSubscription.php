@@ -25,11 +25,13 @@ class UpdateSubscription implements HookInterface
         }
 
         $subscription = $event['data']['object'];
+        $previousAttributes = $event['data']['previous_attributes'];
+        
         $billingSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $subscription['id']);
 
         // check previous attribute to see if a plan have changed
-        if (!empty($subscription['previous_attributes']['plan'])) {
-            $newProviderPlan = PlanDAO::getPlanById($subscription['plan']['id']);
+        if (!empty($previousAttributes['plan'])) {
+            $newProviderPlan = PlanDAO::getPlanByUuid($provider->getId(), $subscription['plan']['id']);
 
             if (empty($newProviderPlan)) {
                 throw new BillingsException(ExceptionType::internal , sprintf('Unknow subscription %s provided by stripe', $subscription['plan']['id']));
