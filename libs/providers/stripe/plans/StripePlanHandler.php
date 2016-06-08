@@ -19,6 +19,11 @@ class StripePlanHandler
      */
     public function createProviderPlan(InternalPlan $internalPlan)
     {
+        // stripe does not support plan who is'nt recurrent
+        if ($internalPlan->getCycle() != PlanCycle::auto) {
+            return $internalPlan->getInternalPlanUuid();
+        }
+
         $data = [
             'id' => $internalPlan->getInternalPlanUuid(),
             'amount' => $internalPlan->getAmountInCents(),
