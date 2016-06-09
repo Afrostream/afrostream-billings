@@ -33,7 +33,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				$netsizeClient = new NetsizeClient();
 				
 				$initializeSubscriptionRequest = new InitializeSubscriptionRequest();
-				//$initializeSubscriptionRequest->setFlowId(?);
+				$initializeSubscriptionRequest->setFlowId($subOpts->getOpts()['flowId']);
 				$initializeSubscriptionRequest->setSubscriptionModelId($plan->getPlanUuid());
 				$initializeSubscriptionRequest->setProductName($plan->getName());
 				$initializeSubscriptionRequest->setProductType(getEnv('NETSIZE_API_PRODUCT_TYPE'));
@@ -41,8 +41,12 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				$initializeSubscriptionRequest->setCountryCode('FR');
 				$initializeSubscriptionRequest->setLanguageCode('fr');
 				$initializeSubscriptionRequest->setMerchantUserId($user->getUserBillingUuid());
-	
+				//TODO : Testing purpose only
+				//$initializeSubscriptionRequest->addAdvancedParam('QaScenario', 'Success');
+				//
 				$initializeSubscriptionResponse = $netsizeClient->initializeSubscription($initializeSubscriptionRequest);
+				
+				$subOpts->setOpt('authUrl', $initializeSubscriptionResponse->getAuthUrlUrl());
 				
 				$sub_uuid = $initializeSubscriptionResponse->getTransactionId();
 			}
@@ -64,7 +68,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		$netsizeClient = new NetsizeClient();
 		
 		$getStatusRequest = new GetStatusRequest();
-		$getStatusRequest->setTransactionId($subscription_provider_uuid);
+		$getStatusRequest->setTransactionId($sub_uuid);
 		
 		$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 		//
@@ -73,7 +77,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 	}
 	
 	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, GetStatusResponse $api_subscription, $update_type, $updateId) {
-		config::getLogger()->addInfo("netsize dbsubscription creation for userid=".$user->getId().", netsize_subscription_uuid=".$api_subscription->getUserId()."...");
+		config::getLogger()->addInfo("netsize dbsubscription creation for userid=".$user->getId().", netsize_subscription_uuid=".$api_subscription->getTransactionId()."...");
 		//CREATE
 		$now = new DateTime();
 		$db_subscription = new BillingsSubscription();
@@ -81,34 +85,31 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setProviderId($provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
-		$db_subscription->setSubUid($api_subscription->uuid);
+		$db_subscription->setSubUid($api_subscription->getTransactionId());
 		switch ($api_subscription->getTransactionStatusCode()) {
+			case 110 ://Authentification Pending
 			case 400 ://Started
 			case 410 ://Pending
 				$db_subscription->setSubStatus('future');
 				break;
 			case 420 ://Activated
 			case 421 ://Activated (Auto Billed)
-			case 422 ://Activated (Termination in Progress)
 				$db_subscription->setSubStatus('active');
 				$db_subscription->setSubActivatedDate($now);
 				$db_subscription->setSubPeriodStartedDate($now);
 				//$db_subscription->setSubPeriodEndsDate(?);
 				break;
+			case 422 ://Activated (Termination in Progress)
 			case 432 ://Cancelled
 				$db_subscription->setSubStatus('canceled');
 				$db_subscription->setSubCanceledDate($now);
 				break;
 			case 430 ://Expired
 			case 431 ://Suspended
+			case 433 ://Failed
 				$db_subscription->setSubStatus('expired');
 				$db_subscription->setSubExpiresDate($now);
 				break;
-			case 433 ://Failed
-				$msg = "netsize subscription creation failed (code 433)";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				//break;
 			default :
 				$msg = "unknown subscription state : ".$api_subscription->getTransactionStatusCode();
 				config::getLogger()->addError($msg);
@@ -128,7 +129,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
 		}
 		//<-- DATABASE -->
-		config::getLogger()->addInfo("netsize dbsubscription creation for userid=".$user->getId().", netsize_subscription_uuid=".$api_subscription->getUserId()." done successfully, id=".$db_subscription->getId());
+		config::getLogger()->addInfo("netsize dbsubscription creation for userid=".$user->getId().", netsize_subscription_uuid=".$api_subscription->getTransactionId()." done successfully, id=".$db_subscription->getId());
 		return($db_subscription);
 	}
 	
@@ -329,7 +330,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 	}
 
 	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, GetStatusResponse $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
-		config::getLogger()->addInfo("netsize dbsubscription update for userid=".$user->getId().", netsize_subscription_uuid=".$api_subscription->getUserId().", id=".$db_subscription->getId()."...");
+		config::getLogger()->addInfo("netsize dbsubscription update for userid=".$user->getId().", netsize_subscription_uuid=".$api_subscription->getTransactionId().", id=".$db_subscription->getId()."...");
 		//UPDATE
 		$now = new DateTime();
 		//$db_subscription->setProviderId($provider->getId());//STATIC
@@ -344,7 +345,6 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 			case 420 ://Activated
 			case 421 ://Activated (Auto Billed)
-			case 422 ://Activated (Termination in Progress)
 				$db_subscription->setSubStatus('active');
 				if($db_subscription->getSubActivatedDate() == NULL) {
 					$db_subscription->setSubActivatedDate($now);//assume it's now only if not already set
@@ -356,6 +356,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				}
 				//$db_subscription->setSubPeriodEndsDate(?);
 				break;
+			case 422 ://Activated (Termination in Progress)
 			case 432 ://Cancelled
 				$db_subscription->setSubStatus('canceled');
 				if($db_subscription->getSubCanceledDate() == NULL) {
@@ -365,17 +366,13 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 			case 430 ://Expired
 			case 431 ://Suspended
+			case 433 ://Failed
 				$db_subscription->setSubStatus('expired');
 				if($db_subscription->getSubExpiresDate() == NULL) {
 					$db_subscription->setSubExpiresDate($now);//assume it's now only if not already set
 					$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
 				}
 				break;
-			case 433 ://Failed
-				$msg = "netsize subscription creation failed (code 433)";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				//break;
 			default :
 				$msg = "unknown subscription state : ".$api_subscription->getTransactionStatusCode();
 				config::getLogger()->addError($msg);
@@ -391,8 +388,45 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateId($db_subscription);
 		//$db_subscription->setDeleted('false');//STATIC
 		//
-		config::getLogger()->addInfo("netsize dbsubscription update for userid=".$user->getId().", netsize_subscription_uuid=".$api_subscription->getUserId().", id=".$db_subscription->getId()." done successfully");
+		config::getLogger()->addInfo("netsize dbsubscription update for userid=".$user->getId().", netsize_subscription_uuid=".$api_subscription->getTransactionId().", id=".$db_subscription->getId()." done successfully");
 		return($db_subscription);
+	}
+	
+	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		if($subscription == NULL) {
+			return;
+		}
+		$is_active = NULL;
+		switch($subscription->getSubStatus()) {
+			case 'active' :
+			case 'canceled' :
+				$now = new DateTime();
+				//check dates
+				if(
+						($now < $subscription->getSubPeriodEndsDate())
+						&&
+						($now >= $subscription->getSubPeriodStartedDate())
+						) {
+							//inside the period
+							$is_active = 'yes';
+						} else {
+							//outside the period
+							$is_active = 'no';
+						}
+						break;
+			case 'future' :
+				$is_active = 'no';
+				break;
+			case 'expired' :
+				$is_active = 'no';
+				break;
+			default :
+				$is_active = 'no';
+				config::getLogger()->addWarning("netsize dbsubscription unknown subStatus=".$subscription->getSubStatus().", netsize_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
+				break;
+		}
+		//done
+		$subscription->setIsActive($is_active);
 	}
 	
 }

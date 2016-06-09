@@ -245,11 +245,11 @@ if(getEnv('NETSIZE_API_URL') === false) {
 }
 
 if(getEnv('NETSIZE_API_AUTH_KEY') === false) {
-	putEnv('NETSIZE_API_AUTH_KEY=1234');
+	putEnv('NETSIZE_API_AUTH_KEY=368b8163dca54e64a17ec098d63d2464');
 }
 
 if(getEnv('NETSIZE_API_SERVICE_ID') === false) {
-	putEnv('NETSIZE_API_SERVICE_ID=toto');
+	putEnv('NETSIZE_API_SERVICE_ID=1');
 }
 
 if(getEnv('NETSIZE_API_PRODUCT_TYPE') === false) {
