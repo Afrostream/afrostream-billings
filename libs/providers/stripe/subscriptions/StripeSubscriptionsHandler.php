@@ -43,10 +43,14 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         BillingsSubscriptionOpts $subOpts
     )
     {
-        if ($subscriptionProviderUuid) {
-            $subscription = $this->getSubscription($subscriptionProviderUuid, $user);
+        if ($internalPlan->getCycle() == PlanCycle::auto) {
+            $subscription = $this->chargeCustomer($user, $plan, $subOpts, $internalPlan);
         } else {
-            $subscription = $this->createSubscription($user, $plan, $subOpts);
+            if ($subscriptionProviderUuid) {
+                $subscription = $this->getSubscription($subscriptionProviderUuid, $user);
+            } else {
+                $subscription = $this->createSubscription($user, $plan, $subOpts);
+            }
         }
 
         return $this->getNewBillingSubscription($provider, $user, $plan, $subscription);
@@ -342,6 +346,91 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
 
         return $subscription;
 
+    }
+
+    /**
+     * Charge a customer for paln who's not recurrent
+     *
+     * @param User                     $user
+     * @param Plan                     $plan
+     * @param BillingsSubscriptionOpts $subOpts
+     * @param InternalPlan             $internalPlan
+     *
+     * @throws BillingsException
+     *
+     * @return Subscription
+     */
+    protected function chargeCustomer(User $user, Plan $plan, BillingsSubscriptionOpts $subOpts, InternalPlan $internalPlan)
+    {
+        if (is_null($subOpts->getOpt('stripeToken'))) {
+            throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription. Missing stripe token');
+        }
+
+        try {
+            // assign token to customer then charge him
+            $customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
+            $customer->source = $subOpts->getOpt('stripeToken');
+            $customer->save();
+
+            $charge = \Stripe\Charge::create(array(
+                "amount" => $internalPlan->getAmountInCents(),
+                "currency" => $internalPlan->getCurrency(),
+                'customer' => $user->getUserProviderUuid(),
+                "description" => $plan->getPlanUuid()
+            ));
+
+            if (!$charge->paid) {
+                throw new \Exception('Paiement refused');
+            }
+
+
+            $subscription = new Subscription();
+            $subscription['id'] = $charge['id'];
+            $subscription['created'] = $charge['created'];
+            $subscription['canceled_at'] = null;
+            $subscription['current_period_start'] = $charge['created'];
+            $subscription['current_period_end'] = $this->calculateSubscriptionDateEnd($internalPlan, $charge['created']);
+            $subscription['status'] = 'active';
+
+            return $subscription;
+
+        } catch (\Exception $e) {
+            throw new BillingsException(new ExceptionType(ExceptionType::internal), "Error while charging customer : ".$e->getMessage());
+        }
+
+    }
+
+    /**
+     * Calculate date end of a subscription who is not recurrent
+     *
+     * @param InternalPlan $internalPlan
+     * @param int          $timestampStart
+     *
+     * @return int
+     */
+    protected function calculateSubscriptionDateEnd(InternalPlan $internalPlan, $timestampStart)
+    {
+        $date = new DateTime();
+        $date->setTimestamp($timestampStart);
+
+        switch ($internalPlan->getPeriodUnit()) {
+            case PlanPeriodUnit::day:
+                $interval = new DateInterval("P".$internalPlan->getPeriodLength()."D");
+                break;
+            case PlanPeriodUnit::month:
+                $interval = new DateInterval("P".$internalPlan->getPeriodLength()."M");
+                break;
+            case PlanPeriodUnit::year:
+                $interval = new DateInterval("P".$internalPlan->getPeriodLength()."Y");
+                break;
+            default:
+                new BillingsException(new ExceptionType(ExceptionType::internal), 'Unsupported plan period unit');
+        }
+
+        $date->add($interval);
+        $date->setTime(23, 59);
+
+        return $date->getTimestamp();
     }
 
     /**
