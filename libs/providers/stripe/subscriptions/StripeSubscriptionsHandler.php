@@ -43,7 +43,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         BillingsSubscriptionOpts $subOpts
     )
     {
-        if ($internalPlan->getCycle() == PlanCycle::auto) {
+        if ($internalPlan->getCycle() == PlanCycle::once) {
             $subscription = $this->chargeCustomer($user, $plan, $subOpts, $internalPlan);
         } else {
             if ($subscriptionProviderUuid) {
