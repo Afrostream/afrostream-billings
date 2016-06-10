@@ -138,6 +138,10 @@ if(getEnv('SENDGRID_BCC') === false) {
 	putEnv('SENDGRID_BCC=');
 }
 
+if(getEnv('SENDGRID_TO_IFNULL') === false) {
+	putEnv('SENDGRID_TO_IFNULL=null@afrostream.tv');
+}
+
 #Event (MAIL)
 
 if(getEnv('EVENT_EMAIL_ACTIVATED') === false) {
@@ -222,6 +226,21 @@ if(getEnv('ORANGE_TV_HTTP_AUTH_PWD') === false) {
 
 if(getEnv('ORANGE_SUBSCRIPTION_PERIOD_LENGTH') === false) {
 	putEnv('ORANGE_SUBSCRIPTION_PERIOD_LENGTH=1');
+}
+
+#BouyguesTV
+
+if(getEnv('BOUYGUES_TV_API_URL') === false) {
+	putEnv('BOUYGUES_TV_API_URL=https://idp.bouygtel.fr:20443/federation/eligibility');
+}
+
+if(getEnv('BOUYGUES_SUBSCRIPTION_PERIOD_LENGTH') === false) {
+	putEnv('BOUYGUES_SUBSCRIPTION_PERIOD_LENGTH=1');
+}
+
+#If 1, always consider that customer is a subscriber
+if(getEnv('BOUYGUES_TV_HACK_ACTIVATED') === false) {
+	putEnv('BOUYGUES_TV_HACK_ACTIVATED=0');
 }
 
 #proxy

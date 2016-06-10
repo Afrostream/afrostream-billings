@@ -78,7 +78,6 @@ class BillingsImportUsers {
 				$dbSubscription->setSubActivatedDate(DateTime::createFromFormat(DateTime::ISO8601, '2015-09-01T00:00:00+0100'));
 				$dbSubscription->setSubPeriodStartedDate(DateTime::createFromFormat(DateTime::ISO8601, '2015-09-01T00:00:00+0100'));
 				$dbSubscription->setSubPeriodEndsDate(DateTime::createFromFormat(DateTime::ISO8601, '2016-09-01T00:00:00+0100'));
-				$dbSubscription->setSubCollectionMode('manual');
 				$dbSubscription->setUpdateType('import');
 				$dbSubscription->setUpdateId(0);
 				$dbSubscription->setDeleted('false');

@@ -237,7 +237,7 @@ $app->put("/billings/api/users/", function ($request, $response, $args) {
 	      			"internalPlanUuid": "InternalPlanUuid",
 	      			"name": "name",
 	      			"description": "description",
-	      			"amount_in_cents": "1000",
+	      			"amountInCents": "1000",
 	      			"currency": "EUR",
 	      			"cycle": "once",
 	      			"periodUnit": "month",
@@ -309,6 +309,9 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
       			"subscriptionBillingUuid": "SubscriptionBillingUUID",
       			"subscriptionProviderUuid": "SubscriptionProviderUUID",
       			"isActive": "yes",
+      			"inTrial" : "no",
+      			"isCancelable" : "yes",
+      			"isReactivable" : "no",
       			"user": {
         			"userBillingUuid": "UserBillingUUID",
         			"userReferenceUuid": "afrostreamUUID",
@@ -329,7 +332,7 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
 	      			"internalPlanUuid": "InternalPlanUuid",
 	      			"name": "name",
 	      			"description": "description",
-	      			"amount_in_cents": "1000",
+	      			"amountInCents": "1000",
 	      			"currency": "EUR",
 	      			"cycle": "once",
 	      			"periodUnit": "month",
@@ -458,6 +461,21 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/renew", functio
 	return($subscriptionsController->renew($request, $response, $args));
 });
 
+//reactivate a subscription
+	
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/reactivate", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->reactivate($request, $response, $args));
+});
+
+//change plan from a subscription
+
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/updateinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->updateInternalPlan($request, $response, $args));
+});
+
+
 //InternalPlans
 
 //get one InternalPlan
@@ -479,7 +497,7 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/renew", functio
       			"internalPlanUuid": "InternalPlanUuid",
       			"name": "name",
       			"description": "description",
-      			"amount_in_cents": "1000",
+      			"amountInCents": "1000",
       			"currency": "EUR",
       			"cycle": "once",
       			"periodUnit": "month",
@@ -547,7 +565,7 @@ $app->get("/billings/api/internalplans/", function ($request, $response, $args) 
 		"internalPlanUuid" : "InternalPlanUuid",	//internal plan uuid (should not be changed)
 		"name" : "name",							//internal name (can be changed)
 		"description" : "description",				//internal description (can be changed)
-		"amount_in_cents" : "1000",					//10 Euros
+		"amountInCents" : "1000",					//10 Euros
 		"currency" : "EUR",							//ISO 4217
 		"cycle" : "once",							//	"once", "auto"
 		"periodUnit" : "month",						//	"day", "month", "year"
@@ -570,7 +588,7 @@ $app->get("/billings/api/internalplans/", function ($request, $response, $args) 
       			"internalPlanUuid": "InternalPlanUuid",
       			"name": "name",
       			"description": "description",
-      			"amount_in_cents": "1000",
+      			"amountInCents": "1000",
       			"currency": "EUR",
       			"cycle": "once",
       			"periodUnit": "month",

@@ -78,7 +78,7 @@ class InternalPlansHandler {
 		return($db_internal_plans);
 	}
 	
-	public function doCreate($internalPlanUuid,	$name, $description, $amount_in_cents, $currency, $cycle, $period_unit_str, $period_length, $internalplan_opts_array) {
+	public function doCreate($internalPlanUuid,	$name, $description, $amount_in_cents, $currency, $cycle, $period_unit_str, $period_length, $vatRate, $internalplan_opts_array, $trialEnabled, $trialPeriodLength, $trialPeriodUnit) {
 		$db_internal_plan = NULL;
 		try {
 			config::getLogger()->addInfo("internal plan creating...");
@@ -131,6 +131,10 @@ class InternalPlansHandler {
 				$db_internal_plan->setCycle($planCycle);
 				$db_internal_plan->setPeriodUnit($planPeriodUnit);
 				$db_internal_plan->setPeriodLength($period_length);
+				$db_internal_plan->setVatRate($vatRate);
+				$db_internal_plan->setTrialEnabled($trialEnabled);
+				$db_internal_plan->setTrialPeriodLength($trialPeriodLength);
+				$db_internal_plan->setTrialPeriodUnit(new TrialPeriodUnit($trialPeriodUnit));
 				$db_internal_plan = InternalPlanDAO::addInternalPlan($db_internal_plan);
 				//INTERNAL_PLAN_OPTS
 				$internalPlanOpts = new InternalPlanOpts();
