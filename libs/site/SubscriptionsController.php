@@ -217,6 +217,7 @@ class SubscriptionsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$this->doSortSubscriptions($subscriptions);
 			return($this->returnObjectAsJson($response, 'subscriptions', $subscriptions));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while updating subscriptions, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();

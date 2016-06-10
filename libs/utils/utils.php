@@ -85,11 +85,11 @@ function checkUserOptsValues(array $user_opts_as_array, $providerName) {
 			break;
 		case 'orange' :
 			//email, firstName, lastName are optional but OrangeApiToken is mandatory
-			if(array_key_exists('OrangeAPIToken', $user_opts_as_array)) {
-				$str = $user_opts_as_array['OrangeAPIToken'];
+			if(array_key_exists('OrangeApiToken', $user_opts_as_array)) {
+				$str = $user_opts_as_array['OrangeApiToken'];
 				if(strlen(trim($str)) == 0) {
 					//exception
-					$msg = "'OrangeAPIToken' value is empty";
+					$msg = "'OrangeApiToken' value is empty";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
