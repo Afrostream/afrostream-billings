@@ -234,6 +234,16 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			break;
+		case 'netsize' :
+			if($case == 'create') {
+				if(!array_key_exists('flowId', $sub_opts_as_array)) {
+					//exception
+					$msg = "subOpts field 'flowId' is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
+			break;
 		default :
 			//nothing
 			break;

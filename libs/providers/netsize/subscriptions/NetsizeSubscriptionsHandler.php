@@ -41,8 +41,6 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				$initializeSubscriptionRequest->setCountryCode('FR');
 				$initializeSubscriptionRequest->setLanguageCode('fr');
 				$initializeSubscriptionRequest->setMerchantUserId($user->getUserBillingUuid());
-				//TODO : Testing purpose only
-				//$initializeSubscriptionRequest->addAdvancedParam('QaScenario', 'Success');
 				//
 				$initializeSubscriptionResponse = $netsizeClient->initializeSubscription($initializeSubscriptionRequest);
 				
@@ -88,6 +86,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setSubUid($api_subscription->getTransactionId());
 		switch ($api_subscription->getTransactionStatusCode()) {
 			case 110 ://Authentification Pending
+			case 210 ://Pending
 			case 400 ://Started
 			case 410 ://Pending
 				$db_subscription->setSubStatus('future');
@@ -97,7 +96,33 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				$db_subscription->setSubStatus('active');
 				$db_subscription->setSubActivatedDate($now);
 				$db_subscription->setSubPeriodStartedDate($now);
-				//$db_subscription->setSubPeriodEndsDate(?);
+				$start_date = $db_subscription->getSubPeriodStartedDate();
+				$start_date->setTimezone(new DateTimeZone(config::$timezone));
+				$end_date = NULL;
+				switch($internalPlan->getPeriodUnit()) {
+					case PlanPeriodUnit::day :
+						$end_date = clone $start_date;
+						$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+						$end_date->setTime(23, 59, 59);//force the time to the end of the day
+						break;
+					case PlanPeriodUnit::month :
+						$end_date = clone $start_date;
+						$periodLengthInDays = 30 * $internalPlan->getPeriodLength();
+						$end_date->add(new DateInterval("P".$periodLengthInDays."D"));
+						$end_date->setTime(23, 59, 59);//force the time to the end of the day
+						break;
+					case PlanPeriodUnit::year :
+						$end_date = clone $start_date;
+						$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
+						$end_date->setTime(23, 59, 59);//force the time to the end of the day
+						break;
+					default :
+						$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						break;
+				}
+				$db_subscription->setSubPeriodEndsDate($end_date);
 				break;
 			case 422 ://Activated (Termination in Progress)
 			case 432 ://Cancelled
@@ -310,6 +335,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
+				$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
 				if($internalPlan == NULL) {
 					$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
 					config::getLogger()->addError($msg);
@@ -339,6 +365,8 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription = BillingsSubscriptionDAO::updatePlanId($db_subscription);
 		//$db_subscription->setSubUid($subscription_uuid);//STATIC
 		switch ($api_subscription->getTransactionStatusCode()) {
+			case 110 ://Authentification Pending
+			case 210 ://Pending
 			case 400 ://Started
 			case 410 ://Pending
 				$db_subscription->setSubStatus('future');
@@ -354,7 +382,36 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 					$db_subscription->setSubPeriodStartedDate($now);//assume it's now only if not already set
 					$db_subscription = BillingsSubscriptionDAO::updateSubStartedDate($db_subscription);
 				}
-				//$db_subscription->setSubPeriodEndsDate(?);
+				if($db_subscription->getSubPeriodEndsDate() == NULL) {
+					$start_date = $db_subscription->getSubPeriodStartedDate();
+					$start_date->setTimezone(new DateTimeZone(config::$timezone));
+					$end_date = NULL;
+					switch($internalPlan->getPeriodUnit()) {
+						case PlanPeriodUnit::day :
+							$end_date = clone $start_date;
+							$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+							$end_date->setTime(23, 59, 59);//force the time to the end of the day
+							break;
+						case PlanPeriodUnit::month :
+							$end_date = clone $start_date;
+							$periodLengthInDays = 30 * $internalPlan->getPeriodLength();
+							$end_date->add(new DateInterval("P".$periodLengthInDays."D"));
+							$end_date->setTime(23, 59, 59);//force the time to the end of the day
+							break;
+						case PlanPeriodUnit::year :
+							$end_date = clone $start_date;
+							$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
+							$end_date->setTime(23, 59, 59);//force the time to the end of the day
+							break;
+						default :
+							$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+					}
+					$db_subscription->setSubPeriodEndsDate($end_date);
+					$db_subscription = BillingsSubscriptionDAO::updateSubEndsDate($db_subscription);
+				}
 				break;
 			case 422 ://Activated (Termination in Progress)
 			case 432 ://Cancelled
@@ -429,6 +486,44 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		$subscription->setIsActive($is_active);
 	}
 	
+	public function doUpdateUserSubscription(BillingsSubscription $db_subscription) {
+		$user = UserDAO::getUserById($db_subscription->getUserId());
+		if($user == NULL) {
+			$msg = "unknown user with id : ".$db_subscription->getUserId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+		$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
+		//
+		if($provider == NULL) {
+			$msg = "unknown provider id : ".$db_subscription->getProviderId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$plan = PlanDAO::getPlanById($db_subscription->getPlanId());
+		if($plan == NULL) {
+			$msg = "unknown plan with id : ".$subscription->getPlanId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+		if($internalPlan == NULL) {
+			$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
+		//
+		$netsizeClient = new NetsizeClient();
+		$getStatusRequest = new GetStatusRequest();
+		$getStatusRequest->setTransactionId($db_subscription->getSubUid());
+		$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
+		$api_subscription = $getStatusResponse;
+		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
+		return($db_subscription);
+	}
 }
 
 ?>

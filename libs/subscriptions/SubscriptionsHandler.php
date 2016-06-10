@@ -410,7 +410,7 @@ class SubscriptionsHandler {
 					//nothing to do (unknown)
 					break;
 			}
-			config::getLogger()->addInfo("dbsubscriptions update for userid=".$user->getId()." done successfully");
+			config::getLogger()->addInfo("dbsubscriptions updating for userid=".$user->getId()." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while dbsubscriptions updating for userid=".$user->getId().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscriptions updating failed : ".$msg);
@@ -420,6 +420,47 @@ class SubscriptionsHandler {
 			config::getLogger()->addError("dbsubscriptions updating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+	}
+	
+	public function doUpdateUserSubscriptionByUuid($subscriptionBillingUuid) {
+		$db_subscription = NULL;
+		try {
+			config::getLogger()->addInfo("dbsubscription updating for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			if($db_subscription == NULL) {
+				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}	
+			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());	
+			if($provider == NULL) {
+				$msg = "unknown provider id : ".$db_subscription->getProviderId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			switch($provider->getName()) {
+				case 'netsize' :
+					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+					$db_subscription = $netsizeSubscriptionsHandler->doUpdateUserSubscription($db_subscription);
+					break;
+				default:
+					//nothing to do (unknown)
+					break;
+			}
+			//
+			$this->doFillSubscription($db_subscription);
+			//
+			config::getLogger()->addInfo("dbsubscription updating for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while dbsubscription updating for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscription updating failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while dbsubscription updating for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscription updating failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_subscription);
 	}
 	
 	public function doRenewSubscriptionByUuid($subscriptionBillingUuid, DateTime $start_date = NULL, DateTime $end_date = NULL) {

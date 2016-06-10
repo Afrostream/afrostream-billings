@@ -262,7 +262,7 @@ class IdipperSubscriptionsHandler extends SubscriptionsHandler {
 					$user = UserDAO::getUserById($subscription->getUserId());
 					if($user == NULL) {
 						$msg = "unknown user with id : ".$subscription->getUserId();
-						ScriptsConfig::getLogger()->addError($msg);
+						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					$plan = PlanDAO::getPlanById($subscription->getPlanId());

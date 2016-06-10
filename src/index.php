@@ -408,7 +408,12 @@ $app->post("/billings/api/subscriptions/", function ($request, $response, $args)
 
 $app->put("/billings/api/subscriptions/", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
-	return($subscriptionsController->update($request, $response, $args));
+	return($subscriptionsController->updateMulti($request, $response, $args));
+});
+
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->updateOne($request, $response, $args));
 });
 
 //get subscriptions
