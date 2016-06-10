@@ -275,15 +275,15 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 			
 			$internal_plan_uuid = $api_subscription->metadata->internal_plan_uuid;
 			
-			$internal_plan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid);
+			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid);
 			
-			if($internal_plan == NULL) {
+			if($internalPlan == NULL) {
 				$msg = "unknown internal_plan_uuid : ".$internal_plan_uuid;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
-			$plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internal_plan->getId(), $provider->getId());
+			$plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internalPlan->getId(), $provider->getId());
 			if($plan_id == NULL) {
 				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$provider->getName();
 				config::getLogger()->addError($msg);
@@ -296,6 +296,9 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+		}
+		if($internalPlanOpts == NULL) {
+			$internalPlanOpts = InternalPlanDAO::getInternalPlanById($internalPlan->getId());
 		}
 		if($planOpts == NULL) {
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
