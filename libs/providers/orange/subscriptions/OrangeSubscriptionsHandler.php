@@ -13,7 +13,7 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 	}
 	
 	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $sub_uuid, $update_type, $updateId) {
-		$api_subscription = self::checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeAPIToken'], $plan->getPlanUuid());
+		$api_subscription = self::checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeApiToken'], $plan->getPlanUuid());
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $api_subscription, $update_type, $updateId));
 	}
 	
@@ -165,7 +165,7 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		//VERIFY THAT SUBSCRIPTION IS STILL ACTIVE BEFORE RENEWING
-		self::checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeAPIToken'], $providerPlan->getPlanUuid());
+		self::checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeApiToken'], $providerPlan->getPlanUuid());
 		$today = new DateTime();
 		$today->setTimezone(new DateTimeZone(config::$timezone));
 		$today->setTime(23, 59, 59);//consider all the day
@@ -208,7 +208,7 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
 		config::getLogger()->addInfo("orange dbsubscriptions update for userid=".$user->getId()."...");
 		//
-		$orangeTVClient = new OrangeTVClient($userOpts->getOpts()['OrangeAPIToken']);
+		$orangeTVClient = new OrangeTVClient($userOpts->getOpts()['OrangeApiToken']);
 		//
 		$provider = ProviderDAO::getProviderById($user->getProviderId());
 		//
