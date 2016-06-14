@@ -372,11 +372,22 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription. Missing stripe token');
         }
 
-        $subscription = \Stripe\Subscription::create(array(
+        $subscriptionData = [
             "customer" => $user->getUserProviderUuid(),
             "plan" => $plan->getPlanUuid(),
             'source' => $subOpts->getOpt('customerBankAccountToken')
-        ));
+        ];
+
+        $couponId = $subOpts->getOpt('couponCode');
+        if(!is_null($couponId)) {
+            $coupon = \Stripe\Coupon::retrieve($couponId);
+
+            if ($coupon) {
+                $subscriptionData['coupon'] = $coupon['id'];
+            }
+        }
+
+        $subscription = \Stripe\Subscription::create($subscriptionData);
 
         if (empty($subscription['id'])) {
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription.');
