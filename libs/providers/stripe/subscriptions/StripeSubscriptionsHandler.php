@@ -208,7 +208,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
 
         $subscription = $this->getSubscription($billingSubscription, $user);
 
-        $subscription->cancel();
+        $subscription->cancel(['at_period_end' => true]);
         $subscription->save();
 
         $billingSubscription->setSubCanceledDate($cancelDate);
@@ -246,6 +246,44 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
 
         BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
     }
+
+    /**
+     * Reactivate a canceled subscription
+     *
+     * Only available when the period is still active.
+     *
+     * @TODO create new subscription if period is not active anymore
+     *
+     * @param BillingsSubscription $billingSubscription
+     *
+     * @throws BillingsException
+     */
+   public function doReactivateSubscription(BillingsSubscription $billingSubscription)
+   {
+       // fill the subscription to set needed informations
+       $this->doFillSubscription($billingSubscription);
+
+       // always active , nothing to do
+        if ($billingSubscription->getStatus() == 'active') {
+            return;
+        }
+
+       try {
+           // reactivable and canceled but still active, we rollback the canceling
+           if ($billingSubscription->isReactivable() && $billingSubscription->getSubStatus() == 'canceled' && $billingSubscription->getIsActive() == 'yes') {
+               $subscription = \Stripe\Subscription::retrieve($billingSubscription->getSubUid());
+               $subscription->cancel_at_period_end = false;
+               $subscription->save();
+           }
+
+           $billingSubscription->setSubStatus('active');
+           $billingSubscription->setSubCanceledDate(null);
+
+           BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
+       } catch (\Exception $e) {
+           throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
+       }
+   }
     
     /**
      * Return date with the given timestamp

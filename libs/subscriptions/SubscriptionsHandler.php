@@ -1001,6 +1001,10 @@ class SubscriptionsHandler {
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
 					$db_subscription = $recurlySubscriptionsHandler->doReactivateSubscription($db_subscription);
 					break;
+				case 'stripe':
+					$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
+					$stripeSubscriptionHandler->doReactivateSubscription($db_subscription);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
