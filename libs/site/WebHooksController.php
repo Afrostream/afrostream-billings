@@ -99,6 +99,61 @@ class WebHooksController extends BillingsController {
 		}
 		config::getLogger()->addInfo('Receiving recurly webhook done successfully');
 	}
+
+	public function stripeWebHooksPosting(Request $request, Response $response, array $args) {
+		config::getLogger()->addInfo('Receiving stripe webhook...');
+
+		$valid_passwords = array (getEnv('STRIPE_WH_HTTP_AUTH_USER') => getEnv('STRIPE_WH_HTTP_AUTH_PWD'));
+		$valid_users = array_keys($valid_passwords);
+
+		$user = NULL;
+		if(isset($_SERVER['PHP_AUTH_USER'])) {
+			$user = $_SERVER['PHP_AUTH_USER'];
+		}
+		$pass = NULL;
+		if(isset($_SERVER['PHP_AUTH_PW'])) {
+			$pass = $_SERVER['PHP_AUTH_PW'];
+		}
+
+		$validated = false;
+		if(isset($user) && isset($pass)) {
+			$validated = (in_array($user, $valid_users)) && ($pass == $valid_passwords[$user]);
+		}
+
+		if (!$validated) {
+			config::getLogger()->addError('Receiving stripe webhook failed, Unauthorized access');
+			header('WWW-Authenticate: Basic realm="My Realm"');
+			header('HTTP/1.0 401 Unauthorized');
+			die ("Not authorized");
+		}
+
+		try {
+			$post_data = file_get_contents('php://input');
+			$webHooksHander = new WebHooksHander();
+
+			config::getLogger()->addInfo('Saving stripe webhook...');
+
+			$billingsWebHook = $webHooksHander->doSaveWebHook('stripe', $post_data);
+
+			config::getLogger()->addInfo('Saving stripe webhook done successfully');
+			config::getLogger()->addInfo('Processing stripe webhook, id='.$billingsWebHook->getId().'...');
+
+			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
+
+			config::getLogger()->addInfo('Processing stripe webhook done successfully, id='.$billingsWebHook->getId());
+
+			config::getLogger()->addInfo('Treating stripe webhook done successfully, id='.$billingsWebHook->getId());
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while treating a stripe webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnBillingsExceptionAsJson($response, $e, 500));
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while treating a recurly webhook, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnExceptionAsJson($response, $e, 500));
+		}
+		config::getLogger()->addInfo('Receiving stripe webhook done successfully');
+	}
 	
 	public function gocardlessWebHooksPosting(Request $request, Response $response, array $args) {
 		config::getLogger()->addInfo('Receiving gocardless webhook...');
