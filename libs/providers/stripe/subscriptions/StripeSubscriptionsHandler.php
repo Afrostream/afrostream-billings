@@ -368,14 +368,14 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      */
     protected function createSubscription(User $user, Plan $plan, BillingsSubscriptionOpts $subOpts)
     {
-        if (is_null($subOpts->getOpt('stripeToken'))) {
+        if (is_null($subOpts->getOpt('customerBankAccountToken'))) {
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription. Missing stripe token');
         }
 
         $subscription = \Stripe\Subscription::create(array(
             "customer" => $user->getUserProviderUuid(),
             "plan" => $plan->getPlanUuid(),
-            'source' => $subOpts->getOpt('stripeToken')
+            'source' => $subOpts->getOpt('customerBankAccountToken')
         ));
 
         if (empty($subscription['id'])) {
@@ -400,14 +400,14 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      */
     protected function chargeCustomer(User $user, Plan $plan, BillingsSubscriptionOpts $subOpts, InternalPlan $internalPlan)
     {
-        if (is_null($subOpts->getOpt('stripeToken'))) {
+        if (is_null($subOpts->getOpt('customerBankAccountToken'))) {
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription. Missing stripe token');
         }
 
         try {
             // assign token to customer then charge him
             $customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
-            $customer->source = $subOpts->getOpt('stripeToken');
+            $customer->source = $subOpts->getOpt('customerBankAccountToken');
             $customer->save();
 
             $charge = \Stripe\Charge::create(array(
