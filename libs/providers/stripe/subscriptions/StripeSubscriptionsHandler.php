@@ -388,7 +388,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         ];
 
         $couponId = $subOpts->getOpt('couponCode');
-        if(!is_null($couponId)) {
+        if(!is_null($couponId) && strlen($couponId) > 0) {
             $coupon = \Stripe\Coupon::retrieve($couponId);
 
             if ($coupon) {
