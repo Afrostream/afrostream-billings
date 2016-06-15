@@ -296,7 +296,9 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
         	"key3": "value3"
       	}
 	}
- 
+ */
+
+/*
  	sample answer :
  	
 	{
@@ -629,8 +631,8 @@ $app->post("/billings/api/internalplans/", function ($request, $response, $args)
 	$internalPlansController = new InternalPlansFilteredController();
 	return($internalPlansController->create($request, $response, $args));
 });
-
 //update
+
 
 $app->put("/billings/api/internalplans/{internalPlanUuid}", function ($request, $response, $args) {
 	$internalPlansController = new InternalPlansFilteredController();
@@ -870,6 +872,13 @@ $app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/moveinte
 $app->post("/billings/providers/recurly/webhooks/", function ($request, $response, $args) {
 	$webHooksController = new WebHooksController();
 	return($webHooksController->recurlyWebHooksPosting($request, $response, $args));
+});
+
+//WebHooks - Stripe
+
+$app->post("/billings/providers/stripe/webhooks/", function ($request, $response, $args) {
+	$webHooksController = new WebHooksController();
+	return($webHooksController->stripeWebHooksPosting($request, $response, $args));
 });
 
 //WebHooks - Gocardless

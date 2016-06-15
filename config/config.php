@@ -279,6 +279,22 @@ if(getEnv('PROXY_PWD') === false) {
 	putEnv('PROXY_PWD=afrostream77');
 }
 
+
+# stripe api key
+if(getEnv('STRIPE_API_KEY') === false) {
+	putEnv('STRIPE_API_KEY=sk_test_VaFvskbZOobGZ1L3x1iGwzOk');
+}
+
+#Stripe WebHooks
+
+if(getEnv('STRIPE_WH_HTTP_AUTH_USER') === false) {
+	putEnv('STRIPE_WH_HTTP_AUTH_USER=admin');
+}
+if(getEnv('STRIPE_WH_HTTP_AUTH_PWD') === false) {
+	putEnv('STRIPE_WH_HTTP_AUTH_PWD=pwd');
+}
+
+
 #logger, #db_conn, ...
 
 class config {
@@ -318,5 +334,3 @@ class config {
 }
 
 config::init();
-
-?>
