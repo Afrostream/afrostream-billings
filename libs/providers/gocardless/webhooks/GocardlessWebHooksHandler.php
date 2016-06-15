@@ -276,6 +276,7 @@ class GocardlessWebHooksHandler {
 				return($db_subscription);
 			}
 		}
+		return(NULL);
 	}
 	
 	private function doProcessMandate(array $notification_as_array, $update_type, $updateId) {

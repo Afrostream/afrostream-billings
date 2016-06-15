@@ -491,6 +491,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				return($db_subscription);
 			}
 		}
+		return(NULL);
 	}
 	
 	private function getApiSubscriptionByUuid(Paginator $api_subscriptions, $subUuid) {
@@ -499,6 +500,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				return($api_subscription);
 			}
 		}
+		return(NULL);
 	}
 	
 	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {

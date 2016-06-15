@@ -4,9 +4,56 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "dcded581fc965b1b4035f73a5395cc46",
-    "content-hash": "bf630ce2a000903533f61137a89711bc",
+    "hash": "d67c369035e4fa62911de9d0ede46a9d",
+    "content-hash": "82f4544049daecc5a41fbd72db3c5c9a",
     "packages": [
+        {
+            "name": "braintree/braintree_php",
+            "version": "3.13.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/braintree/braintree_php.git",
+                "reference": "cbee7c8c998aff5d5df682cc0b2cf3f403dbba76"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/braintree/braintree_php/zipball/cbee7c8c998aff5d5df682cc0b2cf3f403dbba76",
+                "reference": "cbee7c8c998aff5d5df682cc0b2cf3f403dbba76",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-dom": "*",
+                "ext-hash": "*",
+                "ext-openssl": "*",
+                "ext-xmlwriter": "*",
+                "php": ">=5.4.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "3.7.*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Braintree": "lib/"
+                },
+                "psr-4": {
+                    "Braintree\\": "lib/Braintree"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Braintree",
+                    "homepage": "http://www.braintreepayments.com"
+                }
+            ],
+            "description": "Braintree PHP Client Library",
+            "time": "2016-05-23 18:22:21"
+        },
         {
             "name": "container-interop/container-interop",
             "version": "1.1.0",

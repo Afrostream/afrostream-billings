@@ -9,7 +9,6 @@ require_once __DIR__ . '/../libs/site/CouponsController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
 require_once __DIR__ . '/../libs/site/CouponsCampaignsController.php';
 require_once __DIR__ . '/../libs/site/ContextsController.php';
-//require_once __DIR__ . '/test.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -894,11 +893,12 @@ $app->post("/billings/providers/cashway/webhooks/", function ($request, $respons
 	return($webHooksController->cashwayWebHooksPosting($request, $response, $args));
 });
 
-//Testing purpose
-
-/*$app->get("/billings/api/test/", function ($request, $response, $args) {
-	testMe();
-});*/
+//WebHooks - braintree
+	
+$app->post("/billings/providers/braintree/webhooks/", function ($request, $response, $args) {
+	$webHooksController = new WebHooksController();
+	return($webHooksController->braintreeWebHooksPosting($request, $response, $args));
+});
 
 $app->run();
 

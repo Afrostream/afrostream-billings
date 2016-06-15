@@ -12,6 +12,7 @@ require_once __DIR__ . '/../providers/afr/subscriptions/AfrSubscriptionsHandler.
 require_once __DIR__ . '/../providers/cashway/subscriptions/CashwaySubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/orange/subscriptions/OrangeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/bouygues/subscriptions/BouyguesSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/braintree/subscriptions/BraintreeSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__.'/../utils/BillingsException.php';
 
@@ -170,6 +171,10 @@ class SubscriptionsHandler {
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						break;
+					case 'braintree' :
+						$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+						$sub_uuid = $braintreeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						break;
 					default:
 						$msg = "unsupported feature for provider named : ".$provider->getName();
 						config::getLogger()->addError($msg);
@@ -220,6 +225,10 @@ class SubscriptionsHandler {
 						case 'bouygues' :
 							$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 							$db_subscription = $bouyguesSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							break;
+						case 'braintree' :
+							$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+							$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
 						default:
 							$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -299,6 +308,10 @@ class SubscriptionsHandler {
 				case 'bouygues' :
 					$subscriptionsHandler = new BouyguesSubscriptionsHandler();
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'braintree' :
+					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$subscriptions = $braintreeSubscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -388,7 +401,11 @@ class SubscriptionsHandler {
 				case 'bouygues' :
 					$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 					$bouyguesSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
-					break;				
+					break;
+				case 'braintree' :
+					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$braintreeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
+					break;
 				default:
 					//nothing to do (unknown)
 					break;
@@ -710,6 +727,10 @@ class SubscriptionsHandler {
 			case 'bouygues' :
 				$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 				$bouyguesSubscriptionsHandler->doFillSubscription($subscription);				
+				break;
+			case 'braintree' :
+				$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+				$braintreeSubscriptionsHandler->doFillSubscription($subscription);
 				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -1037,6 +1058,10 @@ class SubscriptionsHandler {
 				case 'recurly' :
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
 					$db_subscription = $recurlySubscriptionsHandler->doUpdateInternalPlan($db_subscription, $internalPlan, $internalPlanOpts, $providerPlan, $providerPlanOpts);
+					break;
+				case 'braintree' :
+					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$db_subscription = $braintreeSubscriptionsHandler->doUpdateInternalPlan($db_subscription, $internalPlan, $internalPlanOpts, $providerPlan, $providerPlanOpts);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
