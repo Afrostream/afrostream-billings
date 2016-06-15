@@ -13,6 +13,7 @@ require_once __DIR__ . '/../providers/cashway/subscriptions/CashwaySubscriptions
 require_once __DIR__ . '/../providers/orange/subscriptions/OrangeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/bouygues/subscriptions/BouyguesSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/stripe/subscriptions/StripeSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/braintree/subscriptions/BraintreeSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__.'/../utils/BillingsException.php';
 
@@ -175,6 +176,10 @@ class SubscriptionsHandler {
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						break;
+					case 'braintree' :
+						$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+						$sub_uuid = $braintreeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						break;
 					default:
 						$msg = "unsupported feature for provider named : ".$provider->getName();
 						config::getLogger()->addError($msg);
@@ -229,6 +234,10 @@ class SubscriptionsHandler {
 						case 'stripe':
 							$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
 							$db_subscription = $stripeSubscriptionHandler->createDbSubscriptionFromApiSubscription($billingSubscription, $subOpts);
+							break;
+						case 'braintree' :
+							$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+							$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
 						default:
 							$msg = "record new: unsupported feature for provider named : ".$provider->getName();
@@ -312,6 +321,10 @@ class SubscriptionsHandler {
 				case 'stripe' :
 					$subscriptionsHandler = new StripeSubscriptionsHandler();
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'braintree' :
+					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$subscriptions = $braintreeSubscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -405,6 +418,10 @@ class SubscriptionsHandler {
 				case 'stripe':
 					$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
 					$stripeSubscriptionHandler->doUpdateUserSubscriptions($user, $userOpts);
+					break;
+				case 'braintree' :
+					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$braintreeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
 					break;
 				default:
 					//nothing to do (unknown)
@@ -740,6 +757,10 @@ class SubscriptionsHandler {
 				$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
 				$stripeSubscriptionHandler->doFillSubscription($subscription);
 				break;
+			case 'braintree' :
+				$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+				$braintreeSubscriptionsHandler->doFillSubscription($subscription);
+				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
 				config::getLogger()->addError($msg);
@@ -1074,6 +1095,10 @@ class SubscriptionsHandler {
 				case 'stripe':
 					$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
 					$stripeSubscriptionHandler->doUpdateInternalPlan($db_subscription, $internalPlan, $internalPlanOpts, $providerPlan, $providerPlanOpts);
+					break;
+				case 'braintree' :
+					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$db_subscription = $braintreeSubscriptionsHandler->doUpdateInternalPlan($db_subscription, $internalPlan, $internalPlanOpts, $providerPlan, $providerPlanOpts);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();

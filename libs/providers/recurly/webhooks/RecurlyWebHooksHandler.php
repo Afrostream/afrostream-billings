@@ -154,6 +154,7 @@ class RecurlyWebHooksHandler {
 				return($db_subscription);
 			}
 		}
+		return(NULL);
 	}
 	
 	private static function getNodeByName(SimpleXMLElement $node, $name) {

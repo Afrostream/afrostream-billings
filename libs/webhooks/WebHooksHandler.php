@@ -6,6 +6,8 @@ require_once __DIR__ . '/../providers/recurly/webhooks/RecurlyWebHooksHandler.ph
 require_once __DIR__ . '/../providers/gocardless/webhooks/GocardlessWebHooksHandler.php';
 require_once __DIR__ . '/../providers/cashway/webhooks/CashwayWebHooksHandler.php';
 require_once __DIR__ . '/../providers/stripe/webhooks/StripeWebHooksHandler.php';
+require_once __DIR__ . '/../providers/braintree/webhooks/BraintreeWebHooksHandler.php';
+
 
 class WebHooksHander {
 	
@@ -61,8 +63,12 @@ class WebHooksHander {
 				case 'stripe':
 					$stripeWebHookHandler = new StripeWebHooksHandler();
 					$stripeWebHookHandler->loadHooks();
-					
+						
 					$stripeWebHookHandler->doProcessWebHook($billingsWebHook, $update_type);
+					break;
+				case 'braintree' :
+					$braintreeWebHooksHandler = new BraintreeWebHooksHandler();
+					$braintreeWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
