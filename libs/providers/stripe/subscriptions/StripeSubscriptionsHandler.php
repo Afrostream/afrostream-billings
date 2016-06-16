@@ -398,7 +398,9 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $logMessage = 'Create subscription : customer : %s, plan : %s, source : %s';
 
         $couponId = $subOpts->getOpt('couponCode');
+
         if(!empty($couponId)) {
+
             $coupon = \Stripe\Coupon::retrieve($couponId);
 
             if ($coupon) {
