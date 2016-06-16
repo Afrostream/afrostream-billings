@@ -76,8 +76,16 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $billingSubscription->setUpdateType($updateType);
         $billingSubscription->setUpdateId($updateId);
 
-        $subscriptinoinfos = json_decode($billingSubscription->jsonSerialize(), true);
-        $this->log('record subscription  '.str_repeat(', %s', count($subscriptinoinfos)), $subscriptinoinfos);
+        $subscriptionInfos = $billingSubscription->jsonSerialize();
+        $this->log(
+            'record subscription. providerUuid: %s, user billing uuid: %s, user provider uuid: %s, internal plan: %s',
+            [
+                $subscriptionInfos['subscriptionProviderUuid'],
+                $subscriptionInfos['user']['userBillingUuid'],
+                $subscriptionInfos['user']['userProviderUuid'],
+                $subscriptionInfos['internalPlan']['internalPlanUuid']
+            ]
+        );
 
         $billingSubscription = BillingsSubscriptionDAO::addBillingsSubscription($billingSubscription);
 
@@ -387,16 +395,19 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             'source' => $subOpts->getOpt('customerBankAccountToken')
         ];
 
+        $logMessage = 'Create subscription : customer : %s, plan : %s, source : %s';
+
         $couponId = $subOpts->getOpt('couponCode');
-        if(!is_null($couponId)) {
+        if(!empty($couponId)) {
             $coupon = \Stripe\Coupon::retrieve($couponId);
 
             if ($coupon) {
                 $subscriptionData['coupon'] = $coupon['id'];
+                $logMessage = 'Create subscription : customer : %s, plan : %s, source : %s, coupon : %s';
             }
         }
 
-        $this->log('Create subscription : customer : %s, plan : %s, source : %s, coupon : %s', $subscriptionData);
+        $this->log($logMessage, $subscriptionData);
 
         $subscription = \Stripe\Subscription::create($subscriptionData);
 
