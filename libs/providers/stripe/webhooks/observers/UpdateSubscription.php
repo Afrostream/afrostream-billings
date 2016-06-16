@@ -41,5 +41,6 @@ class UpdateSubscription implements HookInterface
         }
 
         BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
+        config::getLogger()->addInfo('STRIPE - customer.subscription.updated : update subscription '.$billingSubscription->getId());
     }
 }

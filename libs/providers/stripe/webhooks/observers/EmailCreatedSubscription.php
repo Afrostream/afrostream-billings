@@ -52,5 +52,6 @@ class EmailCreatedSubscription implements HookInterface
 
         $this->sendMail($this->sendGridTemplateId, $userMail, $substitutions);
 
+        config::getLogger()->addInfo('STRIPE - customer.subscription.created : email customer '.$userMail);
     }
 }
