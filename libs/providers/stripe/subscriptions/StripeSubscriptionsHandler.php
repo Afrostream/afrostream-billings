@@ -76,7 +76,12 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $billingSubscription->setUpdateType($updateType);
         $billingSubscription->setUpdateId($updateId);
 
+        $subscriptinoinfos = json_decode($billingSubscription->jsonSerialize(), true);
+        $this->log('record subscription  '.str_repeat(', %s', count($subscriptinoinfos)), $subscriptinoinfos);
+
         $billingSubscription = BillingsSubscriptionDAO::addBillingsSubscription($billingSubscription);
+
+        $this->log('Subscription id : '.$billingSubscription->getId());
 
         if (!is_null($subOpts))
         {
@@ -207,6 +212,8 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $user = UserDAO::getUserById($billingSubscription->getUserId());
 
         $subscription = $this->getSubscription($billingSubscription, $user);
+
+        $this->log('Cancel subscription id %s ', [$subscription['id']]);
 
         $subscription->cancel(['at_period_end' => true]);
         $subscription->save();
@@ -341,6 +348,8 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      */
     protected function getSubscription($subscriptionProviderUuid, User $user)
     {
+        $this->log('Retrieve subscription whith id '.$subscriptionProviderUuid);
+
         $subscription = \Stripe\Subscription::retrieve($subscriptionProviderUuid);
 
         if (empty($subscription['id'])) {
@@ -387,9 +396,12 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             }
         }
 
+        $this->log('Create subscription : customer : %s, plan : %s, source : %s, coupon : %s', $subscriptionData);
+
         $subscription = \Stripe\Subscription::create($subscriptionData);
 
         if (empty($subscription['id'])) {
+            $this->log('Error while creating subscription');
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription.');
         }
 
@@ -416,20 +428,27 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         }
 
         try {
+            $this->log('Update customer : set source : '.$subOpts->getOpt('customerBankAccountToken'));
+
             // assign token to customer then charge him
             $customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
             $customer->source = $subOpts->getOpt('customerBankAccountToken');
             $customer->save();
 
-            $charge = \Stripe\Charge::create(array(
+            $chargeData = array(
                 "amount" => $internalPlan->getAmountInCents(),
                 "currency" => $internalPlan->getCurrency(),
                 'customer' => $user->getUserProviderUuid(),
                 "description" => $plan->getPlanUuid()
-            ));
+            );
+
+            $this->log("Charge customer,  amount : %s, currency : %s, customer : %s, description : %s", $chargeData);
+
+            $charge = \Stripe\Charge::create($chargeData);
 
             if (!$charge->paid) {
-                throw new \Exception('Paiement refused');
+                $this->log('Payment refused');
+                throw new \Exception('Payment refused');
             }
 
 
@@ -545,5 +564,11 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $billingSubscription->setDeleted('false');
 
         return $billingSubscription;
+    }
+
+    protected function log($message, array $values =  [])
+    {
+        $message = vsprintf($message, $values);
+        config::getLogger()->addInfo('STRIPE - '.$message);
     }
 }

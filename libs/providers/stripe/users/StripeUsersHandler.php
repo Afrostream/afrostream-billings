@@ -30,9 +30,12 @@ class StripeUsersHandler
      */
     protected function getUser($userProviderUuid)
     {
+        $this->log('Retrieve user '.$userProviderUuid);
+
         $customer = \Stripe\Customer::retrieve($userProviderUuid);
 
         if (empty($customer['id'])) {
+            $this->log('No user available with the given id');
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'No user available with the given id');
         }
 
@@ -60,10 +63,19 @@ class StripeUsersHandler
             ]
         ]);
 
+        $this->log('Create customer : email : %s, firstname: %s, lastname: %s', [$userOpts['email'], $userOpts['firstName'], $userOpts['lastName']]);
+
         if (empty($customer['id'])) {
+            $this->log('Error on recording user on stripe side');
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error on recording user on stripe side');
         }
 
         return $customer;
+    }
+
+    protected function log($message, array $values =  [])
+    {
+        $message = vsprintf($message, $values);
+        config::getLogger()->addInfo('STRIPE - '.$message);
     }
 }

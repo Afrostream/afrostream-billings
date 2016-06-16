@@ -56,11 +56,14 @@ class StripeWebHooksHandler
     {
         $postedEvent = json_decode($billingsWebHook->getPostData(), true);
 
+        $this->log('Process new event '.$postedEvent['id']);
+
         // request event to be sure it's a real one
         $event = \Stripe\Event::retrieve($postedEvent['id']);
 
         // bad event, return quietly
         if (empty($event['id']) || empty($event['data']['object'])) {
+            $this->log('Bad event , no id or no object found in event');
             return;
         }
 
@@ -81,5 +84,11 @@ class StripeWebHooksHandler
             ->addHookObserver(new EmailCanceledSubscription())
             ->addHookObserver(new EmailCreatedSubscription())
             ->addHookObserver(new UpdateSubscription());
+    }
+
+    protected function log($message, array $values =  [])
+    {
+        $message = vsprintf($message, $values);
+        config::getLogger()->addInfo('STRIPE - '.$message);
     }
 }

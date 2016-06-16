@@ -54,5 +54,7 @@ class EmailCanceledSubscription implements HookInterface
         
         
         $this->sendMail($this->sendGridTemplateId, $userMail, $substitutions);
+
+        config::getLogger()->addInfo('STRIPE - customer.subscription.deleted : email customer '.$userMail);
     }
 }

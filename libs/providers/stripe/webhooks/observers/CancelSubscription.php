@@ -33,6 +33,8 @@ class CancelSubscription implements HookInterface
         $billingSubscription->setSubCanceledDate( new \DateTime(date('c', $subscription['canceled_at'])));
 
         BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
+
+        config::getLogger()->addInfo('STRIPE - customer.subscription.deleted : cancel subscription #'.$billingSubscription->getId());
     }
     
 }
