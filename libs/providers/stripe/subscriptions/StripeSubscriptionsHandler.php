@@ -219,7 +219,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         // get user
         $user = UserDAO::getUserById($billingSubscription->getUserId());
 
-        $subscription = $this->getSubscription($billingSubscription, $user);
+        $subscription = $this->getSubscription($billingSubscription->getSubUid(), $user);
 
         $this->log('Cancel subscription id %s ', [$subscription['id']]);
 
