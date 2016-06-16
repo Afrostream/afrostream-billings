@@ -45,6 +45,11 @@ class EmailCanceledSubscription implements HookInterface
         $subscription = $event['data']['object'];
         $billingSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $subscription['id']);
 
+        if (empty($billingSubscription)) {
+            config::getLogger()->addInfo(sprintf('STRIPE - customer.subscription.created : unable to find subscription %s for provider %s', $subscription['id'], $provider->getId()));
+            return null;
+        }
+        
         $user = UserDAO::getUserById($billingSubscription->getUserId());
         $userOpts     = UserOptsDAO::getUserOptsByUserId($user->getId());
 

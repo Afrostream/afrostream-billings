@@ -299,7 +299,34 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
            throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
        }
    }
-    
+
+    /**
+     * Get internal status from provider status
+     * 
+     * @param $status
+     *
+     * @return null|string
+     */
+    public static function getMappedStatus($status)
+    {
+        switch ($status) {
+            case 'active':
+            case 'trialing':
+            case 'past_due':
+                $status = 'active';
+                break;
+            case 'canceled':
+                $status = 'canceled';
+                break;
+            case 'unpaid':
+                $status = 'expired';
+                break;
+            default:
+                $status = null;
+        }
+
+        return $status;
+    }
     /**
      * Return date with the given timestamp
      *
@@ -326,20 +353,10 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      */
     protected function getStatusFromProvider(Subscription $subscription)
     {
-        switch ($subscription['status']) {
-            case 'active':
-            case 'trialing':
-            case 'past_due':
-                $status = 'active';
-                break;
-            case 'canceled':
-                $status = 'canceled';
-                break;
-            case 'unpaid':
-                $status = 'expired';
-                break;
-            default:
-                throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow stripe subscritpion status');
+        $status = self::getMappedStatus($subscription['status']);
+
+        if (is_null($status)) {
+            throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow stripe subscritpion status');
         }
 
         return $status;
