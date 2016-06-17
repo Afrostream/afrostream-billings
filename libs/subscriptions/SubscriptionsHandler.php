@@ -634,6 +634,9 @@ class SubscriptionsHandler {
 					$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 					$db_subscription = $bouyguesSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
+				case 'braintree' :
+					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$db_subscription = $braintreeSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
