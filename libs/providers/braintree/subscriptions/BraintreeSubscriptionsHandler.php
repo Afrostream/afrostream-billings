@@ -46,16 +46,28 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
 				Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
 				//
-				$paymentMethod = Braintree\PaymentMethod::find($subOpts->getOpts()['customerBankAccountToken']);
-				if($paymentMethod->customerId != $user->getUserProviderUuid()) {
-					$msg = "customerBankAccountToken =".$subOpts->getOpts()['customerBankAccountToken']." not found for user with provider_user_uuid=".$user->getUserProviderUuid();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);					
+				$paymentMethod_attribs = array();
+				$paymentMethod_attribs['customerId'] = $user->getUserProviderUuid();
+				$paymentMethod_attribs['paymentMethodNonce'] = $subOpts->getOpts()['customerBankAccountToken'];
+				$paymentMethod_attribs['options'] = [
+						'makeDefault' => true
+				];
+				$result = Braintree\PaymentMethod::create($paymentMethod_attribs);
+				$paymentMethod = NULL;
+				if ($result->success) {
+					$paymentMethod = $result->paymentMethod;
+				} else {
+					$msg = 'a braintree api error occurred : ';
+					$errorString = $result->message;
+					foreach($result->errors->deepAll() as $error) {
+						$errorString.= '; Code=' . $error->code . ", msg=" . $error->message;
+					}
+					throw new Exception($msg.$errorString);					
 				}
 				//
 				$attribs = array();
 				$attribs['planId'] = $plan->getPlanUuid();
-				$attribs['paymentMethodToken'] = $subOpts->getOpts()['customerBankAccountToken'];				
+				$attribs['paymentMethodToken'] = $paymentMethod->token;
 				
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
