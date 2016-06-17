@@ -76,7 +76,20 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $billingSubscription->setUpdateType($updateType);
         $billingSubscription->setUpdateId($updateId);
 
+        $subscriptionInfos = $billingSubscription->jsonSerialize();
+        $this->log(
+            'record subscription. providerUuid: %s, user billing uuid: %s, user provider uuid: %s, internal plan: %s',
+            [
+                $subscriptionInfos['subscriptionProviderUuid'],
+                $subscriptionInfos['user']['userBillingUuid'],
+                $subscriptionInfos['user']['userProviderUuid'],
+                $subscriptionInfos['internalPlan']['internalPlanUuid']
+            ]
+        );
+
         $billingSubscription = BillingsSubscriptionDAO::addBillingsSubscription($billingSubscription);
+
+        $this->log('Subscription id : '.$billingSubscription->getId());
 
         if (!is_null($subOpts))
         {
@@ -206,7 +219,9 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         // get user
         $user = UserDAO::getUserById($billingSubscription->getUserId());
 
-        $subscription = $this->getSubscription($billingSubscription, $user);
+        $subscription = $this->getSubscription($billingSubscription->getSubUid(), $user);
+
+        $this->log('Cancel subscription id %s ', [$subscription['id']]);
 
         $subscription->cancel(['at_period_end' => true]);
         $subscription->save();
@@ -284,7 +299,34 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
            throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
        }
    }
-    
+
+    /**
+     * Get internal status from provider status
+     * 
+     * @param $status
+     *
+     * @return null|string
+     */
+    public static function getMappedStatus($status)
+    {
+        switch ($status) {
+            case 'active':
+            case 'trialing':
+            case 'past_due':
+                $status = 'active';
+                break;
+            case 'canceled':
+                $status = 'canceled';
+                break;
+            case 'unpaid':
+                $status = 'expired';
+                break;
+            default:
+                $status = null;
+        }
+
+        return $status;
+    }
     /**
      * Return date with the given timestamp
      *
@@ -311,20 +353,10 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      */
     protected function getStatusFromProvider(Subscription $subscription)
     {
-        switch ($subscription['status']) {
-            case 'active':
-            case 'trialing':
-            case 'past_due':
-                $status = 'active';
-                break;
-            case 'canceled':
-                $status = 'canceled';
-                break;
-            case 'unpaid':
-                $status = 'expired';
-                break;
-            default:
-                throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow stripe subscritpion status');
+        $status = self::getMappedStatus($subscription['status']);
+
+        if (is_null($status)) {
+            throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow stripe subscritpion status');
         }
 
         return $status;
@@ -341,6 +373,8 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      */
     protected function getSubscription($subscriptionProviderUuid, User $user)
     {
+        $this->log('Retrieve subscription whith id '.$subscriptionProviderUuid);
+
         $subscription = \Stripe\Subscription::retrieve($subscriptionProviderUuid);
 
         if (empty($subscription['id'])) {
@@ -378,18 +412,26 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             'source' => $subOpts->getOpt('customerBankAccountToken')
         ];
 
+        $logMessage = 'Create subscription : customer : %s, plan : %s, source : %s';
+
         $couponId = $subOpts->getOpt('couponCode');
-        if(!is_null($couponId)) {
+
+        if(!empty($couponId)) {
+
             $coupon = \Stripe\Coupon::retrieve($couponId);
 
             if ($coupon) {
                 $subscriptionData['coupon'] = $coupon['id'];
+                $logMessage = 'Create subscription : customer : %s, plan : %s, source : %s, coupon : %s';
             }
         }
+
+        $this->log($logMessage, $subscriptionData);
 
         $subscription = \Stripe\Subscription::create($subscriptionData);
 
         if (empty($subscription['id'])) {
+            $this->log('Error while creating subscription');
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription.');
         }
 
@@ -416,20 +458,27 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         }
 
         try {
+            $this->log('Update customer : set source : '.$subOpts->getOpt('customerBankAccountToken'));
+
             // assign token to customer then charge him
             $customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
             $customer->source = $subOpts->getOpt('customerBankAccountToken');
             $customer->save();
 
-            $charge = \Stripe\Charge::create(array(
+            $chargeData = array(
                 "amount" => $internalPlan->getAmountInCents(),
                 "currency" => $internalPlan->getCurrency(),
                 'customer' => $user->getUserProviderUuid(),
                 "description" => $plan->getPlanUuid()
-            ));
+            );
+
+            $this->log("Charge customer,  amount : %s, currency : %s, customer : %s, description : %s", $chargeData);
+
+            $charge = \Stripe\Charge::create($chargeData);
 
             if (!$charge->paid) {
-                throw new \Exception('Paiement refused');
+                $this->log('Payment refused');
+                throw new \Exception('Payment refused');
             }
 
 
@@ -545,5 +594,11 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $billingSubscription->setDeleted('false');
 
         return $billingSubscription;
+    }
+
+    protected function log($message, array $values =  [])
+    {
+        $message = vsprintf($message, $values);
+        config::getLogger()->addInfo('STRIPE - '.$message);
     }
 }

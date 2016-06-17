@@ -27,12 +27,19 @@ class CancelSubscription implements HookInterface
         $subscription = $event['data']['object'];
         $billingSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $subscription['id']);
 
+        if (empty($billingSubscription)) {
+            config::getLogger()->addInfo(sprintf('STRIPE - customer.subscription.created : unable to find subscription %s for provider %s', $subscription['id'], $provider->getId()));
+            return null;
+        }
+        
         // update status to cancel
         $billingSubscription->setSubStatus('canceled');
         // take care date reflect the date of canceling subscription not the end of access
         $billingSubscription->setSubCanceledDate( new \DateTime(date('c', $subscription['canceled_at'])));
 
         BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
+
+        config::getLogger()->addInfo('STRIPE - customer.subscription.deleted : cancel subscription #'.$billingSubscription->getId());
     }
     
 }

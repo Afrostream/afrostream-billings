@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../../../utils/utils.php';
 require_once __DIR__ . '/../../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../../db/dbGlobal.php';
 require_once __DIR__.'/HookInterface.php';
+require_once __DIR__ . '/../../subscriptions/StripeSubscriptionsHandler.php';
 
 use \Stripe\Event;
 
@@ -25,21 +26,52 @@ class UpdateSubscription implements HookInterface
         }
 
         $subscription = $event['data']['object'];
-        $previousAttributes = $event['data']['previous_attributes'];
-        
+
         $billingSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $subscription['id']);
 
-        // check previous attribute to see if a plan have changed
-        if (!empty($previousAttributes['plan'])) {
-            $newProviderPlan = PlanDAO::getPlanByUuid($provider->getId(), $subscription['plan']['id']);
-
-            if (empty($newProviderPlan)) {
-                throw new BillingsException(ExceptionType::internal , sprintf('Unknow subscription %s provided by stripe', $subscription['plan']['id']));
-            }
-
-            $billingSubscription->setPlanId($newProviderPlan->getId());
+        if (empty($billingSubscription)) {
+            config::getLogger()->addInfo(sprintf('STRIPE - customer.subscription.updated : unable to find subscription %s for provider %s', $subscription['id'], $provider->getId()));
+            return null;
         }
 
+        $newProviderPlan = PlanDAO::getPlanByUuid($provider->getId(), $subscription['plan']['id']);
+        if (empty($newProviderPlan)) {
+            config::getLogger()->addInfo(sprintf('STRIPE - customer.subscription.updated : unable to find subscription plan %s for provider %s', $subscription['plan']['id'], $provider->getId()));
+            return null;
+        }
+
+        $status = StripeSubscriptionsHandler::getMappedStatus($subscription['status']);
+        if (empty($status)) {
+            config::getLogger()->addInfo(sprintf('STRIPE - customer.subscription.updated : unknown subscription status %s', $subscription['status']));
+            return null;
+        }
+
+        if (!empty($subscription['canceled_at'])) {
+            $status = 'canceled';
+        }
+        
+        $billingSubscription->setPlanId($newProviderPlan->getId());
+        $billingSubscription->setSubStatus($status);
+        $billingSubscription->setSubCanceledDate($this->createDate($subscription['canceled_at']));
+        $billingSubscription->setSubPeriodStartedDate($this->createDate($subscription['current_period_start']));
+        $billingSubscription->setSubPeriodEndsDate($this->createDate($subscription['current_period_end']));
+
         BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
+        config::getLogger()->addInfo('STRIPE - customer.subscription.updated : update subscription '.$billingSubscription->getId());
+    }
+
+    /**
+     * Return date with the given timestamp
+     *
+     * @param int|null $timestamp
+     *
+     * @return null|string
+     */
+    protected function createDate($timestamp) {
+        if (empty($timestamp)) {
+            return null;
+        }
+
+        return new \DateTime(date('c', $timestamp));
     }
 }
