@@ -227,8 +227,10 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				//break;
 		}
-		$db_subscription->setSubPeriodStartedDate($api_subscription->billingPeriodStartDate);
-		$db_subscription->setSubPeriodEndsDate($api_subscription->billingPeriodEndDate);
+		$db_subscription->setSubPeriodStartedDate($api_subscription->billingPeriodStartDate == NULL ? 
+				$api_subscription->createdAt : $api_subscription->billingPeriodStartDate);
+		$db_subscription->setSubPeriodEndsDate($api_subscription->billingPeriodEndDate == NULL ? 
+				$api_subscription->nextBillingDate : $api_subscription->billingPeriodEndDate);
 		$db_subscription->setUpdateType($update_type);
 		//
 		$db_subscription->setUpdateId($updateId);
@@ -291,8 +293,10 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				//break;
 		}
 		//
-		$db_subscription->setSubPeriodStartedDate($api_subscription->billingPeriodStartDate);
-		$db_subscription->setSubPeriodEndsDate($api_subscription->billingPeriodEndDate);
+		$db_subscription->setSubPeriodStartedDate($api_subscription->billingPeriodStartDate == NULL ? 
+				$api_subscription->createdAt : $api_subscription->billingPeriodStartDate);
+		$db_subscription->setSubPeriodEndsDate($api_subscription->billingPeriodEndDate == NULL ? 
+				$api_subscription->nextBillingDate : $api_subscription->billingPeriodEndDate);
 		//
 		$db_subscription->setUpdateType($update_type);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateType($db_subscription);
