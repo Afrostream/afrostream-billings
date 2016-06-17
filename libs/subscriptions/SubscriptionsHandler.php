@@ -553,6 +553,10 @@ class SubscriptionsHandler {
 					$stripeSubscriptinoHandler->doCancelSubscription($db_subscription, $cancel_date);
 					$doSendSubscription = false; // mail is sent on event notification by stripe
 					break;
+				case 'braintree' :
+					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$braintreeSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
