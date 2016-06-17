@@ -95,7 +95,8 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 					throw new Exception($msg.$errorString);
 				}
 			}
-			//
+			//TODO : remove me
+			config::getLogger()->addInfo("Braintree api_subscription_object=".var_export($subscription, true));
 			$sub_uuid = $subscription->id;
 			config::getLogger()->addInfo("braintree subscription creation done successfully, braintree_subscription_uuid=".$sub_uuid);
 		} catch(BillingsException $e) {
