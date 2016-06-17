@@ -623,8 +623,8 @@ class SubscriptionsHandler {
 					$db_subscription = $idipperSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
 				case 'afr' :
-					$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
-					$db_subscription = $gocardlessSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
+					$db_subscription = $afrSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
 				case 'cashway' :
 					$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
