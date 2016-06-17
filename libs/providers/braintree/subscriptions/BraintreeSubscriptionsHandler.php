@@ -95,8 +95,6 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 					throw new Exception($msg.$errorString);
 				}
 			}
-			//TODO : remove me
-			config::getLogger()->addInfo("Braintree api_subscription_object=".var_export($subscription, true));
 			$sub_uuid = $subscription->id;
 			config::getLogger()->addInfo("braintree subscription creation done successfully, braintree_subscription_uuid=".$sub_uuid);
 		} catch(BillingsException $e) {
@@ -370,17 +368,26 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 	}
 	
 	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
-		//TODO : check what happens at the end of the subscription
 		if($subscription == NULL) {
 			return;
 		}
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
 			case 'active' :
-				$is_active = 'yes';//always 'yes' ?
-				break;
 			case 'canceled' :
-				$is_active = 'yes';//always 'yes' ?
+				$now = new DateTime();
+				//check dates
+				if(
+						($now < $subscription->getSubPeriodEndsDate())
+								&&
+						($now >= $subscription->getSubPeriodStartedDate())
+				) {
+					//inside the period
+					$is_active = 'yes';
+				} else {
+					//outside the period
+					$is_active = 'no';
+				}
 				break;
 			case 'future' :
 				$is_active = 'no';
@@ -390,9 +397,10 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 			default :
 				$is_active = 'no';
-				config::getLogger()->addWarning("braintree dbsubscription unknown subStatus=".$subscription->getSubStatus().", braintree_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
+				config::getLogger()->addWarning("braintree dbsubscription unknown subStatus=".$subscription->getSubStatus().", gocardless_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;		
 		}
+		//done
 		$subscription->setIsActive($is_active);
 	}
 	
@@ -462,6 +470,58 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		return(NULL);
 	}
+	
+	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+		try {
+			config::getLogger()->addInfo("braintree subscription expiring...");
+			if(
+					$subscription->getSubStatus() == "expired"
+			)
+			{
+				//nothing todo : already done or in process
+			} else {
+				//
+				if($subscription->getSubStatus() != "canceled") {
+					//exception
+					$msg = "cannot expire a subscription that has not been canceled";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($subscription->getSubPeriodEndsDate() >= $expires_date) {
+					//exception
+					$msg = "cannot expire a subscription that has not ended yet";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$subscription->setSubExpiresDate($expires_date);
+				$subscription->setSubStatus("expired");
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			}
+			//
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("braintree subscription expiring done successfully for braintree_subscription_uuid=".$subscription->getSubUid());
+			return($subscription);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while expiring a braintree subscription for braintree_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("braintree subscription expiring failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while expiring a braintree subscription for braintree_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("braintree subscription expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+	}
+
 }
 
 ?>
