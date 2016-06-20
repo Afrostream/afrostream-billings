@@ -117,6 +117,7 @@ class CelerySubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//done
 		$subscription->setIsActive($is_active);
+		$subscription->setIsCancelable(false);
 	}
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {

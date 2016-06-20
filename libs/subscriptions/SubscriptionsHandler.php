@@ -717,6 +717,31 @@ class SubscriptionsHandler {
 		if($subscription == NULL) {
 			return;
 		}
+		//--> DEFAULT
+		// check if subscription still in trial to provide information in boolean mode through inTrial() method
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
+		
+		if ($internalPlan->getTrialEnabled() && !is_null($subscription->getSubActivatedDate())) {
+		
+			$subscriptionDate = clone $subscription->getSubActivatedDate();
+			$subscriptionDate->modify('+ '.$internalPlan->getTrialPeriodLength().' '.$internalPlan->getTrialPeriodUnit());
+		
+			$subscription->setInTrial(($subscriptionDate->getTimestamp() > time()));
+		}
+		
+		// set cancelable status regarding cycle on internal plan
+		if ($internalPlan->getCycle()->getValue() === PlanCycle::once) {
+			$subscription->setIsCancelable(false);
+		} else {
+			$array_status_cancelable = ['future', 'active'];
+			if(array_key_exists($subscription->getSubStatus() , $array_status_cancelable)) {
+				$subscription->setIsCancelable(true);
+			} else {
+				$subscription->setIsCancelable(false);
+			}
+		}
+		//<-- DEFAULT
+		//--> SPECIFIC
 		$provider = ProviderDAO::getProviderById($subscription->getProviderId());
 		if($provider == NULL) {
 			$msg = "unknown provider with id : ".$subscription->getProviderId();
@@ -774,24 +799,7 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 		}
-
-		// check if subscription still in trial to provide information in boolean mode through inTrial() method
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
-
-		if ($internalPlan->getTrialEnabled() && !is_null($subscription->getSubActivatedDate())) {
-
-			$subscriptionDate = clone $subscription->getSubActivatedDate();
-			$subscriptionDate->modify('+ '.$internalPlan->getTrialPeriodLength().' '.$internalPlan->getTrialPeriodUnit());
-
-			$subscription->setInTrial(($subscriptionDate->getTimestamp() > time()));
-		}
-
-		// set cancelable status regarding cycle on internal plan
-		if ($internalPlan->getCycle()->getValue() === PlanCycle::once || $subscription->getSubStatus() != 'active') {
-			$subscription->setIsCancelable(false);
-		} else {
-			$subscription->setIsCancelable(true);
-		}
+		//<-- SPECIFIC
 	}
 	
 	private function checkBillingInfoOptsArray($billing_info_opts_as_array) {
