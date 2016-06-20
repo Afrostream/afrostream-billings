@@ -31,14 +31,16 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 			$sub_period_ends_date->setTime(0, 0, 0);
 			//
 			$providerIdsToIgnore = array();
-			$providerNameToIgnore = 'recurly';
-			$providerRecurly = ProviderDAO::getProviderByName($providerNameToIgnore);
-			if($providerRecurly == NULL) {
-				$msg = "unknown provider named : ".$providerNameToIgnore;
-				ScriptsConfig::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			$providerNamesToIgnore = ['recurly', 'stripe'];
+			foreach ($providerNamesToIgnore as $providerNameToIgnore) {
+				$provider = ProviderDAO::getProviderByName($providerNameToIgnore);
+				if($provider == NULL) {
+					$msg = "unknown provider named : ".$providerNameToIgnore;
+					ScriptsConfig::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$providerIdsToIgnore[] = $provider->getId();
 			}
-			$providerIdsToIgnore[] = $providerRecurly->getId();
 			//
 			while(count($canceledBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, $offset, NULL, $sub_period_ends_date, array('canceled'), NULL, $providerIdsToIgnore)) > 0) {
 				ScriptsConfig::getLogger()->addInfo("processing...current offset=".$offset);
@@ -92,14 +94,16 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 			$sub_period_ends_date->setTime(0, 0, 0);
 			//
 			$providerIdsToIgnore = array();
-			$providerNameToIgnore = 'recurly';
-			$providerRecurly = ProviderDAO::getProviderByName($providerNameToIgnore);
-			if($providerRecurly == NULL) {
-				$msg = "unknown provider named : ".$providerNameToIgnore;
-				ScriptsConfig::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			$providerNamesToIgnore = ['recurly', 'stripe'];
+			foreach ($providerNamesToIgnore as $providerNameToIgnore) {
+				$provider = ProviderDAO::getProviderByName($providerNameToIgnore);
+				if($provider == NULL) {
+					$msg = "unknown provider named : ".$providerNameToIgnore;
+					ScriptsConfig::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$providerIdsToIgnore[] = $provider->getId();
 			}
-			$providerIdsToIgnore[] = $providerRecurly->getId();
 			//
 			while(count($endedBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, $offset, NULL, $sub_period_ends_date, array('active'), array('once'), $providerIdsToIgnore)) > 0) {
 				ScriptsConfig::getLogger()->addInfo("processing...current offset=".$offset);
