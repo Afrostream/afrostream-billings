@@ -3625,7 +3625,7 @@ class UsersIbanDao
 		$entity->setIban($row['iban']);
 		$entity->setCreatedDate($row['creation_date']);
 		$entity->setInvalidatedDate($row['invalidated_date']);
-
+		$entity->setValid($row['valid'] == 't' ? true : false);
 		return $entity;
 	}
 
