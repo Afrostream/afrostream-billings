@@ -761,7 +761,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 					//exception
 					$msg = "iban is not valid";
 					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SEPA_IBAN_INVALID);
 				}
 			} else {
 				$entity = new UsersIban();
