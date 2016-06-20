@@ -27,7 +27,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 			if($coupon == NULL) {
 				$msg = "coupon : code=".$couponCode." NOT FOUND";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_CODE_NOT_FOUND);				
 			}
 			$couponProviderPlan = PlanDAO::getPlanById($coupon->getProviderPlanId());
 			if($couponProviderPlan == NULL) {
