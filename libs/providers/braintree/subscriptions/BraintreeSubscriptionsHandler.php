@@ -72,11 +72,17 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
 					if(strlen($couponCode) > 0) {
+						$discount = $this->getDiscountByCouponCode(Braintree\Discount::all(), $couponCode);
+						if($discount == NULL) {
+							$msg = "coupon : code=".$couponCode." NOT FOUND";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_CODE_NOT_FOUND);
+						}
 						$attribs[] = [
 							'discounts' =>	[
 								'add' =>		[
 													[
-														'inheritedFromId' => $couponCode,
+														'inheritedFromId' => $discount->id,
 													]
 												]
 							 				]
@@ -466,6 +472,15 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 		foreach ($api_subscriptions as $api_subscription) {
 			if($api_subscription->id == $subUuid) {
 				return($api_subscription);
+			}
+		}
+		return(NULL);
+	}
+	
+	private function getDiscountByCouponCode(array $discounts, $couponCode) {
+		foreach ($discounts as $discount) {
+			if($discount->id == $couponCode) {
+				return($discount);
 			}
 		}
 		return(NULL);
