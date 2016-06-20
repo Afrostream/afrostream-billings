@@ -755,6 +755,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		//if no iban suplied, return true
 		$iban = $billingInfoOpts->getOpt('iban');
 		if(!empty($iban)) {
+			$iban = preg_replace('/\s+/','', $iban);//remove all spaces
 			$usersIban = UsersIbanDao::getIban($iban);
 			if (!is_null($usersIban)) {
 				if(!$usersIban->getValid()) {
@@ -765,7 +766,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				}
 			} else {
 				$entity = new UsersIban();
-				$entity->setIban($billingInfoOpts->getOpt('iban'))
+				$entity->setIban($iban)
 				->setUserid($user->getId())
 				->setCreatedDate('now')
 				->setValid(true);
