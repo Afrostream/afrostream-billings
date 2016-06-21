@@ -82,7 +82,7 @@ class StripeWebHooksHandler
     {
         $this->addHookObserver(new CancelSubscription())
             ->addHookObserver(new EmailCanceledSubscription())
-            ->addHookObserver(new EmailCreatedSubscription())
+            //->addHookObserver(new EmailCreatedSubscription())
             ->addHookObserver(new UpdateSubscription());
     }
 

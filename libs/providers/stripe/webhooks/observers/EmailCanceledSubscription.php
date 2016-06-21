@@ -19,7 +19,7 @@ class EmailCanceledSubscription implements HookInterface
     
     public function __construct()
     {
-        $this->sendGridTemplateId = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
+        $this->sendGridTemplateId = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID');
     }
 
     /**
