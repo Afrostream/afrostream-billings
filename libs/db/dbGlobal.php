@@ -1310,8 +1310,9 @@ class BillingsSubscriptionDAO {
 		sub_canceled_date=$4,
 		sub_period_started_date=$5,
 		sub_period_ends_date=$6,
+		sub_expires_date=$7,
 		updated_date = CURRENT_TIMESTAMP
-		WHERE _id=$7';
+		WHERE _id=$8';
 
 		pg_query_params(config::getDbConn(), $query, [
 			$subscription->getPlanId(),
@@ -1320,6 +1321,7 @@ class BillingsSubscriptionDAO {
 			dbGlobal::toISODate($subscription->getSubCanceledDate()),
 			dbGlobal::toISODate($subscription->getSubPeriodStartedDate()),
 			dbGlobal::toISODate($subscription->getSubPeriodEndsDate()),
+			dbGlobal::toISODate($subscription->getSubExpiresDate()),
 			$subscription->getId()
 		]);
 
