@@ -14,6 +14,7 @@ require_once __DIR__ . '/../providers/orange/subscriptions/OrangeSubscriptionsHa
 require_once __DIR__ . '/../providers/bouygues/subscriptions/BouyguesSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/stripe/subscriptions/StripeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/braintree/subscriptions/BraintreeSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/netsize/subscriptions/NetsizeSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__.'/../utils/BillingsException.php';
 
@@ -174,6 +175,10 @@ class SubscriptionsHandler {
 						$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
 						$sub_uuid = $braintreeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
 						break;
+					case 'netsize' : 
+						$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+						$sub_uuid = $netsizeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						break;						
 					default:
 						$msg = "unsupported feature for provider named : ".$provider->getName();
 						config::getLogger()->addError($msg);
@@ -232,6 +237,10 @@ class SubscriptionsHandler {
 						case 'braintree' :
 							$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
 							$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							break;
+						case 'netsize' :
+							$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+							$db_subscription = $netsizeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
 						default:
 							$msg = "record new: unsupported feature for provider named : ".$provider->getName();
@@ -319,6 +328,10 @@ class SubscriptionsHandler {
 				case 'braintree' :
 					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
 					$subscriptions = $braintreeSubscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'netsize' :
+					$subscriptionsHandler = new NetsizeSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -417,11 +430,15 @@ class SubscriptionsHandler {
 					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
 					$braintreeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
 					break;
+				case 'netsize' :
+					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+					$netsizeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
+					break;
 				default:
 					//nothing to do (unknown)
 					break;
 			}
-			config::getLogger()->addInfo("dbsubscriptions update for userid=".$user->getId()." done successfully");
+			config::getLogger()->addInfo("dbsubscriptions updating for userid=".$user->getId()." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while dbsubscriptions updating for userid=".$user->getId().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscriptions updating failed : ".$msg);
@@ -431,6 +448,47 @@ class SubscriptionsHandler {
 			config::getLogger()->addError("dbsubscriptions updating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+	}
+	
+	public function doUpdateUserSubscriptionByUuid($subscriptionBillingUuid) {
+		$db_subscription = NULL;
+		try {
+			config::getLogger()->addInfo("dbsubscription updating for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			if($db_subscription == NULL) {
+				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}	
+			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());	
+			if($provider == NULL) {
+				$msg = "unknown provider id : ".$db_subscription->getProviderId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			switch($provider->getName()) {
+				case 'netsize' :
+					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+					$db_subscription = $netsizeSubscriptionsHandler->doUpdateUserSubscription($db_subscription);
+					break;
+				default:
+					//nothing to do (unknown)
+					break;
+			}
+			//
+			$this->doFillSubscription($db_subscription);
+			//
+			config::getLogger()->addInfo("dbsubscription updating for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while dbsubscription updating for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscription updating failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while dbsubscription updating for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("dbsubscription updating failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_subscription);
 	}
 	
 	public function doRenewSubscriptionByUuid($subscriptionBillingUuid, DateTime $start_date = NULL, DateTime $end_date = NULL) {
@@ -479,6 +537,10 @@ class SubscriptionsHandler {
 				case 'bouygues' :
 					$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 					$db_subscription = $bouyguesSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
+					break;
+				case 'netsize' :
+					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+					$db_subscription = $netsizeSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -543,13 +605,17 @@ class SubscriptionsHandler {
 					$db_subscription = $idipperSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
 				case 'stripe':
-					$stripeSubscriptinoHandler = new StripeSubscriptionsHandler();
-					$stripeSubscriptinoHandler->doCancelSubscription($db_subscription, $cancel_date);
+					$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
+					$db_subscription = $stripeSubscriptionHandler->doCancelSubscription($db_subscription, $cancel_date);
 					$doSendSubscription = false; // mail is sent on event notification by stripe
 					break;
 				case 'braintree' :
 					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
 					$db_subscription = $braintreeSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date);
+					break;
+				case 'netsize' :
+					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+					$db_subscription = $netsizeSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -631,6 +697,11 @@ class SubscriptionsHandler {
 				case 'braintree' :
 					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
 					$db_subscription = $braintreeSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'netsize' :
+					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+					$db_subscription = $netsizeSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
@@ -786,6 +857,10 @@ class SubscriptionsHandler {
 			case 'braintree' :
 				$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
 				$braintreeSubscriptionsHandler->doFillSubscription($subscription);
+				break;
+			case 'netsize' :
+				$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+				$netsizeSubscriptionsHandler->doFillSubscription($subscription);
 				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
