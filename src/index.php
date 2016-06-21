@@ -907,27 +907,19 @@ $app->post("/billings/providers/cashway/webhooks/", function ($request, $respons
 	return($webHooksController->cashwayWebHooksPosting($request, $response, $args));
 });
 
-<<<<<<< HEAD
-//WebHooks - Netsize
-	
-$app->post("/billings/providers/netsize/webhooks/", function ($request, $response, $args) {
-	$webHooksController = new WebHooksController();
-	return($webHooksController->netsizeWebHooksPosting($request, $response, $args));
-});
-	
-//Testing purpose
-
-/*$app->get("/billings/api/test/", function ($request, $response, $args) {
-	testMe();
-});*/
-=======
 //WebHooks - braintree
 	
 $app->post("/billings/providers/braintree/webhooks/", function ($request, $response, $args) {
 	$webHooksController = new WebHooksController();
 	return($webHooksController->braintreeWebHooksPosting($request, $response, $args));
 });
->>>>>>> master
+
+//WebHooks - Netsize
+	
+$app->post("/billings/providers/netsize/webhooks/", function ($request, $response, $args) {
+	$webHooksController = new WebHooksController();
+	return($webHooksController->netsizeWebHooksPosting($request, $response, $args));
+});
 
 $app->run();
 
