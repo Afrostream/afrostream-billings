@@ -15,6 +15,13 @@ class UpdateSubscription implements HookInterface
 {
     const REQUESTED_HOOK_TYPE = 'customer.subscription.updated';
 
+    protected $subscriptionHandler;
+
+    public function __construct()
+    {
+        $this->subscriptionHandler = new SubscriptionsHandler();
+    }
+
     public function event(Event $event, Provider $provider)
     {
         if ($event['type'] != self::REQUESTED_HOOK_TYPE) {
@@ -46,10 +53,13 @@ class UpdateSubscription implements HookInterface
             return null;
         }
 
+
         if (!empty($subscription['canceled_at'])) {
             $status = 'canceled';
         }
-        
+
+        $oldSubscription = clone $billingSubscription;
+
         $billingSubscription->setPlanId($newProviderPlan->getId());
         $billingSubscription->setSubStatus($status);
         $billingSubscription->setSubCanceledDate($this->createDate($subscription['canceled_at']));
@@ -57,6 +67,9 @@ class UpdateSubscription implements HookInterface
         $billingSubscription->setSubPeriodEndsDate($this->createDate($subscription['current_period_end']));
 
         BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
+
+        $this->subscriptionHandler->doSendSubscriptionEvent($oldSubscription, $billingSubscription);
+
         config::getLogger()->addInfo('STRIPE - customer.subscription.updated : update subscription '.$billingSubscription->getId());
     }
 

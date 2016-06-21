@@ -137,7 +137,8 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 		}
 		//done
-		$subscription->setIsActive($is_active);	
+		$subscription->setIsActive($is_active);
+		$subscription->setIsCancelable(false);
 	}
 	
 	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
