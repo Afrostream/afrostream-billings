@@ -4,7 +4,6 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/afr/coupons/AfrCouponsHandler.php';
 require_once __DIR__ . '/../providers/cashway/coupons/CashwayCouponsHandler.php';
-require_once __DIR__ . '/../providers/stripe/coupons/StripeCouponsHandler.php';
 
 class CouponsHandler {
 	
@@ -113,9 +112,9 @@ class CouponsHandler {
 					$cashwayCouponsHandler = new CashwayCouponsHandler();
 					$coupon_provider_uuid = $cashwayCouponsHandler->doCreateCoupon($user, $userOpts, $couponsCampaign, $coupon_billing_uuid);
 					break;
-				case 'stripe' :
-					$stripeCouponsHandler = new StripeCouponsHandler();
-					$coupon_provider_uuid = $stripeCouponsHandler->doCreateCoupon($user, $userOpts, $couponsCampaign, $coupon_billing_uuid);
+				case 'afr' :
+					$afrCouponHandler = new AfrCouponsHandler();
+					$coupon_provider_uuid = $afrCouponHandler->doCreateCoupon($user, $userOpts, $couponsCampaign, $coupon_billing_uuid);
 					break;
 				default :
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -128,9 +127,9 @@ class CouponsHandler {
 					$cashwayCouponsHandler = new CashwayCouponsHandler();
 					$db_coupon = $cashwayCouponsHandler->createDbCouponFromApiCouponUuid($user, $userOpts, $couponsCampaign, $coupon_billing_uuid, $coupon_provider_uuid);
 					break;
-				case 'stripe' :
-					$stripeCouponsHandler = new StripeCouponsHandler();
-					$db_coupon = $stripeCouponsHandler->createDbCouponFromApiCouponUuid($user, $userOpts, $couponsCampaign, $coupon_billing_uuid, $coupon_provider_uuid);
+				case 'afr' :
+					$afrCouponHandler = new AfrCouponsHandler();
+					$db_coupon = $afrCouponHandler->createDbCouponFromApiCouponUuid($user, $userOpts, $couponsCampaign, $coupon_billing_uuid, $coupon_provider_uuid);
 					break;
 				default :
 					$msg = "unsupported feature for provider named : ".$provider->getName();
