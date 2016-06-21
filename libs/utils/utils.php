@@ -234,11 +234,19 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			break;
+<<<<<<< HEAD
 		case 'netsize' :
 			if($case == 'create') {
 				if(!array_key_exists('flowId', $sub_opts_as_array)) {
 					//exception
 					$msg = "subOpts field 'flowId' is missing";
+=======
+		case 'braintree' :
+			if($case == 'create') {
+				if(!array_key_exists('customerBankAccountToken', $sub_opts_as_array)) {
+					//exception
+					$msg = "subOpts field 'customerBankAccountToken' is missing";
+>>>>>>> master
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}

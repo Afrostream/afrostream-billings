@@ -261,6 +261,24 @@ if(getEnv('BOUYGUES_TV_HACK_ACTIVATED') === false) {
 	putEnv('BOUYGUES_TV_HACK_ACTIVATED=0');
 }
 
+#Braintree
+
+if(getEnv('BRAINTREE_ENVIRONMENT') === false) {
+	putEnv('BRAINTREE_ENVIRONMENT=sandbox');
+}
+
+if(getEnv('BRAINTREE_MERCHANT_ID') === false) {
+	putEnv('BRAINTREE_MERCHANT_ID=vpchhx9ppk3xwrcy');
+}
+
+if(getEnv('BRAINTREE_PUBLIC_KEY') === false) {
+	putEnv('BRAINTREE_PUBLIC_KEY=hpwk56f69q22bnqh');
+}
+
+if(getEnv('BRAINTREE_PRIVATE_KEY') === false) {
+	putEnv('BRAINTREE_PRIVATE_KEY=d2cc0c2d62852a9555e7fa9119f89665');
+}
+
 #proxy
 
 if(getEnv('PROXY_HOST') === false) {
@@ -278,6 +296,22 @@ if(getEnv('PROXY_USER') === false) {
 if(getEnv('PROXY_PWD') === false) {
 	putEnv('PROXY_PWD=afrostream77');
 }
+
+
+# stripe api key
+if(getEnv('STRIPE_API_KEY') === false) {
+	putEnv('STRIPE_API_KEY=sk_test_VaFvskbZOobGZ1L3x1iGwzOk');
+}
+
+#Stripe WebHooks
+
+if(getEnv('STRIPE_WH_HTTP_AUTH_USER') === false) {
+	putEnv('STRIPE_WH_HTTP_AUTH_USER=admin');
+}
+if(getEnv('STRIPE_WH_HTTP_AUTH_PWD') === false) {
+	putEnv('STRIPE_WH_HTTP_AUTH_PWD=pwd');
+}
+
 
 #logger, #db_conn, ...
 
@@ -318,5 +352,3 @@ class config {
 }
 
 config::init();
-
-?>

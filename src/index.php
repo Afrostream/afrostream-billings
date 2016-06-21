@@ -9,7 +9,6 @@ require_once __DIR__ . '/../libs/site/CouponsController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
 require_once __DIR__ . '/../libs/site/CouponsCampaignsController.php';
 require_once __DIR__ . '/../libs/site/ContextsController.php';
-//require_once __DIR__ . '/test.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -297,7 +296,9 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
         	"key3": "value3"
       	}
 	}
- 
+ */
+
+/*
  	sample answer :
  	
 	{
@@ -635,8 +636,8 @@ $app->post("/billings/api/internalplans/", function ($request, $response, $args)
 	$internalPlansController = new InternalPlansFilteredController();
 	return($internalPlansController->create($request, $response, $args));
 });
-
 //update
+
 
 $app->put("/billings/api/internalplans/{internalPlanUuid}", function ($request, $response, $args) {
 	$internalPlansController = new InternalPlansFilteredController();
@@ -878,6 +879,13 @@ $app->post("/billings/providers/recurly/webhooks/", function ($request, $respons
 	return($webHooksController->recurlyWebHooksPosting($request, $response, $args));
 });
 
+//WebHooks - Stripe
+
+$app->post("/billings/providers/stripe/webhooks/", function ($request, $response, $args) {
+	$webHooksController = new WebHooksController();
+	return($webHooksController->stripeWebHooksPosting($request, $response, $args));
+});
+
 //WebHooks - Gocardless
 
 $app->post("/billings/providers/gocardless/webhooks/", function ($request, $response, $args) {
@@ -899,6 +907,7 @@ $app->post("/billings/providers/cashway/webhooks/", function ($request, $respons
 	return($webHooksController->cashwayWebHooksPosting($request, $response, $args));
 });
 
+<<<<<<< HEAD
 //WebHooks - Netsize
 	
 $app->post("/billings/providers/netsize/webhooks/", function ($request, $response, $args) {
@@ -911,6 +920,14 @@ $app->post("/billings/providers/netsize/webhooks/", function ($request, $respons
 /*$app->get("/billings/api/test/", function ($request, $response, $args) {
 	testMe();
 });*/
+=======
+//WebHooks - braintree
+	
+$app->post("/billings/providers/braintree/webhooks/", function ($request, $response, $args) {
+	$webHooksController = new WebHooksController();
+	return($webHooksController->braintreeWebHooksPosting($request, $response, $args));
+});
+>>>>>>> master
 
 $app->run();
 

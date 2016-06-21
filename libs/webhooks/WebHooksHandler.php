@@ -5,7 +5,13 @@ require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/recurly/webhooks/RecurlyWebHooksHandler.php';
 require_once __DIR__ . '/../providers/gocardless/webhooks/GocardlessWebHooksHandler.php';
 require_once __DIR__ . '/../providers/cashway/webhooks/CashwayWebHooksHandler.php';
+<<<<<<< HEAD
 require_once __DIR__ . '/../providers/netsize/webhooks/NetsizeWebHooksHandler.php';
+=======
+require_once __DIR__ . '/../providers/stripe/webhooks/StripeWebHooksHandler.php';
+require_once __DIR__ . '/../providers/braintree/webhooks/BraintreeWebHooksHandler.php';
+
+>>>>>>> master
 
 class WebHooksHander {
 	
@@ -58,9 +64,21 @@ class WebHooksHander {
 					$cashwayWebHooksHandler = new CashwayWebHooksHandler();
 					$cashwayWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
 					break;
+<<<<<<< HEAD
 				case 'netsize' :
 					$netsizeWebHooksHandler = new NetsizeWebHooksHandler();
 					$netsizeWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
+=======
+				case 'stripe':
+					$stripeWebHookHandler = new StripeWebHooksHandler();
+					$stripeWebHookHandler->loadHooks();
+						
+					$stripeWebHookHandler->doProcessWebHook($billingsWebHook, $update_type);
+					break;
+				case 'braintree' :
+					$braintreeWebHooksHandler = new BraintreeWebHooksHandler();
+					$braintreeWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
+>>>>>>> master
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();

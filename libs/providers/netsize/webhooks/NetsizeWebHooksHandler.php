@@ -57,7 +57,7 @@ class NetsizeWebHooksHandler {
 		}
 		config::getLogger()->addInfo('Processing netsize hook notification done successfully');
 	}
-
+	
 	private function doProcessTransactionChanged(SimpleXMLElement $notificationNode, $update_type, $updateId) {
 		config::getLogger()->addInfo('Processing netsize hook subscription, notification_name='.$notificationNode->getName().'...');
 		//check Attribute : subscription-transaction-id. If NOT HERE : IGNORE

@@ -62,6 +62,7 @@ class NetsizeClient {
 		$content = curl_exec($CURL);
 		$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
 		curl_close($CURL);
+		config::getLogger()->addError("GET-STATUS-XML-CONTENT=".$content);
 		if($httpCode == 200) {
 			$getStatusResponse = new GetStatusResponse($content);
 			$getStatusResponse->setTransactionId($getStatusRequest->getTransactionId());
@@ -77,7 +78,7 @@ class NetsizeClient {
 	public function closeSubscription(CloseSubscriptionRequest $closeSubscriptionRequest) {
 		$closeSubscriptionResponse = NULL;
 		$url = getEnv('NETSIZE_API_URL');
-		$data_string = $getStatusRequest->getPost();
+		$data_string = $closeSubscriptionRequest->getPost();
 		$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_CUSTOMREQUEST => 'POST',
@@ -95,6 +96,7 @@ class NetsizeClient {
 		$content = curl_exec($CURL);
 		$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
 		curl_close($CURL);
+		config::getLogger()->addError("CLOSE-SUB-XML-CONTENT=".$content);
 		if($httpCode == 200) {
 			$closeSubscriptionResponse = new CloseSubscriptionResponse($content);
 		} else {
@@ -488,7 +490,7 @@ class CloseSubscriptionRequest {
 	}
 	
 	public function setTrigger($trigger) {
-		$this->trigger = trigger;
+		$this->trigger = $trigger;
 	}
 	
 	public function getTrigger() {
@@ -514,7 +516,7 @@ class CloseSubscriptionRequest {
 		$methodNode = $xml->createElement('close-subscription');
 		$methodNode = $requestNode->appendChild($methodNode);
 		$methodNode->setAttribute('auth-key', getEnv('NETSIZE_API_AUTH_KEY'));
-		$methodNode->setAttribute('service-id', getEnv('NETSIZE_API_SERVICE_ID'));
+		//$methodNode->setAttribute('service-id', getEnv('NETSIZE_API_SERVICE_ID'));
 		$methodNode->setAttribute('transaction-id', $this->transactionId);
 		$methodNode->setAttribute('trigger', $this->trigger);
 		$methodNode->setAttribute('return-url', $this->returnUrl);
@@ -560,7 +562,7 @@ class CloseSubscriptionResponse {
 			throw new Exception("API CALL : getting netsize close-subscription, transaction-status node not found, response=".(string) $response);
 		}
 		$this->transactionStatusCode = $transactionStatusNode['code'];
-		$lastTransactionErrorNode = self::getNodeByName($getStatusNode, 'last-transaction-error');
+		$lastTransactionErrorNode = self::getNodeByName($closeSubscriptionNode, 'last-transaction-error');
 		if(isset($lastTransactionErrorNode)) {
 			$this->lastTransactionErrorCode = $lastTransactionErrorNode['code'];
 			$this->lastTransactionErrorReason = $lastTransactionErrorNode['reason'];

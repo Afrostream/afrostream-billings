@@ -66,7 +66,10 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				$subscription->account = $account;
 				
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
-					$subscription->coupon_code = $subOpts->getOpts()['couponCode'];
+					$couponCode = $subOpts->getOpts()['couponCode'];
+					if(strlen($couponCode) > 0) {
+						$subscription->coupon_code = $couponCode;
+					}
 				}
 				
 				$subscription->create();
@@ -316,6 +319,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				return($db_subscription);
 			}
 		}
+		return(NULL);
 	}
 	
 	private function getApiSubscriptionByUuid(Recurly_SubscriptionList $api_subscriptions, $subUuid) {
@@ -324,6 +328,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				return($api_subscription);
 			}
 		}
+		return(NULL);
 	}
 	
 	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {

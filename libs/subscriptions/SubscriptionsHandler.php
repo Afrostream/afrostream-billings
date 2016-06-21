@@ -12,7 +12,12 @@ require_once __DIR__ . '/../providers/afr/subscriptions/AfrSubscriptionsHandler.
 require_once __DIR__ . '/../providers/cashway/subscriptions/CashwaySubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/orange/subscriptions/OrangeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/bouygues/subscriptions/BouyguesSubscriptionsHandler.php';
+<<<<<<< HEAD
 require_once __DIR__ . '/../providers/netsize/subscriptions/NetsizeSubscriptionsHandler.php';
+=======
+require_once __DIR__ . '/../providers/stripe/subscriptions/StripeSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/braintree/subscriptions/BraintreeSubscriptionsHandler.php';
+>>>>>>> master
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__.'/../utils/BillingsException.php';
 
@@ -133,12 +138,10 @@ class SubscriptionsHandler {
 					case 'gocardless' :
 						$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
 						$sub_uuid = $gocardlessSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
-
-						// if $sub_uuid is null the iban supplied is invalid
-						if (is_null($sub_uuid)) {
-							throw new  BillingsException(new ExceptionType(ExceptionType::internal), 'Supplied iban is invalid');
-						}
-
+						break;
+					case 'stripe':
+						$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
+						$billingSubscription = $stripeSubscriptionHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
 						break;
 					case 'celery' :
 						$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -171,10 +174,17 @@ class SubscriptionsHandler {
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						break;
+<<<<<<< HEAD
 					case 'netsize' : 
 						$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 						$sub_uuid = $netsizeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
 						break;						
+=======
+					case 'braintree' :
+						$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+						$sub_uuid = $braintreeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						break;
+>>>>>>> master
 					default:
 						$msg = "unsupported feature for provider named : ".$provider->getName();
 						config::getLogger()->addError($msg);
@@ -226,12 +236,23 @@ class SubscriptionsHandler {
 							$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 							$db_subscription = $bouyguesSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;
+<<<<<<< HEAD
 						case 'netsize' :
 							$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 							$db_subscription = $netsizeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
 							break;							
+=======
+						case 'stripe':
+							$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
+							$db_subscription = $stripeSubscriptionHandler->createDbSubscriptionFromApiSubscription($billingSubscription, $subOpts);
+							break;
+						case 'braintree' :
+							$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+							$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							break;
+>>>>>>> master
 						default:
-							$msg = "unsupported feature for provider named : ".$provider->getName();
+							$msg = "record new: unsupported feature for provider named : ".$provider->getName();
 							config::getLogger()->addError($msg);
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 							break;
@@ -309,10 +330,21 @@ class SubscriptionsHandler {
 					$subscriptionsHandler = new BouyguesSubscriptionsHandler();
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
+<<<<<<< HEAD
 				case 'netsize' :
 					$subscriptionsHandler = new NetsizeSubscriptionsHandler();
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
+=======
+				case 'stripe' :
+					$subscriptionsHandler = new StripeSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'braintree' :
+					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$subscriptions = $braintreeSubscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+>>>>>>> master
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
@@ -402,9 +434,19 @@ class SubscriptionsHandler {
 					$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 					$bouyguesSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
 					break;
+<<<<<<< HEAD
 				case 'netsize' :
 					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 					$netsizeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
+=======
+				case 'stripe':
+					$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
+					$stripeSubscriptionHandler->doUpdateUserSubscriptions($user, $userOpts);
+					break;
+				case 'braintree' :
+					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$braintreeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
+>>>>>>> master
 					break;
 				default:
 					//nothing to do (unknown)
@@ -475,7 +517,7 @@ class SubscriptionsHandler {
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$user->getProviderId();
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -548,11 +590,12 @@ class SubscriptionsHandler {
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$user->getProviderId();
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$db_subscription_before_update = clone $db_subscription;
+			$doSendSubscription = true;
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
@@ -575,9 +618,20 @@ class SubscriptionsHandler {
 					$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
 					$db_subscription = $idipperSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
+<<<<<<< HEAD
 				case 'netsize' :
 					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 					$db_subscription = $netsizeSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
+=======
+				case 'stripe':
+					$stripeSubscriptinoHandler = new StripeSubscriptionsHandler();
+					$stripeSubscriptinoHandler->doCancelSubscription($db_subscription, $cancel_date);
+					$doSendSubscription = false; // mail is sent on event notification by stripe
+					break;
+				case 'braintree' :
+					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$braintreeSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date);
+>>>>>>> master
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -585,8 +639,10 @@ class SubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
-			//
-			$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			 if ($doSendSubscription) {
+				 $this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			 }
+
 			//
 			$this->doFillSubscription($db_subscription);
 			//
@@ -615,7 +671,7 @@ class SubscriptionsHandler {
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$user->getProviderId();
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -643,8 +699,8 @@ class SubscriptionsHandler {
 					$db_subscription = $idipperSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
 				case 'afr' :
-					$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
-					$db_subscription = $gocardlessSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
+					$db_subscription = $afrSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
 				case 'cashway' :
 					$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
@@ -654,10 +710,16 @@ class SubscriptionsHandler {
 					$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 					$db_subscription = $bouyguesSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
+<<<<<<< HEAD
 				case 'netsize' :
 					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 					$db_subscription = $netsizeSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
+=======
+				case 'braintree' :
+					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$db_subscription = $braintreeSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+>>>>>>> master
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
@@ -694,7 +756,7 @@ class SubscriptionsHandler {
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$user->getProviderId();
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -738,6 +800,31 @@ class SubscriptionsHandler {
 		if($subscription == NULL) {
 			return;
 		}
+		//--> DEFAULT
+		// check if subscription still in trial to provide information in boolean mode through inTrial() method
+		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
+		
+		if ($internalPlan->getTrialEnabled() && !is_null($subscription->getSubActivatedDate())) {
+		
+			$subscriptionDate = clone $subscription->getSubActivatedDate();
+			$subscriptionDate->modify('+ '.$internalPlan->getTrialPeriodLength().' '.$internalPlan->getTrialPeriodUnit());
+		
+			$subscription->setInTrial(($subscriptionDate->getTimestamp() > time()));
+		}
+		
+		// set cancelable status regarding cycle on internal plan
+		if ($internalPlan->getCycle()->getValue() === PlanCycle::once) {
+			$subscription->setIsCancelable(false);
+		} else {
+			$array_status_cancelable = ['future', 'active'];
+			if(array_key_exists($subscription->getSubStatus() , $array_status_cancelable)) {
+				$subscription->setIsCancelable(true);
+			} else {
+				$subscription->setIsCancelable(false);
+			}
+		}
+		//<-- DEFAULT
+		//--> SPECIFIC
 		$provider = ProviderDAO::getProviderById($subscription->getProviderId());
 		if($provider == NULL) {
 			$msg = "unknown provider with id : ".$subscription->getProviderId();
@@ -781,9 +868,19 @@ class SubscriptionsHandler {
 				$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
 				$bouyguesSubscriptionsHandler->doFillSubscription($subscription);				
 				break;
+<<<<<<< HEAD
 			case 'netsize' :
 				$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 				$netsizeSubscriptionsHandler->doFillSubscription($subscription);
+=======
+			case 'stripe':
+				$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
+				$stripeSubscriptionHandler->doFillSubscription($subscription);
+				break;
+			case 'braintree' :
+				$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+				$braintreeSubscriptionsHandler->doFillSubscription($subscription);
+>>>>>>> master
 				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -791,24 +888,7 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 		}
-
-		// check if subscription still in trial to provide information in boolean mode through inTrial() method
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
-
-		if ($internalPlan->getTrialEnabled() && !is_null($subscription->getSubActivatedDate())) {
-
-			$subscriptionDate = clone $subscription->getSubActivatedDate();
-			$subscriptionDate->modify('+ '.$internalPlan->getTrialPeriodLength().' '.$internalPlan->getTrialPeriodUnit());
-
-			$subscription->setInTrial(($subscriptionDate->getTimestamp() > time()));
-		}
-
-		// set cancelable status regarding cycle on internal plan
-		if ($internalPlan->getCycle()->getValue() === PlanCycle::once || $subscription->getSubStatus() != 'active') {
-			$subscription->setIsCancelable(false);
-		} else {
-			$subscription->setIsCancelable(true);
-		}
+		//<-- SPECIFIC
 	}
 	
 	private function checkBillingInfoOptsArray($billing_info_opts_as_array) {
@@ -1036,7 +1116,7 @@ class SubscriptionsHandler {
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$user->getProviderId();
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -1045,6 +1125,10 @@ class SubscriptionsHandler {
 				case 'recurly' :
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
 					$db_subscription = $recurlySubscriptionsHandler->doReactivateSubscription($db_subscription);
+					break;
+				case 'stripe':
+					$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
+					$stripeSubscriptionHandler->doReactivateSubscription($db_subscription);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -1082,7 +1166,7 @@ class SubscriptionsHandler {
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$user->getProviderId();
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -1112,6 +1196,14 @@ class SubscriptionsHandler {
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
 					$db_subscription = $recurlySubscriptionsHandler->doUpdateInternalPlan($db_subscription, $internalPlan, $internalPlanOpts, $providerPlan, $providerPlanOpts);
 					break;
+				case 'stripe':
+					$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
+					$stripeSubscriptionHandler->doUpdateInternalPlan($db_subscription, $internalPlan, $internalPlanOpts, $providerPlan, $providerPlanOpts);
+					break;
+				case 'braintree' :
+					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$db_subscription = $braintreeSubscriptionsHandler->doUpdateInternalPlan($db_subscription, $internalPlan, $internalPlanOpts, $providerPlan, $providerPlanOpts);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
@@ -1137,5 +1229,3 @@ class SubscriptionsHandler {
 	}
 	
 }
-
-?>

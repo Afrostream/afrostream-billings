@@ -225,6 +225,25 @@ class UserOpts {
 	public function setOpt($key, $value) {
 		$this->opts[$key] = $value;
 	}
+
+	/**
+	 * Get value for the given option
+	 * If filter is requested (default) the return value will be filtered to avoid bad data (ie. firstNameValue,...)
+	 *
+	 * @param string $key
+	 * @param bool   $filter
+	 *
+	 * @return string|null
+	 */
+	public function getOpt($key, $filter = true)
+	{
+		$badValues = ['firstNameValue', 'lastNameValue'];
+		if (array_key_exists($key, $this->opts) && !in_array($this->opts[$key], $badValues)) {
+			return $this->opts[$key];
+		}
+
+		return null;
+	}
 	
 	public function setOpts($opts) {
 		$this->opts = $opts;
@@ -1276,7 +1295,36 @@ class BillingsSubscriptionDAO {
 		$row = pg_fetch_row($result);
 		return(self::getBillingsSubscriptionById($row[0]));
 	}
-	
+
+	/**
+	 * @param BillingsSubscription $subscription
+	 * 
+	 * @return BillingsSubscription|null
+	 */
+	public static function updateBillingsSubscription(BillingsSubscription $subscription)
+	{
+		$query = 'UPDATE billing_subscriptions 
+		SET planid=$1,
+		sub_status=$2,
+		sub_activated_date=$3,
+		sub_canceled_date=$4,
+		sub_period_started_date=$5,
+		sub_period_ends_date=$6,
+		updated_date = CURRENT_TIMESTAMP
+		WHERE _id=$7';
+
+		pg_query_params(config::getDbConn(), $query, [
+			$subscription->getPlanId(),
+			$subscription->getSubStatus(),
+			dbGlobal::toISODate($subscription->getSubActivatedDate()),
+			dbGlobal::toISODate($subscription->getSubCanceledDate()),
+			dbGlobal::toISODate($subscription->getSubPeriodStartedDate()),
+			dbGlobal::toISODate($subscription->getSubPeriodEndsDate()),
+			$subscription->getId()
+		]);
+
+		return self::getBillingsSubscriptionById($subscription->getId());
+	}
 
 	//planid
 	public static function updatePlanId(BillingsSubscription $subscription) {
@@ -1286,7 +1334,7 @@ class BillingsSubscriptionDAO {
 						$subscription->getId()));
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
-	
+
 	//subStatus
 	public static function updateSubStatus(BillingsSubscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, sub_status = $1 WHERE _id = $2";
@@ -1780,6 +1828,15 @@ class BillingsSubscriptionOpts implements JsonSerializable {
 
 	public function getOpts() {
 		return($this->opts);
+	}
+
+	public function getOpt($key)
+	{
+		if (array_key_exists($key, $this->opts)) {
+			return $this->opts[$key];
+		}
+
+		return null;
 	}
 
 	public function jsonSerialize() {
@@ -3568,7 +3625,7 @@ class UsersIbanDao
 		$entity->setIban($row['iban']);
 		$entity->setCreatedDate($row['creation_date']);
 		$entity->setInvalidatedDate($row['invalidated_date']);
-
+		$entity->setValid($row['valid'] == 't' ? true : false);
 		return $entity;
 	}
 

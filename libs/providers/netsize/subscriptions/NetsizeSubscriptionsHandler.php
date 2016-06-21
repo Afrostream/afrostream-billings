@@ -86,7 +86,9 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setSubUid($api_subscription->getTransactionId());
 		switch ($api_subscription->getTransactionStatusCode()) {
 			case 110 ://Authentification Pending
+			case 120 ://Success
 			case 210 ://Pending
+			case 220 ://Success
 			case 400 ://Started
 			case 410 ://Pending
 				$db_subscription->setSubStatus('future');
@@ -172,16 +174,22 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				) {
 					//nothing to do : already done or in process
 				} else {
+					//
 					$doIt = true;
 					$netsizeClient = new NetsizeClient();
 						
 					$closeSubscriptionRequest = new CloseSubscriptionRequest();
 					$closeSubscriptionRequest->setTransactionId($subscription->getSubUid());
-					$closeSubscriptionRequest->setTrigger(1);
-					$closeSubscriptionRequest->setReturnUrl('todo');//TODO
-						
+					$closeSubscriptionRequest->setTrigger(0);
+					$closeSubscriptionRequest->setReturnUrl('');//TODO : is it needed ?
+					
 					$closeSubscriptionResponse = $netsizeClient->closeSubscription($closeSubscriptionRequest);
-					//done
+					
+					if($closeSubscriptionResponse->getTransactionStatusCode() != 422) {
+						$msg = "netsize subscription cannot be canceled, code=".$getStatusResponse->getTransactionStatusCode();
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
+					}
 				}
 			} else {
 				if(
@@ -366,14 +374,18 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		//$db_subscription->setSubUid($subscription_uuid);//STATIC
 		switch ($api_subscription->getTransactionStatusCode()) {
 			case 110 ://Authentification Pending
+			case 120 ://Success
 			case 210 ://Pending
+			case 220 ://Success
 			case 400 ://Started
 			case 410 ://Pending
 				$db_subscription->setSubStatus('future');
+				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
 				break;
 			case 420 ://Activated
 			case 421 ://Activated (Auto Billed)
 				$db_subscription->setSubStatus('active');
+				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
 				if($db_subscription->getSubActivatedDate() == NULL) {
 					$db_subscription->setSubActivatedDate($now);//assume it's now only if not already set
 					$db_subscription = BillingsSubscriptionDAO::updateSubActivatedDate($db_subscription);
@@ -416,6 +428,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 			case 422 ://Activated (Termination in Progress)
 			case 432 ://Cancelled
 				$db_subscription->setSubStatus('canceled');
+				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
 				if($db_subscription->getSubCanceledDate() == NULL) {
 					$db_subscription->setSubCanceledDate($now);//assume it's now only if not already set
 					$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
@@ -425,6 +438,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 			case 431 ://Suspended
 			case 433 ://Failed
 				$db_subscription->setSubStatus('expired');
+				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
 				if($db_subscription->getSubExpiresDate() == NULL) {
 					$db_subscription->setSubExpiresDate($now);//assume it's now only if not already set
 					$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
@@ -436,7 +450,6 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				//break;
 		}
-		$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
 		//
 		$db_subscription->setUpdateType($update_type);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateType($db_subscription);
@@ -524,6 +537,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
 		return($db_subscription);
 	}
+	
 }
 
 ?>

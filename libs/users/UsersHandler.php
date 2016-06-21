@@ -10,7 +10,12 @@ require_once __DIR__ . '/../providers/afr/users/AfrUsersHandler.php';
 require_once __DIR__ . '/../providers/cashway/users/CashwayUsersHandler.php';
 require_once __DIR__ . '/../providers/orange/users/OrangeUsersHandler.php';
 require_once __DIR__ . '/../providers/bouygues/users/BouyguesUsersHandler.php';
+<<<<<<< HEAD
 require_once __DIR__ . '/../providers/netsize/users/NetsizeUsersHandler.php';
+=======
+require_once __DIR__ . '/../providers/stripe/users/StripeUsersHandler.php';
+require_once __DIR__ . '/../providers/braintree/users/BraintreeUsersHandler.php';
+>>>>>>> master
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/utils.php';
 
@@ -232,10 +237,21 @@ class UsersHandler {
 				case 'bouygues' :
 					$bouyguesUsersHandler = new BouyguesUsersHandler();
 					$user_provider_uuid = $bouyguesUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+<<<<<<< HEAD
 					break;				
 				case 'netsize' :
 					$netsizeUsersHandler = new NetsizeUsersHandler();
 					$user_provider_uuid = $netsizeUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+=======
+					break;
+				case 'stripe':
+					$stripeUserHandler = new StripeUsersHandler();
+					$user_provider_uuid = $stripeUserHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					break;
+				case 'braintree' :
+					$braintreeUsersHandler = new BraintreeUsersHandler();
+					$user_provider_uuid = $braintreeUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+>>>>>>> master
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider_name;
@@ -332,10 +348,17 @@ class UsersHandler {
 					$gocardlessUsersHandler = new GocardlessUsersHandler();
 					$gocardlessUsersHandler->doUpdateUserOpts($db_user->getUserProviderUuid(), $db_user_opts->getOpts());
 					break;
+<<<<<<< HEAD
 				case 'netsize' :
 					$netsizeUsersHandler = new NetsizeUsersHandler();
 					$netsizeUsersHandler->doUpdateUserOpts($db_user->getUserProviderUuid(), $db_user_opts->getOpts());
 					break;				
+=======
+				case 'braintree' :
+					$braintreeUsersHandler = new BraintreeUsersHandler();
+					$braintreeUsersHandler->doUpdateUserOpts($db_user->getUserProviderUuid(), $db_user_opts->getOpts());
+					break;
+>>>>>>> master
 				default:
 					//nothing to do
 					break;

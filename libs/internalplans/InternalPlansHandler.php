@@ -7,6 +7,7 @@ require_once __DIR__ . '/../providers/gocardless/plans/GocardlessPlansHandler.ph
 require_once __DIR__ . '/../providers/bachat/plans/BachatPlansHandler.php';
 require_once __DIR__ . '/../providers/idipper/plans/IdipperPlansHandler.php';
 require_once __DIR__ . '/../providers/afr/plans/AfrPlansHandler.php';
+require_once __DIR__ . '/../providers/stripe/plans/StripePlanHandler.php';
 
 use Money\Currency;
 use Iso3166\Codes;
@@ -210,6 +211,10 @@ class InternalPlansHandler {
 				case 'afr' :
 					$afrPlansHandler = new AfrPlansHandler();
 					$provider_plan_uuid = $afrPlansHandler->createProviderPlan($db_internal_plan);
+					break;
+				case 'stripe':
+					$stripePlanHandler = new StripePlanHandler();
+					$provider_plan_uuid = $stripePlanHandler->createProviderPlan($db_internal_plan);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
