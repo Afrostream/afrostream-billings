@@ -66,7 +66,7 @@ class UpdateSubscription implements HookInterface
         $billingSubscription->setSubPeriodStartedDate($this->createDate($subscription['current_period_start']));
         $billingSubscription->setSubPeriodEndsDate($this->createDate($subscription['current_period_end']));
 
-        BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
+        $billingSubscription = BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
 
         $this->subscriptionHandler->doSendSubscriptionEvent($oldSubscription, $billingSubscription);
 
