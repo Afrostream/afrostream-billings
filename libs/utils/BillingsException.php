@@ -17,6 +17,8 @@ class ExceptionError extends Enum {
 	const UNKNOWN_ERROR									=	0;
 	//
 	const COUPON_CODE_NOT_FOUND							=	50;
+	//
+	const SEPA_IBAN_INVALID								=	60;
 	//CONTEXTS ERRORS
 	const CONTEXT_NOT_FOUND								=	100;
 	//CASHWAY ERRORS

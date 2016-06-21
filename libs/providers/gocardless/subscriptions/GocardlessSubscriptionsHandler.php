@@ -19,12 +19,6 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
-
-		if (!$this->checkBillingInfos($billingInfoOpts, $user)) {
-
-			return $sub_uuid;
-		}
-
 		try {
 			config::getLogger()->addInfo("gocardless subscription creation...");
 			if(isset($subscription_provider_uuid)) {
@@ -58,6 +52,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$sub_uuid = $subscription_provider_uuid;
 			} else {
 				checkSubOptsArray($subOpts->getOpts(), 'gocardless', 'create');
+				$this->checkBillingInfos($billingInfoOpts, $user);
 				$amount = $internalPlan->getAmountInCents();
 				$currency = $internalPlan->getCurrency();
 				if(!array_key_exists($internalPlan->getPeriodUnit()->getValue(), GocardlessPlansHandler::$supported_periods)) {
@@ -758,24 +753,26 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 	protected function checkBillingInfos(BillingInfoOpts $billingInfoOpts, User $user)
 	{
 		//if no iban suplied, return true
-		if ($billingInfoOpts->getOpt('iban') === null) {
-			return true;
-		}
-
-		$usersIban = UsersIbanDao::getIban($billingInfoOpts->getOpt('iban'));
-
-		if (!is_null($usersIban)) {
-			return $usersIban->getValid();
-		} else {
-			$entity = new UsersIban();
-			$entity->setIban($billingInfoOpts->getOpt('iban'))
+		$iban = $billingInfoOpts->getOpt('iban');
+		if(!empty($iban)) {
+			$iban = preg_replace('/\s+/','', $iban);//remove all spaces
+			$usersIban = UsersIbanDao::getIban($iban);
+			if (!is_null($usersIban)) {
+				if(!$usersIban->getValid()) {
+					//exception
+					$msg = "iban is not valid";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SEPA_IBAN_INVALID);
+				}
+			} else {
+				$entity = new UsersIban();
+				$entity->setIban($iban)
 				->setUserid($user->getId())
 				->setCreatedDate('now')
 				->setValid(true);
-
-			UsersIbanDao::save($entity);
+				
+				UsersIbanDao::save($entity);
+			}
 		}
-
-		return true;
 	}
 }

@@ -226,6 +226,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 		}
 		$subscription->setIsActive($is_active);
+		$subscription->setIsCancelable(false);
 	}
 	
 	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
