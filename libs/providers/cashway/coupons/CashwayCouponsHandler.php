@@ -13,7 +13,7 @@ class CashwayCouponsHandler {
 	public function __construct() {
 	}
 		
-	public function doCreateCoupon(User $user, UserOpts $userOpts, CouponsCampaign $couponsCampaign, $coupon_billing_uuid) {
+	public function doCreateCoupon(User $user, UserOpts $userOpts, CouponsCampaign $couponsCampaign, $coupon_billing_uuid, BillingsCouponsOpts $billingCouponsOpts) {
 		try {
 			config::getLogger()->addInfo("cashway coupon creation...");
 			//

@@ -3687,3 +3687,113 @@ class UsersIbanDao
 		return $userIban;
 	}
 }
+
+class BillingsCouponsOpts implements JsonSerializable {
+
+	private $couponid;
+	private $opts = array();
+
+	public function __construct(array $opts = null)
+	{
+		if(!empty($opts)) {
+			$this->setOpts($opts);
+		}
+	}
+
+	public function setCouponId($couponid) {
+		$this->couponid = $couponid;
+	}
+
+	public function getCouponId() {
+		return($this->couponid);
+	}
+
+	public function setOpt($key, $value) {
+		$this->opts[$key] = $value;
+	}
+
+	public function setOpts($opts) {
+		$this->opts = $opts;
+	}
+
+	public function getOpts() {
+		return($this->opts);
+	}
+
+	public function getOpt($key)
+	{
+		if (array_key_exists($key, $this->opts)) {
+			return $this->opts[$key];
+		}
+
+		return null;
+	}
+
+	public function jsonSerialize() {
+		return($this->opts);
+	}
+
+}
+
+class BillingsCouponsOptsDAO {
+
+	public static function getBillingsCouponsOptsByCouponId($couponId) {
+		$query = "SELECT _id, couponid, key, value FROM billing_coupons_opts WHERE deleted = false AND couponid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($couponId));
+
+		$out = new BillingsCouponsOpts();
+		$out->setCouponId($couponId);
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out->setOpt($row["key"], $row["value"]);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+
+	public static function addBillingsCouponsOpts(BillingsCouponsOpts $billingsCouponsOpts) {
+		foreach ($billingsCouponsOpts->getOpts() as $k => $v) {
+			if(isset($v)) {
+				$query = "INSERT INTO billing_coupons_opts (couponid, key, value)";
+				$query.= " VALUES ($1, $2, $3) RETURNING _id";
+				$result = pg_query_params(config::getDbConn(), $query,
+					array($billingsCouponsOpts->getCouponId(),
+						trim($k),
+						trim($v)));
+			}
+		}
+		return(self::getBillingsCouponsOptsByCouponId($billingsCouponsOpts->getSubId()));
+	}
+
+	public static function updateBillingsCouponsOptsKey($couponId, $key, $value) {
+		$query = "UPDATE billing_coupons_opts SET value = $3 WHERE couponid = $1 AND key = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+			array($couponId, $key, trim($value)));
+		return($result);
+	}
+
+	public static function deleteBillingsCouponsOptsKey($couponId, $key) {
+		$query = "UPDATE billing_coupons_opts SET deleted = true WHERE couponid = $1 AND key = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+			array($couponId, $key));
+		return($result);
+	}
+
+	public static function addBillingsCouponsOptsKey($couponId, $key, $value) {
+		$query = "INSERT INTO billing_coupons_opts (couponid, key, value)";
+		$query.= " VALUES ($1, $2, $3) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+			array($couponId,
+				trim($key),
+				trim($value)));
+		return($result);
+	}
+
+	public static function deleteBillingsCouponsOptsByCouponId($couponId) {
+		$query = "UPDATE billing_coupons_opts SET deleted = true WHERE couponid = $1";
+		$result = pg_query_params(config::getDbConn(), $query,
+			array($couponId));
+		return($result);
+	}
+}

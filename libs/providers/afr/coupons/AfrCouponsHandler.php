@@ -38,8 +38,39 @@ class AfrCouponsHandler {
 		return($db_coupon);
 	}
 
-	public function doCreateCoupon(User $user, UserOpts $userOpts, CouponsCampaign $couponsCampaign, $couponBillingUuid)
+	public function doCreateCoupon(User $user, UserOpts $userOpts, CouponsCampaign $couponsCampaign, $couponBillingUuid, BillingsCouponsOpts $billingCouponsOpts)
 	{
+		if (is_null($billingCouponsOpts->getOpt('customerBankAccountToken'))) {
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating afr coupon. Missing stripe token');
+		}
+
+		$providerPlanId = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($couponsCampaign->getProviderPlanId(), $couponsCampaign->getProviderId());
+		$internalPlanId = InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($couponsCampaign->getProviderPlanId());
+		$internalPlan   = InternalPlanDAO::getInternalPlanById($internalPlanId);
+		$providerPlan   = PlanDAO::getPlanById($providerPlanId);
+
+		if (empty($internalPlan)) {
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow internal plan');
+		}
+
+		if (empty($providerPlan)) {
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow provider plan');
+		}
+
+		$chargeData = [
+			'amount' => $internalPlan->getAmountInCents(),
+			'currency' => $internalPlan->getCurrency(),
+			'description' => $providerPlan->getPlanUuid()
+		];
+
+		// charge customer
+		$charge = \Stripe\Charge::create($chargeData);
+
+		if (!$charge->paid) {
+			config::getLogger()->addError('Payment refused');
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Payment refused');
+		}
+
 		$coupon = new Coupon();
 		$coupon->setCouponBillingUuid($couponBillingUuid);
 		$coupon->setCouponsCampaignId($couponsCampaign->getId());

@@ -66,7 +66,7 @@ class CouponsHandler {
 		return($db_coupon);
 	}
 	
-	public function doCreateCoupon($userBillingUuid, $couponsCampaignBillingUuid) {
+	public function doCreateCoupon($userBillingUuid, $couponsCampaignBillingUuid, array $couponOpts) {
 		$db_coupon = NULL;
 		try {
 			config::getLogger()->addInfo("coupon creating....");
@@ -104,17 +104,21 @@ class CouponsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
 			}
+			
+			$billingCouponsOpts = new BillingsCouponsOpts($couponOpts);
+
+			
 			$provider = $provider_from_user;
 			//
 			$coupon_billing_uuid = guid();
 			switch($provider->getName()) {
 				case 'cashway' :
 					$cashwayCouponsHandler = new CashwayCouponsHandler();
-					$coupon_provider_uuid = $cashwayCouponsHandler->doCreateCoupon($user, $userOpts, $couponsCampaign, $coupon_billing_uuid);
+					$coupon_provider_uuid = $cashwayCouponsHandler->doCreateCoupon($user, $userOpts, $couponsCampaign, $coupon_billing_uuid, $billingCouponsOpts);
 					break;
 				case 'afr' :
 					$afrCouponHandler = new AfrCouponsHandler();
-					$coupon_provider_uuid = $afrCouponHandler->doCreateCoupon($user, $userOpts, $couponsCampaign, $coupon_billing_uuid);
+					$coupon_provider_uuid = $afrCouponHandler->doCreateCoupon($user, $userOpts, $couponsCampaign, $coupon_billing_uuid, $billingCouponsOpts);
 					break;
 				default :
 					$msg = "unsupported feature for provider named : ".$provider->getName();
