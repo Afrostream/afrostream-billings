@@ -549,7 +549,7 @@ class SubscriptionsHandler {
 					break;
 				case 'braintree' :
 					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
-					$braintreeSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date);
+					$db_subscription = $braintreeSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
