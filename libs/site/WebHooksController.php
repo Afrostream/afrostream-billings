@@ -519,6 +519,66 @@ class WebHooksController extends BillingsController {
 		config::getLogger()->addInfo('Receiving braintree webhook done successfully');
 	}
 	
+	public function braintreeWebHooksPosting(Request $request, Response $response, array $args) {
+		config::getLogger()->addInfo('Receiving braintree webhook...');
+		//
+		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
+		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
+		Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
+		Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+		//
+		$bt_signature = $request->getParsedBodyParam('bt_signature');
+		$bt_payload = $request->getParsedBodyParam('bt_payload');
+		//
+		$validated = false;
+		if(isset($bt_signature) && isset($bt_payload)) {
+			$webhookNotification = Braintree\WebhookNotification::parse($bt_signature, $bt_payload);
+			$validated = true;
+		}
+		
+		if (!$validated) {
+			config::getLogger()->addError('Receiving braintree webhook failed, Unauthorized access');
+			header('WWW-Authenticate: Basic realm="My Realm"');
+			header('HTTP/1.0 401 Unauthorized');
+			die ("Not authorized");
+		}
+		
+		try {
+			config::getLogger()->addInfo('Treating braintree webhook...');
+	
+			$webHooksHander = new WebHooksHander();
+			
+			$bt_signature = $request->getParsedBodyParam('bt_signature');
+			$bt_payload = $request->getParsedBodyParam('bt_payload');
+			
+			$post_data_as_array = array();
+			
+			$post_data_as_array['bt_signature'] = $bt_signature;
+			$post_data_as_array['bt_payload'] = $bt_payload;
+			
+			$post_data_as_json = json_encode($post_data_as_array);
+			
+			config::getLogger()->addInfo('Saving braintree webhook...');
+			$billingsWebHook = $webHooksHander->doSaveWebHook('braintree', $post_data_as_json);
+			config::getLogger()->addInfo('Saving braintree webhook done successfully');
+	
+			config::getLogger()->addInfo('Processing braintree webhook, id='.$billingsWebHook->getId().'...');
+			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
+			config::getLogger()->addInfo('Processing braintree webhook done successfully, id='.$billingsWebHook->getId());
+	
+			config::getLogger()->addInfo('Treating braintree webhook done successfully, id='.$billingsWebHook->getId());
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while treating a braintree webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnBillingsExceptionAsJson($response, $e, 500));
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while treating a braintree webhook, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnExceptionAsJson($response, $e, 500));
+		}
+		config::getLogger()->addInfo('Receiving braintree webhook done successfully');
+	}
+	
 }
 
 ?>

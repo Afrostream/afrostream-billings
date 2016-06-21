@@ -62,7 +62,7 @@ class WebHooksHander {
 					break;
 				case 'stripe':
 					$stripeWebHookHandler = new StripeWebHooksHandler();
-					$stripeWebHookHandler->loadHooks();	
+					$stripeWebHookHandler->loadHooks();
 					$stripeWebHookHandler->doProcessWebHook($billingsWebHook, $update_type);
 					break;
 				case 'braintree' :
