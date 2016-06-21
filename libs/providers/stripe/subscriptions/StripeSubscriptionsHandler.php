@@ -213,23 +213,24 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
     {
         // already canceled, return gracefully
         if (in_array($billingSubscription->getSubStatus(), ['canceled', 'expired'])) {
-            return;
+            return(BillingsSubscriptionDAO::getBillingsSubscriptionById($billingSubscription->getId()));
+        } else {
+
+	        // get user
+	        $user = UserDAO::getUserById($billingSubscription->getUserId());
+	
+	        $subscription = $this->getSubscription($billingSubscription->getSubUid(), $user);
+	
+	        $this->log('Cancel subscription id %s ', [$subscription['id']]);
+	
+	        $subscription->cancel(['at_period_end' => true]);
+	        $subscription->save();
+	
+	        $billingSubscription->setSubCanceledDate($cancelDate);
+	        $billingSubscription->setSubStatus('canceled');
+	
+	        return(BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription));
         }
-
-        // get user
-        $user = UserDAO::getUserById($billingSubscription->getUserId());
-
-        $subscription = $this->getSubscription($billingSubscription->getSubUid(), $user);
-
-        $this->log('Cancel subscription id %s ', [$subscription['id']]);
-
-        $subscription->cancel(['at_period_end' => true]);
-        $subscription->save();
-
-        $billingSubscription->setSubCanceledDate($cancelDate);
-        $billingSubscription->setSubStatus('canceled');
-
-        BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
     }
 
 
