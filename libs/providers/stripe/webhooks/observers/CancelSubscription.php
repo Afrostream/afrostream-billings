@@ -47,7 +47,7 @@ class CancelSubscription implements HookInterface
         // take care date reflect the when event is receipt
         $billingSubscription->setSubExpiresDate( new \DateTime('now'));
 
-        BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
+        $billingSubscription = BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
 
         $this->subscriptionHandler->doSendSubscriptionEvent($oldSubscription, $billingSubscription);
         
