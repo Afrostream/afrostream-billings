@@ -45,6 +45,10 @@ class AfrCouponsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating afr coupon. Missing stripe token');
 		}
 
+		if (is_null($billingCouponsOpts->getOpt('recipient_email'))) {
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'You must provide a recipient mail');
+		}
+
 		$internalPlanId = InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($couponsCampaign->getProviderPlanId());
 		$internalPlan   = InternalPlanDAO::getInternalPlanById($internalPlanId);
 
@@ -84,6 +88,7 @@ class AfrCouponsHandler {
 
 		$billingCouponsOpts = BillingsCouponsOptsDAO::addBillingsCouponsOpts($billingCouponsOpts);
 
+		$this ->sendMails($user, $userOpts, $coupon, $billingCouponsOpts, $internalPlan);
 		return $coupon->getCode();
 	}
 
@@ -101,6 +106,123 @@ class AfrCouponsHandler {
 		}
 
 		return $strReturnString;
+	}
+
+	protected function sendMails(User $user, UserOpts $userOpts, Coupon $coupon, BillingsCouponsOpts $billingCouponsOpts, InternalPlan $internalPlan)
+	{
+		$amountInCentsTax = ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax());
+		$firstName        = $userOpts->getOpt('firstName');
+		$lastName         = $userOpts->getOpt('lastName');
+		$userMail         = $userOpts->getOpt('email');
+
+		$substitutions = [
+			'%userreferenceuuid%'       => $user->getUserReferenceUuid(),
+			'%userbillinguuid%'         => $user->getUserBillingUuid(),
+			'%internalplanname%'        => $internalPlan->getName(),
+			'%internalplandesc%'        => $internalPlan->getDescription(),
+			'%amountincents%'           => $internalPlan->getAmountInCents(),
+			'%amount%'                  => $this->getMoneyFormat($internalPlan->getAmountInCents(), $internalPlan->getCurrency()),
+			'%amountincentsexcltax%'    => $internalPlan->getAmountInCentsExclTax(),
+			'%amountexcltax%'           => $this->getMoneyFormat($internalPlan->getAmountInCentsExclTax(), $internalPlan->getCurrency()),
+			'%vat%'                     => (is_null($internalPlan->getVatRate())) ? 'N/A' : number_format($internalPlan->getVatRate(), 2, ',', '').'%',
+			'%amountincentstax%'        => $amountInCentsTax,
+			'%amounttax%'               => $this->getMoneyFormat($amountInCentsTax, $internalPlan->getCurrency()),
+			'%currency%'                => $internalPlan->getCurrencyForDisplay(),
+			'%cycle%'                   => $internalPlan->getCycle(),
+			'%periodunit%'              => $internalPlan->getPeriodUnit(),
+			'%periodlength%'            => $internalPlan->getPeriodLength(),
+			'%email%'                   => $userMail,
+			'%firstname%'               => $firstName,
+			'%lastname%'                => $lastName,
+			'%username%'                => strstr($userMail, '@', true),
+			'%fullname%'                => trim($firstName.' '.$lastName),
+			'%couponcode%'              => $coupon->getCode(),
+			'%recipientemail%'          => $billingCouponsOpts->getOpt('recipient_email'),
+			'%recipientfirstname%'      => $billingCouponsOpts->getOpt('recipient_firstname'),
+			'%recipientlastname%'       => $billingCouponsOpts->getOpt('recipient_lastname')
+		];
+
+		$this->sendMailToOwner($userMail, $substitutions);
+		$this->sendMailToRecipient($billingCouponsOpts->getOpt('recipient_email'), $substitutions);
+	}
+
+	protected function sendMailToOwner($userMail, array $substitutions)
+	{
+		if (empty($userMail)) {
+			$userMail = getenv('SENDGRID_TO_IFNULL');
+		}
+
+		$bcc  = getenv('SENDGRID_BCC');
+
+		$nbRecipient = (empty($bcc)) ? 1 : 2;
+
+		array_walk($substitutions, function (&$value, $key) use ($nbRecipient) {
+			$value = array_fill(0, $nbRecipient, $value);
+		});
+
+		$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
+		$email = new SendGrid\Email();
+
+		$email->addTo($userMail);
+		$email->setFrom(getenv('SENDGRID_FROM'))
+			->setFromName(getenv('SENDGRID_FROM_NAME'))
+			->setSubject(' ')
+			->setText(' ')
+			->setHtml(' ')
+			->setTemplateId(getEnv('SENDGRID_TEMPLATE_COUPON_OWN_NEW'))
+			->setSubstitutions($substitutions);
+		if (!empty($bcc)) {
+			$email->setBcc($bcc);
+		}
+
+		$sendgrid->send($email);
+	}
+
+	protected function sendMailToRecipient($userMail, array $substitutions)
+	{
+		if (empty($userMail)) {
+			$userMail = getenv('SENDGRID_TO_IFNULL');
+		}
+
+		$bcc  = getenv('SENDGRID_BCC');
+
+		$nbRecipient = (empty($bcc)) ? 1 : 2;
+
+		array_walk($substitutions, function (&$value, $key) use ($nbRecipient) {
+			$value = array_fill(0, $nbRecipient, $value);
+		});
+
+		$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
+		$email = new SendGrid\Email();
+
+		$email->addTo($userMail);
+		$email->setFrom(getenv('SENDGRID_FROM'))
+			->setFromName(getenv('SENDGRID_FROM_NAME'))
+			->setSubject(' ')
+			->setText(' ')
+			->setHtml(' ')
+			->setTemplateId(getEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_NEW'))
+			->setSubstitutions($substitutions);
+		if (!empty($bcc)) {
+			$email->setBcc($bcc);
+		}
+
+		$sendgrid->send($email);
+	}
+
+	/**
+	 * Get formatted money
+	 *
+	 * @param int    $value    Amount in cents
+	 * @param string $currency Currency
+	 *
+	 * @return string
+	 */
+	protected function getMoneyFormat($value, $currency)
+	{
+		$money = new Money((integer) $value, new Currency($currency));
+
+		return money_format('%!.2n', (float) ($money->getAmount() / 100));
 	}
 }
 
