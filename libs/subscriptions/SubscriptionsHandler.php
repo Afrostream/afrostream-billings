@@ -581,7 +581,7 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$db_subscription_before_update = clone $db_subscription;
-			$doSendSubscription = true;
+
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
@@ -607,7 +607,6 @@ class SubscriptionsHandler {
 				case 'stripe':
 					$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
 					$db_subscription = $stripeSubscriptionHandler->doCancelSubscription($db_subscription, $cancel_date);
-					$doSendSubscription = false; // mail is sent on event notification by stripe
 					break;
 				case 'braintree' :
 					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
@@ -623,9 +622,9 @@ class SubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
-			 if ($doSendSubscription) {
-				 $this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
-			 }
+
+			$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+
 
 			//
 			$this->doFillSubscription($db_subscription);
