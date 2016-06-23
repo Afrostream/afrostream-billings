@@ -126,6 +126,7 @@ class CouponsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
+
 			switch ($provider->getName()) {
 				case 'cashway' :
 					$cashwayCouponsHandler = new CashwayCouponsHandler();

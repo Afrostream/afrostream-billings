@@ -3763,7 +3763,7 @@ class BillingsCouponsOptsDAO {
 						trim($v)));
 			}
 		}
-		return(self::getBillingsCouponsOptsByCouponId($billingsCouponsOpts->getSubId()));
+		return(self::getBillingsCouponsOptsByCouponId($billingsCouponsOpts->getCouponId()));
 	}
 
 	public static function updateBillingsCouponsOptsKey($couponId, $key, $value) {

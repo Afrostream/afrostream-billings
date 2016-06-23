@@ -8,6 +8,7 @@ require_once __DIR__ . '/../../../utils/utils.php';
 class AfrCouponsHandler {
 	
 	public function __construct() {
+		\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
 	}
 		
 	public function doGetCoupon(User $user = NULL, UserOpts $userOpts = NULL, $couponCode) {
@@ -44,23 +45,20 @@ class AfrCouponsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating afr coupon. Missing stripe token');
 		}
 
-		$providerPlanId = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($couponsCampaign->getProviderPlanId(), $couponsCampaign->getProviderId());
 		$internalPlanId = InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($couponsCampaign->getProviderPlanId());
 		$internalPlan   = InternalPlanDAO::getInternalPlanById($internalPlanId);
-		$providerPlan   = PlanDAO::getPlanById($providerPlanId);
 
 		if (empty($internalPlan)) {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow internal plan');
 		}
 
-		if (empty($providerPlan)) {
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow provider plan');
-		}
+		$couponCode = $couponsCampaign->getPrefix()."-".$this->getRandomString($couponsCampaign->getGeneratedCodeLength());
 
 		$chargeData = [
 			'amount' => $internalPlan->getAmountInCents(),
 			'currency' => $internalPlan->getCurrency(),
-			'description' => $providerPlan->getPlanUuid()
+			'description' => "Coupon afrostream : $couponCode",
+			'source' => $billingCouponsOpts->getOpt('customerBankAccountToken')
 		];
 
 		// charge customer
@@ -71,14 +69,20 @@ class AfrCouponsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Payment refused');
 		}
 
+		$billingCouponsOpts->setOpt('chargeid', $charge->id);
+
 		$coupon = new Coupon();
 		$coupon->setCouponBillingUuid($couponBillingUuid);
 		$coupon->setCouponsCampaignId($couponsCampaign->getId());
 		$coupon->setProviderId($couponsCampaign->getProviderId());
 		$coupon->setProviderPlanId($couponsCampaign->getProviderPlanId());
-		$coupon->setCode($couponsCampaign->getPrefix()."-".$this->getRandomString($couponsCampaign->getGeneratedCodeLength()));
+		$coupon->setCode($couponCode);
 
-		CouponDAO::addCoupon($coupon);
+		$coupon = CouponDAO::addCoupon($coupon);
+
+		$billingCouponsOpts->setCouponId($coupon->getId());
+
+		$billingCouponsOpts = BillingsCouponsOptsDAO::addBillingsCouponsOpts($billingCouponsOpts);
 
 		return $coupon->getCode();
 	}
