@@ -72,11 +72,24 @@ class CouponsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+
+			$couponOpts = array();
+			if (isset($data['couponsOpts'])) {
+				if(!is_array($data['couponsOpts'])) {
+					//exception
+					$msg = "field 'couponsOpts' must be an array";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+
+				$couponOpts = $data['couponsOpts'];
+			}
+
 			$userBillingUuid = $data['userBillingUuid'];
 			$couponsCampaignBillingUuid = $data['couponsCampaignBillingUuid'];
 			//
 			$couponsHandler = new CouponsHandler();
-			$coupon = $couponsHandler->doCreateCoupon($userBillingUuid, $couponsCampaignBillingUuid);
+			$coupon = $couponsHandler->doCreateCoupon($userBillingUuid, $couponsCampaignBillingUuid, $couponOpts);
 			return($this->returnObjectAsJson($response, 'coupon', $coupon));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while creating a coupon, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
