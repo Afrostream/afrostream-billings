@@ -5,6 +5,9 @@ require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 
+use Money\Money;
+use Money\Currency;
+
 class AfrCouponsHandler {
 	
 	public function __construct() {
@@ -142,6 +145,13 @@ class AfrCouponsHandler {
 			'%recipientlastname%'       => $billingCouponsOpts->getOpt('recipient_lastname')
 		];
 
+		$bcc  = getenv('SENDGRID_BCC');
+		$nbRecipient = (empty($bcc)) ? 1 : 2;
+
+		array_walk($substitutions, function (&$value, $key) use ($nbRecipient) {
+			$value = array_fill(0, $nbRecipient, $value);
+		});
+
 		$this->sendMailToOwner($userMail, $substitutions);
 		$this->sendMailToRecipient($billingCouponsOpts->getOpt('recipient_email'), $substitutions);
 	}
@@ -153,12 +163,6 @@ class AfrCouponsHandler {
 		}
 
 		$bcc  = getenv('SENDGRID_BCC');
-
-		$nbRecipient = (empty($bcc)) ? 1 : 2;
-
-		array_walk($substitutions, function (&$value, $key) use ($nbRecipient) {
-			$value = array_fill(0, $nbRecipient, $value);
-		});
 
 		$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
 		$email = new SendGrid\Email();
@@ -185,12 +189,6 @@ class AfrCouponsHandler {
 		}
 
 		$bcc  = getenv('SENDGRID_BCC');
-
-		$nbRecipient = (empty($bcc)) ? 1 : 2;
-
-		array_walk($substitutions, function (&$value, $key) use ($nbRecipient) {
-			$value = array_fill(0, $nbRecipient, $value);
-		});
 
 		$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
 		$email = new SendGrid\Email();
