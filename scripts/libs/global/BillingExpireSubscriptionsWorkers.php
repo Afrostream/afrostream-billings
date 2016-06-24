@@ -42,7 +42,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 				$providerIdsToIgnore[] = $provider->getId();
 			}
 			//
-			while(count($canceledBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, $offset, NULL, $sub_period_ends_date, array('canceled'), NULL, $providerIdsToIgnore)) > 0) {
+			while(count($canceledBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, $offset, NULL, $sub_period_ends_date, array('canceled'), array('auto'), $providerIdsToIgnore)) > 0) {
 				ScriptsConfig::getLogger()->addInfo("processing...current offset=".$offset);
 				$offset = $offset + $limit;
 				//
@@ -94,7 +94,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 			$sub_period_ends_date->setTime(0, 0, 0);
 			//
 			$providerIdsToIgnore = array();
-			$providerNamesToIgnore = ['recurly', 'stripe'];
+			$providerNamesToIgnore = ['recurly', 'braintree'];
 			foreach ($providerNamesToIgnore as $providerNameToIgnore) {
 				$provider = ProviderDAO::getProviderByName($providerNameToIgnore);
 				if($provider == NULL) {
