@@ -48,7 +48,7 @@ class AfrCouponsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating afr coupon. Missing stripe token');
 		}
 
-		if (is_null($billingCouponsOpts->getOpt('recipient_email'))) {
+		if (is_null($billingCouponsOpts->getOpt('recipientEmail'))) {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'You must provide a recipient mail');
 		}
 
@@ -140,9 +140,9 @@ class AfrCouponsHandler {
 			'%username%'                => strstr($userMail, '@', true),
 			'%fullname%'                => trim($firstName.' '.$lastName),
 			'%couponcode%'              => $coupon->getCode(),
-			'%recipientemail%'          => $billingCouponsOpts->getOpt('recipient_email'),
-			'%recipientfirstname%'      => $billingCouponsOpts->getOpt('recipient_firstname'),
-			'%recipientlastname%'       => $billingCouponsOpts->getOpt('recipient_lastname')
+			'%recipientemail%'          => $billingCouponsOpts->getOpt('recipientEmail'),
+			'%recipientfirstname%'      => $billingCouponsOpts->getOpt('recipientFirstName'),
+			'%recipientlastname%'       => $billingCouponsOpts->getOpt('recipientLastName')
 		];
 
 		$bcc  = getenv('SENDGRID_BCC');
