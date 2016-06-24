@@ -281,20 +281,14 @@ class BouyguesSubscriptionsHandler extends SubscriptionsHandler {
 				//nothing todo : already done or in process
 			} else {
 				//
-				if($subscription->getSubPeriodEndsDate() < $expires_date) {
-					$subscription->setSubExpiresDate($expires_date);
-					$subscription->setSubStatus("expired");
-					//NC : We suppose that it was canceled somewhere in the current day, so we take the beginning of the day
-					//NC : Must be different of the expires_date otherwise it will be considered as a payment issue
-					$canceled_date = clone $expires_date;
-					$canceled_date->setTimezone(new DateTimeZone(config::$timezone));
-					$canceled_date->setTime(0, 0, 0);
-					$subscription->setSubCanceledDate($canceled_date);
-				} else {
-					$msg = "cannot expire a subscription that has not ended yet";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
+				$subscription->setSubExpiresDate($expires_date);
+				$subscription->setSubStatus("expired");
+				//NC : We suppose that it was canceled somewhere in the current day, so we take the beginning of the day
+				//NC : Must be different of the expires_date otherwise it will be considered as a payment issue
+				$canceled_date = clone $expires_date;
+				$canceled_date->setTimezone(new DateTimeZone(config::$timezone));
+				$canceled_date->setTime(0, 0, 0);
+				$subscription->setSubCanceledDate($canceled_date);
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
