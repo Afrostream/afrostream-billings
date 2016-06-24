@@ -7,8 +7,10 @@ require_once __DIR__ . '/../providers/gocardless/plans/GocardlessPlansHandler.ph
 require_once __DIR__ . '/../providers/bachat/plans/BachatPlansHandler.php';
 require_once __DIR__ . '/../providers/idipper/plans/IdipperPlansHandler.php';
 require_once __DIR__ . '/../providers/afr/plans/AfrPlansHandler.php';
+require_once __DIR__ . '/../providers/stripe/plans/StripePlanHandler.php';
 
-use SebastianBergmann\Money\Currency;
+use Money\Currency;
+use Iso3166\Codes;
 
 class InternalPlansHandler {
 	
@@ -35,7 +37,7 @@ class InternalPlansHandler {
 		return($db_internal_plan);
 	}
 	
-	public function doGetInternalPlans($provider_name = NULL) {
+	public function doGetInternalPlans($provider_name = NULL, $contextBillingUuid = NULL, $contextCountry = NULL, $isVisible = NULL, $country = NULL) {
 		$db_internal_plans = NULL;
 		try {
 			config::getLogger()->addInfo("internal plans getting...");
@@ -49,7 +51,21 @@ class InternalPlansHandler {
 				}
 				$provider_id = $provider->getId();
 			}
-			$db_internal_plans = InternalPlanDAO::getInternalPlans($provider_id);
+			$context_id = NULL;
+			if(isset($contextBillingUuid)) {
+				if($contextCountry == NULL) {
+					$contextCountry = "FR";//forced when not given (it is the case for now)
+					config::getLogger()->addInfo("contextCountry NOT given, it was forced to : ".$contextCountry);
+				}
+				$context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
+				if($context == NULL) {
+					$msg = "unknown context with contextBillingUuid : ".$contextBillingUuid." AND contextCountry : ".$contextCountry;
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::CONTEXT_NOT_FOUND);					
+				}
+				$context_id = $context->getId();
+			}
+			$db_internal_plans = InternalPlanDAO::getInternalPlans($provider_id, $context_id, $isVisible, $country);
 			config::getLogger()->addInfo("internal plans getting done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting internal plans, error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -63,7 +79,7 @@ class InternalPlansHandler {
 		return($db_internal_plans);
 	}
 	
-	public function doCreate($internalPlanUuid,	$name, $description, $amount_in_cents, $currency, $cycle, $period_unit_str, $period_length, $internalplan_opts_array) {
+	public function doCreate($internalPlanUuid,	$name, $description, $amount_in_cents, $currency, $cycle, $period_unit_str, $period_length, $vatRate, $internalplan_opts_array, $trialEnabled, $trialPeriodLength, $trialPeriodUnit) {
 		$db_internal_plan = NULL;
 		try {
 			config::getLogger()->addInfo("internal plan creating...");
@@ -116,6 +132,10 @@ class InternalPlansHandler {
 				$db_internal_plan->setCycle($planCycle);
 				$db_internal_plan->setPeriodUnit($planPeriodUnit);
 				$db_internal_plan->setPeriodLength($period_length);
+				$db_internal_plan->setVatRate($vatRate);
+				$db_internal_plan->setTrialEnabled($trialEnabled);
+				$db_internal_plan->setTrialPeriodLength($trialPeriodLength);
+				$db_internal_plan->setTrialPeriodUnit(new TrialPeriodUnit($trialPeriodUnit));
 				$db_internal_plan = InternalPlanDAO::addInternalPlan($db_internal_plan);
 				//INTERNAL_PLAN_OPTS
 				$internalPlanOpts = new InternalPlanOpts();
@@ -192,6 +212,10 @@ class InternalPlansHandler {
 					$afrPlansHandler = new AfrPlansHandler();
 					$provider_plan_uuid = $afrPlansHandler->createProviderPlan($db_internal_plan);
 					break;
+				case 'stripe':
+					$stripePlanHandler = new StripePlanHandler();
+					$provider_plan_uuid = $stripePlanHandler->createProviderPlan($db_internal_plan);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
@@ -225,6 +249,164 @@ class InternalPlansHandler {
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while adding an Internal Plan to a provider, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("adding an Internal Plan to a provider failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_internal_plan);
+	}
+	
+	public function doAddToCountry($internalPlanUuid, $country) {
+		$db_internal_plan = NULL;
+		try {
+			if(!Codes::isValid($country)) {
+				$msg = $country." is NOT a valid ISO3166-1 country code";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			if($db_internal_plan == NULL) {
+				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//linked to that country ?
+			$internalPlanCountry = InternalPlanCountryDAO::getInternalPlanCountry($db_internal_plan->getId(), $country);
+			if(isset($internalPlanCountry)) {
+				$msg = "internal plan with internalPlanUuid : ".$internalPlanUuid." is already linked to country : ".$country;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanCountry = new InternalPlanCountry();
+			$internalPlanCountry->setInternalPlanId($db_internal_plan->getId());
+			$internalPlanCountry->setCountry($country);
+			$internalPlanCountry = InternalPlanCountryDAO::addInternalPlanCountry($internalPlanCountry);
+			//Done
+			$db_internal_plan = InternalPlanDAO::getInternalPlanById($db_internal_plan->getId());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while adding an Internal Plan to a country, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("adding an Internal Plan to a country failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while adding an Internal Plan to a country, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("adding an Internal Plan to a country failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_internal_plan);	
+	}
+	
+	public function doRemoveFromCountry($internalPlanUuid, $country) {
+		$db_internal_plan = NULL;
+		try {
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			if($db_internal_plan == NULL) {
+				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//linked to that country ?
+			$internalPlanCountry = InternalPlanCountryDAO::getInternalPlanCountry($db_internal_plan->getId(), $country);
+			if($internalPlanCountry == NULL) {
+				$msg = "internal plan with internalPlanUuid : ".$internalPlanUuid." is NOT linked to country : ".$country;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			InternalPlanCountryDAO::deleteInternalPlanCountryById($internalPlanCountry->getId());
+			//Done
+			$db_internal_plan = InternalPlanDAO::getInternalPlanById($db_internal_plan->getId());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while removing an Internal Plan from a country, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("removing an Internal Plan from a country failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while removing an Internal Plan from a country, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("removing an Internal Plan from a country failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_internal_plan);		
+	}
+	
+	public function doAddToContext($internalPlanUuid, $contextBillingUuid, $contextCountry) {
+		$db_internal_plan = NULL;
+		try {
+			if(!Codes::isValid($contextCountry)) {
+				$msg = $country." is NOT a valid ISO3166-1 country code";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			if($db_internal_plan == NULL) {
+				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
+			if($context == NULL) {
+				$msg = "unknown context with contextBillingUuid : ".$contextBillingUuid." AND contextCountry : ".$contextCountry;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::CONTEXT_NOT_FOUND);
+			}
+			//linked to that context ?
+			$internalPlanContext = InternalPlanContextDAO::getInternalPlanContext($db_internal_plan->getId(), $context->getId());
+			if(isset($internalPlanContext)) {
+				$msg = "internal plan with internalPlanUuid : ".$internalPlanUuid." is already linked to the contextBillingUuid : ".$contextBillingUuid." and contextCountry : ".$contextCountry;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanCountry = InternalPlanCountryDAO::getInternalPlanCountry($db_internal_plan->getId(), $contextCountry);
+			if($internalPlanCountry == NULL) {
+				$msg = "internal plan with internalPlanUuid : ".$internalPlanUuid." must be available in the country : ".$contextCountry." in order to be added to that context";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
+			}
+			$internalPlanContext = new InternalPlanContext();
+			$internalPlanContext->setInternalPlanId($db_internal_plan->getId());
+			$internalPlanContext->setContextId($context->getId());
+			$internalPlanContext = InternalPlanContextDAO::addInternalPlanContext($internalPlanContext);
+			//Done
+			$db_internal_plan = InternalPlanDAO::getInternalPlanById($db_internal_plan->getId());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while adding an Internal Plan to a context, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("adding an Internal Plan to a context failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while adding an Internal Plan to a context, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("adding an Internal Plan to a context failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_internal_plan);		
+	}
+	
+	public function doRemoveFromContext($internalPlanUuid, $contextBillingUuid, $contextCountry) {
+		$db_internal_plan = NULL;
+		try {
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			if($db_internal_plan == NULL) {
+				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
+			if($context == NULL) {
+				$msg = "unknown context with contextBillingUuid : ".$contextBillingUuid." AND contextCountry : ".$contextCountry;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::CONTEXT_NOT_FOUND);
+			}
+			//linked to that context ?
+			$internalPlanContext = InternalPlanContextDAO::getInternalPlanContext($db_internal_plan->getId(), $context->getId());
+			if($internalPlanContext == NULL) {
+				$msg = "internal plan with internalPlanUuid : ".$internalPlanUuid." is NOT linked to the contextBillingUuid : ".$contextBillingUuid." and contextCountry : ".$contextCountry;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			InternalPlanContextDAO::deleteInternalPlanContextById($internalPlanContext->getId());
+			//Done
+			$db_internal_plan = InternalPlanDAO::getInternalPlanById($db_internal_plan->getId());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while removing an Internal Plan from a context, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("removing an Internal Plan from a context failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while removing an Internal Plan from a context, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("removing an Internal Plan from a context failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_internal_plan);

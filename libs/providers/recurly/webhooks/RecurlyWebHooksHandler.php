@@ -14,7 +14,7 @@ class RecurlyWebHooksHandler {
 			config::getLogger()->addInfo("processing recurly webHook with id=".$billingsWebHook->getId()."...");
 			$notification = new Recurly_PushNotification($billingsWebHook->getPostData());
 			$this->doProcessNotification($notification, $update_type, $billingsWebHook->getId());
-			config::getLogger()->addInfo("processing recurly webHook with id=".$billingsWebHook->getId()." done successully");
+			config::getLogger()->addInfo("processing recurly webHook with id=".$billingsWebHook->getId()." done successfully");
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while processing recurly webHook with id=".$billingsWebHook->getId().", message=".$e->getMessage();
 			config::getLogger()->addError("processing recurly webHook with id=".$billingsWebHook->getId()." failed : ". $msg);
@@ -154,6 +154,7 @@ class RecurlyWebHooksHandler {
 				return($db_subscription);
 			}
 		}
+		return(NULL);
 	}
 	
 	private static function getNodeByName(SimpleXMLElement $node, $name) {

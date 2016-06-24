@@ -3,7 +3,8 @@
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../users/UsersHandler.php';
 require_once __DIR__ . '/../subscriptions/SubscriptionsHandler.php';
-require_once __DIR__ .'/BillingsController.php';
+require_once __DIR__ . '/BillingsController.php';
+require_once __DIR__ . '/../db/dbGlobal.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -168,7 +169,7 @@ class SubscriptionsController extends BillingsController {
 		}
 	}
 	
-	public function update(Request $request, Response $response, array $args) {
+	public function updateMulti(Request $request, Response $response, array $args) {
 		try {
 			$data = json_decode($request->getBody(), true);
 			$requestIsOk = false;
@@ -216,6 +217,7 @@ class SubscriptionsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$this->doSortSubscriptions($subscriptions);
 			return($this->returnObjectAsJson($response, 'subscriptions', $subscriptions));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while updating subscriptions, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -225,6 +227,33 @@ class SubscriptionsController extends BillingsController {
 			//
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while updating subscriptions, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function updateOne(Request $request, Response $response, array $args) {
+		try {
+			if(!isset($args['subscriptionBillingUuid'])) {
+				//exception
+				$msg = "field 'subscriptionBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
+			$subscriptionsHandler = new SubscriptionsHandler();
+			$subscription = $subscriptionsHandler->doUpdateUserSubscriptionByUuid($subscriptionBillingUuid);
+			return($this->returnObjectAsJson($response, 'subscription', $subscription));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while updating subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while updating subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));
@@ -252,13 +281,13 @@ class SubscriptionsController extends BillingsController {
 				return($this->returnObjectAsJson($response, 'subscription', $subscription));
 			}
 		} catch(BillingsException $e) {
-			$msg = "an exception occurred while cancelling a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an exception occurred while canceling a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnBillingsExceptionAsJson($response, $e));
 			//
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while cancelling a subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while canceling a subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));
@@ -300,12 +329,88 @@ class SubscriptionsController extends BillingsController {
 		}
 	}
 	
+	public function reactivate(Request $request, Response $response, array $args) {
+		try {
+			$data = $request->getQueryParams();
+			$subscriptionBillingUuid = NULL;
+			if(!isset($args['subscriptionBillingUuid'])) {
+				//exception
+				$msg = "field 'subscriptionBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
+			//
+			$subscriptionsHandler = new SubscriptionsHandler();
+			$subscription = $subscriptionsHandler->doReactivateSubscriptionByUuid($subscriptionBillingUuid);
+			if($subscription == NULL) {
+				return($this->returnNotFoundAsJson($response));
+			} else {
+				return($this->returnObjectAsJson($response, 'subscription', $subscription));
+			}
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while reactivating a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while reactivating a subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function updateInternalPlan(Request $request, Response $response, array $args) {
+		try {
+			$data = $request->getQueryParams();
+			$subscriptionBillingUuid = NULL;
+			if(!isset($args['subscriptionBillingUuid'])) {
+				//exception
+				$msg = "field 'subscriptionBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
+			$internalPlanUuid = NULL;
+			if(!isset($args['internalPlanUuid'])) {
+				//exception
+				$msg = "field 'internalPlanUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanUuid = $args['internalPlanUuid'];
+			//
+			$subscriptionsHandler = new SubscriptionsHandler();
+			$subscription = $subscriptionsHandler->doUpdateInternalPlanByUuid($subscriptionBillingUuid, $internalPlanUuid);
+			if($subscription == NULL) {
+				return($this->returnNotFoundAsJson($response));
+			} else {
+				return($this->returnObjectAsJson($response, 'subscription', $subscription));
+			}
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while reactivating a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while reactivating a subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
 	//passage par référence !!!
 	private function doSortSubscriptions(&$subscriptions) {
 		//more recent firt
 		usort($subscriptions, 
 				function(BillingsSubscription $a, BillingsSubscription $b) {
-					return(strcmp($b->getSubActivatedDate(), $a->getSubActivatedDate()));
+					return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), dbGlobal::toISODate($a->getSubActivatedDate())));
 				}
 		);
 	}

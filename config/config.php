@@ -38,6 +38,7 @@ if(getEnv('DB_PASSWORD') === false) {
 }
 
 #Billings API
+
 if(getEnv('API_HTTP_AUTH_USER') === false) {
 	putEnv('API_HTTP_AUTH_USER=admin');
 }
@@ -55,6 +56,7 @@ if(getEnv('API_HTTP_SECURE') === false) {
 }
 
 #Recurly API
+
 if(getEnv('RECURLY_API_SUBDOMAIN') === false) {
 	putEnv('RECURLY_API_SUBDOMAIN=johnarch');
 }
@@ -68,11 +70,11 @@ if(getEnv('RECURLY_POSTPONE_ACTIVATED') === false) {
 }
 
 if(getEnv('RECURLY_POSTPONE_LIMIT_IN') === false) {
-	putEnv('RECURLY_POSTPONE_LIMIT_IN=28');
+	putEnv('RECURLY_POSTPONE_LIMIT_IN=7');
 }
 
 if(getEnv('RECURLY_POSTPONE_LIMIT_OUT') === false) {
-	putEnv('RECURLY_POSTPONE_LIMIT_OUT=7');
+	putEnv('RECURLY_POSTPONE_LIMIT_OUT=28');
 }
 
 if(getEnv('RECURLY_POSTPONE_TO') === false) {
@@ -80,6 +82,7 @@ if(getEnv('RECURLY_POSTPONE_TO') === false) {
 }
 
 #Recurly WebHooks
+
 if(getEnv('RECURLY_WH_HTTP_AUTH_USER') === false) {
 	putEnv('RECURLY_WH_HTTP_AUTH_USER=admin');
 }
@@ -88,6 +91,7 @@ if(getEnv('RECURLY_WH_HTTP_AUTH_PWD') === false) {
 }
 
 #Gocardless API
+
 if(getEnv('GOCARDLESS_API_ENV') === false) {
 	putEnv('GOCARDLESS_API_ENV=sandbox');
 }
@@ -114,6 +118,14 @@ if(getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID') === false) {
 	putEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID=32685665-87ba-4c67-a726-395b58c2e36b');
 }
 
+if(getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID') === false) {
+	putEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID=51b5b68f-3fc2-4fb3-b274-ec90d9ccfc20');
+}
+
+if(getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_FP_ID') === false) {
+	putEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_FP_ID=835e891b-c196-486e-8f0a-64394e62f737');
+}
+
 if(getEnv('SENDGRID_FROM') === false) {
 	putEnv('SENDGRID_FROM=abonnement@afrostream.tv');
 }
@@ -126,7 +138,12 @@ if(getEnv('SENDGRID_BCC') === false) {
 	putEnv('SENDGRID_BCC=');
 }
 
+if(getEnv('SENDGRID_TO_IFNULL') === false) {
+	putEnv('SENDGRID_TO_IFNULL=null@afrostream.tv');
+}
+
 #Event (MAIL)
+
 if(getEnv('EVENT_EMAIL_ACTIVATED') === false) {
 	putEnv('EVENT_EMAIL_ACTIVATED=1');
 }
@@ -134,6 +151,167 @@ if(getEnv('EVENT_EMAIL_ACTIVATED') === false) {
 if(getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION') === false) {
 	putEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION=recurly');
 }
+
+#Slack
+//test channel : test-channel
+if(getEnv('SLACK_ACTIVATED') === false) {
+	putEnv('SLACK_ACTIVATED=0');
+}
+
+if(getEnv('SLACK_GROWTH_CHANNEL') === false) {
+	putEnv('SLACK_GROWTH_CHANNEL=growth');
+}
+
+if(getEnv('SLACK_STATS_CHANNEL') === false) {
+	putEnv('SLACK_STATS_CHANNEL=test-channel');
+}
+
+if(getEnv('SLACK_STATS_COUPONS_CHANNEL') === false) {
+	putEnv('SLACK_STATS_COUPONS_CHANNEL=activation');
+}
+
+#Bouygues
+
+if(getEnv('BOUYGUES_BHA_ACTIVATED') === false) {
+	putEnv('BOUYGUES_BHA_ACTIVATED=0');
+}
+
+#Cashway
+
+if(getEnv('CASHWAY_API_URL') === false) {
+	putEnv('CASHWAY_API_URL=https://api-staging.cashway.fr/');
+}
+
+if(getEnv('CASHWAY_API_HTTP_AUTH_USER') === false) {
+	putEnv('CASHWAY_API_HTTP_AUTH_USER=73123a828c94b4b1f2b4e4669a5cae6e187090ff7ba510d6de449d707e980951');
+}
+
+if(getEnv('CASHWAY_API_HTTP_AUTH_PWD') === false) {
+	putEnv('CASHWAY_API_HTTP_AUTH_PWD=81c2c892f30d8304c6af90a387001765132a2887b76a7bdbe39af9131f1be9b9');
+}
+
+if(getEnv('CASHWAY_USER_AGENT') === false) {
+	putEnv('CASHWAY_USER_AGENT=afrbillingsapi/1.0');
+}
+
+if(getEnv('CASHWAY_USE_STAGING') === false) {
+	putEnv('CASHWAY_USE_STAGING=1');
+}
+
+if(getEnv('CASHWAY_WH_SECRET') === false) {
+	putEnv('CASHWAY_WH_SECRET=DakUdoycsOctoaphObyo');
+}
+
+if(getEnv('CASHWAY_COUPON_URL') === false) {
+	putEnv('CASHWAY_COUPON_URL=https://staging-payments-afrostream.cashway.fr/1/b/');
+}
+
+if(getEnv('CASHWAY_COUPON_ONE_BY_USER_FOR_EACH_CAMPAIGN_ACTIVATED') === false) {
+	putEnv('CASHWAY_COUPON_ONE_BY_USER_FOR_EACH_CAMPAIGN_ACTIVATED=0');
+}
+
+#OrangeTV
+
+if(getEnv('ORANGE_TV_API_URL') === false) {
+	putEnv('ORANGE_TV_API_URL=https://iosw3sn-ba-rest.orange.com:8443/OTP/API_OTVP_Partners-1/user/v1');
+}
+
+if(getEnv('ORANGE_TV_HTTP_AUTH_USER') === false) {
+	putEnv('ORANGE_TV_HTTP_AUTH_USER=OTP-OTP_AFR');
+}
+
+if(getEnv('ORANGE_TV_HTTP_AUTH_PWD') === false) {
+	putEnv('ORANGE_TV_HTTP_AUTH_PWD=a]ar[9vU');
+}
+
+if(getEnv('ORANGE_SUBSCRIPTION_PERIOD_LENGTH') === false) {
+	putEnv('ORANGE_SUBSCRIPTION_PERIOD_LENGTH=1');
+}
+
+#BouyguesTV
+
+if(getEnv('BOUYGUES_TV_API_URL') === false) {
+	putEnv('BOUYGUES_TV_API_URL=https://idp.bouygtel.fr:20443/federation/eligibility');
+}
+
+if(getEnv('BOUYGUES_SUBSCRIPTION_PERIOD_LENGTH') === false) {
+	putEnv('BOUYGUES_SUBSCRIPTION_PERIOD_LENGTH=1');
+}
+
+#Netsize
+
+if(getEnv('NETSIZE_API_URL') === false) {
+	putEnv('NETSIZE_API_URL=http://qa.pay.netsize.com/API/1.2/');
+}
+
+if(getEnv('NETSIZE_API_AUTH_KEY') === false) {
+	putEnv('NETSIZE_API_AUTH_KEY=368b8163dca54e64a17ec098d63d2464');
+}
+
+if(getEnv('NETSIZE_API_SERVICE_ID') === false) {
+	putEnv('NETSIZE_API_SERVICE_ID=1');
+}
+
+if(getEnv('NETSIZE_API_PRODUCT_TYPE') === false) {
+	putEnv('NETSIZE_API_PRODUCT_TYPE=121');
+}
+
+#If 1, always consider that customer is a subscriber
+if(getEnv('BOUYGUES_TV_HACK_ACTIVATED') === false) {
+	putEnv('BOUYGUES_TV_HACK_ACTIVATED=0');
+}
+
+#Braintree
+
+if(getEnv('BRAINTREE_ENVIRONMENT') === false) {
+	putEnv('BRAINTREE_ENVIRONMENT=sandbox');
+}
+
+if(getEnv('BRAINTREE_MERCHANT_ID') === false) {
+	putEnv('BRAINTREE_MERCHANT_ID=vpchhx9ppk3xwrcy');
+}
+
+if(getEnv('BRAINTREE_PUBLIC_KEY') === false) {
+	putEnv('BRAINTREE_PUBLIC_KEY=hpwk56f69q22bnqh');
+}
+
+if(getEnv('BRAINTREE_PRIVATE_KEY') === false) {
+	putEnv('BRAINTREE_PRIVATE_KEY=d2cc0c2d62852a9555e7fa9119f89665');
+}
+
+#proxy
+
+if(getEnv('PROXY_HOST') === false) {
+	putEnv('PROXY_HOST=proxy.adm.afrostream.net');
+}
+
+if(getEnv('PROXY_PORT') === false) {
+	putEnv('PROXY_PORT=3128');
+}
+
+if(getEnv('PROXY_USER') === false) {
+	putEnv('PROXY_USER=afrostream');
+}
+
+if(getEnv('PROXY_PWD') === false) {
+	putEnv('PROXY_PWD=afrostream77');
+}
+
+
+# stripe api key
+if(getEnv('STRIPE_API_KEY') === false) {
+	putEnv('STRIPE_API_KEY=sk_test_VaFvskbZOobGZ1L3x1iGwzOk');
+}
+
+#Stripe WebHooks
+
+if(getEnv('STRIPE_WH_HTTP_AUTH_USER') === false) {
+	putEnv('STRIPE_WH_HTTP_AUTH_USER=admin');
+}
+if(getEnv('STRIPE_WH_HTTP_AUTH_PWD') === false) {
+	putEnv('STRIPE_WH_HTTP_AUTH_PWD=pwd');
+}
+
 
 #logger, #db_conn, ...
 
@@ -174,5 +352,3 @@ class config {
 }
 
 config::init();
-
-?>

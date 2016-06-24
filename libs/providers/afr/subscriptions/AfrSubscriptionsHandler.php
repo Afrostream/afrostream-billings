@@ -27,7 +27,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 			if($coupon == NULL) {
 				$msg = "coupon : code=".$couponCode." NOT FOUND";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_CODE_NOT_FOUND);				
 			}
 			$couponProviderPlan = PlanDAO::getPlanById($coupon->getProviderPlanId());
 			if($couponProviderPlan == NULL) {
@@ -81,6 +81,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('active');
 		$start_date = new DateTime();
+		$start_date->setTimezone(new DateTimeZone(config::$timezone));
 		$api_subscription->setSubActivatedDate($start_date);
 		$api_subscription->setSubPeriodStartedDate($start_date);
 		$end_date = NULL;
@@ -143,18 +144,6 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setSubExpiresDate($api_subscription->getSubExpiresDate());
 		$db_subscription->setSubPeriodStartedDate($api_subscription->getSubPeriodStartedDate());
 		$db_subscription->setSubPeriodEndsDate($api_subscription->getSubPeriodEndsDate());
-		//The information is in the PLAN
-		/*switch ($api_subscription->collection_mode) {
-			case 'automatic' :
-				$db_subscription->setSubCollectionMode('automatic');
-				break;
-			case 'manual' :
-				$db_subscription->setSubCollectionMode('manual');
-				break;
-			default :
-				$db_subscription->setSubCollectionMode('manual');//it is the default says recurly
-				break;
-		}*/
 		$db_subscription->setUpdateType($update_type);
 		//
 		$db_subscription->setUpdateId($updateId);
@@ -214,9 +203,9 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < new DateTime($subscription->getSubPeriodEndsDate()))
+						($now < $subscription->getSubPeriodEndsDate())
 								&&
-						($now >= new DateTime($subscription->getSubPeriodStartedDate()))
+						($now >= $subscription->getSubPeriodStartedDate())
 				) {
 					//inside the period
 					$is_active = 'yes';
@@ -237,106 +226,52 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 		}
 		$subscription->setIsActive($is_active);
+		$subscription->setIsCancelable(false);
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL) {
-		if($subscription->getSubStatus() == "pending_canceled") {
-			$msg = "cannot renew because of the current_status=".$subscription->getSubStatus();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
-		if($providerPlan == NULL) {
-			$msg = "unknown plan with id : ".$subscription->getPlanId();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
-		if($internalPlan == NULL) {
-			$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider afr is not linked to an internal plan";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		if($start_date == NULL) {
-			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
-		}
-		$end_date = NULL;
-		switch($internalPlan->getPeriodUnit()) {
-			case PlanPeriodUnit::day :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::month :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::year :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			default :
-				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
-		}
-		$subscription->setSubPeriodStartedDate($start_date);
-		$subscription->setSubPeriodEndsDate($end_date);
-		$subscription->setSubStatus('active');
+	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
 		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			BillingsSubscriptionDAO::updateSubStartedDate($subscription);
-			BillingsSubscriptionDAO::updateSubEndsDate($subscription);
-			BillingsSubscriptionDAO::updateSubStatus($subscription);
-			//COMMIT
-			pg_query("COMMIT");
-		} catch(Exception $e) {
-			pg_query("ROLLBACK");
-			throw $e;
-		}
-		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
-	}
-		
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
-		if($subscription->getSubStatus() == "pending_active") {
-			$msg = "cannot cancel because of the current_status=".$subscription->getSubStatus();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			break;
-		}
-		if(
-				$subscription->getSubStatus() == "canceled"
-				||
-				$subscription->getSubStatus() == "requesting_canceled"
-				||
-				$subscription->getSubStatus() == "pending_canceled"
-		)
-		{
-			//nothing todo : already done or in process
-		} else {
-			$subscription->setSubCanceledDate($cancel_date);
-			if($is_a_request == true) {
-				$subscription->setSubStatus('requesting_canceled');
+			config::getLogger()->addInfo("afr subscription expiring...");
+			if(
+					$subscription->getSubStatus() == "expired"
+			)
+			{
+				//nothing todo : already done or in process
 			} else {
-				$subscription->setSubStatus('canceled');
+				//
+				if($subscription->getSubPeriodEndsDate() < $expires_date) {
+					$subscription->setSubExpiresDate($expires_date);
+					$subscription->setSubStatus("expired");
+				} else {
+					$msg = "cannot expire a subscription that has not ended yet";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
 			}
-			try {
-				//START TRANSACTION
-				pg_query("BEGIN");
-				BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
-				BillingsSubscriptionDAO::updateSubStatus($subscription);
-				//COMMIT
-				pg_query("COMMIT");
-			} catch(Exception $e) {
-				pg_query("ROLLBACK");
-				throw $e;
-			}
+			//
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("afr subscription expiring done successfully for afr_subscription_uuid=".$subscription->getSubUid());
+			return($subscription);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while expiring a afr subscription for afr_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("afr subscription expiring failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while expiring a afr subscription for afr_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("afr subscription expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
 	}
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {

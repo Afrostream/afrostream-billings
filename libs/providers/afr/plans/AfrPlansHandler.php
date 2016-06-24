@@ -9,7 +9,6 @@ class AfrPlansHandler {
 	public static function init() {
 		AfrPlansHandler::$supported_currencies = array('EUR');
 		AfrPlansHandler::$supported_cycles = array(
-				(new PlanCycle(PlanCycle::auto))->getValue(),
 				(new PlanCycle(PlanCycle::once))->getValue()
 		);
 		

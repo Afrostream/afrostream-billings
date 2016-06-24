@@ -25,6 +25,11 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			if(getEnv('BOUYGUES_BHA_ACTIVATED') != 1) {
+				$msg = "BACHAT is not activated";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			}
 			//
 			$requestId = $subOpts->getOpts()['requestId'];
 			$idSession = $subOpts->getOpts()['idSession'];
@@ -122,18 +127,6 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setSubExpiresDate($api_subscription->getSubExpiresDate());
 		$db_subscription->setSubPeriodStartedDate($api_subscription->getSubPeriodStartedDate());
 		$db_subscription->setSubPeriodEndsDate($api_subscription->getSubPeriodEndsDate());
-		//The information is in the PLAN
-		/*switch ($api_subscription->collection_mode) {
-			case 'automatic' :
-				$db_subscription->setSubCollectionMode('automatic');
-				break;
-			case 'manual' :
-				$db_subscription->setSubCollectionMode('manual');
-				break;
-			default :
-				$db_subscription->setSubCollectionMode('manual');//it is the default says recurly
-				break;
-		}*/
 		$db_subscription->setUpdateType($update_type);
 		//
 		$db_subscription->setUpdateId($updateId);
@@ -156,8 +149,8 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			return;
 		}
 		$is_active = NULL;
-		$periodStartedDate = (new DateTime($subscription->getSubPeriodStartedDate()))->setTimezone(new DateTimeZone(config::$timezone));
-		$periodEndsDate = (new DateTime($subscription->getSubPeriodEndsDate()))->setTimezone(new DateTimeZone(config::$timezone));
+		$periodStartedDate = $subscription->getSubPeriodStartedDate()->setTimezone(new DateTimeZone(config::$timezone));
+		$periodEndsDate = $subscription->getSubPeriodEndsDate()->setTimezone(new DateTimeZone(config::$timezone));
 		$periodEndsDate->setTime(23, 59, 59);
 		$periodeGraceEndsDate = clone $periodEndsDate;
 		$periodeGraceEndsDate->add(new DateInterval("P3D"));//3 full days of grace period
@@ -196,8 +189,13 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		$subscription->setIsActive($is_active);
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL) {
-		if($subscription->getSubStatus() == "pending_canceled") {
+	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+		if($end_date != NULL) {
+			$msg = "renewing a bachat subscription does not support that end_date is already set";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
+		}
+		if($subscription->getSubStatus() != "active" && $subscription->getSubStatus() != "pending_active") {
 			$msg = "cannot renew because of the current_status=".$subscription->getSubStatus();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -222,10 +220,10 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		
 		$today = new DateTime();
 		$today->setTimezone(new DateTimeZone(config::$timezone));
-		$today->setTime(0, 0, 0);
+		$today->setTime(23, 59, 59);//consider all the day
 		
 		if($start_date == NULL) {
-			$start_date = new DateTime($subscription->getSubPeriodEndsDate());
+			$start_date = $subscription->getSubPeriodEndsDate();
 			$start_date->add(new DateInterval("P1D"));
 		}
 		$start_date->setTimezone(new DateTimeZone(config::$timezone));
@@ -308,6 +306,57 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			}
 		}
 		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+		try {
+			config::getLogger()->addInfo("bachat subscription expiring...");
+			if(
+					$subscription->getSubStatus() == "expired"
+			)
+			{
+				//nothing todo : already done or in process
+			} else {
+				//
+				if($subscription->getSubStatus() != "canceled") {
+					//exception
+					$msg = "cannot expire a subscription that has not been canceled";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($subscription->getSubPeriodEndsDate() >= $expires_date) {
+					//exception
+					$msg = "cannot expire a subscription that has not ended yet";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$subscription->setSubExpiresDate($expires_date);
+				$subscription->setSubStatus("expired");
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			}
+			//
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("bachat subscription expiring done successfully for bachat_subscription_uuid=".$subscription->getSubUid());
+			return($subscription);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while expiring a bachat subscription for bachat_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("bachat subscription expiring failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while expiring a bachat subscription for bachat_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("bachat subscription expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
 	}
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {

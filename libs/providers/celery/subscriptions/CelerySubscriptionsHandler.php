@@ -10,11 +10,7 @@ class CelerySubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function __construct() {
 	}
-	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts, BillingsSubscriptionOpts $subOpts) {
-		
-	}
-	
+
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
 		
 	}
@@ -40,6 +36,51 @@ class CelerySubscriptionsHandler extends SubscriptionsHandler {
 			}
 		}*/
 	}
+
+	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+		try {
+			config::getLogger()->addInfo("celery subscription expiring...");
+			if(
+					$subscription->getSubStatus() == "expired"
+			)
+			{
+				//nothing todo : already done or in process
+			} else {
+				//
+				if($subscription->getSubPeriodEndsDate() < $expires_date) {
+					$subscription->setSubExpiresDate($expires_date);
+					$subscription->setSubStatus("expired");
+				} else {
+					$msg = "cannot expire a subscription that has not ended yet";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			}
+			//
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("celery subscription expiring done successfully for celery_subscription_uuid=".$subscription->getSubUid());
+			return($subscription);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while expiring a celery subscription for celery_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("celery subscription expiring failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while expiring a celery subscription for celery_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("celery subscription expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+	}
 	
 	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
 		if($subscription == NULL) {
@@ -52,9 +93,9 @@ class CelerySubscriptionsHandler extends SubscriptionsHandler {
 				$now = new DateTime();
 				//check dates
 				if(
-						($now < new DateTime($subscription->getSubPeriodEndsDate()))
+						($now < $subscription->getSubPeriodEndsDate())
 								&&
-						($now >= new DateTime($subscription->getSubPeriodStartedDate()))
+						($now >= $subscription->getSubPeriodStartedDate())
 				) {
 					//inside the period
 					$is_active = 'yes';
@@ -76,6 +117,7 @@ class CelerySubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//done
 		$subscription->setIsActive($is_active);
+		$subscription->setIsCancelable(false);
 	}
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {

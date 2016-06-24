@@ -21,59 +21,121 @@ function guid( $opt = false ) {       //  Set to true/false as your default way 
 	}
 }
 
-function checkUserOptsArray(array $user_opts_as_array) {
-	checkUserOptsKeys($user_opts_as_array);
-	checkUserOptsValues($user_opts_as_array);
+function checkUserOptsArray(array $user_opts_as_array, $providerName) {
+	checkUserOptsKeys($user_opts_as_array, $providerName);
+	checkUserOptsValues($user_opts_as_array, $providerName);
 }
 
-function checkUserOptsKeys(array $user_opts_as_array) {
-	if(!array_key_exists('email', $user_opts_as_array)) {
-		//exception
-		$msg = "userOpts field 'email' is missing";
-		config::getLogger()->addError($msg);
-		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-	}
-	if(!array_key_exists('firstName', $user_opts_as_array)) {
-		//exception
-		$msg = "userOpts field 'firstName' is missing";
-		config::getLogger()->addError($msg);
-		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-	}
-	if(!array_key_exists('lastName', $user_opts_as_array)) {
-		//exception
-		$msg = "userOpts field 'lastName' is missing";
-		config::getLogger()->addError($msg);
-		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+function checkUserOptsKeys(array $user_opts_as_array, $providerName) {
+	switch ($providerName) {
+		case 'bouygues' :
+			//email, firstName, lastName are optional
+			break;
+		case 'bachat' :
+			//email, firstName, lastName are optional
+			break;
+		case 'orange' :
+			//email, firstName, lastName are optional but OrangeApiToken is mandatory
+			if(!array_key_exists('OrangeApiToken', $user_opts_as_array)) {
+				//exception
+				$msg = "userOpts field 'OrangeApiToken' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}			
+			break;
+		case 'afr' :
+			//firstName, lastName are optional
+			if(!array_key_exists('email', $user_opts_as_array)) {
+				//exception
+				$msg = "userOpts field 'email' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			break;
+		default :
+			if(!array_key_exists('email', $user_opts_as_array)) {
+				//exception
+				$msg = "userOpts field 'email' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('firstName', $user_opts_as_array)) {
+				//exception
+				$msg = "userOpts field 'firstName' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('lastName', $user_opts_as_array)) {
+				//exception
+				$msg = "userOpts field 'lastName' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			break;
 	}
 }
 
-function checkUserOptsValues(array $user_opts_as_array) {
-	if(array_key_exists('email', $user_opts_as_array)) {
-		$email = $user_opts_as_array['email'];
-		if(strlen(trim($email)) == 0) {
-			//exception
-			$msg = "'email' value is empty";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-	}
-	if(array_key_exists('firstName', $user_opts_as_array)) {
-		$firstName = $user_opts_as_array['firstName'];
-		if(strlen(trim($firstName)) == 0) {
-			//exception
-			$msg = "'firstName' value is empty";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-	}
-	if(array_key_exists('lastName', $user_opts_as_array)) {
-		$lastName = $user_opts_as_array['lastName'];
-		if(strlen(trim($lastName)) == 0) {
-			//exception
-			$msg = "'lastName' value is empty";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
+function checkUserOptsValues(array $user_opts_as_array, $providerName) {
+	switch ($providerName) {
+		case 'bouygues' :
+			//email, firstName, lastName are optional
+			break;
+		case 'bachat' :
+			//email, firstName, lastName are optional
+			break;
+		case 'orange' :
+			//email, firstName, lastName are optional but OrangeApiToken is mandatory
+			if(array_key_exists('OrangeApiToken', $user_opts_as_array)) {
+				$str = $user_opts_as_array['OrangeApiToken'];
+				if(strlen(trim($str)) == 0) {
+					//exception
+					$msg = "'OrangeApiToken' value is empty";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
+			break;
+		case 'afr' :
+			//firstName, lastName are optional
+			if(array_key_exists('email', $user_opts_as_array)) {
+				$email = $user_opts_as_array['email'];
+				if(strlen(trim($email)) == 0) {
+					//exception
+					$msg = "'email' value is empty";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}			
+			break;
+		default :
+			if(array_key_exists('email', $user_opts_as_array)) {
+				$email = $user_opts_as_array['email'];
+				if(strlen(trim($email)) == 0) {
+					//exception
+					$msg = "'email' value is empty";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
+			if(array_key_exists('firstName', $user_opts_as_array)) {
+				$firstName = $user_opts_as_array['firstName'];
+				if(strlen(trim($firstName)) == 0) {
+					//exception
+					$msg = "'firstName' value is empty";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
+			if(array_key_exists('lastName', $user_opts_as_array)) {
+				$lastName = $user_opts_as_array['lastName'];
+				if(strlen(trim($lastName)) == 0) {
+					//exception
+					$msg = "'lastName' value is empty";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
+			break;
 	}
 }
 
@@ -170,6 +232,26 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 				$msg = "subOpts field 'couponCode' is missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			break;
+		case 'braintree' :
+			if($case == 'create') {
+				if(!array_key_exists('customerBankAccountToken', $sub_opts_as_array)) {
+					//exception
+					$msg = "subOpts field 'customerBankAccountToken' is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
+			break;
+		case 'netsize' :
+			if($case == 'create') {
+				if(!array_key_exists('flowId', $sub_opts_as_array)) {
+					//exception
+					$msg = "subOpts field 'flowId' is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
 			}
 			break;
 		default :

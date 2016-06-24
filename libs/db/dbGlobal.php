@@ -28,7 +28,7 @@ class UserDAO {
 		$out->setProviderId($row["providerid"]);
 		$out->setUserReferenceUuid($row["user_reference_uuid"]);
 		$out->setUserProviderUuid($row["user_provider_uuid"]);
-		$out->setDeleted($row["deleted"]);
+		$out->setDeleted($row["deleted"] == 't' ? true : false);
 		return($out);
 	}
 	
@@ -225,6 +225,25 @@ class UserOpts {
 	public function setOpt($key, $value) {
 		$this->opts[$key] = $value;
 	}
+
+	/**
+	 * Get value for the given option
+	 * If filter is requested (default) the return value will be filtered to avoid bad data (ie. firstNameValue,...)
+	 *
+	 * @param string $key
+	 * @param bool   $filter
+	 *
+	 * @return string|null
+	 */
+	public function getOpt($key, $filter = true)
+	{
+		$badValues = ['firstNameValue', 'lastNameValue'];
+		if (array_key_exists($key, $this->opts) && !in_array($this->opts[$key], $badValues)) {
+			return $this->opts[$key];
+		}
+
+		return null;
+	}
 	
 	public function setOpts($opts) {
 		$this->opts = $opts;
@@ -304,7 +323,13 @@ class UserOptsDAO {
 
 class InternalPlanDAO {
 	
-	private static $sfields = "BIP._id, BIP.internal_plan_uuid, BIP.name, BIP.description, BIP.amount_in_cents, BIP.currency, BIP.cycle, BIP.period_unit, BIP.period_length, BIP.thumbid, BIP.vat_rate";
+	private static $sfields = NULL;
+	
+	public static function init() {
+		InternalPlanDAO::$sfields = "BIP._id, BIP.internal_plan_uuid, BIP.name, BIP.description,".
+			" BIP.amount_in_cents, BIP.currency, BIP.cycle, BIP.period_unit, BIP.period_length, BIP.thumbid, BIP.vat_rate,".
+			" BIP.trial_enabled, BIP.trial_period_length, BIP.trial_period_unit, BIP.is_visible";
+	}
 	
 	private static function getInternalPlanFromRow($row) {
 		$out = new InternalPlan();
@@ -319,6 +344,10 @@ class InternalPlanDAO {
 		$out->setPeriodLength($row["period_length"]);
 		$out->setThumbId($row["thumbid"]);
 		$out->setVatRate($row["vat_rate"]);
+		$out->setTrialEnabled($row["trial_enabled"] == 't' ? true : false);
+		$out->setTrialPeriodLength($row["trial_period_length"]);
+		$out->setTrialPeriodUnit($row["trial_period_unit"] == NULL ? NULL : new TrialPeriodUnit($row["trial_period_unit"]));
+		$out->setIsVisible($row["is_visible"] == 't' ? true : false);
 		return($out);
 	}
 	
@@ -367,7 +396,7 @@ class InternalPlanDAO {
 		return($out);
 	}
 	
-	public static function getInternalPlans($providerId = NULL) {
+	public static function getInternalPlans($providerId = NULL, $contextId = NULL, $isVisible = NULL, $country = NULL) {
 		$query = "SELECT ".self::$sfields." FROM billing_internal_plans BIP";
 		$params = array();
 		
@@ -376,9 +405,62 @@ class InternalPlanDAO {
 		if(isset($providerId)) {
 			$query.= " INNER JOIN billing_internal_plans_links BIPL ON (BIP._id = BIPL.internal_plan_id)";
 			$query.= " INNER JOIN billing_plans BP ON (BIPL.provider_plan_id = BP._id)";
-			$query.= " WHERE BP.providerid = $1";
-			$params[] = $providerId;
 		}
+		
+		if(isset($contextId)) {
+			$query.= " INNER JOIN billing_internal_plans_by_context BIPBC ON (BIPBC.internal_plan_id = BIP._id)";
+		}
+		
+		if(isset($country)) {
+			$query.= "INNER JOIN billing_internal_plans_by_country BIPBCY ON (BIPBCY.internal_plan_id = BIP._id)";	
+		}
+		
+		$where = ""; 
+		if(isset($providerId)) {
+			$params[] = $providerId;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "BP.providerid = $".(count($params));
+		}
+		
+		if(isset($contextId)) {
+			$params[] = $contextId;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "BIPBC.context_id = $".(count($params));			
+		}
+		
+		if(isset($country)) {
+			$params[] = $country;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "BIPBCY.country = $".(count($params));
+		}
+		
+		if(isset($isVisible)) {
+			$params[] = $isVisible;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "BIP.is_visible = $".(count($params));
+		}
+		
+		$query.= $where;
+		if(isset($contextId)) {
+			$query.= " ORDER BY BIPBC.index ASC";
+		}
+		//echo $query;
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
@@ -391,8 +473,8 @@ class InternalPlanDAO {
 	}
 	
 	public static function addInternalPlan(InternalPlan $internalPlan) {
-		$query = "INSERT INTO billing_internal_plans (internal_plan_uuid, name, description, amount_in_cents, currency, cycle, period_unit, period_length)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING _id";
+		$query = "INSERT INTO billing_internal_plans (internal_plan_uuid, name, description, amount_in_cents, currency, cycle, period_unit, period_length, trial_enabled, trial_period_length, trial_period_unit, vat_rate)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query, 
 				array($internalPlan->getInternalPlanUuid(),
 					$internalPlan->getName(),
@@ -401,13 +483,19 @@ class InternalPlanDAO {
 					$internalPlan->getCurrency(),
 					$internalPlan->getCycle(),
 					$internalPlan->getPeriodUnit(),
-					$internalPlan->getPeriodLength()
+					$internalPlan->getPeriodLength(),
+					$internalPlan->getTrialEnabled(),
+					$internalPlan->getTrialPeriodLength(),
+					$internalPlan->getTrialPeriodUnit(),
+					$internalPlan->getVatRate()
 				));
 		$row = pg_fetch_row($result);
 		return(self::getInternalPlanById($row[0]));
 	}
 	
 }
+
+InternalPlanDAO::init();
 
 class PlanCycle extends Enum implements JsonSerializable {
 	
@@ -431,7 +519,22 @@ class PlanPeriodUnit extends Enum implements JsonSerializable {
 	
 }
 
+class TrialPeriodUnit extends Enum implements JsonSerializable {
+	
+	const day = 'day';
+	const month = 'month';
+	
+	public function jsonSerialize() {
+		return $this->getValue();
+	}
+	
+}
+
 class InternalPlan implements JsonSerializable {
+	
+	private static $curenciesForDisplay = array(
+		'XOF' => 'FCFA'
+	);
 	
 	private $_id;
 	private $internal_plan_uuid;
@@ -445,6 +548,10 @@ class InternalPlan implements JsonSerializable {
 	private $showProviderPlans = true;
 	private $vatRate = 20;
 	private $thumbId;
+	private $trialEnabled;
+	private $trialPeriodLength;
+	private $trialPeriodUnit;
+	private $isVisible;
 
 	public function getId() {
 		return($this->_id);
@@ -491,6 +598,13 @@ class InternalPlan implements JsonSerializable {
 	}
 	
 	public function getCurrency() {
+		return($this->currency);
+	}
+	
+	public function getCurrencyForDisplay() {
+		if(array_key_exists($this->currency, self::$curenciesForDisplay)) {
+			return(self::$curenciesForDisplay[$this->currency]);
+		}
 		return($this->currency);
 	}
 	
@@ -542,12 +656,56 @@ class InternalPlan implements JsonSerializable {
 		}
 	}
 	
+	public function getAmountExclTax() {
+		if($this->vatRate == NULL) {
+			return($this->amount_in_cents / 100);
+		} else {
+			return(($this->amount_in_cents / (1 + $this->vatRate / 100)) / 100);
+		}
+	}
+	
+	public function getAmount() {
+		return((float) ($this->amount_in_cents / 100));
+	}
+	
 	public function setThumbId($thumbId) {
 		$this->thumbId = $thumbId;
 	}
 	
 	public function getThumbId() {
 		return($this->thumbId);
+	}
+	
+	public function setTrialEnabled($trialEnabled) {
+		$this->trialEnabled = $trialEnabled;
+	}
+	
+	public function getTrialEnabled() {
+		return($this->trialEnabled);
+	}
+	
+	public function setTrialPeriodLength($trialPeriodLength) {
+		$this->trialPeriodLength = $trialPeriodLength;
+	}
+	
+	public function getTrialPeriodLength() {
+		return($this->trialPeriodLength);
+	}
+	
+	public function setTrialPeriodUnit(TrialPeriodUnit $trialPeriodUnit = NULL) {
+		$this->trialPeriodUnit = $trialPeriodUnit;
+	}
+	
+	public function getTrialPeriodUnit() {
+		return($this->trialPeriodUnit);
+	}
+	
+	public function setIsVisible($isVisible) {
+		$this->isVisible = $isVisible;
+	}
+	
+	public function getIsVisible() {
+		return($this->isVisible);
 	}
 	
 	public function jsonSerialize() {
@@ -557,14 +715,21 @@ class InternalPlan implements JsonSerializable {
 				'name' => $this->name,
 				'description' => $this->description,
 				'amountInCents' => $this->amount_in_cents,
+				'amount' => (string) number_format((float) $this->amount_in_cents / 100, 2, ',', ''),//Forced to French Locale
 				'amountInCentsExclTax' => (string) $this->getAmountInCentsExclTax(),
-				'vatRate' => ($this->vatRate == NULL) ? NULL : (string) number_format($this->vatRate, 2, ',', ' '),//Forced to French Locale
+				'amountExclTax' => number_format((float) $this->getAmountExclTax(), 5, ',', ''),//Forced to French Locale
+				'vatRate' => ($this->vatRate == NULL) ? NULL : (string) number_format((float) $this->vatRate, 2, ',', ''),//Forced to French Locale
 				'currency' => $this->currency,
 				'cycle' => $this->cycle,
 				'periodUnit' => $this->periodUnit,
 				'periodLength' => $this->periodLength,
 				'internalPlanOpts' => (InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($this->_id)->jsonSerialize()),
-				'thumb' => ThumbDAO::getThumbById($this->thumbId)
+				'thumb' => ThumbDAO::getThumbById($this->thumbId),
+				'trialEnabled' => $this->trialEnabled,
+				'trialPeriodUnit' => $this->trialPeriodUnit,
+				'trialPeriodLength' => $this->trialPeriodLength,
+				'isVisible' => $this->isVisible == 't' ? true : false,
+				'countries' => InternalPlanCountryDAO::getInternalPlanCountries($this->_id)
 		];
 		if($this->showProviderPlans) {
 			$return['providerPlans'] = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id));
@@ -1036,7 +1201,7 @@ class BillingsSubscriptionDAO {
 	public static function init() {
 		BillingsSubscriptionDAO::$sfields = "BS._id, BS.subscription_billing_uuid, BS.providerid, BS.userid, BS.planid, BS.creation_date, BS.updated_date, BS.sub_uuid, BS.sub_status,".
 			" BS.sub_activated_date, BS.sub_canceled_date, BS.sub_expires_date, BS.sub_period_started_date, BS.sub_period_ends_date,".
-			" BS.sub_collection_mode, BS.update_type, BS.updateid, BS.deleted";		
+			"BS.update_type, BS.updateid, BS.deleted";
 	}
 	
 	private static function getBillingsSubscriptionFromRow($row) {
@@ -1046,19 +1211,18 @@ class BillingsSubscriptionDAO {
 		$out->setProviderId($row["providerid"]);
 		$out->setUserId($row["userid"]);
 		$out->setPlanId($row["planid"]);
-		$out->setCreationDate($row["creation_date"]);
-		$out->setUpdatedDate($row["updated_date"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		$out->setUpdatedDate($row["updated_date"] == NULL ? NULL : new DateTime($row["updated_date"]));
 		$out->setSubUid($row["sub_uuid"]);
 		$out->setSubStatus($row["sub_status"]);
-		$out->setSubActivatedDate($row["sub_activated_date"]);
-		$out->setSubCanceledDate($row["sub_canceled_date"]);
-		$out->setSubExpiresDate($row["sub_expires_date"]);
-		$out->setSubCollectionMode($row["sub_collection_mode"]);
-		$out->setSubPeriodStartedDate($row["sub_period_started_date"]);
-		$out->setSubPeriodEndsDate($row["sub_period_ends_date"]);
+		$out->setSubActivatedDate($row["sub_activated_date"] == NULL ? NULL : new DateTime($row["sub_activated_date"]));
+		$out->setSubCanceledDate($row["sub_canceled_date"] == NULL ? NULL : new DateTime($row["sub_canceled_date"]));
+		$out->setSubExpiresDate($row["sub_expires_date"] == NULL ? NULL : new DateTime($row["sub_expires_date"]));
+		$out->setSubPeriodStartedDate($row["sub_period_started_date"] == NULL ? NULL : new DateTime($row["sub_period_started_date"]));
+		$out->setSubPeriodEndsDate($row["sub_period_ends_date"] == NULL ? NULL : new DateTime($row["sub_period_ends_date"]));
 		$out->setUpdateType($row["update_type"]);
 		$out->setUpdateId($row["updateid"]);
-		$out->setDeleted($row["deleted"]);
+		$out->setDeleted($row["deleted"] == 't' ? true : false);
 		$out->setBillingsSubscriptionOpts(BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($row["_id"]));
 		return($out);
 	}
@@ -1111,8 +1275,8 @@ class BillingsSubscriptionDAO {
 	public static function addBillingsSubscription(BillingsSubscription $subscription) {
 		$query = "INSERT INTO billing_subscriptions (subscription_billing_uuid, providerid, userid, planid,";
 		$query.= " sub_uuid, sub_status, sub_activated_date, sub_canceled_date, sub_expires_date,";
-		$query.= " sub_period_started_date, sub_period_ends_date, sub_collection_mode, update_type, updateid, deleted)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING _id";
+		$query.= " sub_period_started_date, sub_period_ends_date,  update_type, updateid, deleted)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$subscription->getSubscriptionBillingUuid(),
 						$subscription->getProviderId(),
@@ -1125,34 +1289,45 @@ class BillingsSubscriptionDAO {
 						dbGlobal::toISODate($subscription->getSubExpiresDate()),
 						dbGlobal::toISODate($subscription->getSubPeriodStartedDate()),
 						dbGlobal::toISODate($subscription->getSubPeriodEndsDate()),
-						$subscription->getSubCollectionMode(),
 						$subscription->getUpdateType(),
 						$subscription->getUpdateId(),
 						$subscription->getDeleted()));
 		$row = pg_fetch_row($result);
 		return(self::getBillingsSubscriptionById($row[0]));
 	}
-	
-	/*public static function updateBillingsSubscription(BillingsSubscription $subscription) {
-		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, planid = $1, sub_status = $2, sub_activated_date = $3, sub_canceled_date = $4,";
-		$query.= " sub_expires_date = $5, sub_period_started_date = $6, sub_period_ends_date = $7, sub_collection_mode = $8, update_type = $9, updateid = $10";
-		$query.= " WHERE _id = $11";
-		$result = pg_query_params(config::getDbConn(), $query,
-				array(	$subscription->getPlanId(),
-						$subscription->getSubStatus(),
-						dbGlobal::toISODate($subscription->getSubActivatedDate()),
-						dbGlobal::toISODate($subscription->getSubCanceledDate()),
-						dbGlobal::toISODate($subscription->getSubExpiresDate()),
-						dbGlobal::toISODate($subscription->getSubPeriodStartedDate()),
-						dbGlobal::toISODate($subscription->getSubPeriodEndsDate()),
-						$subscription->getSubCollectionMode(),
-						$subscription->getUpdateType(),
-						$subscription->getUpdateId(),
-						$subscription->getId()));
-		$row = pg_fetch_row($result);
-		return(self::getBillingsSubscriptionById($subscription->getId()));
-	}*/
-	
+
+	/**
+	 * @param BillingsSubscription $subscription
+	 * 
+	 * @return BillingsSubscription|null
+	 */
+	public static function updateBillingsSubscription(BillingsSubscription $subscription)
+	{
+		$query = 'UPDATE billing_subscriptions 
+		SET planid=$1,
+		sub_status=$2,
+		sub_activated_date=$3,
+		sub_canceled_date=$4,
+		sub_period_started_date=$5,
+		sub_period_ends_date=$6,
+		sub_expires_date=$7,
+		updated_date = CURRENT_TIMESTAMP
+		WHERE _id=$8';
+
+		pg_query_params(config::getDbConn(), $query, [
+			$subscription->getPlanId(),
+			$subscription->getSubStatus(),
+			dbGlobal::toISODate($subscription->getSubActivatedDate()),
+			dbGlobal::toISODate($subscription->getSubCanceledDate()),
+			dbGlobal::toISODate($subscription->getSubPeriodStartedDate()),
+			dbGlobal::toISODate($subscription->getSubPeriodEndsDate()),
+			dbGlobal::toISODate($subscription->getSubExpiresDate()),
+			$subscription->getId()
+		]);
+
+		return self::getBillingsSubscriptionById($subscription->getId());
+	}
+
 	//planid
 	public static function updatePlanId(BillingsSubscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, planid = $1 WHERE _id = $2";
@@ -1161,7 +1336,7 @@ class BillingsSubscriptionDAO {
 						$subscription->getId()));
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
-	
+
 	//subStatus
 	public static function updateSubStatus(BillingsSubscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, sub_status = $1 WHERE _id = $2";
@@ -1216,15 +1391,7 @@ class BillingsSubscriptionDAO {
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
 	
-	//subCollectionMode
-	public static function updateSubCollectionMode(BillingsSubscription $subscription) {
-		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, sub_collection_mode = $1 WHERE _id = $2";
-		$result = pg_query_params(config::getDbConn(), $query,
-				array(	$subscription->getSubCollectionMode(),
-						$subscription->getId()));
-		return(self::getBillingsSubscriptionById($subscription->getId()));
-	}
-	
+
 	//UpdateType
 	public static function updateUpdateType(BillingsSubscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, update_type = $1 WHERE _id = $2";
@@ -1239,6 +1406,15 @@ class BillingsSubscriptionDAO {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, updateid = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$subscription->getUpdateId(),
+						$subscription->getId()));
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//updateDeleted
+	public static function updateDeleted(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, deleted = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getDeleted(),
 						$subscription->getId()));
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
@@ -1258,6 +1434,23 @@ class BillingsSubscriptionDAO {
 		return($out);
 	}
 	
+	public static function getBillingsSubscripionByUserReferenceUuid($userReferenceUuid) {
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS";
+		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
+		$query.= " WHERE BS.deleted = false AND BU.deleted = false AND BU.user_reference_uuid = $1 ORDER BY BS.sub_activated_date DESC";
+		$result = pg_query_params(config::getDbConn(), $query, array($userReferenceUuid));
+		
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getBillingsSubscriptionFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);		
+	}
+	
 	public static function deleteBillingsSubscriptionById($id) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, deleted = true WHERE _id = $1";
 		$result = pg_query_params(config::getDbConn(), $query,
@@ -1265,10 +1458,15 @@ class BillingsSubscriptionDAO {
 		return($result);
 	}
 	
-	public static function getEndingBillingsSubscriptions($limit = 0, $offset = 0, $providerId = NULL, DateTime $sub_period_ends_date, $status_array = array('active')) {
+	public static function getEndingBillingsSubscriptions($limit = 0, $offset = 0, $providerId = NULL, DateTime $sub_period_ends_date, $status_array = array('active'), $cycle_array = NULL, $providerIdsToIgnore_array = NULL) {
 		$params = array();
 		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
+		if(isset($cycle_array)) {
+			$query.= " INNER JOIN billing_plans BP ON (BS.planid = BP._id)";
+			$query.= " INNER JOIN billing_internal_plans_links BIPL ON (BIPL.provider_plan_id = BP._id)";
+			$query.= " INNER JOIN billing_internal_plans BIP ON (BIPL.internal_plan_id = BIP._id)";
+		}
 		$query.= " WHERE BU.deleted = false AND BS.deleted = false";
 		$query.= " AND BS.sub_status in (";
 		$firstLoop = true;
@@ -1285,6 +1483,34 @@ class BillingsSubscriptionDAO {
 		if(isset($providerId)) {
 			$params[] = $providerId;
 			$query.= " AND BU.providerid = $".(count($params));
+		}
+		if(isset($providerIdsToIgnore_array) && count($providerIdsToIgnore_array) > 0) {
+			$firstLoop = true;
+			$query.= " AND BU.providerid not in (";
+			foreach($providerIdsToIgnore_array as $providerIdToIgnore) {
+				$params[] = $providerIdToIgnore;
+				if($firstLoop) {
+					$firstLoop = false;
+					$query .= "$".(count($params));
+				} else {
+					$query .= ", $".(count($params));
+				}
+			}
+			$query.= ")";
+		}
+		if(isset($cycle_array)) {
+			$firstLoop = true;
+			$query.= " AND BIP.cycle in (";
+			foreach($cycle_array as $cycle) {
+				$params[] = $cycle;
+				if($firstLoop) {
+					$firstLoop = false;
+					$query .= "$".(count($params));
+				} else {
+					$query .= ", $".(count($params));
+				}
+			}
+			$query.= ")";	
 		}
 		$sub_period_ends_date_str = dbGlobal::toISODate($sub_period_ends_date);
 		$query.= " AND BS.sub_period_ends_date < '".$sub_period_ends_date_str."'";//STRICT
@@ -1357,7 +1583,6 @@ class BillingsSubscription implements JsonSerializable {
 	private $sub_activated_date;
 	private $sub_canceled_date;
 	private $sub_expires_date;
-	private $sub_collection_mode;
 	private $sub_period_started_date;
 	private $sub_period_ends_date;
 	private $update_type;
@@ -1367,7 +1592,11 @@ class BillingsSubscription implements JsonSerializable {
 	private $is_active;
 	//
 	private $billingsSubscriptionOpts = NULL;
-	
+	//
+	private $in_trial = false;
+	private $is_cancelable = true;
+	private $is_reactivable = false;
+
 	public function getId() {
 		return($this->_id);
 	}
@@ -1376,12 +1605,12 @@ class BillingsSubscription implements JsonSerializable {
 		$this->_id = $id;
 	}
 	
-	public function setSubscriptionBillingUuid($uuid) {
-		$this->subscription_billing_uuid = $uuid;
-	}
-	
 	public function getSubscriptionBillingUuid() {
 		return($this->subscription_billing_uuid);
+	}
+	
+	public function setSubscriptionBillingUuid($uuid) {
+		$this->subscription_billing_uuid = $uuid;
 	}
 	
 	public function getProviderId() {
@@ -1480,14 +1709,6 @@ class BillingsSubscription implements JsonSerializable {
 		$this->sub_period_ends_date = $date;
 	}
 	
-	public function getSubCollectionMode() {
-		return($this->sub_collection_mode);
-	}
-	
-	public function setSubCollectionMode($str) {
-		$this->sub_collection_mode = $str;
-	}
-	
 	public function getUpdateType() {
 		return($this->update_type);
 	}
@@ -1512,20 +1733,50 @@ class BillingsSubscription implements JsonSerializable {
 		$this->deleted = $bool;
 	}
 	
+	public function getIsActive() {
+		return($this->is_active);
+	}
+	
 	public function setIsActive($bool) {
 		$this->is_active = $bool;
 	}
 	
-	public function getIsActive() {
-		return($this->is_active);
+	public function getBillingsSubscriptionOpts() {
+		return($this->billingsSubscriptionOpts);
 	}
 	
 	public function setBillingsSubscriptionOpts($billingsSubscriptionOpts) {
 		$this->billingsSubscriptionOpts = $billingsSubscriptionOpts;
 	}
+
+	public function setInTrial($boolean)
+	{
+		$this->in_trial = (boolean) $boolean;
+	}
+
+	public function getInTrial()
+	{
+		return $this->in_trial;
+	}
+
+	public function setIsCancelable($boolean)
+	{
+		$this->is_cancelable = (boolean) $boolean;
+	}
+
+	public function getIsCancelable()
+	{
+		return $this->is_cancelable;
+	}
 	
-	public function getBillingsSubscriptionOpts() {
-		return($this->billingsSubscriptionOpts);
+	public function setIsReactivable($boolean)
+	{
+		$this->is_reactivable = (boolean) $boolean;
+	}
+	
+	public function getIsReactivable()
+	{
+		return $this->is_reactivable;
 	}
 	
 	public function jsonSerialize() {
@@ -1533,16 +1784,19 @@ class BillingsSubscription implements JsonSerializable {
 			'subscriptionBillingUuid' => $this->subscription_billing_uuid,
 			'subscriptionProviderUuid' => $this->sub_uuid,
 			'isActive' => $this->is_active,
+			'inTrial' => ($this->in_trial) ? 'yes' : 'no',
+			'isCancelable' => ($this->is_cancelable) ? 'yes' : 'no',
+			'isReactivable' => ($this->is_reactivable) ? 'yes' : 'no',
 			'user' =>	((UserDAO::getUserById($this->userid)->jsonSerialize())),
 			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
-			'creationDate' => $this->creation_date,
-			'updatedDate' => $this->updated_date,
+			'creationDate' => dbGlobal::toISODate($this->creation_date),
+			'updatedDate' => dbGlobal::toISODate($this->updated_date),
 			'subStatus' => $this->sub_status,
-			'subActivatedDate' => $this->sub_activated_date,
-			'subCanceledDate' => $this->sub_canceled_date,
-			'subExpiresDate' => $this->sub_expires_date,
-			'subPeriodStartedDate' => $this->sub_period_started_date,
-			'subPeriodEndsDate' => $this->sub_period_ends_date,
+			'subActivatedDate' => dbGlobal::toISODate($this->sub_activated_date),
+			'subCanceledDate' => dbGlobal::toISODate($this->sub_canceled_date),
+			'subExpiresDate' => dbGlobal::toISODate($this->sub_expires_date),
+			'subPeriodStartedDate' => dbGlobal::toISODate($this->sub_period_started_date),
+			'subPeriodEndsDate' => dbGlobal::toISODate($this->sub_period_ends_date),
 			'subOpts' => (BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($this->_id)->jsonSerialize())
 		];
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->planid));
@@ -1576,6 +1830,15 @@ class BillingsSubscriptionOpts implements JsonSerializable {
 
 	public function getOpts() {
 		return($this->opts);
+	}
+
+	public function getOpt($key)
+	{
+		if (array_key_exists($key, $this->opts)) {
+			return $this->opts[$key];
+		}
+
+		return null;
 	}
 
 	public function jsonSerialize() {
@@ -1663,6 +1926,14 @@ class BillingInfoOpts {
 		return($this->opts);
 	}
 
+	public function getOpt($key)
+	{
+		if (array_key_exists($key, $this->opts)) {
+			return $this->opts[$key];
+		}
+
+		return null;
+	}
 }
 
 class BillingsWebHookDAO {
@@ -1872,6 +2143,7 @@ class BillingsSubscriptionActionLog {
 	private $started_date;
 	private $ended_date;
 	private $message;
+	private $processing_status_code = 0;//DEFAULT
 	
 	public function getId() {
 		return($this->_id);
@@ -1929,17 +2201,26 @@ class BillingsSubscriptionActionLog {
 		$this->message = $msg;
 	}
 	
+	public function getProcessingStatusCode() {
+		return($this->processing_status_code);
+	}
+	
+	public function setProcessingStatusCode($status_code) {
+		$this->processing_status_code = $status_code;
+	}
+	
 }
 
 class BillingsSubscriptionActionLogDAO {
 
-	private static $sfields = "_id, subid, processing_status, action_type, started_date, ended_date, message";
+	private static $sfields = "_id, subid, processing_status, action_type, started_date, ended_date, message, processing_status_code";
 
 	private static function getBillingsSubscriptionActionLogFromRow($row) {
 		$out = new BillingsSubscriptionActionLog();
 		$out->setId($row["_id"]);
 		$out->setSubId($row["subid"]);
 		$out->setProcessingStatus($row["processing_status"]);
+		$out->setProcessingStatusCode($row["processing_status_code"]);
 		$out->setActionType($row["action_type"]);
 		$out->setStartedDate($row["started_date"]);
 		$out->setEndedDate($row["ended_date"]);
@@ -1955,8 +2236,12 @@ class BillingsSubscriptionActionLogDAO {
 	}
 
 	public static function updateBillingsSubscriptionActionLogProcessingStatus(BillingsSubscriptionActionLog $billingsSubscriptionActionLog) {
-		$query = "UPDATE billing_subscriptions_action_logs SET processing_status = $1, ended_date = CURRENT_TIMESTAMP, message = $2 WHERE _id = $3";
-		$result = pg_query_params(config::getDbConn(), $query, array($billingsSubscriptionActionLog->getProcessingStatus(), $billingsSubscriptionActionLog->getMessage(), $billingsSubscriptionActionLog->getId()));
+		$query = "UPDATE billing_subscriptions_action_logs SET processing_status = $1, ended_date = CURRENT_TIMESTAMP, message = $2, processing_status_code = $3 WHERE _id = $4";
+		$result = pg_query_params(config::getDbConn(), $query, 
+				array($billingsSubscriptionActionLog->getProcessingStatus(), 
+						$billingsSubscriptionActionLog->getMessage(),
+						$billingsSubscriptionActionLog->getProcessingStatusCode(),
+						$billingsSubscriptionActionLog->getId()));
 		$row = pg_fetch_row($result);
 		return(self::getBillingsSubscriptionActionLogById($row[0]));
 	}
@@ -2092,12 +2377,18 @@ class ProcessingLogDAO {
 		return($out);
 	}
 	
-	public static function getProcessingLogByDay($providerid, $processing_type, Datetime $day) {
+	public static function getProcessingLogByDay($providerid = NULL, $processing_type, Datetime $day) {
 		$dayStr = dbGlobal::toISODate($day);
-		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE providerid = $1 AND processing_type = $2";
+		$params = array();
+		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE processing_type = $1";
+		$params[] = $processing_type;
+		if(isset($providerid)) {
+			$query.= " AND providerid = $2";
+			$params[] = $providerid;
+		}
 		$query.= " AND date(started_date AT TIME ZONE 'Europe/Paris') = date('".$dayStr."')";
 		// /!\ Querying with dbGlobal::toISODate($day) in the pg_query_params DOES NOT WORK !!!
-		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $processing_type));
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
 		$out = array();
 		
@@ -2180,7 +2471,7 @@ class ThumbDAO {
 	
 }
 
-class CouponCampaign implements JsonSerializable {
+class CouponsCampaign implements JsonSerializable {
 	
 	private $_id;
 	private $uuid;
@@ -2275,7 +2566,7 @@ class CouponCampaign implements JsonSerializable {
 	
 	public function jsonSerialize() {
 		$return = [
-			'couponCampaignBillingUuid' => $this->uuid,
+			'couponsCampaignBillingUuid' => $this->uuid,
 			'creationDate' => $this->creation_date,
 			'name' => $this->name,
 			'description' => $this->description,
@@ -2289,12 +2580,12 @@ class CouponCampaign implements JsonSerializable {
 	
 }
 
-class CouponCampaignDAO {
+class CouponsCampaignDAO {
 	
 	private static $sfields = "_id, coupons_campaigns_uuid, creation_date, name, description, providerid, providerplanid, prefix, generated_code_length, total_number";
 	
-	private static function getCouponCampaignFromRow($row) {
-		$out = new CouponCampaign();
+	private static function getCouponsCampaignFromRow($row) {
+		$out = new CouponsCampaign();
 		$out->setId($row["_id"]);
 		$out->setUuid($row["coupons_campaigns_uuid"]);
 		$out->setCreationDate($row["creation_date"]);
@@ -2308,14 +2599,14 @@ class CouponCampaignDAO {
 		return($out);
 	}
 	
-	public static function getCouponCampaignById($id) {
+	public static function getCouponsCampaignById($id) {
 		$query = "SELECT ".self::$sfields." FROM billing_coupons_campaigns WHERE _id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
 		
 		$out = null;
 		
 		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getCouponCampaignFromRow($row);
+			$out = self::getCouponsCampaignFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -2323,14 +2614,14 @@ class CouponCampaignDAO {
 		return($out);		
 	}
 	
-	public static function getCouponCampaignByUuid($uuid) {
+	public static function getCouponsCampaignByUuid($uuid) {
 		$query = "SELECT ".self::$sfields." FROM billing_coupons_campaigns WHERE coupons_campaigns_uuid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($uuid));
 	
 		$out = null;
 	
 		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getCouponCampaignFromRow($row);
+			$out = self::getCouponsCampaignFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -2338,12 +2629,33 @@ class CouponCampaignDAO {
 		return($out);
 	}
 	
+	public static function getCouponsCampaigns($providerId = NULL) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons_campaigns";
+		$params = array();
+	
+		$out = array();
+	
+		if(isset($providerId)) {
+			$query.= " WHERE providerid = $1";
+			$params[] = $providerId;
+		}
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+	
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getCouponsCampaignFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
 }
 
 class Coupon implements JsonSerializable {
 	
 	private $_id;
-	private $couponcampaignid;
+	private $couponBillingUuid;
+	private $couponscampaignid;
 	private $providerid;
 	private $providerplanid;
 	private $code;
@@ -2351,6 +2663,7 @@ class Coupon implements JsonSerializable {
 	private $creation_date;
 	private $updated_date;
 	private $redeemed_date;
+	private $expires_date;
 	private $userid;
 	private $subid;
 
@@ -2362,12 +2675,20 @@ class Coupon implements JsonSerializable {
 		$this->_id = $id;
 	}
 	
-	public function getCouponCampaignId() {
-		return($this->couponcampaignid);
+	public function setCouponBillingUuid($uuid) {
+		$this->couponBillingUuid = $uuid;
 	}
 	
-	public function setCouponCampaignId($id) {
-		$this->couponcampaignid = $id;
+	public function getCouponBillingUuid() {
+		return($this->couponBillingUuid);
+	}
+	
+	public function getCouponsCampaignId() {
+		return($this->couponscampaignid);
+	}
+	
+	public function setCouponsCampaignId($id) {
+		$this->couponscampaignid = $id;
 	}
 	
 	public function setProviderId($id) {
@@ -2426,6 +2747,14 @@ class Coupon implements JsonSerializable {
 		return($this->redeemed_date);
 	}
 	
+	public function setExpiresDate($date) {
+		$this->expires_date = $date;
+	}
+	
+	public function getExpiresDate() {
+		return($this->expires_date);
+	}
+	
 	public function setUserId($id) {
 		$this->userid = $id;
 	}
@@ -2444,9 +2773,10 @@ class Coupon implements JsonSerializable {
 	
 	public function jsonSerialize() {
 		$return = [
+				'couponBillingUuid' => $this->couponBillingUuid,
 				'code' => $this->code,
 				'status' => $this->status,
-				'campaign' => CouponCampaignDAO::getCouponCampaignById($this->couponcampaignid)->jsonSerialize(),
+				'campaign' => CouponsCampaignDAO::getCouponsCampaignById($this->couponscampaignid)->jsonSerialize(),
 				'provider' => ProviderDAO::getProviderById($this->providerid)->jsonSerialize()
 		];
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->providerplanid));
@@ -2461,15 +2791,16 @@ class CouponDAO {
 	private static $sfields = NULL;
 	
 	public static function init() {
-		CouponDAO::$sfields = "_id, couponscampaignsid, providerid, providerplanid, code, coupon_status,".
-							" creation_date, updated_date, redeemed_date,".
+		CouponDAO::$sfields = "_id, coupon_billing_uuid, couponscampaignsid, providerid, providerplanid, code, coupon_status,".
+							" creation_date, updated_date, redeemed_date, expires_date,".
 							" userid, subid";
 	}
 	
 	private static function getCouponFromRow($row) {
 		$out = new Coupon();
 		$out->setId($row["_id"]);
-		$out->setCouponCampaignId($row["couponscampaignsid"]);
+		$out->setCouponBillingUuid($row['coupon_billing_uuid']);
+		$out->setCouponsCampaignId($row["couponscampaignsid"]);
 		$out->setProviderId($row["providerid"]);
 		$out->setProviderPlanId($row["providerplanid"]);
 		$out->setCode($row["code"]);
@@ -2477,6 +2808,7 @@ class CouponDAO {
 		$out->setCreationDate($row["creation_date"]);
 		$out->setUpdatedDate($row["updated_date"]);
 		$out->setRedeemedDate($row["redeemed_date"]);
+		$out->setExpiresDate($row["expires_date"]);
 		$out->setUserId($row["userid"]);
 		$out->setSubId($row["subid"]);
 		return($out);
@@ -2497,9 +2829,32 @@ class CouponDAO {
 		return($out);
 	}
 	
-	public static function getCoupon($providerId, $couponCode) {
-		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE providerid = $1 AND lower(code) = lower($2)";
-		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $couponCode));
+	public static function getCouponByCouponBillingUuid($coupon_billing_uuid) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE coupon_billing_uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($coupon_billing_uuid));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getCouponFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getCoupon($providerId, $couponCode, $userId = NULL) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE providerid = $1 AND lower(code) = lower($2)";						
+		if(isset($userId)) {
+			$query.= " AND userid = $3";
+		}
+		$query_params = array($providerId, $couponCode);
+		if(isset($userId)) {
+			array_push($query_params, $userId);
+		}
+		
+		$result = pg_query_params(config::getDbConn(), $query, $query_params);
 		
 		$out = null;
 		
@@ -2513,18 +2868,22 @@ class CouponDAO {
 	}
 	
 	public static function addCoupon(Coupon $coupon) {
-		$query = "INSERT INTO billing_coupons (couponscampaignsid, providerid, providerplanid, code)";
-		$query.= " VALUES ($1, $2, $3, $4) RETURNING _id";
+		$query = "INSERT INTO billing_coupons (coupon_billing_uuid, couponscampaignsid, providerid, providerplanid, code, expires_date, userid)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
-				array(	$coupon->getCouponCampaignId(),
+				array(	$coupon->getCouponBillingUuid(),
+						$coupon->getCouponsCampaignId(),
 						$coupon->getProviderId(),
 						$coupon->getProviderPlanId(),
-						$coupon->getCode()));
+						$coupon->getCode(),
+						dbGlobal::toISODate($coupon->getExpiresDate()),
+						$coupon->getUserId()
+				));
 		$row = pg_fetch_row($result);
 		return(self::getCouponById($row[0]));
 	}
 	
-	public static function getCouponsTotalNumberByCouponCampaignId($couponscampaignsid) {
+	public static function getCouponsTotalNumberByCouponsCampaignId($couponscampaignsid) {
 		$query = "SELECT count(*) as counter FROM billing_coupons WHERE couponscampaignsid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($couponscampaignsid));
 		
@@ -2539,7 +2898,7 @@ class CouponDAO {
 		return($out);
 	}
 	
-	public function updateStatus(Coupon $coupon) {
+	public static function updateStatus(Coupon $coupon) {
 		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, coupon_status = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$coupon->getStatus(),
@@ -2547,15 +2906,23 @@ class CouponDAO {
 		return(self::getCouponById($coupon->getId()));
 	}
 	
-	public function updateRedeemedDate(Coupon $coupon) {
+	public static function updateRedeemedDate(Coupon $coupon) {
 		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, redeemed_date = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	dbGlobal::toISODate($coupon->getRedeemedDate()),
 						$coupon->getId()));
 		return(self::getCouponById($coupon->getId()));
 	}
+	
+	public static function updateExpiresDate(Coupon $coupon) {
+		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, expires_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($coupon->getExpiresDate()),
+						$coupon->getId()));
+		return(self::getCouponById($coupon->getId()));
+	}
 
-	public function updateSubId(Coupon $coupon) {
+	public static function updateSubId(Coupon $coupon) {
 		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, subid = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$coupon->getSubId(),
@@ -2563,21 +2930,762 @@ class CouponDAO {
 		return(self::getCouponById($coupon->getId()));		
 	}
 	
-	public function updateUserId(Coupon $coupon) {
+	public static function updateUserId(Coupon $coupon) {
 		$query = "UPDATE billing_coupons SET updated_date = CURRENT_TIMESTAMP, userid = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$coupon->getUserId(),
 						$coupon->getId()));
 		return(self::getCouponById($coupon->getId()));		
 	}
+
+	public static function getCouponsByUserId($userid, $couponscampaignsid = NULL) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE userid = $1";
+		$params = array();
+		$params[] = $userid;
+		if(isset($couponscampaignsid)) {
+			$query.= " AND couponscampaignsid= $2";
+			$params[] = $couponscampaignsid;
+		}
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getCouponFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
 	
 }
 
 CouponDAO::init();
+
+class Context implements JsonSerializable {
+	
+	private $_id;
+	private $context_uuid;
+	private $context_country;
+	private $name;
+	private $description;
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getContextUuid() {
+		return($this->context_uuid);
+	}
+	
+	public function setContextUuid($uuid) {
+		$this->context_uuid = $uuid;
+	}
+	
+	public function getContextCountry() {
+		return($this->context_country);
+	}
+	
+	public function setContextCountry($contextCountry) {
+		$this->context_country = $contextCountry;	
+	}
+	
+	public function getName() {
+		return($this->name);
+	}
+	
+	public function setName($name) {
+		$this->name = $name;
+	}
+	
+	public function getDescription() {
+		return($this->description);
+	}
+	
+	public function setDescription($desc) {
+		$this->description = $desc;
+	}
+
+	public function jsonSerialize() {
+		$return = [
+				'contextBillingUuid' => $this->context_uuid,
+				'contextCountry' => $this->context_country,
+				'name' => $this->name,
+				'description' => $this->description
+		];
+		$internalPlans = array();
+		$internalPlanContexts = InternalPlanContextDAO::getInternalPlanContexts($this->_id);
+		foreach ($internalPlanContexts as $internalPlanContext) {
+			array_push($internalPlans, InternalPlanDAO::getInternalPlanById($internalPlanContext->getInternalPlanId()));
+		}
+		$return['internalPlans'] = $internalPlans;
+		return($return);
+	}
+	
+}
+
+class ContextDAO {
+	
+	private static $sfields = "_id, context_uuid, country, name, description";
+	
+	private static function getContextFromRow($row) {
+		$out = new Context();
+		$out->setId($row["_id"]);
+		$out->setContextUuid($row["context_uuid"]);
+		$out->setContextCountry($row["country"]);
+		$out->setName($row["name"]);
+		$out->setDescription($row["description"]);
+		return($out);
+	}
+	
+	public static function getContextById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_contexts WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getContextFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);	
+	}
+	
+	public static function getContext($contextBillingUuid, $contextCountry) {
+		$query = "SELECT ".self::$sfields." FROM billing_contexts WHERE context_uuid = $1 AND country = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($contextBillingUuid, $contextCountry));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getContextFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getContexts($contextCountry = NULL) {
+		$query = "SELECT ".self::$sfields." FROM billing_contexts";
+		$params = array();
+		if(isset($contextCountry)) {
+			$query.= " WHERE country = $1";
+			$params[] = $contextCountry;
+		}
+		
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+	
+		$out = array();
+	
+		while($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getContextFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function addContext(Context $context) {
+		$query = "INSERT INTO billing_contexts (context_uuid, country, name, description)";
+		$query.= " VALUES ($1, $2, $3, $4) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($context->getContextUuid(),
+						$context->getContextCountry(),
+						$context->getName(),
+						$context->getDescription()
+				));
+		$row = pg_fetch_row($result);
+		return(self::getContextById($row[0]));
+	}
+	
+}
+
+class InternalPlanCountry implements JsonSerializable {
+	
+	private $_id;
+	private $internalPlanId;
+	private $country;
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setInternalPlanId($internalPlanId) {
+		$this->internalPlanId = $internalPlanId;
+	}
+	
+	public function getInternalPlanId() {
+		return($this->internalPlanId);
+	}
+	
+	public function setCountry($country) {
+		$this->country = $country;
+	}
+	
+	public function getCountry() {
+		return($this->country);
+	}
+	
+	public function jsonSerialize() {
+		$return =
+			[
+				'country' => $this->country
+		];
+		return($return);
+	}
+	
+}
+
+class InternalPlanCountryDAO {
+	
+	private static $sfields = "_id, internal_plan_id, country";
+	
+	private static function getInternalPlanCountryFromRow($row) {
+		$out = new InternalPlanCountry();
+		$out->setId($row["_id"]);
+		$out->setInternalPlanId($row["internal_plan_id"]);
+		$out->setCountry($row["country"]);
+		return($out);
+	}
+
+	public static function getInternalPlanCountryById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans_by_country WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+	
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getInternalPlanCountryFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getInternalPlanCountry($internalplanid, $country) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans_by_country WHERE internal_plan_id = $1 AND country = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalplanid, $country));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getInternalPlanCountryFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function addInternalPlanCountry(InternalPlanCountry $internalPlanCountry) {
+		$query = "INSERT INTO billing_internal_plans_by_country (internal_plan_id, country)";
+		$query.= " VALUES ($1, $2) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($internalPlanCountry->getInternalPlanId(),
+					$internalPlanCountry->getCountry()
+				));
+		$row = pg_fetch_row($result);
+		return(self::getInternalPlanCountryById($row[0]));
+	}
+	
+	public static function deleteInternalPlanCountryById($id) {
+		$query = "DELETE FROM billing_internal_plans_by_country";
+		$query.= " WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($id));		
+		return($result);
+	}
+	
+	public static function getInternalPlanCountries($internalplanid) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans_by_country WHERE internal_plan_id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalplanid));
+		
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getInternalPlanCountryFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+}
+
+class InternalPlanContext {
+
+	private $_id;
+	private $internalPlanId;
+	private $contextId;
+	private $index;
+
+	public function setId($id) {
+		$this->_id = $id;
+	}
+
+	public function getId() {
+		return($this->_id);
+	}
+
+	public function setInternalPlanId($internalPlanId) {
+		$this->internalPlanId = $internalPlanId;
+	}
+
+	public function getInternalPlanId() {
+		return($this->internalPlanId);
+	}
+
+	public function setContextId($id) {
+		$this->contextId = $id;
+	}
+
+	public function getContextId() {
+		return($this->contextId);
+	}
+	
+	public function setIndex($idx) {
+		$this->index = $idx;
+	}
+	
+	public function getIndex() {
+		return($this->index);
+	}
+}
+
+class InternalPlanContextDAO {
+
+	private static $sfields = "_id, internal_plan_id, context_id, index";
+
+	private static function getInternalPlanContextFromRow($row) {
+		$out = new InternalPlanContext();
+		$out->setId($row["_id"]);
+		$out->setInternalPlanId($row["internal_plan_id"]);
+		$out->setContextId($row["context_id"]);
+		$out->setIndex($row["index"]);
+		return($out);
+	}
+
+	public static function getInternalPlanContextById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans_by_context WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+
+		$out = null;
+
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getInternalPlanContextFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+
+	public static function getInternalPlanContext($internalPlanId, $contextId) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans_by_context WHERE internal_plan_id = $1 AND context_id = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalPlanId, $contextId));
+
+		$out = null;
+
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getInternalPlanContextFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+
+	public static function getInternalPlanContexts($contextId) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans_by_context WHERE context_id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($contextId));
+	
+		$out = array();
+		
+		while($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getInternalPlanContextFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function addInternalPlanContext(InternalPlanContext $internalPlanContext) {
+		$query = "INSERT INTO billing_internal_plans_by_context (internal_plan_id, context_id, index)";
+		$query.= " VALUES ($1, $2, $3) RETURNING _id";
+		
+		$index = $internalPlanContext->getIndex();
+		
+		if($index == NULL) {
+			config::getLogger()->addError("INDEX IS NULL");
+			$index = self::getMaxIndex($internalPlanContext->getContextId()) + 1;
+		}
+		config::getLogger()->addError("INDEX =".$index);
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($internalPlanContext->getInternalPlanId(),
+						$internalPlanContext->getContextId(),
+						$index
+				));
+		$row = pg_fetch_row($result);
+		return(self::getInternalPlanContextById($row[0]));
+	}
+
+	public static function deleteInternalPlanContextById($id) {
+		$query = "DELETE FROM billing_internal_plans_by_context";
+		$query.= " WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($id));
+		return($result);
+	}
+	
+	public static function getMaxIndex($contextId) {
+		$out = 1;
+		$query = "SELECT max(index) as max_index FROM billing_internal_plans_by_context WHERE context_id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($contextId));
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = $row['max_index'];
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function updateIndex(InternalPlanContext $internalPlanContext) {
+		$currentInternalPlanContext = self::getInternalPlanContextById($internalPlanContext->getId());
+		$old = $currentInternalPlanContext->getIndex();
+		$new = $internalPlanContext->getIndex();
+		$diff = $old - $new;
+		$lower = min(array($old, $new));
+		$upper = max(array($old, $new));
+		$query = "UPDATE billing_internal_plans_by_context SET index = (index + SIGN($1)) WHERE index BETWEEN $2 AND $3 AND context_id = $4";
+		$result = pg_query_params(config::getDbConn(), $query, 
+				array($diff,
+					$lower,
+					$upper,
+					$internalPlanContext->getContextId()
+				));
+		config::getLogger()->addInfo(var_export(array($old,
+					$new,
+					$lower,
+					$upper,
+					$internalPlanContext->getContextId()), true));
+		$query = "UPDATE billing_internal_plans_by_context SET index = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($new,
+					$internalPlanContext->getId()
+				));
+		return(self::getInternalPlanContextById($internalPlanContext->getId()));	
+	}
+
+}
+
+class UsersRequestsLog {
+	
+	private $id;
+	private $userid;
+	private $creation_date;
+	
+	public function setId($id) {
+		$this->id = $id;
+	}
+	
+	public function getId() {
+		return($this->id);
+	}
+	
+	public function setUserId($userid) {
+		$this->userid = $userid;
+	}
+	
+	public function getUserId() {
+		return($this->userid);
+	}	
+	
+	public function getCreationDate() {
+		return($this->creation_date);
+	}
+	
+	public function setCreationDate($date) {
+		$this->creation_date = $date;
+	}
+	
+}
+
+class UsersRequestsLogDAO {
+	
+	private static $sfields = "_id, userid, creation_date";
+	
+	private static function getUsersRequestsLogFromRow($row) {
+		$out = new UsersRequestsLog();
+		$out->setId($row["_id"]);
+		$out->setUserId($row["userid"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		return($out);
+	}
+	
+	public static function getUsersRequestsLogById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_users_requests_logs WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getUsersRequestsLogFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);		
+	}
+	
+	public static function addUsersRequestsLog(UsersRequestsLog $usersRequestsLog) {
+		$query = "INSERT INTO billing_users_requests_logs (userid)";
+		$query.= " VALUES ($1) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($usersRequestsLog->getUserId()));
+		$row = pg_fetch_row($result);
+		return(self::getUsersRequestsLogById($row[0]));
+	}
+	
+	//more recent FIRST
+	public static function getLastUsersRequestsLogsByUserId($userid, $limit = 10) {
+		$query = "SELECT ".self::$sfields." FROM billing_users_requests_logs WHERE userid = $1";
+		if($limit > 0) {
+			$query.= " ORDER BY _id DESC LIMIT ".$limit;
+		}
+		$result = pg_query_params(config::getDbConn(), $query, array($userid));
+		
+		$out = array();
+		
+		while($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getUsersRequestsLogFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+}
 
 class UtilsDAO {
 	
 
 }
 
-?>
+class UsersIban
+{
+	protected $_id;
+
+	protected $userid;
+
+	protected $iban;
+
+	protected $valid;
+
+	protected $createdDate;
+
+	protected $invalidatedDate;
+
+	public function setId($id)
+	{
+		$this->_id = $id;
+	}
+
+	/**
+	 * @return integer
+	 */
+	public function getId()
+	{
+		return $this->_id;
+	}
+
+	/**
+	 * @return integer
+	 */
+	public function getUserid()
+	{
+		return $this->userid;
+	}
+
+	/**
+	 * @param integer $userid
+	 *
+	 * @return UsersIban
+	 */
+	public function setUserid($userid)
+	{
+		$this->userid = $userid;
+
+		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getIban()
+	{
+		return $this->iban;
+	}
+
+	/**
+	 * @param string $iban
+	 *
+	 * @return UsersIban
+	 */
+	public function setIban($iban)
+	{
+		$this->iban = $iban;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getValid()
+	{
+		return $this->valid;
+	}
+
+	/**
+	 * @param boolean $valid
+	 * @return UsersIban
+	 */
+	public function setValid($valid)
+	{
+		$this->valid = (boolean) $valid;
+
+		return $this;
+	}
+
+	/**
+	 * @return DateTime
+	 */
+	public function getCreatedDate()
+	{
+		return $this->createdDate;
+	}
+
+	/**
+	 * @param string $createdDate
+	 *
+	 * @return UsersIban
+	 */
+	public function setCreatedDate($createdDate)
+	{
+		$this->createdDate = new DateTime($createdDate);
+
+		return $this;
+	}
+
+	/**
+	 * @return DateTime
+	 */
+	public function getInvalidatedDate()
+	{
+		return $this->invalidatedDate;
+	}
+
+	/**
+	 * @param string  $invalidatedDate
+	 *
+	 * @return UsersIban
+	 */
+	public function setInvalidatedDate($invalidatedDate)
+	{
+		$this->invalidatedDate = (empty($invalidatedDate)) ? null : new DateTime($invalidatedDate);
+
+		return $this;
+	}
+}
+
+class UsersIbanDao
+{
+	protected static function getEntityFromRow(array $row)
+	{
+		$entity  = new UsersIban();
+		$entity->setId($row['_id']);
+		$entity->setUserid($row['userid']);
+		$entity->setIban($row['iban']);
+		$entity->setCreatedDate($row['creation_date']);
+		$entity->setInvalidatedDate($row['invalidated_date']);
+		$entity->setValid($row['valid'] == 't' ? true : false);
+		return $entity;
+	}
+
+	/**
+	 * @param string $iban
+	 * @param int    $userid
+	 *
+	 * @return UsersIban|null
+	 */
+	public static function getIban($iban, $userid = null)
+	{
+		$query = 'SELECT * FROM billing_users_iban WHERE iban = $1';
+		$params = [$iban];
+
+		if (!is_null($userid)) {
+			$query .= ' AND userid= $2';
+			$params[] = $userid;
+		}
+
+		$query .= ' LIMIT 1';
+
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+
+		$return = [];
+
+		$row = pg_fetch_array($result, null, PGSQL_ASSOC);
+		// free result
+		pg_free_result($result);
+
+		if ($row) {
+			return  self::getEntityFromRow($row);
+		}
+
+		return null;
+	}
+
+	public static function save(UsersIban $userIban)
+	{
+		$query = "INSERT INTO billing_users_iban (userid, iban, valid, creation_date)";
+		$query .= " VALUES ($1, $2, $3, $4) RETURNING _id";
+
+		$data = [
+			$userIban->getUserid(),
+			$userIban->getIban(),
+			$userIban->getValid(),
+			$userIban->getCreatedDate()->format(DateTime::ISO8601)
+		];
+
+		$result = pg_query_params(config::getDbConn(), $query, $data);
+
+		$row = pg_fetch_row($result);
+
+		if (empty($row[0])) {
+			throw new \Exception('Error while recording iban');
+		}
+
+		$userIban->setId($row[0]);
+
+		return $userIban;
+	}
+}
