@@ -44,7 +44,7 @@ class AfrCouponsHandler {
 
 	public function doCreateCoupon(User $user, UserOpts $userOpts, CouponsCampaign $couponsCampaign, $couponBillingUuid, BillingsCouponsOpts $billingCouponsOpts)
 	{
-		$hasCharge = ($couponsCampaign->getCouponType()->getValue() == CouponCampaignType::sponsorship);
+		$hasCharge = ($couponsCampaign->getCouponType()->getValue() == CouponCampaignType::standard);
 
 		if ($hasCharge && is_null($billingCouponsOpts->getOpt('customerBankAccountToken'))) {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating afr coupon. Missing stripe token');
@@ -158,7 +158,7 @@ class AfrCouponsHandler {
 		});
 
 		$this->sendMailToOwner($userMail, $substitutions, $hasCharge);
-		$this->sendMailToRecipient($billingCouponsOpts->getOpt('recipient_email'), $substitutions, $hasCharge);
+		$this->sendMailToRecipient($billingCouponsOpts->getOpt('recipientEmail'), $substitutions, $hasCharge);
 	}
 
 	protected function sendMailToOwner($userMail, array $substitutions, $hasCharge)
