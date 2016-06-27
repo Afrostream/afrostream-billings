@@ -105,6 +105,10 @@ class UsersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			//
+			if($user_reference_uuid == 'generate') {
+				$user_reference_uuid = 'generated_'.guid();
+			}
 			//as usual
 			$db_tmp_user = NULL;
 			$db_users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid, $provider->getId());

@@ -743,15 +743,13 @@ $app->post("/billings/api/coupons/", function ($request, $response, $args) {
 	return($couponsController->create($request, $response, $args));
 });
 
-//get InternalPlans
+//get couponscampaigns
 	
 /*
 
 	sample call :
 	
-	GET /billings/api/couponscampaigns/?providerName=cashway
-
- 	"providerName" : "cashway" (optional) Retrieve internalplans available only to that provider
+	GET /billings/api/couponscampaigns/
 	
  	sample answer :
 	
@@ -760,7 +758,7 @@ $app->post("/billings/api/coupons/", function ($request, $response, $args) {
 	 	"statusMessage": "success",
 		"statusCode": 0,
 		"response": {
-			"internalPlans": [
+			"couponscampaigns": [
 		 		{...},
 		 		{...}
 		 	]
@@ -772,6 +770,11 @@ $app->post("/billings/api/coupons/", function ($request, $response, $args) {
 $app->get("/billings/api/couponscampaigns/", function ($request, $response, $args) {
 	$couponsCampaignsController = new CouponsCampaignsController();
 	return($couponsCampaignsController->getMulti($request, $response, $args));
+});
+
+$app->get("/billings/api/couponscampaigns/{couponsCampaignBillingUuid}", function ($request, $response, $args) {
+	$couponsCampaignsController = new CouponsCampaignsController();
+	return($couponsCampaignsController->getOne($request, $response, $args));
 });
 
 //contexts
