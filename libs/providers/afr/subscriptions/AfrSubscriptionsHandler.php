@@ -180,8 +180,11 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 			$coupon = CouponDAO::updateRedeemedDate($coupon);
 			$coupon->setSubId($db_subscription->getId());
 			$coupon = CouponDAO::updateSubId($coupon);
-			$coupon->setUserId($user->getId());
-			$coupon = CouponDAO::updateUserId($coupon);
+			//SET userid only if not yet SET
+			if($coupon->getUserId() == NULL) {
+				$coupon->setUserId($user->getId());
+				$coupon = CouponDAO::updateUserId($coupon);
+			}
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("afr dbsubscription creation for userid=".$user->getId().", afr_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
