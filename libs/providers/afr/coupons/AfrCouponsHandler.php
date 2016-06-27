@@ -79,7 +79,7 @@ class AfrCouponsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Payment refused');
 			}
 
-			$billingCouponsOpts->setOpt('chargeid', $charge->id);
+			$billingCouponsOpts->setOpt('chargeId', $charge->id);
 		}
 
 
@@ -89,6 +89,7 @@ class AfrCouponsHandler {
 		$coupon->setProviderId($couponsCampaign->getProviderId());
 		$coupon->setProviderPlanId($couponsCampaign->getProviderPlanId());
 		$coupon->setCode($couponCode);
+		$coupon->setUserId($user->getId());
 
 		$coupon = CouponDAO::addCoupon($coupon);
 
