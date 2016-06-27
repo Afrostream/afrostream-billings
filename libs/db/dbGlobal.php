@@ -530,6 +530,17 @@ class TrialPeriodUnit extends Enum implements JsonSerializable {
 	
 }
 
+class CouponCampaignType extends Enum implements JsonSerializable {
+
+	const standard    = 'standard';
+	const sponsorship = 'sponsorship';
+
+	public function jsonSerialize() {
+		return $this->getValue();
+	}
+
+}
+
 class InternalPlan implements JsonSerializable {
 	
 	private static $curenciesForDisplay = array(
@@ -2483,6 +2494,7 @@ class CouponsCampaign implements JsonSerializable {
 	private $prefix;
 	private $generated_code_length;
 	private	$total_number;
+	private $coupon_type;
 	
 	public function getId() {
 		return($this->_id);
@@ -2563,6 +2575,16 @@ class CouponsCampaign implements JsonSerializable {
 	public function getTotalNumber() {
 		return($this->total_number);
 	}
+
+	public function getCouponType()
+	{
+		return $this->coupon_type;
+	}
+
+	public function setCouponType(CouponCampaignType $type)
+	{
+		$this->coupon_type = $type;
+	}
 	
 	public function jsonSerialize() {
 		$return = [
@@ -2582,7 +2604,7 @@ class CouponsCampaign implements JsonSerializable {
 
 class CouponsCampaignDAO {
 	
-	private static $sfields = "_id, coupons_campaigns_uuid, creation_date, name, description, providerid, providerplanid, prefix, generated_code_length, total_number";
+	private static $sfields = "_id, coupons_campaigns_uuid, creation_date, name, description, providerid, providerplanid, prefix, generated_code_length, total_number, coupon_type";
 	
 	private static function getCouponsCampaignFromRow($row) {
 		$out = new CouponsCampaign();
@@ -2596,6 +2618,8 @@ class CouponsCampaignDAO {
 		$out->setPrefix($row["prefix"]);
 		$out->setGeneratedCodeLength($row["generated_code_length"]);
 		$out->setTotalNumber($row["total_number"]);
+		$out->setCouponType(new CouponCampaignType($row['coupon_type']));
+
 		return($out);
 	}
 	
