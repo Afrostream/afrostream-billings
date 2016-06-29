@@ -65,7 +65,11 @@ class AfrCouponsHandler {
 			'amount' => $internalPlan->getAmountInCents(),
 			'currency' => $internalPlan->getCurrency(),
 			'description' => "Coupon afrostream : $couponCode",
-			'source' => $billingCouponsOpts->getOpt('customerBankAccountToken')
+			'source' => $billingCouponsOpts->getOpt('customerBankAccountToken'),
+			"metadata" => [
+				'AfrSource' => 'afrBillingApi',
+				'AfrOrigin' => 'coupon'
+			]
 		];
 
 		// charge customer
