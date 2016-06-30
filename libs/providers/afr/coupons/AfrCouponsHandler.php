@@ -64,19 +64,24 @@ class AfrCouponsHandler {
 		$couponCode = $couponsCampaign->getPrefix()."-".$this->getRandomString($couponsCampaign->getGeneratedCodeLength());
 
 		if ($hasCharge) {
-		$chargeData = [
-			'amount' => $internalPlan->getAmountInCents(),
-			'currency' => $internalPlan->getCurrency(),
-			'description' => "Coupon afrostream : $couponCode",
-			'source' => $billingCouponsOpts->getOpt('customerBankAccountToken'),
-			"metadata" => [
-				'AfrSource' => 'afrBillingApi',
-				'AfrOrigin' => 'coupon'
-			]
-		];
+			$chargeData = [
+				'amount' => $internalPlan->getAmountInCents(),
+				'currency' => $internalPlan->getCurrency(),
+				'description' => "Coupon afrostream : $couponCode",
+				'source' => $billingCouponsOpts->getOpt('customerBankAccountToken'),
+				"metadata" => [
+					'AfrSource' => 'afrBillingApi',
+					'AfrOrigin' => 'coupon'
+				]
+			];
 
 			// charge customer
 			$charge = \Stripe\Charge::create($chargeData);
+			
+			if (!$charge->paid) {
+				config::getLogger()->addError('Payment refused');
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Payment refused');
+			}
 
 			$billingCouponsOpts->setOpt('chargeId', $charge->id);
 		}
