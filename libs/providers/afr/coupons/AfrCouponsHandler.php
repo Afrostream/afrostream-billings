@@ -83,6 +83,9 @@ class AfrCouponsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Payment refused');
 			}
 
+		// charge customer
+		$charge = \Stripe\Charge::create($chargeData);
+
 			$billingCouponsOpts->setOpt('chargeId', $charge->id);
 		}
 
