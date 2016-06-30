@@ -410,7 +410,11 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $subscriptionData = [
             "customer" => $user->getUserProviderUuid(),
             "plan" => $plan->getPlanUuid(),
-            'source' => $subOpts->getOpt('customerBankAccountToken')
+            'source' => $subOpts->getOpt('customerBankAccountToken'),
+            "metadata" => [
+                'AfrSource' => 'afrBillingApi',
+                'AfrOrigin' => 'subscription'
+            ]
         ];
 
         $logMessage = 'Create subscription : customer : %s, plan : %s, source : %s';
@@ -470,7 +474,11 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
                 "amount" => $internalPlan->getAmountInCents(),
                 "currency" => $internalPlan->getCurrency(),
                 'customer' => $user->getUserProviderUuid(),
-                "description" => $plan->getPlanUuid()
+                "description" => $plan->getPlanUuid(),
+                "metadata" => [
+                    'AfrSource' => 'afrBillingApi',
+                    'AfrOrigin' => 'subscription'
+                ]
             );
 
             $this->log("Charge customer,  amount : %s, currency : %s, customer : %s, description : %s", $chargeData);
