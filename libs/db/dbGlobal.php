@@ -277,7 +277,7 @@ class UserOptsDAO {
 	
 	public static function addUserOpts(UserOpts $user_opts) {
 		foreach ($user_opts->getOpts() as $k => $v) {
-			if(isset($v)) {
+			if(isset($v) && is_scalar($v)) {
 				$query = "INSERT INTO billing_users_opts (userid, key, value)";
 				$query.= " VALUES ($1, $2, $3) RETURNING _id";
 				$result = pg_query_params(config::getDbConn(), $query,
@@ -290,10 +290,13 @@ class UserOptsDAO {
 	}
 	
 	public static function updateUserOptsKey($userid, $key, $value) {
-		$query = "UPDATE billing_users_opts SET value = $3 WHERE userid = $1 AND key = $2";
-		$result = pg_query_params(config::getDbConn(), $query,
-				array($userid, $key, trim($value)));
-		return($result);
+		if(is_scalar($value)) {
+			$query = "UPDATE billing_users_opts SET value = $3 WHERE userid = $1 AND key = $2";
+			$result = pg_query_params(config::getDbConn(), $query,
+					array($userid, $key, trim($value)));
+			return($result);
+		}
+		return(NULL);
 	}
 	
 	public static function deleteUserOptsKey($userid, $key) {
@@ -304,13 +307,16 @@ class UserOptsDAO {
 	}
 	
 	public static function addUserOptsKey($userid, $key, $value) {
-		$query = "INSERT INTO billing_users_opts (userid, key, value)";
-		$query.= " VALUES ($1, $2, $3) RETURNING _id";
-		$result = pg_query_params(config::getDbConn(), $query,
-				array($userid,
-						trim($key),
-						trim($value)));
-		return($result);
+		if(is_scalar($value)) {
+			$query = "INSERT INTO billing_users_opts (userid, key, value)";
+			$query.= " VALUES ($1, $2, $3) RETURNING _id";
+			$result = pg_query_params(config::getDbConn(), $query,
+					array($userid,
+							trim($key),
+							trim($value)));
+			return($result);
+		}
+		return(NULL);
 	}
 	
 	public static function deleteUserOptsByUserId($userid) {
@@ -800,7 +806,7 @@ class InternalPlanOptsDAO {
 	
 	public static function addInternalPlanOpts(InternalPlanOpts $internalplan_opts) {
 		foreach ($internalplan_opts->getOpts() as $k => $v) {
-			if(isset($v)) {
+			if(isset($v) && is_scalar($v)) {
 				$query = "INSERT INTO billing_internal_plans_opts (internalplanid, key, value)";
 				$query.= " VALUES ($1, $2, $3) RETURNING _id";
 				$result = pg_query_params(config::getDbConn(), $query,
@@ -813,10 +819,13 @@ class InternalPlanOptsDAO {
 	}
 	
 	public static function updateInternalPlanOptsKey($internalplanid, $key, $value) {
-		$query = "UPDATE billing_internal_plans_opts SET value = $3 WHERE internalplanid = $1 AND key = $2";
-		$result = pg_query_params(config::getDbConn(), $query,
-			array($internalplanid, $key, trim($value)));
-		return($result);
+		if(is_scalar($value)) {
+			$query = "UPDATE billing_internal_plans_opts SET value = $3 WHERE internalplanid = $1 AND key = $2";
+			$result = pg_query_params(config::getDbConn(), $query,
+				array($internalplanid, $key, trim($value)));
+			return($result);
+		}
+		return(NULL);
 	}
 	
 	public static function deleteInternalPlanOptsKey($internalplanid, $key) {
@@ -827,13 +836,16 @@ class InternalPlanOptsDAO {
 	}
 	
 	public static function addInternalPlanOptsKey($internalplanid, $key, $value) {
-		$query = "INSERT INTO billing_internal_plans_opts (internalplanid, key, value)";
-		$query.= " VALUES ($1, $2, $3) RETURNING _id";
-		$result = pg_query_params(config::getDbConn(), $query,
-				array($internalplanid,
-						trim($key),
-						trim($value)));
-		return($result);
+		if(is_scalar($value)) {
+			$query = "INSERT INTO billing_internal_plans_opts (internalplanid, key, value)";
+			$query.= " VALUES ($1, $2, $3) RETURNING _id";
+			$result = pg_query_params(config::getDbConn(), $query,
+					array($internalplanid,
+							trim($key),
+							trim($value)));
+			return($result);
+		}
+		return(NULL);
 	}
 	
 }
@@ -1877,7 +1889,7 @@ class BillingsSubscriptionOptsDAO {
 
 	public static function addBillingsSubscriptionOpts(BillingsSubscriptionOpts $billingsSubscriptionOpts) {
 		foreach ($billingsSubscriptionOpts->getOpts() as $k => $v) {
-			if(isset($v)) {
+			if(isset($v) && is_scalar($v)) {
 				$query = "INSERT INTO billing_subscriptions_opts (subid, key, value)";
 				$query.= " VALUES ($1, $2, $3) RETURNING _id";
 				$result = pg_query_params(config::getDbConn(), $query,
@@ -1890,10 +1902,13 @@ class BillingsSubscriptionOptsDAO {
 	}
 
 	public static function updateBillingsSubscriptionOptsKey($subid, $key, $value) {
-		$query = "UPDATE billing_subscriptions_opts SET value = $3 WHERE subid = $1 AND key = $2";
-		$result = pg_query_params(config::getDbConn(), $query,
-				array($subid, $key, trim($value)));
-		return($result);
+		if(is_scalar($value)) {
+			$query = "UPDATE billing_subscriptions_opts SET value = $3 WHERE subid = $1 AND key = $2";
+			$result = pg_query_params(config::getDbConn(), $query,
+					array($subid, $key, trim($value)));
+			return($result);
+		}
+		return(NULL);
 	}
 
 	public static function deleteBillingsSubscriptionOptsKey($subid, $key) {
@@ -1904,13 +1919,16 @@ class BillingsSubscriptionOptsDAO {
 	}
 
 	public static function addBillingsSubscriptionOptsKey($subid, $key, $value) {
-		$query = "INSERT INTO billing_subscriptions_opts (subid, key, value)";
-		$query.= " VALUES ($1, $2, $3) RETURNING _id";
-		$result = pg_query_params(config::getDbConn(), $query,
-				array($subid,
-						trim($key),
-						trim($value)));
-		return($result);
+		if(is_scalar($value)) {
+			$query = "INSERT INTO billing_subscriptions_opts (subid, key, value)";
+			$query.= " VALUES ($1, $2, $3) RETURNING _id";
+			$result = pg_query_params(config::getDbConn(), $query,
+					array($subid,
+							trim($key),
+							trim($value)));
+			return($result);
+		}
+		return(NULL);
 	}
 
 	public static function deleteBillingsSubscriptionOptBySubId($subid) {
@@ -3780,7 +3798,7 @@ class BillingsCouponsOptsDAO {
 
 	public static function addBillingsCouponsOpts(BillingsCouponsOpts $billingsCouponsOpts) {
 		foreach ($billingsCouponsOpts->getOpts() as $k => $v) {
-			if(isset($v)) {
+			if(isset($v) && is_scalar($v)) {
 				$query = "INSERT INTO billing_coupons_opts (couponid, key, value)";
 				$query.= " VALUES ($1, $2, $3) RETURNING _id";
 				$result = pg_query_params(config::getDbConn(), $query,
@@ -3793,10 +3811,13 @@ class BillingsCouponsOptsDAO {
 	}
 
 	public static function updateBillingsCouponsOptsKey($couponId, $key, $value) {
-		$query = "UPDATE billing_coupons_opts SET value = $3 WHERE couponid = $1 AND key = $2";
-		$result = pg_query_params(config::getDbConn(), $query,
-			array($couponId, $key, trim($value)));
-		return($result);
+		if(is_scalar($value)) {
+			$query = "UPDATE billing_coupons_opts SET value = $3 WHERE couponid = $1 AND key = $2";
+			$result = pg_query_params(config::getDbConn(), $query,
+				array($couponId, $key, trim($value)));
+			return($result);
+		}
+		return(NULL);
 	}
 
 	public static function deleteBillingsCouponsOptsKey($couponId, $key) {
@@ -3807,13 +3828,16 @@ class BillingsCouponsOptsDAO {
 	}
 
 	public static function addBillingsCouponsOptsKey($couponId, $key, $value) {
-		$query = "INSERT INTO billing_coupons_opts (couponid, key, value)";
-		$query.= " VALUES ($1, $2, $3) RETURNING _id";
-		$result = pg_query_params(config::getDbConn(), $query,
-			array($couponId,
-				trim($key),
-				trim($value)));
-		return($result);
+		if(is_scalar($value)) {
+			$query = "INSERT INTO billing_coupons_opts (couponid, key, value)";
+			$query.= " VALUES ($1, $2, $3) RETURNING _id";
+			$result = pg_query_params(config::getDbConn(), $query,
+				array($couponId,
+					trim($key),
+					trim($value)));
+			return($result);
+		}
+		return(NULL);
 	}
 
 	public static function deleteBillingsCouponsOptsByCouponId($couponId) {
