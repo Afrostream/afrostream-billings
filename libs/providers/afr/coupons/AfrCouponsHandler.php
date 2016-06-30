@@ -79,12 +79,12 @@ class AfrCouponsHandler {
 			$charge = \Stripe\Charge::create($chargeData);
 
 			if (!$charge->paid) {
-				config::getLogger()->addError('Payment refused');
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Payment refused');
+					config::getLogger()->addError('Payment refused');
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Payment refused');
 			}
 
-		// charge customer
-		$charge = \Stripe\Charge::create($chargeData);
+			// charge customer
+			$charge = \Stripe\Charge::create($chargeData);
 
 			$billingCouponsOpts->setOpt('chargeId', $charge->id);
 		}
