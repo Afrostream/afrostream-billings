@@ -299,8 +299,10 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setSubPeriodStartedDate($api_subscription->billingPeriodStartDate == NULL ? 
 				$api_subscription->createdAt : $api_subscription->billingPeriodStartDate);
+		$db_subscription = BillingsSubscriptionDAO::updateSubStartedDate($db_subscription);
 		$db_subscription->setSubPeriodEndsDate($api_subscription->billingPeriodEndDate == NULL ? 
 				$api_subscription->nextBillingDate : $api_subscription->billingPeriodEndDate);
+		$db_subscription = BillingsSubscriptionDAO::updateSubEndsDate($db_subscription);
 		//
 		$db_subscription->setUpdateType($update_type);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateType($db_subscription);
