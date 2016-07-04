@@ -37,6 +37,7 @@ $app->add(function (Request $req, Response $res, callable $next) {
 		config::getLogger()->addInfo($msg);
 	}
 	$newResponse = $next($req, $res);
+	$newResponse = $newResponse->withHeader('Access-Control-Allow-Origin', '*');
 	return($newResponse);
 });
 

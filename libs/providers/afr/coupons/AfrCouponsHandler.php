@@ -44,7 +44,9 @@ class AfrCouponsHandler {
 
 	public function doCreateCoupon(User $user, UserOpts $userOpts, CouponsCampaign $couponsCampaign, $couponBillingUuid, BillingsCouponsOpts $billingCouponsOpts)
 	{
-		if (is_null($billingCouponsOpts->getOpt('customerBankAccountToken'))) {
+		$hasCharge = ($couponsCampaign->getCouponType()->getValue() == CouponCampaignType::standard);
+
+		if ($hasCharge && is_null($billingCouponsOpts->getOpt('customerBankAccountToken'))) {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating afr coupon. Missing stripe token');
 		}
 
@@ -61,6 +63,7 @@ class AfrCouponsHandler {
 
 		$couponCode = $couponsCampaign->getPrefix()."-".$this->getRandomString($couponsCampaign->getGeneratedCodeLength());
 
+		if ($hasCharge) {
 		$chargeData = [
 			'amount' => $internalPlan->getAmountInCents(),
 			'currency' => $internalPlan->getCurrency(),
@@ -72,15 +75,17 @@ class AfrCouponsHandler {
 			]
 		];
 
-		// charge customer
-		$charge = \Stripe\Charge::create($chargeData);
+			// charge customer
+			$charge = \Stripe\Charge::create($chargeData);
 
-		if (!$charge->paid) {
-			config::getLogger()->addError('Payment refused');
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Payment refused');
+			if (!$charge->paid) {
+				config::getLogger()->addError('Payment refused');
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Payment refused');
+			}
+
+			$billingCouponsOpts->setOpt('chargeId', $charge->id);
 		}
 
-		$billingCouponsOpts->setOpt('chargeid', $charge->id);
 
 		$coupon = new Coupon();
 		$coupon->setCouponBillingUuid($couponBillingUuid);
@@ -88,6 +93,7 @@ class AfrCouponsHandler {
 		$coupon->setProviderId($couponsCampaign->getProviderId());
 		$coupon->setProviderPlanId($couponsCampaign->getProviderPlanId());
 		$coupon->setCode($couponCode);
+		$coupon->setUserId($user->getId());
 
 		$coupon = CouponDAO::addCoupon($coupon);
 
@@ -95,7 +101,7 @@ class AfrCouponsHandler {
 
 		$billingCouponsOpts = BillingsCouponsOptsDAO::addBillingsCouponsOpts($billingCouponsOpts);
 
-		$this ->sendMails($user, $userOpts, $coupon, $billingCouponsOpts, $internalPlan);
+		$this ->sendMails($user, $userOpts, $coupon, $billingCouponsOpts, $internalPlan, $hasCharge);
 		return $coupon->getCode();
 	}
 
@@ -115,7 +121,7 @@ class AfrCouponsHandler {
 		return $strReturnString;
 	}
 
-	protected function sendMails(User $user, UserOpts $userOpts, Coupon $coupon, BillingsCouponsOpts $billingCouponsOpts, InternalPlan $internalPlan)
+	protected function sendMails(User $user, UserOpts $userOpts, Coupon $coupon, BillingsCouponsOpts $billingCouponsOpts, InternalPlan $internalPlan, $hasCharge)
 	{
 		$amountInCentsTax = ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax());
 		$firstName        = $userOpts->getOpt('firstName');
@@ -156,17 +162,18 @@ class AfrCouponsHandler {
 			$value = array_fill(0, $nbRecipient, $value);
 		});
 
-		$this->sendMailToOwner($userMail, $substitutions);
-		$this->sendMailToRecipient($billingCouponsOpts->getOpt('recipient_email'), $substitutions);
+		$this->sendMailToOwner($userMail, $substitutions, $hasCharge);
+		$this->sendMailToRecipient($billingCouponsOpts->getOpt('recipientEmail'), $substitutions, $hasCharge);
 	}
 
-	protected function sendMailToOwner($userMail, array $substitutions)
+	protected function sendMailToOwner($userMail, array $substitutions, $hasCharge)
 	{
 		if (empty($userMail)) {
 			$userMail = getenv('SENDGRID_TO_IFNULL');
 		}
 
 		$bcc  = getenv('SENDGRID_BCC');
+		$template = ($hasCharge) ? getEnv('COUPON_OWN_STANDARD_NEW') : getEnv('COUPON_OWN_SPONSORSHIP_NEW');
 
 		$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
 		$email = new SendGrid\Email();
@@ -177,7 +184,7 @@ class AfrCouponsHandler {
 			->setSubject(' ')
 			->setText(' ')
 			->setHtml(' ')
-			->setTemplateId(getEnv('SENDGRID_TEMPLATE_COUPON_OWN_NEW'))
+			->setTemplateId($template)
 			->setSubstitutions($substitutions);
 		if (!empty($bcc)) {
 			$email->setBcc($bcc);
@@ -186,13 +193,14 @@ class AfrCouponsHandler {
 		$sendgrid->send($email);
 	}
 
-	protected function sendMailToRecipient($userMail, array $substitutions)
+	protected function sendMailToRecipient($userMail, array $substitutions, $hasCharge)
 	{
 		if (empty($userMail)) {
 			$userMail = getenv('SENDGRID_TO_IFNULL');
 		}
 
 		$bcc  = getenv('SENDGRID_BCC');
+		$template = ($hasCharge) ? getEnv('COUPON_OFFERED_STANDARD_NEW') : getEnv('COUPON_OFFERED_SPONSORSHIP_NEW');
 
 		$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
 		$email = new SendGrid\Email();
@@ -203,7 +211,7 @@ class AfrCouponsHandler {
 			->setSubject(' ')
 			->setText(' ')
 			->setHtml(' ')
-			->setTemplateId(getEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_NEW'))
+			->setTemplateId($template)
 			->setSubstitutions($substitutions);
 		if (!empty($bcc)) {
 			$email->setBcc($bcc);
