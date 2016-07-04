@@ -36,9 +36,16 @@ $app->add(function (Request $req, Response $res, callable $next) {
 		$msg.= " body='".$req->getBody()."'";
 		config::getLogger()->addInfo($msg);
 	}
-	$newResponse = $next($req, $res);
-	$newResponse = $newResponse->withHeader('Access-Control-Allow-Origin', '*');
-	return($newResponse);
+
+	$newResponse = $res->withHeader('Access-Control-Allow-Origin', '*')
+		               ->withHeader('Access-Control-Allow-Headers', ['Content-Type', 'X-Requested-With', 'Authorization'])
+	                   ->withHeader('Access-Control-Allow-Methods', ['GET', 'POST', 'PUT', 'OPTIONS']);
+
+	if($req->isOptions()) {
+		return $newResponse;
+	}
+
+	return $next($req, $res);
 });
 
 //API BASIC AUTH ACTIVATION
