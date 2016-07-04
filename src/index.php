@@ -45,7 +45,7 @@ $app->add(function (Request $req, Response $res, callable $next) {
 		return $newResponse;
 	}
 
-	return $next($req, $res);
+	return $next($req, $newResponse);
 });
 
 //API BASIC AUTH ACTIVATION
