@@ -315,6 +315,7 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 			$subPeriodStartedDate = clone $api_subscription->billingPeriodStartDate;
 		}
 		$db_subscription->setSubPeriodStartedDate($subPeriodStartedDate);
+		$db_subscription = BillingsSubscriptionDAO::updateSubStartedDate($db_subscription);
 		$subPeriodEndsDate = NULL;
 		if($api_subscription->billingPeriodEndDate == NULL) {
 			$subPeriodEndsDate = clone $api_subscription->nextBillingDate;
@@ -323,8 +324,6 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		$subPeriodEndsDate->setTime(23, 59, 59);//force the time to the end of the day (API always gives 00:00:00)
 		$db_subscription->setSubPeriodEndsDate($subPeriodEndsDate);
-		//
-		$db_subscription = BillingsSubscriptionDAO::updateSubStartedDate($db_subscription);
 		$db_subscription = BillingsSubscriptionDAO::updateSubEndsDate($db_subscription);
 		//
 		$db_subscription->setUpdateType($update_type);
