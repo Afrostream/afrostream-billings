@@ -71,7 +71,8 @@ class AfrCouponsHandler {
 			'source' => $billingCouponsOpts->getOpt('customerBankAccountToken'),
 			"metadata" => [
 				'AfrSource' => 'afrBillingApi',
-				'AfrOrigin' => 'coupon'
+				'AfrOrigin' => 'coupon',
+				'AfrCouponBillingUuid' => $couponBillingUuid
 			]
 		];
 
