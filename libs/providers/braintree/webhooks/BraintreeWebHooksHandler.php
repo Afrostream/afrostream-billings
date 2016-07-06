@@ -39,10 +39,6 @@ class BraintreeWebHooksHandler {
 			case Braintree\WebhookNotification::SUBSCRIPTION_WENT_PAST_DUE :
 				$this->doProcessSubscription($notification, $update_type, $updateId);
 				break;
-			case Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_SUCCESSFULLY:
-			case Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_UNSUCCESSFULLY:
-				$this->notifyCharge($notification);
-				break;
 			default :
 				config::getLogger()->addWarning('notification kind : '. $notification->kind. ' is not yet implemented');
 				break;
