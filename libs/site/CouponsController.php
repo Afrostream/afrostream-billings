@@ -54,6 +54,28 @@ class CouponsController extends BillingsController {
 			//
 		}
 	}
+
+	public function getList(Request $request, Response $response, array $args)
+	{
+		$data = $request->getQueryParams();
+
+		$userBillingUuid = null;
+
+		if (empty($data['userBillingUuid'])) {
+			$msg = "'userBillingUuid' is missing";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+
+		$userBillingUuid = $data['userBillingUuid'];
+		$campaignUUid = empty($data['campaignUuid']) ? null : $data['campaignUuid'];
+
+		$couponsHandler = new CouponsHandler();
+		$listCoupons = $couponsHandler->doGetList($userBillingUuid, $campaignUUid);
+
+		return $this->returnObjectAsJson($response, 'couponsList', $listCoupons);
+
+	}
 	
 	public function create(Request $request, Response $response, array $args) {
 		try {
