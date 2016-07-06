@@ -187,6 +187,10 @@ if(getEnv('SLACK_STATS_COUPONS_CHANNEL') === false) {
 	putEnv('SLACK_STATS_COUPONS_CHANNEL=activation');
 }
 
+if(getEnv('SLACK_STATS_TRANSACTIONS_CHANNEL') === false) {
+	putEnv('SLACK_STATS_TRANSACTIONS_CHANNEL=test-channel');
+}
+
 #Bouygues
 
 if(getEnv('BOUYGUES_BHA_ACTIVATED') === false) {
@@ -298,6 +302,11 @@ if(getEnv('BRAINTREE_PUBLIC_KEY') === false) {
 
 if(getEnv('BRAINTREE_PRIVATE_KEY') === false) {
 	putEnv('BRAINTREE_PRIVATE_KEY=d2cc0c2d62852a9555e7fa9119f89665');
+}
+
+// url au format sprintf 
+if(getEnv('BRAINTREE_TRANSACTION_URL_DETAIL_FORMAT') === false) {
+	putEnv('BRAINTREE_TRANSACTION_URL_DETAIL_FORMAT=https://sandbox.braintreegateway.com/merchants/%s/transactions/%s');
 }
 
 #proxy

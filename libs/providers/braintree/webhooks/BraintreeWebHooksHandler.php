@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/BraintreeSubscriptionsHandler.php';
+require_once __DIR__ . '/../../../slack/SlackHandler.php';
 
 class BraintreeWebHooksHandler {
 	
@@ -42,6 +43,14 @@ class BraintreeWebHooksHandler {
 				config::getLogger()->addWarning('notification kind : '. $notification->kind. ' is not yet implemented');
 				break;
 		}
+
+		if (in_array($notification->kind, [
+			Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_SUCCESSFULLY,
+			Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_UNSUCCESSFULLY
+		])) {
+			$this->notifyCharge($notification);
+		}
+
 		config::getLogger()->addInfo('Processing braintree hook notification done successfully');
 	}
 	
@@ -146,6 +155,34 @@ class BraintreeWebHooksHandler {
 			}
 		}
 		return(NULL);
+	}
+
+	private function notifyCharge(Braintree\WebhookNotification $notification)
+	{
+		config::getLogger()->addInfo('Notify charge on slack '.$notification->kind.'...');
+		//
+		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
+		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
+		Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
+		Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+
+		if ($notification->kind == Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_SUCCESSFULLY) {
+			$title = 'braintree charge succeeded';
+			$detail = '%s%s charged for %s';
+		} else {
+			$title = 'braintree charge failed';
+			$detail = '%s%s failed charge for %s';
+		}
+
+		$plan = $notification->subject['subscription']['planId'];
+		$price = $notification->subject['subscription']['price'];
+		$currency = $notification->subject['subscription']['transactions'][0]['currencyIsoCode'];
+
+		$slack = new SlackHandler();
+		$message = sprintf("*%s*\n", $title);
+		$message .= sprintf($detail, $price, $currency, $plan);
+
+		$slack->sendMessage(getenv('SLACK_STATS_TRANSACTIONS_CHANNEL'), $message);
 	}
 	
 }
