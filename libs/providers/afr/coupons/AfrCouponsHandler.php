@@ -174,7 +174,7 @@ class AfrCouponsHandler {
 		}
 
 		$bcc  = getenv('SENDGRID_BCC');
-		$template = ($hasCharge) ? getEnv('COUPON_OWN_STANDARD_NEW') : getEnv('COUPON_OWN_SPONSORSHIP_NEW');
+		$template = ($hasCharge) ? getEnv('SENDGRID_TEMPLATE_COUPON_OWN_STANDARD_NEW') : getEnv('SENDGRID_TEMPLATE_COUPON_OWN_SPONSORSHIP_NEW');
 
 		$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
 		$email = new SendGrid\Email();
@@ -201,7 +201,7 @@ class AfrCouponsHandler {
 		}
 
 		$bcc  = getenv('SENDGRID_BCC');
-		$template = ($hasCharge) ? getEnv('COUPON_OFFERED_STANDARD_NEW') : getEnv('COUPON_OFFERED_SPONSORSHIP_NEW');
+		$template = ($hasCharge) ? getEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_STANDARD_NEW') : getEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_SPONSORSHIP_NEW');
 
 		$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
 		$email = new SendGrid\Email();
