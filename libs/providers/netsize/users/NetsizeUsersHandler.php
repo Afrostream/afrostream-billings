@@ -13,7 +13,19 @@ class NetsizeUsersHandler {
 		try {
 			config::getLogger()->addInfo("netsize user creation...");
 			if(isset($user_provider_uuid)) {
-				//TODO : (should check provider side...)
+				$netsizeClient = new NetsizeClient();
+				$getStatusRequest = new GetStatusRequest();
+				$getStatusRequest->setTransactionId($user_provider_uuid);
+				$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
+				//1 - A real MSISDN
+				//2 - An encrypted MSISDN
+				//4 - IMSI
+				$array_userIdType_ok = [1, 2, 4];
+				if(!array_key_exists($getStatusResponse->getUserIdType(), $array_userIdType_ok)) {
+					$msg = "user-id-type ".$getStatusResponse->getUserIdType()." is not correct";
+					config::getLogger()->addError("netsize user creation failed : ".$msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
+				}
 			} else {
 				$msg = "unsupported feature for provider named netsize, userProviderUuid has to be provided";
 				config::getLogger()->addError($msg);

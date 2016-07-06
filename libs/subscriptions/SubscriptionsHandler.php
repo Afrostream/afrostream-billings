@@ -326,8 +326,8 @@ class SubscriptionsHandler {
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				case 'braintree' :
-					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
-					$subscriptions = $braintreeSubscriptionsHandler->doGetUserSubscriptions($user);
+					$subscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				case 'netsize' :
 					$subscriptionsHandler = new NetsizeSubscriptionsHandler();
