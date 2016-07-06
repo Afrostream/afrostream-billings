@@ -256,6 +256,10 @@ if(getEnv('NETSIZE_API_PRODUCT_TYPE') === false) {
 	putEnv('NETSIZE_API_PRODUCT_TYPE=121');
 }
 
+if(getEnv('NETSIZE_SUBSCRIPTION_PERIOD_LENGTH') === false) {
+	putEnv('NETSIZE_SUBSCRIPTION_PERIOD_LENGTH=1');
+}
+
 #If 1, always consider that customer is a subscriber
 if(getEnv('BOUYGUES_TV_HACK_ACTIVATED') === false) {
 	putEnv('BOUYGUES_TV_HACK_ACTIVATED=0');

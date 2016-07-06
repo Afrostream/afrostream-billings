@@ -28,6 +28,9 @@ function checkUserOptsArray(array $user_opts_as_array, $providerName) {
 
 function checkUserOptsKeys(array $user_opts_as_array, $providerName) {
 	switch ($providerName) {
+		case 'netsize' :
+			//email, firstName, lastName are optional
+			break;
 		case 'bouygues' :
 			//email, firstName, lastName are optional
 			break;
@@ -77,6 +80,9 @@ function checkUserOptsKeys(array $user_opts_as_array, $providerName) {
 
 function checkUserOptsValues(array $user_opts_as_array, $providerName) {
 	switch ($providerName) {
+		case 'netsize' :
+			//email, firstName, lastName are optional
+			break;
 		case 'bouygues' :
 			//email, firstName, lastName are optional
 			break;
