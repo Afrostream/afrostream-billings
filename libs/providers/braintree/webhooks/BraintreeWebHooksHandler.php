@@ -174,7 +174,7 @@ class BraintreeWebHooksHandler {
 			$detail = '%s %s failed charge for %s';
 		}
 
-		$url = sprintf(getenv('BRAINTREE_TRANSACTION_URL_DETAIL_FORMAT', getenv('BRAINTREE_MERCHANT_ID'), $notification->subject['subscription']['transactions'][0]['id']));
+		$url = sprintf(getenv('BRAINTREE_TRANSACTION_URL_DETAIL_FORMAT'), getenv('BRAINTREE_MERCHANT_ID'), $notification->subject['subscription']['transactions'][0]['id']);
 		$plan = $notification->subject['subscription']['planId'];
 		$price = $notification->subject['subscription']['price'];
 		$currency = $notification->subject['subscription']['transactions'][0]['currencyIsoCode'];
