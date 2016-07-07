@@ -2607,6 +2607,7 @@ class CouponsCampaign implements JsonSerializable {
 	public function jsonSerialize() {
 		$return = [
 			'couponsCampaignBillingUuid' => $this->uuid,
+			'couponsCampaignType' => $this->coupon_type,
 			'creationDate' => $this->creation_date,
 			'name' => $this->name,
 			'description' => $this->description,
@@ -2671,16 +2672,35 @@ class CouponsCampaignDAO {
 		return($out);
 	}
 	
-	public static function getCouponsCampaigns($providerId = NULL) {
+	public static function getCouponsCampaigns($providerId = NULL, $couponsCampaignType = NULL) {
 		$query = "SELECT ".self::$sfields." FROM billing_coupons_campaigns";
 		$params = array();
 	
 		$out = array();
 	
+		$where = "";
+		
 		if(isset($providerId)) {
-			$query.= " WHERE providerid = $1";
 			$params[] = $providerId;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "providerid = $".(count($params));
 		}
+		if(isset($couponsCampaignType)) {
+			$params[] = $couponsCampaignType;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "coupon_type = $".(count($params));
+		}
+		
+		$query.= $where;
+		
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 	
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
