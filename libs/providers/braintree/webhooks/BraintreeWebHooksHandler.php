@@ -168,12 +168,13 @@ class BraintreeWebHooksHandler {
 
 		if ($notification->kind == Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_SUCCESSFULLY) {
 			$title = 'braintree charge succeeded';
-			$detail = '%s%s charged for %s';
+			$detail = '%s %s charged for %s';
 		} else {
 			$title = 'braintree charge failed';
-			$detail = '%s%s failed charge for %s';
+			$detail = '%s %s failed charge for %s';
 		}
 
+		$url = sprintf(getenv('BRAINTREE_TRANSACTION_URL_DETAIL_FORMAT', getenv('BRAINTREE_MERCHANT_ID'), $notification->subject['subscription']['transactions'][0]['id']));
 		$plan = $notification->subject['subscription']['planId'];
 		$price = $notification->subject['subscription']['price'];
 		$currency = $notification->subject['subscription']['transactions'][0]['currencyIsoCode'];
@@ -181,6 +182,7 @@ class BraintreeWebHooksHandler {
 		$slack = new SlackHandler();
 		$message = sprintf("*%s*\n", $title);
 		$message .= sprintf($detail, $price, $currency, $plan);
+		$message .= "\n".$url;
 
 		$slack->sendMessage(getenv('SLACK_STATS_TRANSACTIONS_CHANNEL'), $message);
 	}
