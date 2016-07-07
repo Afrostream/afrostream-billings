@@ -66,7 +66,7 @@ class CouponsHandler {
 		return($db_coupon);
 	}
 
-	public function doGetList($userBillingUuid, $campaignUuid = null)
+	public function doGetList($userBillingUuid, $couponsCampaignBillingUuid = null)
 	{
 		$user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
 		if($user == NULL) {
@@ -76,11 +76,11 @@ class CouponsHandler {
 		}
 
 		$campaignId = null;
-		if (!is_null($campaignUuid)) {
-			$campaign = CouponsCampaignDAO::getCouponsCampaignByUuid($campaignUuid);
+		if (!is_null($couponsCampaignBillingUuid)) {
+			$campaign = CouponsCampaignDAO::getCouponsCampaignByUuid($couponsCampaignBillingUuid);
 
 			if($campaign == NULL) {
-				$msg = "unknown campaign uid : ".$campaignUuid;
+				$msg = "unknown couponsCampaignBillingUuid : ".$couponsCampaignBillingUuid;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}

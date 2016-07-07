@@ -57,24 +57,31 @@ class CouponsController extends BillingsController {
 
 	public function getList(Request $request, Response $response, array $args)
 	{
-		$data = $request->getQueryParams();
-
-		$userBillingUuid = null;
-
-		if (empty($data['userBillingUuid'])) {
-			$msg = "'userBillingUuid' is missing";
+		try {
+			$data = $request->getQueryParams();
+	
+			$userBillingUuid = null;
+	
+			if (empty($data['userBillingUuid'])) {
+				$msg = "'userBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+	
+			$userBillingUuid = $data['userBillingUuid'];
+			$couponsCampaignBillingUuid = empty($data['couponsCampaignBillingUuid']) ? null : $data['couponsCampaignBillingUuid'];
+	
+			$couponsHandler = new CouponsHandler();
+			$listCoupons = $couponsHandler->doGetList($userBillingUuid, $couponsCampaignBillingUuid);
+	
+			return $this->returnObjectAsJson($response, 'coupons', $listCoupons);
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting coupons, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
 		}
-
-		$userBillingUuid = $data['userBillingUuid'];
-		$campaignUUid = empty($data['campaignUuid']) ? null : $data['campaignUuid'];
-
-		$couponsHandler = new CouponsHandler();
-		$listCoupons = $couponsHandler->doGetList($userBillingUuid, $campaignUUid);
-
-		return $this->returnObjectAsJson($response, 'couponsList', $listCoupons);
-
 	}
 	
 	public function create(Request $request, Response $response, array $args) {

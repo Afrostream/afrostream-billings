@@ -760,7 +760,7 @@ $app->post("/billings/api/coupons/", function ($request, $response, $args) {
  * Filters :
  *  - campaignUuid=111111-1111-1111-11111111
  */
-$app->get("/billings/api/coupons/list", function ($request, $response, $args) {
+$app->get("/billings/api/coupons/list/", function ($request, $response, $args) {
 	$couponsController = new CouponsController();
 	return($couponsController->getList($request, $response, $args));
 });
