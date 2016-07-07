@@ -182,7 +182,7 @@ class BraintreeWebHooksHandler {
 		$slack = new SlackHandler();
 		$message = sprintf("*%s*\n", $title);
 		$message .= sprintf($detail, $price, $currency, $plan);
-		$message .= "\n".$url;
+		$message .= "\n<".$url."|View details>";
 
 		$slack->sendMessage(getenv('SLACK_STATS_TRANSACTIONS_CHANNEL'), $message);
 	}
