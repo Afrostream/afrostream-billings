@@ -742,6 +742,20 @@ $app->post("/billings/api/coupons/", function ($request, $response, $args) {
 	return($couponsController->create($request, $response, $args));
 });
 
+/**
+ * GET /billings/api/coupons/list?userBillingUuid=UserBillingUUID
+ *
+ * Mandatory :
+ *  - userBillingUuid=UserBillingUUID
+ *
+ * Filters :
+ *  - campaignUuid=111111-1111-1111-11111111
+ */
+$app->get("/billings/api/coupons/list/", function ($request, $response, $args) {
+	$couponsController = new CouponsController();
+	return($couponsController->getList($request, $response, $args));
+});
+
 //get couponscampaigns
 	
 /*
