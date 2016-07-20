@@ -538,8 +538,9 @@ class TrialPeriodUnit extends Enum implements JsonSerializable {
 
 class CouponCampaignType extends Enum implements JsonSerializable {
 
-	const standard    = 'standard';
-	const sponsorship = 'sponsorship';
+	const standard    	= 'standard';
+	const sponsorship 	= 'sponsorship';
+	const prepaid 		= 'prepaid';
 
 	public function jsonSerialize() {
 		return $this->getValue();
@@ -2819,7 +2820,8 @@ class Coupon implements JsonSerializable {
 				'code' => $this->code,
 				'status' => $this->status,
 				'campaign' => CouponsCampaignDAO::getCouponsCampaignById($this->couponscampaignid)->jsonSerialize(),
-				'provider' => ProviderDAO::getProviderById($this->providerid)->jsonSerialize()
+				'provider' => ProviderDAO::getProviderById($this->providerid)->jsonSerialize(),
+				'couponOpts' => BillingsCouponsOptsDAO::getBillingsCouponsOptsByCouponId($this->_id)->jsonSerialize()
 		];
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->providerplanid));
 		$internalPlan->setShowProviderPlans(false);
