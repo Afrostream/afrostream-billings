@@ -56,6 +56,8 @@ class BouyguesSubscriptionsHandler extends SubscriptionsHandler {
 	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BouyguesSubscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("bouygues dbsubscription update for userid=".$user->getId().", id=".$db_subscription->getId()."...");
 		//UPDATE
+		$db_subscription_before_update = clone $db_subscription;
+		//
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription = BillingsSubscriptionDAO::updatePlanId($db_subscription);
 		//
@@ -64,6 +66,8 @@ class BouyguesSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateId($db_subscription);
+		//
+		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
 		config::getLogger()->addInfo("bouygues dbsubscription update for userid=".$user->getId().", id=".$db_subscription->getId()." done successfully");
 		return($db_subscription);

@@ -119,7 +119,6 @@ class BraintreeWebHooksHandler {
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
-		$db_subscription_before_update = NULL;
 		try {
 			//START TRANSACTION
 			pg_query("BEGIN");
@@ -134,7 +133,6 @@ class BraintreeWebHooksHandler {
 				//$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 			} else {
 				//UPDATE
-				$db_subscription_before_update = clone $db_subscription;
 				$db_subscription = $braintreeSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
 			}
 			//COMMIT
@@ -143,7 +141,6 @@ class BraintreeWebHooksHandler {
 			pg_query("ROLLBACK");
 			throw $e;
 		}
-		$braintreeSubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
 		config::getLogger()->addInfo('Processing braintree hook subscription, notification_kind='.$notification->kind.' done successfully');
 	}
