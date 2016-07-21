@@ -74,7 +74,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				if($email != $recipientEmail) {
 					$msg = "coupon cannot be used with another email";
 					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionType::AFR_SUB_SPS_RECIPIENT_DIFFER);						
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::AFR_SUB_SPS_RECIPIENT_DIFFER);						
 				}
 				
 			}
