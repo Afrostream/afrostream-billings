@@ -303,7 +303,7 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				if(count($status_history_array) > 0) {
 					$last_status = $status_history_array[0];
 					if($last_status->status == Braintree\Subscription::CANCELED) {
-						if($last_status->subscriptionSource == Braintree\Subscription::CONTROL_PANEL) {
+						if($last_status->subscriptionSource == Braintree\Subscription::RECURRING) {
 							$subscriptionStatus = 'expired';
 							$subExpiresDate = $subCanceledDate;
 						}
