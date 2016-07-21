@@ -212,8 +212,22 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				$db_subscription->setSubActivatedDate($api_subscription->createdAt);
 				break;
 			case Braintree\Subscription::CANCELED :
-				$db_subscription->setSubStatus('canceled');
-				$db_subscription->setSubCanceledDate($api_subscription->updatedAt);
+				$status_history_array = $api_subscription->status_history;
+				$subscriptionStatus = 'canceled';//by default
+				$subCanceledDate = $api_subscription->updatedAt;
+				$subExpiresDate = NULL;
+				if(count($status_history_array) > 0) {
+					$last_status = $status_history_array[0];
+					if($last_status->status == Braintree\Subscription::CANCELED) {
+						if($last_status->subscriptionSource == Braintree\Subscription::RECURRING) {
+							$subscriptionStatus = 'expired';
+							$subExpiresDate = $subCanceledDate;
+						}
+					}
+				}
+				$db_subscription->setSubStatus($subscriptionStatus);
+				$db_subscription->setSubCanceledDate($subCanceledDate);
+				$db_subscription->setSubExpiresDate($subExpiresDate);
 				break;
 			case Braintree\Subscription::EXPIRED :
 				$db_subscription->setSubStatus('expired');
@@ -282,10 +296,25 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				}
 				break;
 			case Braintree\Subscription::CANCELED :
-				$db_subscription->setSubStatus('canceled');
+				$status_history_array = $api_subscription->status_history;
+				$subscriptionStatus = 'canceled';//by default
+				$subCanceledDate = $api_subscription->updatedAt;
+				$subExpiresDate = NULL;
+				if(count($status_history_array) > 0) {
+					$last_status = $status_history_array[0];
+					if($last_status->status == Braintree\Subscription::CANCELED) {
+						if($last_status->subscriptionSource == Braintree\Subscription::CONTROL_PANEL) {
+							$subscriptionStatus = 'expired';
+							$subExpiresDate = $subCanceledDate;
+						}
+					}
+				}
+				$db_subscription->setSubStatus($subscriptionStatus);
 				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-				$db_subscription->setSubCanceledDate($api_subscription->updatedAt);
+				$db_subscription->setSubCanceledDate($subCanceledDate);
 				$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
+				$db_subscription->setSubExpiresDate($subExpiresDate);
+				$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
 				break;
 			case Braintree\Subscription::EXPIRED :
 				$db_subscription->setSubStatus('expired');
