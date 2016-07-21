@@ -39,6 +39,11 @@ class ExceptionError extends Enum {
 	//Netsize
 	const NETSIZE_INCOMPATIBLE							=	360;
 	const NETSIZE_SUBSCRIPTION_BAD_STATUS				=	361;
+	//AFR
+	const AFR_COUPON_SPS_SELF_FORBIDDEN					=	400;
+	const AFR_COUPON_SPS_RECIPIENT_ALREADY_SPONSORED	=	401;
+	const AFR_COUPON_SPS_RECIPIENT_ACTIVE_FORBIDDEN		=	402;
+	const AFR_SUB_SPS_RECIPIENT_DIFFER					=	410;
 }
 
 class BillingsException extends Exception {

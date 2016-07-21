@@ -18,7 +18,7 @@ class dbGlobal {
 
 class UserDAO {
 	
-	private static $sfields = "_id, creation_date, providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid, deleted";
+	private static $sfields = "BU._id, BU.creation_date, BU.providerid, BU.user_billing_uuid, BU.user_reference_uuid, BU.user_provider_uuid, BU.deleted";
 	
 	private static function getUserFromRow($row) {
 		$out = new User();
@@ -45,7 +45,7 @@ class UserDAO {
 	}
 	
 	public static function getUserById($id) {
-		$query = "SELECT ".self::$sfields." FROM billing_users WHERE _id = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_users BU WHERE BU._id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
 		
 		$out = null;
@@ -60,9 +60,9 @@ class UserDAO {
 	}
 	
 	public static function getUsersByUserReferenceUuid($user_reference_uuid, $providerid = NULL) {
-		$query = "SELECT ".self::$sfields." FROM billing_users WHERE deleted = false AND user_reference_uuid = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_users BU WHERE BU.deleted = false AND BU.user_reference_uuid = $1";
 		if(isset($providerid)) {
-			$query.= " AND providerid = $2";
+			$query.= " AND BU.providerid = $2";
 		}
 		$query_params = array($user_reference_uuid);
 		if(isset($providerid)) {
@@ -82,7 +82,7 @@ class UserDAO {
 	}
 	
 	public static function getUserByUserProviderUuid($providerid, $user_provider_uuid) {
-		$query = "SELECT ".self::$sfields." FROM billing_users WHERE deleted = false AND providerid = $1 AND user_provider_uuid = $2";
+		$query = "SELECT ".self::$sfields." FROM billing_users BU WHERE BU.deleted = false AND BU.providerid = $1 AND BU.user_provider_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $user_provider_uuid));
 		
 		$out = null;
@@ -97,7 +97,7 @@ class UserDAO {
 	}
 	
 	public static function getUserByUserBillingUuid($user_billing_uuid) {
-		$query = "SELECT ".self::$sfields." FROM billing_users WHERE deleted = false AND user_billing_uuid = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_users BU WHERE BU.deleted = false AND BU.user_billing_uuid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($user_billing_uuid));
 	
 		$out = null;
@@ -112,9 +112,9 @@ class UserDAO {
 	}
 	
 	public static function getUsers($id = NULL, $limit = 0, $offset = 0) {
-		$query = "SELECT ".self::$sfields." FROM billing_users WHERE deleted = false";
-		if(isset($id)) { $query.= " AND _id <= ".$id; }
-		$query.= " ORDER BY _id DESC";//LAST USERS FIRST
+		$query = "SELECT ".self::$sfields." FROM billing_users BU WHERE BU.deleted = false";
+		if(isset($id)) { $query.= " AND BU._id <= ".$id; }
+		$query.= " ORDER BY BU._id DESC";//LAST USERS FIRST
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getDbConn(), $query, array());
@@ -126,6 +126,27 @@ class UserDAO {
 		// free result
 		pg_free_result($result);
 	
+		return($out);
+	}
+	
+	public static function getUsersByEmail($email) {
+		$query = "SELECT ".self::$sfields." FROM billing_users BU";
+		$query.= " INNER JOIN billing_users_opts BUO ON (BU._id = BUO.userid)";
+		$query.= " WHERE BU.deleted = false";
+		$query.= " AND BUO.key = 'email'";
+		$query.= " AND BUO.deleted = false";
+		$query.= " AND BUO.value = $1";
+		
+		$result = pg_query_params(config::getDbConn(), $query, array($email));
+		
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getUserFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
 		return($out);
 	}
 	
@@ -2855,9 +2876,9 @@ class CouponDAO {
 	private static $sfields = NULL;
 	
 	public static function init() {
-		CouponDAO::$sfields = "_id, coupon_billing_uuid, couponscampaignsid, providerid, providerplanid, code, coupon_status,".
-							" creation_date, updated_date, redeemed_date, expires_date,".
-							" userid, subid";
+		CouponDAO::$sfields = "BC._id, BC.coupon_billing_uuid, BC.couponscampaignsid, BC.providerid, BC.providerplanid, BC.code, BC.coupon_status,".
+							" BC.creation_date, BC.updated_date, BC.redeemed_date, BC.expires_date,".
+							" BC.userid, BC.subid";
 	}
 	
 	private static function getCouponFromRow($row) {
@@ -2879,7 +2900,7 @@ class CouponDAO {
 	}
 	
 	public static function getCouponById($id) {
-		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE _id = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_coupons BC WHERE BC._id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
 	
 		$out = null;
@@ -2894,7 +2915,7 @@ class CouponDAO {
 	}
 	
 	public static function getCouponByCouponBillingUuid($coupon_billing_uuid) {
-		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE coupon_billing_uuid = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_coupons BC WHERE BC.coupon_billing_uuid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($coupon_billing_uuid));
 	
 		$out = null;
@@ -2909,9 +2930,9 @@ class CouponDAO {
 	}
 	
 	public static function getCoupon($providerId, $couponCode, $userId = NULL) {
-		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE providerid = $1 AND lower(code) = lower($2)";						
+		$query = "SELECT ".self::$sfields." FROM billing_coupons BC WHERE BC.providerid = $1 AND lower(BC.code) = lower($2)";						
 		if(isset($userId)) {
-			$query.= " AND userid = $3";
+			$query.= " AND BC.userid = $3";
 		}
 		$query_params = array($providerId, $couponCode);
 		if(isset($userId)) {
@@ -2948,7 +2969,7 @@ class CouponDAO {
 	}
 	
 	public static function getCouponsTotalNumberByCouponsCampaignId($couponscampaignsid) {
-		$query = "SELECT count(*) as counter FROM billing_coupons WHERE couponscampaignsid = $1";
+		$query = "SELECT count(*) as counter FROM billing_coupons BC WHERE BC.couponscampaignsid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($couponscampaignsid));
 		
 		$out = 0;
@@ -3003,11 +3024,11 @@ class CouponDAO {
 	}
 
 	public static function getCouponsByUserId($userid, $couponscampaignsid = NULL) {
-		$query = "SELECT ".self::$sfields." FROM billing_coupons WHERE userid = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_coupons BC WHERE BC.userid = $1";
 		$params = array();
 		$params[] = $userid;
 		if(isset($couponscampaignsid)) {
-			$query.= " AND couponscampaignsid= $2";
+			$query.= " AND BC.couponscampaignsid= $2";
 			$params[] = $couponscampaignsid;
 		}
 		$result = pg_query_params(config::getDbConn(), $query, $params);
@@ -3016,6 +3037,41 @@ class CouponDAO {
 		
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			array_push($out, self::getCouponFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function getCouponsTotalNumberByRecipientEmails($recipientEmail, CouponCampaignType $couponCampaignType = NULL) {
+		$query = "SELECT count(*) as counter FROM billing_coupons BC";
+		$query.= " INNER JOIN billing_coupons_opts BCO ON (BC._id = BCO.couponid)";
+		$params = array();
+		$where = "";
+		if(isset($couponCampaignType)) {
+			$params[] = $couponCampaignType->getValue();
+			$query.= " INNER JOIN billing_coupons_campaigns BCC ON (BC.couponscampaignsid = BCC._id)";
+			$where = " WHERE BCC.coupon_type = $".(count($params));
+		}
+		$params[] = $recipientEmail;
+		if(empty($where)) {
+			$where.= " WHERE ";
+		} else {
+			$where.= " AND ";
+		}
+		$where.= "BCO.key = 'recipientEmail'";
+		$where.= " AND BCO.deleted = false";
+		$where.= " AND BCO.value = $".(count($params));
+		
+		$query.= $where;
+		
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		
+		$out = 0;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = $row['counter'];
 		}
 		// free result
 		pg_free_result($result);

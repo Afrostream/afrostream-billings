@@ -276,4 +276,22 @@ function checkSubOptsValues(array $sub_opts_as_array, $providerName, $case = 'al
 	}
 }
 
+//passage par référence !!!
+function doSortSubscriptions(&$subscriptions) {
+	//more recent firt
+	usort($subscriptions,
+			function(BillingsSubscription $a, BillingsSubscription $b) {
+				if((null !== $a->getSubActivatedDate()) && (null !== $b->getSubActivatedDate())) {
+					return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), dbGlobal::toISODate($a->getSubActivatedDate())));
+				} else if(null !== $a->getSubActivatedDate()) {
+					return(strcmp("", dbGlobal::toISODate($a->getSubActivatedDate())));
+				} else if(null !== $b->getSubActivatedDate()) {
+					return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), ""));
+				} else {
+					return(strcmp(dbGlobal::toISODate($b->getCreationDate()), dbGlobal::toISODate($a->getCreationDate())));
+				}
+			}
+			);
+}
+
 ?>
