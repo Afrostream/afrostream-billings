@@ -65,6 +65,33 @@ class CouponsHandler {
 		}
 		return($db_coupon);
 	}
+
+	public function doGetList($userBillingUuid, $couponsCampaignBillingUuid = null)
+	{
+		$user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
+		if($user == NULL) {
+			$msg = "unknown user_billing_uuid : ".$userBillingUuid;
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+
+		$campaignId = null;
+		if (!is_null($couponsCampaignBillingUuid)) {
+			$campaign = CouponsCampaignDAO::getCouponsCampaignByUuid($couponsCampaignBillingUuid);
+
+			if($campaign == NULL) {
+				$msg = "unknown couponsCampaignBillingUuid : ".$couponsCampaignBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+
+			$campaignId = $campaign->getId();
+		}
+
+		$list = CouponDAO::getCouponsByUserId($user->getId(), $campaignId);
+
+		return $list;
+	}
 	
 	public function doCreateCoupon($userBillingUuid, $couponsCampaignBillingUuid, array $couponOpts) {
 		$db_coupon = NULL;

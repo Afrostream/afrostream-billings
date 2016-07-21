@@ -326,8 +326,8 @@ class SubscriptionsHandler {
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				case 'braintree' :
-					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
-					$subscriptions = $braintreeSubscriptionsHandler->doGetUserSubscriptions($user);
+					$subscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				case 'netsize' :
 					$subscriptionsHandler = new NetsizeSubscriptionsHandler();
@@ -703,6 +703,10 @@ class SubscriptionsHandler {
 				case 'netsize' :
 					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 					$db_subscription = $netsizeSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'stripe' :
+					$stripeSubscriptionsHandler = new StripeSubscriptionsHandler();
+					$db_subscription = $stripeSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();

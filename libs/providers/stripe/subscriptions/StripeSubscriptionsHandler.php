@@ -610,4 +610,50 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $message = vsprintf($message, $values);
         config::getLogger()->addInfo('STRIPE - '.$message);
     }
+    
+    public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+    	try {
+    		config::getLogger()->addInfo("stripe subscription expiring...");
+    		if(
+    				$subscription->getSubStatus() == "expired"
+    		)
+    		{
+    			//nothing todo : already done or in process
+    		} else {
+    			//
+    			if($subscription->getSubPeriodEndsDate() >= $expires_date) {
+    				//exception
+    				$msg = "cannot expire a subscription that has not ended yet";
+    				config::getLogger()->addError($msg);
+    				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    			}
+    			$subscription->setSubExpiresDate($expires_date);
+    			$subscription->setSubStatus("expired");
+    			try {
+    				//START TRANSACTION
+    				pg_query("BEGIN");
+    				BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
+    				BillingsSubscriptionDAO::updateSubStatus($subscription);
+    				//COMMIT
+    				pg_query("COMMIT");
+    			} catch(Exception $e) {
+    				pg_query("ROLLBACK");
+    				throw $e;
+    			}
+    		}
+    		//
+    		$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+    		config::getLogger()->addInfo("stripe subscription expiring done successfully for stripe_subscription_uuid=".$subscription->getSubUid());
+    		return($subscription);
+    	} catch(BillingsException $e) {
+    		$msg = "a billings exception occurred while expiring a stripe subscription for stripe_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+    		config::getLogger()->addError("stripe subscription expiring failed : ".$msg);
+    		throw $e;
+    	} catch(Exception $e) {
+    		$msg = "an unknown exception occurred while expiring a stripe subscription for stripe_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+    		config::getLogger()->addError("stripe subscription expiring failed : ".$msg);
+    		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    	}
+    }
+    
 }

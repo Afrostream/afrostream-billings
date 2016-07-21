@@ -206,10 +206,10 @@ class AfrCouponsHandler {
 		$template = NULL;
 		switch($couponCampaignType) {
 			case CouponCampaignType::sponsorship :
-				$template = getEnv('COUPON_OWN_SPONSORSHIP_NEW');
+				$template = getEnv('SENDGRID_TEMPLATE_COUPON_OWN_SPONSORSHIP_NEW');
 			 	break;
 			default :
-				$template = getEnv('COUPON_OWN_STANDARD_NEW');
+				$template = getEnv('SENDGRID_TEMPLATE_COUPON_OWN_STANDARD_NEW');
 				break;			
 		}
 
@@ -241,10 +241,10 @@ class AfrCouponsHandler {
 		$template = NULL;
 		switch($couponCampaignType) {
 			case CouponCampaignType::sponsorship :
-				$template = getEnv('COUPON_OFFERED_SPONSORSHIP_NEW');
+				$template = getEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_SPONSORSHIP_NEW');
 				break;
 			default :
-				$template = getEnv('COUPON_OFFERED_STANDARD_NEW');
+				$template = getEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_STANDARD_NEW');
 				break;
 		}
 
