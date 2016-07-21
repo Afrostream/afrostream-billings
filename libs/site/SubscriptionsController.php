@@ -5,6 +5,7 @@ require_once __DIR__ . '/../users/UsersHandler.php';
 require_once __DIR__ . '/../subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ . '/BillingsController.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
+require_once __DIR__ . '/../utils/utils.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -89,7 +90,7 @@ class SubscriptionsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$this->doSortSubscriptions($subscriptions);
+			doSortSubscriptions($subscriptions);
 			return($this->returnObjectAsJson($response, 'subscriptions', $subscriptions));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while getting subscriptions, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -217,7 +218,7 @@ class SubscriptionsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$this->doSortSubscriptions($subscriptions);
+			doSortSubscriptions($subscriptions);
 			return($this->returnObjectAsJson($response, 'subscriptions', $subscriptions));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while updating subscriptions, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -403,16 +404,6 @@ class SubscriptionsController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e));
 			//
 		}
-	}
-	
-	//passage par référence !!!
-	private function doSortSubscriptions(&$subscriptions) {
-		//more recent firt
-		usort($subscriptions, 
-				function(BillingsSubscription $a, BillingsSubscription $b) {
-					return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), dbGlobal::toISODate($a->getSubActivatedDate())));
-				}
-		);
 	}
 	
 }

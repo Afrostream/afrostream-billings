@@ -74,15 +74,15 @@ class CouponsController extends BillingsController {
 			}
 
 			$couponOpts = array();
-			if (isset($data['couponsOpts'])) {
-				if(!is_array($data['couponsOpts'])) {
+			if (isset($data['couponOpts'])) {
+				if(!is_array($data['couponOpts'])) {
 					//exception
-					$msg = "field 'couponsOpts' must be an array";
+					$msg = "field 'couponOpts' must be an array";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 
-				$couponOpts = $data['couponsOpts'];
+				$couponOpts = $data['couponOpts'];
 			}
 
 			$userBillingUuid = $data['userBillingUuid'];

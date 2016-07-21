@@ -353,6 +353,7 @@ class SubscriptionsHandler {
 			config::getLogger()->addError("subscriptions getting failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		doSortSubscriptions($subscriptions);
 		return($subscriptions);
 	}
 	
@@ -361,6 +362,7 @@ class SubscriptionsHandler {
 	}
 	
 	public function doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid) {
+		$subscriptions = NULL;
 		try {
 			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid."...");
 			$subscriptions = BillingsSubscriptionDAO::getBillingsSubscripionByUserReferenceUuid($userReferenceUuid);
@@ -375,7 +377,8 @@ class SubscriptionsHandler {
 			config::getLogger()->addError("subscriptions getting failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		return($subscriptions);		
+		doSortSubscriptions($subscriptions);
+		return($subscriptions);
 	}
 	
 	public function doUpdateUserSubscriptionsByUser(User $user) {
