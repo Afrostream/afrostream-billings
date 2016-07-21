@@ -212,7 +212,7 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				$db_subscription->setSubActivatedDate($api_subscription->createdAt);
 				break;
 			case Braintree\Subscription::CANCELED :
-				$status_history_array = $api_subscription->status_history;
+				$status_history_array = $api_subscription->statusHistory;
 				$subscriptionStatus = 'canceled';//by default
 				$subCanceledDate = $api_subscription->updatedAt;
 				$subExpiresDate = NULL;
@@ -296,7 +296,7 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				}
 				break;
 			case Braintree\Subscription::CANCELED :
-				$status_history_array = $api_subscription->status_history;
+				$status_history_array = $api_subscription->statusHistory;
 				$subscriptionStatus = 'canceled';//by default
 				$subCanceledDate = $api_subscription->updatedAt;
 				$subExpiresDate = NULL;
