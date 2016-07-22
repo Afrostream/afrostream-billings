@@ -469,6 +469,7 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$db_subscription_before_update = clone $db_subscription;
 			switch($provider->getName()) {
 				case 'netsize' :
 					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
@@ -478,6 +479,8 @@ class SubscriptionsHandler {
 					//nothing to do (unknown)
 					break;
 			}
+			//
+			$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 			//
 			$this->doFillSubscription($db_subscription);
 			//
@@ -584,7 +587,6 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$db_subscription_before_update = clone $db_subscription;
-
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
