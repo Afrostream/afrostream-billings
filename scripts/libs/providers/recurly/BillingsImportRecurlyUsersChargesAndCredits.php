@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/utils/utils.php';
+require_once __DIR__ . '/../../../../libs/transactions/TransactionsHandler.php';
 
 class BillingsImportRecurlyUsersChargesAndCredits {
 	
@@ -41,7 +42,9 @@ class BillingsImportRecurlyUsersChargesAndCredits {
 		if($user == NULL) {
 			throw new Exception("user with account_code=".$recurlyAccount->account_code." does not exist in billings database");
 		}
-		$recurlyTransactions = Recurly_TransactionList::getForAccount($recurlyAccount->account_code);
+		$transactionHandler = new TransactionsHandler();
+		$transactionHandler->doUpdateTransactionsByUser($user);
+		/*$recurlyTransactions = Recurly_TransactionList::getForAccount($recurlyAccount->account_code);
 		foreach ($recurlyTransactions as $recurlyTransaction) {
 			$msg =
 					"transaction : uuid=".$recurlyTransaction->uuid.
@@ -59,7 +62,7 @@ class BillingsImportRecurlyUsersChargesAndCredits {
 			}
 			$msg.= ", country=".$recurlyAccount->billing_info->get()->country;
 			ScriptsConfig::getLogger()->addInfo($msg);
-		}
+		}*/
 		ScriptsConfig::getLogger()->addInfo("importing charges and credits from recurly account with account_code=".$recurlyAccount->account_code." done successfully");
 	}	
 }

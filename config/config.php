@@ -18,6 +18,28 @@ if(getEnv('LOG_REQUESTS_ACTIVATED') === false) {
 #DATABASE_URL is filled in by heroku
 
 if(getEnv('DB_HOST') === false) {
+	putEnv('DB_HOST=ec2-54-247-167-90.eu-west-1.compute.amazonaws.com');
+}
+
+if(getEnv('DB_PORT') === false) {
+	putEnv('DB_PORT=5432');
+}
+
+if(getEnv('DB_NAME') === false) {
+	putEnv('DB_NAME=d8pun490ac8ria');
+}
+
+if(getEnv('DB_USER') === false) {
+	putEnv('DB_USER=tjmgcqkrixvkzu');
+}
+
+if(getEnv('DB_PASSWORD') === false) {
+	putEnv('DB_PASSWORD=4TwV23GXYZCyDhtJ5ybAyYeKEK');
+}
+
+/*
+ 
+if(getEnv('DB_HOST') === false) {
 	putEnv('DB_HOST=localhost');
 }
 
@@ -36,6 +58,8 @@ if(getEnv('DB_USER') === false) {
 if(getEnv('DB_PASSWORD') === false) {
 	putEnv('DB_PASSWORD=password');
 }
+
+*/
 
 #Billings API
 
@@ -338,7 +362,7 @@ class config {
 	public static function getLogger() {
 		if(self::$logger == NULL) {
 			self::$logger = new Logger('afrostream-billings');
-			self::$logger->pushHandler(new StreamHandler('php://stderr', Logger::INFO));
+			self::$logger->pushHandler(new StreamHandler('/Users/nelsounet/dev/logs.logs', Logger::INFO));
 		}
 		return(self::$logger);
 	}

@@ -3822,4 +3822,259 @@ class BillingsCouponsOptsDAO {
 			array($couponId));
 		return($result);
 	}
+	
+}
+
+
+class BillingsTransactionStatus extends Enum implements JsonSerializable {
+
+	const success = 'success';
+	const declined = 'declined';
+	const void = 'void';
+
+	public function jsonSerialize() {
+		return $this->getValue();
+	}
+}
+
+class BillingsTransactionType extends Enum implements JsonSerializable {
+
+	const purchase = 'purchase';
+	const refund = 'refund';
+	const verify = 'verify';
+
+	public function jsonSerialize() {
+		return $this->getValue();
+	}
+}
+
+class BillingsTransaction {
+	
+	private $_id;
+	private $providerid;
+	private $userid;
+	private $subid;
+	private $couponid;
+	private $invoiceid;
+	private $transactionBillingUuid;
+	private $transactionProviderUuid;
+	private $creationDate;
+	private $updatedDate;
+	private $transactionCreationDate;
+	private $amountInCents;
+	private $currency;
+	private $country;
+	private $transactionStatus;
+	private $transactionType;
+	private $invoiceProviderUuid;
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function setProviderId($id) {
+		$this->providerid = $id;
+	}
+	
+	public function getProviderId() {
+		return($this->providerid);
+	}
+	public function setUserId($id) {
+		$this->userid = $id;
+	}
+	
+	public function getUserId() {
+		return($this->userid);
+	}
+	
+	public function setSubId($id) {
+		$this->subid = $id;
+	}
+	
+	public function getSubId() {
+		return($this->subid);
+	}
+	
+	public function setCouponId($id) {
+		$this->couponid = $id;
+	}
+	
+	public function getCouponId() {
+		return($this->couponid);
+	}
+
+	public function setInvoiceId($id) {
+		$this->invoiceid = $id;
+	}
+	
+	public function getInvoiceId() {
+		return($this->invoiceid);
+	}
+	
+	public function setTransactionBillingUuid($id) {
+		$this->transactionBillingUuid = $id;
+	}
+	
+	public function getTransactionBillingUuid() {
+		return($this->transactionBillingUuid);
+	}
+	
+	public function setTransactionProviderUuid($id) {
+		$this->transactionProviderUuid = $id;
+	}
+	
+	public function getTransactionProviderUuid() {
+		return($this->transactionProviderUuid);
+	}
+	
+	public function setCreationDate(DateTime $date) {
+		$this->creationDate = $date;
+	}
+	
+	public function getCreationDate() {
+		return($this->creationDate);
+	}
+	
+	public function setUpdatedDate(DateTime $date) {
+		$this->updatedDate = $date;
+	}
+	
+	public function getUpdatedDate() {
+		return($this->updatedDate);
+	}
+	
+	public function setTransactionCreationDate(DateTime $date) {
+		$this->transactionCreationDate = $date;
+	}
+	
+	public function getTransactionCreationDate() {
+		return($this->transactionCreationDate);
+	}
+	
+	public function setAmountInCents($integer) {
+		$this->amountInCents = $integer;
+	}
+	
+	public function getAmoutInCents() {
+		return($this->amountInCents);
+	}
+	
+	public function setCurrency($str) {
+		$this->currency = $str;
+	}
+	
+	public function getCurrency() {
+		return($this->currency);
+	}
+	
+	public function setCountry($str) {
+		$this->country = $str;
+	}
+	
+	public function getCountry() {
+		return($this->country);
+	}
+
+	public function setTransactionStatus(BillingsTransactionStatus $transactionStatus) {
+		$this->transactionStatus = $transactionStatus;
+	}
+	
+	public function getTransactionStatus() {
+		return($this->transactionStatus);
+	}
+	
+	public function setTransactionType(BillingsTransactionType $transactionType) {
+		$this->transactionType = $transactionType;
+	}
+	
+	public function getTransactionType() {
+		return($this->transactionType);
+	}
+	
+	public function setInvoiceProviderUuid($id) {
+		$this->invoiceProviderUuid = $id;
+	}
+	
+	public function getInvoiceProviderUuid() {
+		return($this->invoiceProviderUuid);
+	}
+	
+}
+
+class BillingsTransactionDAO {
+
+	private static $sfields = <<<EOL
+	_id, providerid, userid, subid, couponid, invoiceid, 
+	transaction_billing_uuid, transaction_provider_uuid,
+	creation_date, updated_date, transaction_creation_date, 
+	amount_in_cents, currency, country, transaction_status, transaction_type, invoice_provider_uuid
+EOL;
+
+	private static function getBillingsTransactionFromRow($row) {
+		$out = new BillingsTransaction();
+		$out->setId($row["_id"]);
+		$out->setProviderId($row["providerid"]);
+		$out->setUserId($row["userid"]);
+		$out->setSubId($row["subid"]);
+		$out->setCouponId($row["couponid"]);
+		$out->setInvoiceId($row["invoiceid"]);
+		$out->setTransactionBillingUuid($row["transaction_billing_uuid"]);
+		$out->setTransactionProviderUuid($row["transaction_provider_uuid"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		$out->setUpdatedDate($row["updated_date"] == NULL ? NULL : new DateTime($row["updated_date"]));
+		$out->setTransactionCreationDate($row["transaction_creation_date"] == NULL ? NULL : new DateTime($row["transaction_creation_date"]));
+		$out->setAmountInCents($row["amount_in_cents"]);
+		$out->setCurrency($row["currency"]);
+		$out->setCountry($row["country"]);
+		$out->setTransactionStatus($row["transaction_status"] == NULL ? NULL : new BillingsTransactionStatus($row["transaction_status"]));
+		$out->setTransactionType($row["transaction_type"] == NULL ? NULL : new BillingsTransactionType($row["transaction_type"]));
+		$out->setInvoiceProviderUuid($row["invoice_provider_uuid"]);
+		return($out);
+	}
+
+	public static function getBillingsTransactionById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_transactions WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+
+		$out = null;
+
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingsTransactionFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+
+	public static function addBillingsTransaction(BillingsTransaction $billingsTransaction) {
+		$query = "INSERT INTO billing_transactions";
+		$query.= " (providerid, userid, subid, couponid, invoiceid,"; 
+		$query.= " transaction_billing_uuid, transaction_provider_uuid,";
+		$query.= " transaction_creation_date,"; 
+		$query.= " amount_in_cents, currency, country, transaction_status, transaction_type, invoice_provider_uuid)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingsTransaction->getProviderId(),
+						$billingsTransaction->getUserId(),
+						$billingsTransaction->getSubId(),
+						$billingsTransaction->getCouponId(),
+						$billingsTransaction->getInvoiceId(),
+						$billingsTransaction->getTransactionBillingUuid(),
+						$billingsTransaction->getTransactionProviderUuid(),
+						dbGlobal::toISODate($billingsTransaction->getTransactionCreationDate()),
+						$billingsTransaction->getAmoutInCents(),
+						$billingsTransaction->getCurrency(),
+						$billingsTransaction->getCountry(),
+						$billingsTransaction->getTransactionStatus(),
+						$billingsTransaction->getTransactionType(),
+						$billingsTransaction->getInvoiceProviderUuid()));
+		$row = pg_fetch_row($result);
+		return(self::getBillingsTransactionById($row[0]));
+	}
+	
 }
