@@ -1,13 +1,13 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
-require_once __DIR__ . '/../../libs/providers/stripe/BillingsImportStripeUsersChargesAndCredits.php';
+require_once __DIR__ . '/../../libs/providers/stripe/BillingsImportStripeTransactions.php';
 
 /*
  * Tool
  */
 
-print_r("starting tool to import recurly users charges and credits...\n");
+print_r("starting tool to import recurly transactions...\n");
 
 foreach ($argv as $arg) {
     $e=explode("=",$arg);
@@ -51,8 +51,8 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsImportStripeUsersChargesAndCredits = new BillingsImportStripeUsersChargesAndCredits();
+$billingsImportStripeTransactions = new BillingsImportStripeTransactions();
 
-$billingsImportStripeUsersChargesAndCredits->doImportUsersChargesAndCredits();
+$billingsImportStripeTransactions->doImportTransactions();
 
 print_r("processing done\n");

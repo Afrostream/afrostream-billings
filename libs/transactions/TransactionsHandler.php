@@ -4,8 +4,8 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/utils.php';
 require_once __DIR__ . '/../providers/recurly/transactions/RecurlyTransactionsHandler.php';
-//require_once __DIR__ . '/../providers/gocardless/transactions/GocardlessTransactionsHandler.php';
-//require_once __DIR__ . '/../providers/stripe/transactions/StripeTransactionsHandler.php';
+require_once __DIR__ . '/../providers/gocardless/transactions/GocardlessTransactionsHandler.php';
+require_once __DIR__ . '/../providers/stripe/transactions/StripeTransactionsHandler.php';
 
 class TransactionsHandler {
 	
