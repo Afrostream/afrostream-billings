@@ -52,7 +52,7 @@ class AfrCouponsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow internal plan');
 		}
 		
-		$couponCode = $couponsCampaign->getPrefix()."-".$this->getRandomString($couponsCampaign->getGeneratedCodeLength());
+		$couponCode = strtoupper($couponsCampaign->getPrefix()."-".$this->getRandomString($couponsCampaign->getGeneratedCodeLength()));
 		
 		switch ($couponsCampaign->getCouponType()) {
 			case CouponCampaignType::standard :
