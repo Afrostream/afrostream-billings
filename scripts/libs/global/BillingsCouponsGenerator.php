@@ -27,7 +27,7 @@ class BillingsCouponsGenerator {
 				$coupon->setCouponsCampaignId($coupons_campaign->getId());
 				$coupon->setProviderId($coupons_campaign->getProviderId());
 				$coupon->setProviderPlanId($coupons_campaign->getProviderPlanId());
-				$coupon->setCode($coupons_campaign->getPrefix()."-".$this->getRandomString($coupons_campaign->getGeneratedCodeLength()));
+				$coupon->setCode(strtoupper($coupons_campaign->getPrefix()."-".$this->getRandomString($coupons_campaign->getGeneratedCodeLength())));
 				CouponDAO::addCoupon($coupon);
 				$coupon_counter++;
 				ScriptsConfig::getLogger()->addInfo("(".$coupon_counter."/".$coupon_total_number.") coupon with code ".$coupon->getCode()." for couponscampaignuuid=".$couponscampaignuuid." generated successfully");
