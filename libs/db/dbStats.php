@@ -269,16 +269,15 @@ EOL;
 		SELECT plans.name AS plan_name, bp.name AS provider_name, buo.value AS user_email
 		FROM 
 		billing_coupons AS bc
-		JOIN billing_providers AS bp ON bc.providerid=bp._id
-		JOIN billing_plans AS plans ON bc.providerplanid=plans._id
-		JOIN billing_users AS bu ON bc.userid=bu._id
-		JOIN billing_users_opts AS buo ON bu._id=buo.userid
+		INNER JOIN billing_providers AS bp ON bc.providerid=bp._id
+		INNER JOIN billing_plans AS plans ON bc.providerplanid=plans._id
+		INNER JOIN billing_users AS bu ON bc.userid=bu._id
+		INNER JOIN billing_users_opts AS buo ON bu._id=buo.userid
 		WHERE
-		bc.coupon_status='pending'
-		AND bp.name='cashway'
-		AND (bc.updated_date  AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		bp.name = 'cashway'
+		AND (bc.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
 		AND buo.key = 'email'
-		AND buo.deleted=false	
+		AND buo.deleted = false	
 EOL;
 
 		$query = sprintf($query, $date_start_str, $date_end_str);
@@ -291,6 +290,41 @@ EOL;
 
 		return $out;
 	}
+	
+	public static function getCouponsAfrGenerated(DateTime $dateStart, Datetime $dateEnd, CouponCampaignType $couponCampaignType)
+	{
+		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
+		$date_start_str = dbGlobal::toISODate($dateStart);
+		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
+		$date_end_str = dbGlobal::toISODate($dateEnd);
+		
+		$query =<<<EOL
+		SELECT plans.name AS plan_name, bp.name AS provider_name, buo.value AS user_email
+		FROM 
+		billing_coupons AS bc
+		INNER JOIN billing_providers AS bp ON bc.providerid=bp._id
+		INNER JOIN billing_plans AS plans ON bc.providerplanid=plans._id
+		INNER JOIN billing_users AS bu ON bc.userid=bu._id
+		INNER JOIN billing_users_opts AS buo ON bu._id=buo.userid
+		INNER JOIN billing_coupons_campaigns AS bcc ON bc.couponscampaignsid=bcc._id
+		WHERE
+		bp.name = 'afr'
+		AND (bc.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		AND buo.key = 'email'
+		AND buo.deleted = false
+		AND bcc.coupon_type = '%s'
+EOL;
+		$query = sprintf($query, $date_start_str, $date_end_str, $couponCampaignType->getValue());
+		
+		$result = pg_query(config::getDbConn(), $query);
+		$out = array();
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = $row;
+		}
+		
+		return $out;		
+	}
+
 }
 
 ?>

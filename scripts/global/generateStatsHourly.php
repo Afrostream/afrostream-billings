@@ -68,7 +68,7 @@ foreach ($couponsActivated as $coupon) {
 	sendMessage($msg, $channelCoupons);
 }
 
-// cahsway coupons in pending status
+//cahsway coupons
 $couponsActivated = dbStats::getCouponsCashwayGenerated($start_date, $end_date);
 
 sendMessage('---------------------------------------------------', $channelCoupons);
@@ -82,6 +82,33 @@ foreach ($couponsActivated as $coupon) {
 	sendMessage($msg, $channelCoupons);
 }
 
+//afr sponsorship coupons
+$couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new CouponCampaignType(CouponCampaignType::sponsorship));
+
+sendMessage('---------------------------------------------------', $channelCoupons);
+sendMessage(
+		count($couponsActivated)." generated sponsorship coupons between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ",
+		$channelCoupons
+);
+
+foreach ($couponsActivated as $coupon) {
+	$msg = sprintf('%s %s (%s)', $coupon['user_email'], $coupon['plan_name'], $coupon['provider_name']);
+	sendMessage($msg, $channelCoupons);
+}
+
+//afr standard coupons
+$couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new CouponCampaignType(CouponCampaignType::standard));
+
+sendMessage('---------------------------------------------------', $channelCoupons);
+sendMessage(
+		count($couponsActivated)." generated standard coupons between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ",
+		$channelCoupons
+);
+
+foreach ($couponsActivated as $coupon) {
+	$msg = sprintf('%s %s (%s)', $coupon['user_email'], $coupon['plan_name'], $coupon['provider_name']);
+	sendMessage($msg, $channelCoupons);
+}
 
 print_r("processing done\n");
 
