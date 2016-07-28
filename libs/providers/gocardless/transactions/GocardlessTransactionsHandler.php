@@ -22,34 +22,19 @@ class GocardlessTransactionsHandler {
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 			));
 			//
+			$customer = $client->customers()->get($user->getUserProviderUuid());
+			//
 			$paginator = $client->payments()->all(
 					['params' =>
 							[
-									'customer' => $user->getUserProviderUuid()
+									'customer' => $customer->id
 							]
 					]);
 			//
+			$country = $customer->country_code;
 			foreach($paginator as $payment_entry) {
-				$billingsTransaction = new BillingsTransaction();
-				$billingsTransaction->setTransactionLinkId(NULL);
-				$billingsTransaction->setProviderId($user->getProviderId());
-				$billingsTransaction->setUserId($user->getId());
-				$billingsTransaction->setSubId(NULL);//TODO
-				$billingsTransaction->setCouponId(NULL);//TODO
-				$billingsTransaction->setInvoiceId(NULL);//TODO
-				$billingsTransaction->setTransactionBillingUuid(guid());
-				$billingsTransaction->setTransactionProviderUuid($payment_entry->id);
-				$billingsTransaction->setTransactionCreationDate(new DateTime($payment_entry->created_at));
-				$billingsTransaction->setAmountInCents($payment_entry->amount);
-				$billingsTransaction->setCurrency($payment_entry->currency);
-				$api_mandate = $client->mandates()->get($payment_entry->links->mandate);
-				$api_customer_bank_account = $client->customerBankAccounts()->get($api_mandate->links->customer_bank_account);
-				$billingsTransaction->setCountry($api_customer_bank_account->country_code);
-				$billingsTransaction->setTransactionStatus(self::getChargeMappedTransactionStatus($payment_entry));
-				$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
-				$billingsTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
-				$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
-				$this->doImportRefunds($billingsTransaction, $payment_entry);
+				$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $payment_entry->id);
+				$this->createOrUpdateChargeFromProvider($user, $userOpts, $payment_entry, $billingsTransaction, $country);
 			}
 			//
 			config::getLogger()->addInfo("updating gocardless transactions done successfully");
@@ -57,19 +42,141 @@ class GocardlessTransactionsHandler {
 			$msg = "a billings exception occurred while updating gocardless transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("updating gocardless transactions failed : ".$msg);
 			throw $e;
-		} catch(Recurly_NotFoundError $e) {
-			$msg = "a not found error exception occurred while updating gocardless transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("updating gocardless transactions failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
-		} catch(Recurly_ValidationError $e) {
-			$msg = "a validation error exception occurred while updating gocardless transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("updating gocardless transactions failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while updating gocardless transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
 		config::getLogger()->addError("updating gocardless transactions failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
+	}
+	
+	private function createOrUpdateChargeFromProvider(User $user, UserOpts $userOpts, Payment $gocardlessChargeTransaction, BillingsTransaction $billingsTransaction = NULL, $country = NULL) {
+		config::getLogger()->addInfo("creating/updating charge transaction from gocardless charge transaction...");
+		if($country == NULL) {
+			$client = new Client(array(
+					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'environment' => getEnv('GOCARDLESS_API_ENV')
+			));
+			$api_mandate = $client->mandates()->get($gocardlessChargeTransaction->links->mandate);
+			$api_customer_bank_account = $client->customerBankAccounts()->get($api_mandate->links->customer_bank_account);
+			$country = $api_customer_bank_account->country_code;
+		}
+		$subId = NULL;
+		if(isset($gocardlessChargeTransaction->links->subscription)) {
+			$subscription_provider_uuid = $gocardlessChargeTransaction->links->subscription;
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($user->getProviderId(), $subscription_provider_uuid);
+			if($subscription == NULL) {
+				$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$subId = $subscription->getId();			
+		}
+		$couponId = NULL;
+		$invoiceId = NULL;
+		if($billingsTransaction == NULL) {
+			//CREATE
+			$billingsTransaction = new BillingsTransaction();
+			$billingsTransaction->setTransactionLinkId(NULL);
+			$billingsTransaction->setProviderId($user->getProviderId());
+			$billingsTransaction->setUserId($user->getId());
+			$billingsTransaction->setSubId($subId);
+			$billingsTransaction->setCouponId(NULL);
+			$billingsTransaction->setInvoiceId(NULL);//NO INVOICE...
+			$billingsTransaction->setTransactionBillingUuid(guid());
+			$billingsTransaction->setTransactionProviderUuid($gocardlessChargeTransaction->id);
+			$billingsTransaction->setTransactionCreationDate(new DateTime($gocardlessChargeTransaction->created_at));
+			$billingsTransaction->setAmountInCents($gocardlessChargeTransaction->amount);
+			$billingsTransaction->setCurrency($gocardlessChargeTransaction->currency);
+			$billingsTransaction->setCountry($country);
+			$billingsTransaction->setTransactionStatus(self::getChargeMappedTransactionStatus($gocardlessChargeTransaction));
+			$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
+			$billingsTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
+			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
+		} else {
+			//UPDATE
+			$billingsTransaction->setTransactionLinkId(NULL);
+			$billingsTransaction->setProviderId($user->getProviderId());
+			$billingsTransaction->setUserId($user->getId());
+			$billingsTransaction->setSubId($subId);
+			$billingsTransaction->setCouponId(NULL);
+			$billingsTransaction->setInvoiceId(NULL);//NO INVOICE...
+			//NO !!! : $billingsTransaction->setTransactionBillingUuid(guid());
+			$billingsTransaction->setTransactionProviderUuid($gocardlessChargeTransaction->id);
+			$billingsTransaction->setTransactionCreationDate(new DateTime($gocardlessChargeTransaction->created_at));
+			$billingsTransaction->setAmountInCents($gocardlessChargeTransaction->amount);
+			$billingsTransaction->setCurrency($gocardlessChargeTransaction->currency);
+			$billingsTransaction->setCountry($country);
+			$billingsTransaction->setTransactionStatus(self::getChargeMappedTransactionStatus($gocardlessChargeTransaction));
+			$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
+			$billingsTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
+			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
+		}
+		$this->updateRefundsFromProvider($user, $userOpts, $gocardlessChargeTransaction, $billingsTransaction);
+		config::getLogger()->addInfo("creating/updating charge transaction from gocardless charge transaction done successfully");
+		return($billingsTransaction);
+	}
+	
+	private function updateRefundsFromProvider(User $user, UserOpts $userOpts, Payment $gocardlessChargeTransaction, BillingsTransaction $billingsTransaction) {
+		$client = new Client(array(
+				'access_token' => getEnv('GOCARDLESS_API_KEY'),
+				'environment' => getEnv('GOCARDLESS_API_ENV')
+		));
+		//
+		$paginator = $client->refunds()->all(
+				['params' =>
+						[
+								'payment' => $gocardlessChargeTransaction->id
+						]
+				]);
+		//
+		foreach($paginator as $refund_entry) {
+			$this->createOrUpdateRefundFromProvider($user, $userOpts, $refund_entry, $billingsTransaction);
+		}
+	}
+	
+	private function createOrUpdateRefundFromProvider(User $user, UserOpts $userOpts, Refund $gocardlessRefundTransaction, BillingsTransaction $billingsTransaction) {
+		config::getLogger()->addInfo("creating/updating refund transaction from gocardless refund transaction...");
+		$billingsRefundTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $gocardlessRefundTransaction->id);
+		if($billingsRefundTransaction == NULL) {
+			//CREATE
+			$billingsRefundTransaction = new BillingsTransaction();
+			$billingsRefundTransaction->setTransactionLinkId($billingsTransaction->getId());
+			$billingsRefundTransaction->setProviderId($billingsTransaction->getProviderId());
+			$billingsRefundTransaction->setUserId($billingsTransaction->getUserId());
+			$billingsRefundTransaction->setSubId($billingsTransaction->getSubId());
+			$billingsRefundTransaction->setCouponId($billingsTransaction->getCouponId());
+			$billingsRefundTransaction->setInvoiceId($billingsTransaction->getInvoiceId());
+			$billingsRefundTransaction->setTransactionBillingUuid(guid());
+			$billingsRefundTransaction->setTransactionProviderUuid($gocardlessRefundTransaction->id);
+			$billingsRefundTransaction->setTransactionCreationDate(new DateTime($gocardlessRefundTransaction->created_at));
+			$billingsRefundTransaction->setAmountInCents($gocardlessRefundTransaction->amount);
+			$billingsRefundTransaction->setCurrency($gocardlessRefundTransaction->currency);
+			$billingsRefundTransaction->setCountry($billingsTransaction->getCountry());//Country = Country of the Charge
+			$billingsRefundTransaction->setTransactionStatus(self::getRefundMappedTransactionStatus($gocardlessRefundTransaction));
+			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
+			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
+			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
+		} else {
+			//UPDATE
+			$billingsRefundTransaction->setTransactionLinkId($billingsTransaction->getId());
+			$billingsRefundTransaction->setProviderId($billingsTransaction->getProviderId());
+			$billingsRefundTransaction->setUserId($billingsTransaction->getUserId());
+			$billingsRefundTransaction->setSubId($billingsTransaction->getSubId());
+			$billingsRefundTransaction->setCouponId($billingsTransaction->getCouponId());
+			$billingsRefundTransaction->setInvoiceId($billingsTransaction->getInvoiceId());
+			//NO !!! : $billingsRefundTransaction->setTransactionBillingUuid(guid());
+			$billingsRefundTransaction->setTransactionProviderUuid($gocardlessRefundTransaction->id);
+			$billingsRefundTransaction->setTransactionCreationDate(new DateTime($gocardlessRefundTransaction->created_at));
+			$billingsRefundTransaction->setAmountInCents($gocardlessRefundTransaction->amount);
+			$billingsRefundTransaction->setCurrency($gocardlessRefundTransaction->currency);
+			$billingsRefundTransaction->setCountry($billingsTransaction->getCountry());//Country = Country of the Charge
+			$billingsRefundTransaction->setTransactionStatus(self::getRefundMappedTransactionStatus($gocardlessRefundTransaction));
+			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
+			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
+			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
+		}
+		config::getLogger()->addInfo("creating/updating refund transaction from gocardless refund transaction done successfully");
+		return($billingsRefundTransaction);
 	}
 	
 	private static function getChargeMappedTransactionStatus(Payment $gocardlessChargeTransaction) {
@@ -100,8 +207,7 @@ class GocardlessTransactionsHandler {
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::failed);
 				break;
 			case 'charge_back' :
-				//TODO : NC : For me OK + has refunds... to be confirmed 
-				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::success);
+				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::declined);
 				break;
 			default :
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown gocardless payment transaction type : ".$gocardlessChargeTransaction->status);
@@ -112,41 +218,6 @@ class GocardlessTransactionsHandler {
 	
 	private static function getRefundMappedTransactionStatus(Refund $gocardlessRefundTransaction) {
 		return(new BillingsTransactionStatus(BillingsTransactionStatus::success));
-	}
-	
-	private function doImportRefunds(BillingsTransaction $billingsTransaction, Payment $gocardlessChargeTransaction) {
-		//
-		$client = new Client(array(
-				'access_token' => getEnv('GOCARDLESS_API_KEY'),
-				'environment' => getEnv('GOCARDLESS_API_ENV')
-		));
-		//
-		$paginator = $client->refunds()->all(
-				['params' =>
-						[
-								'payment' => $gocardlessChargeTransaction->id
-						]
-				]);
-		//
-		foreach($paginator as $refund_entry) {
-			$billingsRefundTransaction = new BillingsTransaction();
-			$billingsRefundTransaction->setTransactionLinkId($billingsTransaction->getId());
-			$billingsRefundTransaction->setProviderId($billingsTransaction->getProviderId());
-			$billingsRefundTransaction->setUserId($billingsTransaction->getUserId());
-			$billingsRefundTransaction->setSubId($billingsTransaction->getSubId());
-			$billingsRefundTransaction->setCouponId($billingsTransaction->getCouponId());
-			$billingsRefundTransaction->setInvoiceId($billingsTransaction->getInvoiceId());
-			$billingsRefundTransaction->setTransactionBillingUuid(guid());
-			$billingsRefundTransaction->setTransactionProviderUuid($refund_entry->id);
-			$billingsRefundTransaction->setTransactionCreationDate(new DateTime($refund_entry->created_at));
-			$billingsRefundTransaction->setAmountInCents($refund_entry->amount);
-			$billingsRefundTransaction->setCurrency($refund_entry->currency);
-			$billingsRefundTransaction->setCountry($billingsTransaction->getCountry());//Country = Country of the Charge
-			$billingsRefundTransaction->setTransactionStatus(self::getRefundMappedTransactionStatus($refund_entry));
-			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
-			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
-			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);			
-		}
 	}
 	
 }

@@ -20,29 +20,13 @@ class RecurlyTransactionsHandler {
 			//
 			$recurlyTransactions = Recurly_TransactionList::getForAccount($user->getUserProviderUuid());
 			//
+			$country = NULL;
+			if(isset($recurlyAccount->billing_info)) {
+				$country = $recurlyAccount->billing_info->get()->country;
+			}
 			foreach ($recurlyTransactions as $recurlyTransaction) {
 				$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $recurlyTransaction->uuid);
-				$this->createOrUpdateFromProvider($user, $userOpts, $recurlyAccount, $recurlyTransaction, $billingsTransaction);
-				/*
-				$billingsTransaction = new BillingsTransaction();
-				$billingsTransaction->setProviderId($user->getProviderId());
-				$billingsTransaction->setUserId($user->getId());
-				$billingsTransaction->setSubId(NULL);//TODO
-				$billingsTransaction->setCouponId(NULL);//TODO
-				$billingsTransaction->setInvoiceId(NULL);//TODO
-				$billingsTransaction->setTransactionBillingUuid(guid());
-				$billingsTransaction->setTransactionProviderUuid($recurlyTransaction->uuid);
-				$billingsTransaction->setTransactionCreationDate($recurlyTransaction->created_at);
-				$billingsTransaction->setAmountInCents($recurlyTransaction->amount_in_cents);
-				$billingsTransaction->setCurrency($recurlyTransaction->currency);
-				$billingsTransaction->setCountry($recurlyAccount->billing_info->get()->country);
-				$billingsTransaction->setTransactionStatus(self::getMappedTransactionStatus($recurlyTransaction->status));
-				$billingsTransaction->setTransactionType(self::getMappedTransactionType($recurlyTransaction->action));
-				if(isset($recurlyTransaction->invoice)) {
-					$billingsTransaction->setInvoiceProviderUuid($recurlyTransaction->invoice->get()->uuid);
-				}
-				$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
-				*/
+				$this->createOrUpdateFromProvider($user, $userOpts, $recurlyTransaction, $billingsTransaction, $country);
 			}
 			//
 			config::getLogger()->addInfo("updating recurly transactions done successfully");
@@ -65,19 +49,29 @@ class RecurlyTransactionsHandler {
 		}
 	}
 	
-	private function createOrUpdateFromProvider(User $user, UserOpts $userOpts, Recurly_Account $recurlyAccount, Recurly_Transaction $recurlyTransaction, BillingsTransaction $billingsTransaction = NULL) {
-		$country = NULL;
-		if(isset($recurlyAccount->billing_info)) {
-			$country = $recurlyAccount->billing_info->get()->country;
+	private function createOrUpdateFromProvider(User $user, UserOpts $userOpts, Recurly_Transaction $recurlyTransaction, BillingsTransaction $billingsTransaction = NULL, $country = NULL) {
+		config::getLogger()->addInfo("creating/updating transactions from recurly transactions...");
+		$subId = NULL;
+		if($recurlyTransaction->source == 'subscription') {
+			$subscription_provider_uuid = $recurlyTransaction->subscription->get()->uuid;
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($user->getProviderId(), $subscription_provider_uuid);
+			if($subscription == NULL) {
+				$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);	
+			}
+			$subId = $subscription->getId();
 		}
+		$couponId = NULL;
+		$invoiceId = NULL;
 		if($billingsTransaction == NULL) {
 			//CREATE
 			$billingsTransaction = new BillingsTransaction();
 			$billingsTransaction->setProviderId($user->getProviderId());
 			$billingsTransaction->setUserId($user->getId());
-			$billingsTransaction->setSubId(NULL);//TODO
-			$billingsTransaction->setCouponId(NULL);//TODO
-			$billingsTransaction->setInvoiceId(NULL);//TODO
+			$billingsTransaction->setSubId($subId);
+			$billingsTransaction->setCouponId($couponId);
+			$billingsTransaction->setInvoiceId($invoiceId);
 			$billingsTransaction->setTransactionBillingUuid(guid());
 			$billingsTransaction->setTransactionProviderUuid($recurlyTransaction->uuid);
 			$billingsTransaction->setTransactionCreationDate($recurlyTransaction->created_at);
@@ -96,10 +90,10 @@ class RecurlyTransactionsHandler {
 			//UPDATE
 			$billingsTransaction->setProviderId($user->getProviderId());
 			$billingsTransaction->setUserId($user->getId());
-			$billingsTransaction->setSubId(NULL);//TODO
-			$billingsTransaction->setCouponId(NULL);//TODO
-			$billingsTransaction->setInvoiceId(NULL);//TODO
-			$billingsTransaction->setTransactionBillingUuid(guid());
+			$billingsTransaction->setSubId($subId);
+			$billingsTransaction->setCouponId($couponId);
+			$billingsTransaction->setInvoiceId($invoiceId);
+			//NO !!! : $billingsTransaction->setTransactionBillingUuid(guid());
 			$billingsTransaction->setTransactionProviderUuid($recurlyTransaction->uuid);
 			$billingsTransaction->setTransactionCreationDate($recurlyTransaction->created_at);
 			$billingsTransaction->setAmountInCents($recurlyTransaction->amount_in_cents);
@@ -114,12 +108,9 @@ class RecurlyTransactionsHandler {
 			}
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
+		config::getLogger()->addInfo("creating/updating transactions from recurly transactions done successfully");
 		return($billingsTransaction);
 	}
-	
-	/*public function updateFromProvider(User $user, UserOpts $userOpts, Recurly_Account $recurlyAccount, Recurly_Transaction $recurlyTransaction) {
-			
-	}*/
 	
 	private static function getMappedTransactionStatus($recurlyTransactionStatus) {
 		$billingTransactionStatus = NULL;

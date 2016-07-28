@@ -58,21 +58,6 @@ class BillingsImportStripeTransactions
 	
         $transactionHandler = new TransactionsHandler();
         $transactionHandler->doUpdateTransactionsByUser($user);
-        /*$listCharge = \Stripe\Charge::all(['customer' => $customer->id]);
-        $list = $listCharge['data'];
-        foreach ($list as $charge) {
-            $msg =
-                "charge : id=".$charge->id.
-                ", amount_in_cents=".$charge->amount.
-                ", currency=".$charge->currency.
-                ", application_fee=".$charge->application_fee.
-                ", amount_refunded=".$charge->amount_refunded.
-                ", balance_transaction=".$charge->balance_transaction.
-                ", invoice=".$charge->invoice.
-                ", source=".$charge->source->id;
-
-            ScriptsConfig::getLogger()->addInfo($msg);
-        }*/
         ScriptsConfig::getLogger()->addInfo("importing transactions from stripe account with account_code=".$customer->id." done successfully");
     }
  

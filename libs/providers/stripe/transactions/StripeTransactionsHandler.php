@@ -28,28 +28,10 @@ class StripeTransactionsHandler {
 				$stripeChargeTransactions = $stripeChargeTransactionsResponse['data'];
 				$offsetCharges = end($stripeChargeTransactions);
 				reset($stripeChargeTransactions);
-				//
 				foreach ($stripeChargeTransactions as $stripeChargeTransaction) {
-					$billingsTransaction = new BillingsTransaction();
-					$billingsTransaction->setTransactionLinkId(NULL);
-					$billingsTransaction->setProviderId($user->getProviderId());
-					$billingsTransaction->setUserId($user->getId());
-					$billingsTransaction->setSubId(NULL);//TODO
-					$billingsTransaction->setCouponId(NULL);//TODO
-					$billingsTransaction->setInvoiceId(NULL);//TODO
-					$billingsTransaction->setTransactionBillingUuid(guid());
-					$billingsTransaction->setTransactionProviderUuid($stripeChargeTransaction->id);
-					$billingsTransaction->setTransactionCreationDate(DateTime::createFromFormat('U', $stripeChargeTransaction->created));
-					$billingsTransaction->setAmountInCents($stripeChargeTransaction->amount);
-					$billingsTransaction->setCurrency($stripeChargeTransaction->currency);
-					$billingsTransaction->setCountry($stripeChargeTransaction->source->country);
-					$billingsTransaction->setTransactionStatus(self::getChargeMappedTransactionStatus($stripeChargeTransaction));
-					$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
-					if(isset($stripeChargeTransaction->invoice)) {
-						$billingsTransaction->setInvoiceProviderUuid($stripeChargeTransaction->invoice);
-					}
-					$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
-					$this->doImportRefunds($billingsTransaction, $stripeChargeTransaction);
+					
+					$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $stripeChargeTransaction->id);
+					$this->createOrUpdateChargeFromProvider($user, $userOpts, $stripeChargeTransaction, $billingsTransaction);
 				}
 			}
 			//
@@ -58,17 +40,9 @@ class StripeTransactionsHandler {
 			$msg = "a billings exception occurred while updating stripe transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("updating stripe transactions failed : ".$msg);
 			throw $e;
-		} catch(Recurly_NotFoundError $e) {
-			$msg = "a not found error exception occurred while updating stripe transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("updating stripe transactions failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
-		} catch(Recurly_ValidationError $e) {
-			$msg = "a validation error exception occurred while updating stripe transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("updating stripe transactions failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while updating stripe transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
-		config::getLogger()->addError("updating stripe transactions failed : ".$msg);
+			config::getLogger()->addError("updating stripe transactions failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
 	}
@@ -109,7 +83,77 @@ class StripeTransactionsHandler {
 		return($billingTransactionStatus);
 	}
 	
-	private function doImportRefunds(BillingsTransaction $billingsTransaction, \Stripe\Charge $stripeChargeTransaction) {
+	
+	private function createOrUpdateChargeFromProvider(User $user, UserOpts $userOpts, \Stripe\Charge $stripeChargeTransaction, BillingsTransaction $billingsTransaction = NULL) {
+		config::getLogger()->addInfo("creating/updating charge transaction from stripe charge transaction...");
+		$subId = NULL;
+		if(isset($stripeChargeTransaction->invoice)) {
+			$invoice = \Stripe\Invoice::retrieve($stripeChargeTransaction->invoice);
+			if(isset($invoice->subscription)) {
+				$subscription_provider_uuid = $invoice->subscription;
+				$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($user->getProviderId(), $subscription_provider_uuid);
+				if($subscription == NULL) {
+					$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$subId = $subscription->getId();				
+			}
+		}
+		$couponId = NULL;
+		$invoiceId = NULL;
+		if($billingsTransaction == NULL) {
+			//CREATE
+			$billingsTransaction = new BillingsTransaction();
+			$billingsTransaction->setTransactionLinkId(NULL);
+			$billingsTransaction->setProviderId($user->getProviderId());
+			$billingsTransaction->setUserId($user->getId());
+			$billingsTransaction->setSubId($subId);
+			$billingsTransaction->setCouponId($couponId);
+			$billingsTransaction->setInvoiceId($invoiceId);
+			$billingsTransaction->setTransactionBillingUuid(guid());
+			$billingsTransaction->setTransactionProviderUuid($stripeChargeTransaction->id);
+			$billingsTransaction->setTransactionCreationDate(DateTime::createFromFormat('U', $stripeChargeTransaction->created));
+			$billingsTransaction->setAmountInCents($stripeChargeTransaction->amount);
+			$billingsTransaction->setCurrency($stripeChargeTransaction->currency);
+			$billingsTransaction->setCountry($stripeChargeTransaction->source->country);
+			$billingsTransaction->setTransactionStatus(self::getChargeMappedTransactionStatus($stripeChargeTransaction));
+			$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
+			if(isset($stripeChargeTransaction->invoice)) {
+				$billingsTransaction->setInvoiceProviderUuid($stripeChargeTransaction->invoice);
+			} else {
+				$billingsTransaction->setInvoiceProviderUuid(NULL);
+			}
+			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
+		} else {
+			//UPDATE
+			$billingsTransaction->setTransactionLinkId(NULL);
+			$billingsTransaction->setProviderId($user->getProviderId());
+			$billingsTransaction->setUserId($user->getId());
+			$billingsTransaction->setSubId($subId);
+			$billingsTransaction->setCouponId($couponId);
+			$billingsTransaction->setInvoiceId($invoiceId);
+			//NO !!! : $billingsTransaction->setTransactionBillingUuid(guid());
+			$billingsTransaction->setTransactionProviderUuid($stripeChargeTransaction->id);
+			$billingsTransaction->setTransactionCreationDate(DateTime::createFromFormat('U', $stripeChargeTransaction->created));
+			$billingsTransaction->setAmountInCents($stripeChargeTransaction->amount);
+			$billingsTransaction->setCurrency($stripeChargeTransaction->currency);
+			$billingsTransaction->setCountry($stripeChargeTransaction->source->country);
+			$billingsTransaction->setTransactionStatus(self::getChargeMappedTransactionStatus($stripeChargeTransaction));
+			$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
+			if(isset($stripeChargeTransaction->invoice)) {
+				$billingsTransaction->setInvoiceProviderUuid($stripeChargeTransaction->invoice);
+			} else {
+				$billingsTransaction->setInvoiceProviderUuid(NULL);
+			}
+			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
+		}
+		$this->updateRefundsFromProvider($user, $userOpts, $stripeChargeTransaction, $billingsTransaction);
+		config::getLogger()->addInfo("creating/updating charge transaction from stripe charge transaction done successfully");
+		return($billingsTransaction);
+	}
+	
+	private function updateRefundsFromProvider(User $user, UserOpts $userOpts, \Stripe\Charge $stripeChargeTransaction, BillingsTransaction $billingsTransaction) {
 		$params = ['charge' => $stripeChargeTransaction->id];
 		$options = ['limit' => self::STRIPE_LIMIT];
 		$hasMoreRefunds = true;
@@ -124,27 +168,54 @@ class StripeTransactionsHandler {
 			reset($stripeRefundTransactions);
 			//
 			foreach ($stripeRefundTransactions as $stripeRefundTransaction) {
-				$billingsRefundTransaction = new BillingsTransaction();
-				$billingsRefundTransaction->setTransactionLinkId($billingsTransaction->getId());
-				$billingsRefundTransaction->setProviderId($billingsTransaction->getProviderId());
-				$billingsRefundTransaction->setUserId($billingsTransaction->getUserId());
-				$billingsRefundTransaction->setSubId($billingsTransaction->getSubId());
-				$billingsRefundTransaction->setCouponId($billingsTransaction->getCouponId());
-				$billingsRefundTransaction->setInvoiceId($billingsTransaction->getInvoiceId());
-				$billingsRefundTransaction->setTransactionBillingUuid(guid());
-				$billingsRefundTransaction->setTransactionProviderUuid($stripeRefundTransaction->id);
-				$billingsRefundTransaction->setTransactionCreationDate(DateTime::createFromFormat('U', $stripeRefundTransaction->created));
-				$billingsRefundTransaction->setAmountInCents($stripeRefundTransaction->amount);
-				$billingsRefundTransaction->setCurrency($stripeRefundTransaction->currency);
-				$billingsRefundTransaction->setCountry($billingsTransaction->getCountry());//Country = Country of the Charge
-				$billingsRefundTransaction->setTransactionStatus(self::getRefundMappedTransactionStatus($stripeRefundTransaction));
-				$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
-				if(isset($stripeChargeTransaction->invoice)) {
-					$billingsRefundTransaction->setInvoiceProviderUuid($stripeChargeTransaction->invoice);
-				}
-				$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
+				$this->createOrUpdateRefundFromProvider($user, $userOpts, $stripeRefundTransaction, $billingsTransaction);
 			}
 		}
+	}
+	
+	private function createOrUpdateRefundFromProvider(User $user, UserOpts $userOpts, \Stripe\Refund $stripeRefundTransaction, BillingsTransaction $billingsTransaction) {
+		config::getLogger()->addInfo("creating/updating refund transaction from stripe refund transaction...");
+		$billingsRefundTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $stripeRefundTransaction->id);
+		if($billingsRefundTransaction == NULL) {
+			//CREATE
+			$billingsRefundTransaction = new BillingsTransaction();
+			$billingsRefundTransaction->setTransactionLinkId($billingsTransaction->getId());
+			$billingsRefundTransaction->setProviderId($billingsTransaction->getProviderId());
+			$billingsRefundTransaction->setUserId($billingsTransaction->getUserId());
+			$billingsRefundTransaction->setSubId($billingsTransaction->getSubId());
+			$billingsRefundTransaction->setCouponId($billingsTransaction->getCouponId());
+			$billingsRefundTransaction->setInvoiceId($billingsTransaction->getInvoiceId());
+			$billingsRefundTransaction->setTransactionBillingUuid(guid());
+			$billingsRefundTransaction->setTransactionProviderUuid($stripeRefundTransaction->id);
+			$billingsRefundTransaction->setTransactionCreationDate(DateTime::createFromFormat('U', $stripeRefundTransaction->created));
+			$billingsRefundTransaction->setAmountInCents($stripeRefundTransaction->amount);
+			$billingsRefundTransaction->setCurrency($stripeRefundTransaction->currency);
+			$billingsRefundTransaction->setCountry($billingsTransaction->getCountry());//Country = Country of the Charge
+			$billingsRefundTransaction->setTransactionStatus(self::getRefundMappedTransactionStatus($stripeRefundTransaction));
+			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
+			$billingsRefundTransaction->setInvoiceProviderUuid($billingsTransaction->getInvoiceProviderUuid());
+			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
+		} else {
+			//UPDATE
+			$billingsRefundTransaction->setTransactionLinkId($billingsTransaction->getId());
+			$billingsRefundTransaction->setProviderId($billingsTransaction->getProviderId());
+			$billingsRefundTransaction->setUserId($billingsTransaction->getUserId());
+			$billingsRefundTransaction->setSubId($billingsTransaction->getSubId());
+			$billingsRefundTransaction->setCouponId($billingsTransaction->getCouponId());
+			$billingsRefundTransaction->setInvoiceId($billingsTransaction->getInvoiceId());
+			//NO !!! : $billingsRefundTransaction->setTransactionBillingUuid(guid());
+			$billingsRefundTransaction->setTransactionProviderUuid($stripeRefundTransaction->id);
+			$billingsRefundTransaction->setTransactionCreationDate(DateTime::createFromFormat('U', $stripeRefundTransaction->created));
+			$billingsRefundTransaction->setAmountInCents($stripeRefundTransaction->amount);
+			$billingsRefundTransaction->setCurrency($stripeRefundTransaction->currency);
+			$billingsRefundTransaction->setCountry($billingsTransaction->getCountry());//Country = Country of the Charge
+			$billingsRefundTransaction->setTransactionStatus(self::getRefundMappedTransactionStatus($stripeRefundTransaction));
+			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
+			$billingsRefundTransaction->setInvoiceProviderUuid($billingsTransaction->getInvoiceProviderUuid());
+			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
+		}
+		config::getLogger()->addInfo("creating/updating refund transaction from stripe refund transaction done successfully");
+		return($billingsRefundTransaction);
 	}
 	
 }
