@@ -326,8 +326,8 @@ class SubscriptionsHandler {
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				case 'braintree' :
-					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
-					$subscriptions = $braintreeSubscriptionsHandler->doGetUserSubscriptions($user);
+					$subscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				case 'netsize' :
 					$subscriptionsHandler = new NetsizeSubscriptionsHandler();
@@ -353,6 +353,7 @@ class SubscriptionsHandler {
 			config::getLogger()->addError("subscriptions getting failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		doSortSubscriptions($subscriptions);
 		return($subscriptions);
 	}
 	
@@ -361,6 +362,7 @@ class SubscriptionsHandler {
 	}
 	
 	public function doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid) {
+		$subscriptions = NULL;
 		try {
 			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid."...");
 			$subscriptions = BillingsSubscriptionDAO::getBillingsSubscripionByUserReferenceUuid($userReferenceUuid);
@@ -375,7 +377,8 @@ class SubscriptionsHandler {
 			config::getLogger()->addError("subscriptions getting failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		return($subscriptions);		
+		doSortSubscriptions($subscriptions);
+		return($subscriptions);
 	}
 	
 	public function doUpdateUserSubscriptionsByUser(User $user) {
@@ -466,6 +469,7 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$db_subscription_before_update = clone $db_subscription;
 			switch($provider->getName()) {
 				case 'netsize' :
 					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
@@ -475,6 +479,8 @@ class SubscriptionsHandler {
 					//nothing to do (unknown)
 					break;
 			}
+			//
+			$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 			//
 			$this->doFillSubscription($db_subscription);
 			//
@@ -581,7 +587,6 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$db_subscription_before_update = clone $db_subscription;
-
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
@@ -700,6 +705,10 @@ class SubscriptionsHandler {
 				case 'netsize' :
 					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 					$db_subscription = $netsizeSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'stripe' :
+					$stripeSubscriptionsHandler = new StripeSubscriptionsHandler();
+					$db_subscription = $stripeSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();

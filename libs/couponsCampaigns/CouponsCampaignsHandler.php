@@ -8,7 +8,7 @@ class CouponsCampaignsHandler {
 	public function __construct() {
 	}
 	
-	public function doGetCouponsCampaigns($provider_name = NULL) {
+	public function doGetCouponsCampaigns($provider_name = NULL, $couponsCampaignType = NULL) {
 		$db_coupons_campaigns = NULL;
 		try {
 			config::getLogger()->addInfo("CouponsCampaigns getting...");
@@ -22,7 +22,7 @@ class CouponsCampaignsHandler {
 				}
 				$provider_id = $provider->getId();
 			}
-			$db_coupons_campaigns =  CouponsCampaignDAO::getCouponsCampaigns($provider_id);
+			$db_coupons_campaigns =  CouponsCampaignDAO::getCouponsCampaigns($provider_id, $couponsCampaignType);
 			config::getLogger()->addInfo("CouponsCampaigns getting done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting CouponsCampaigns, error_code=".$e->getCode().", error_message=".$e->getMessage();

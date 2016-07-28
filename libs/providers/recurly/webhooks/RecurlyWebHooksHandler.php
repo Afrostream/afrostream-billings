@@ -119,7 +119,6 @@ class RecurlyWebHooksHandler {
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-		$db_subscription_before_update = NULL;
 		try {
 			//START TRANSACTION
 			pg_query("BEGIN");
@@ -134,7 +133,6 @@ class RecurlyWebHooksHandler {
 				//$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 			} else {
 				//UPDATE
-				$db_subscription_before_update = clone $db_subscription;
 				$db_subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
 			}
 			//COMMIT
@@ -143,7 +141,6 @@ class RecurlyWebHooksHandler {
 			pg_query("ROLLBACK");
 			throw $e;
 		}
-		$recurlySubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
 		config::getLogger()->addInfo('Processing recurly hook subscription, notification_type='.$notification->type.' done successfully');
 	}

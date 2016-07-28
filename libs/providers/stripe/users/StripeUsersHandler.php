@@ -15,7 +15,7 @@ class StripeUsersHandler
         if ($userProviderUuid) {
             $user = $this->getUser($userProviderUuid);
         } else {
-            $user = $this->createUser($userOpts);
+            $user = $this->createUser($userOpts, $userReferenceUuid);
         }
 
         return $user['id'];
@@ -51,7 +51,7 @@ class StripeUsersHandler
      *
      * @return \Stripe\Customer
      */
-    protected function createUser(array $userOpts)
+    protected function createUser(array $userOpts, $userReferenceUuid)
     {
         checkUserOptsArray($userOpts, 'stripe');
 
@@ -59,7 +59,9 @@ class StripeUsersHandler
             'email' => $userOpts['email'],
             'metadata' => [
                 'firstName' => $userOpts['firstName'],
-                'lastName' => $userOpts['lastName']
+                'lastName' => $userOpts['lastName'],
+                'AfrSource' => 'afrBillingApi',
+                'AfrUserReferenceUuid' => $userReferenceUuid
             ]
         ]);
 

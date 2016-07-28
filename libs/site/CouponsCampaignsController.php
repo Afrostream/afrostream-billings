@@ -16,8 +16,12 @@ class CouponsCampaignsController extends BillingsController {
 			if(isset($data['providerName'])) {
 				$provider_name = $data['providerName'];
 			}
+			$couponsCampaignType = NULL;
+			if(isset($data['couponsCampaignType'])) {
+				$couponsCampaignType = $data['couponsCampaignType'];
+			}
 			$couponsCampaignsHandler = new CouponsCampaignsHandler();
-			$couponsCampaigns = $couponsCampaignsHandler->doGetCouponsCampaigns($provider_name);
+			$couponsCampaigns = $couponsCampaignsHandler->doGetCouponsCampaigns($provider_name, $couponsCampaignType);
 			return($this->returnObjectAsJson($response, 'couponsCampaigns', $couponsCampaigns));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while getting CouponsCampaigns, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();

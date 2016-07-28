@@ -29,6 +29,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_CODE_NOT_FOUND);				
 			}
+			$couponOpts = BillingsCouponsOptsDAO::getBillingsCouponsOptsByCouponId($coupon->getId());
 			$couponProviderPlan = PlanDAO::getPlanById($coupon->getProviderPlanId());
 			if($couponProviderPlan == NULL) {
 				$msg = "unknown coupon plan with id : ".$coupon->getProviderPlanId();
@@ -60,6 +61,22 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				$msg = "coupon : code=".$couponCode." cannot be used";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$couponsCampaign = CouponsCampaignDAO::getCouponsCampaignById($coupon->getCouponsCampaignId());
+			if($couponsCampaign == NULL) {
+				$msg = "unknown couponsCampaign with id : ".$coupon->getCouponsCampaignId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($couponsCampaign->getCouponType() == CouponCampaignType::sponsorship) {
+				$email = $userOpts->getOpt('email');
+				$recipientEmail = $couponOpts->getOpt('recipientEmail');
+				if($email != $recipientEmail) {
+					$msg = "coupon cannot be used with another email";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::AFR_SUB_SPS_RECIPIENT_DIFFER);						
+				}
+				
 			}
 			//OK
 			$sub_uuid = guid();

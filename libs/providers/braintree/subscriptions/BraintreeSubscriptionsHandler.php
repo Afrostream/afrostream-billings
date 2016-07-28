@@ -212,8 +212,22 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				$db_subscription->setSubActivatedDate($api_subscription->createdAt);
 				break;
 			case Braintree\Subscription::CANCELED :
-				$db_subscription->setSubStatus('canceled');
-				$db_subscription->setSubCanceledDate($api_subscription->updatedAt);
+				$status_history_array = $api_subscription->statusHistory;
+				$subscriptionStatus = 'canceled';//by default
+				$subCanceledDate = $api_subscription->updatedAt;
+				$subExpiresDate = NULL;
+				if(count($status_history_array) > 0) {
+					$last_status = $status_history_array[0];
+					if($last_status->status == Braintree\Subscription::CANCELED) {
+						if($last_status->subscriptionSource == Braintree\Subscription::RECURRING) {
+							$subscriptionStatus = 'expired';
+							$subExpiresDate = $subCanceledDate;
+						}
+					}
+				}
+				$db_subscription->setSubStatus($subscriptionStatus);
+				$db_subscription->setSubCanceledDate($subCanceledDate);
+				$db_subscription->setSubExpiresDate($subExpiresDate);
 				break;
 			case Braintree\Subscription::EXPIRED :
 				$db_subscription->setSubStatus('expired');
@@ -231,10 +245,21 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				//break;
 		}
-		$db_subscription->setSubPeriodStartedDate($api_subscription->billingPeriodStartDate == NULL ? 
-				$api_subscription->createdAt : $api_subscription->billingPeriodStartDate);
-		$db_subscription->setSubPeriodEndsDate($api_subscription->billingPeriodEndDate == NULL ? 
-				$api_subscription->nextBillingDate : $api_subscription->billingPeriodEndDate);
+		$subPeriodStartedDate = NULL;
+		if($api_subscription->billingPeriodStartDate == NULL) {
+			$subPeriodStartedDate = clone $api_subscription->createdAt;
+		} else {
+			$subPeriodStartedDate = clone $api_subscription->billingPeriodStartDate;
+		}
+		$db_subscription->setSubPeriodStartedDate($subPeriodStartedDate);
+		$subPeriodEndsDate = NULL;
+		if($api_subscription->billingPeriodEndDate == NULL) {
+			$subPeriodEndsDate = clone $api_subscription->nextBillingDate;
+		} else {
+			$subPeriodEndsDate = clone $api_subscription->billingPeriodEndDate;
+		}
+		$subPeriodEndsDate->setTime(23, 59, 59);//force the time to the end of the day (API always gives 00:00:00)
+		$db_subscription->setSubPeriodEndsDate($subPeriodEndsDate);
 		$db_subscription->setUpdateType($update_type);
 		//
 		$db_subscription->setUpdateId($updateId);
@@ -255,6 +280,8 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, Braintree\Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {		
 		config::getLogger()->addInfo("braintree dbsubscription update for userid=".$user->getId().", braintree_subscription_uuid=".$api_subscription->id.", id=".$db_subscription->getId()."...");
 		//UPDATE
+		$db_subscription_before_update = clone $db_subscription;
+		//
 		$now = new DateTime();
 		//$db_subscription->setProviderId($provider->getId());//STATIC
 		//$db_subscription->setUserId($user->getId());//STATIC
@@ -271,10 +298,25 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				}
 				break;
 			case Braintree\Subscription::CANCELED :
-				$db_subscription->setSubStatus('canceled');
+				$status_history_array = $api_subscription->statusHistory;
+				$subscriptionStatus = 'canceled';//by default
+				$subCanceledDate = $api_subscription->updatedAt;
+				$subExpiresDate = NULL;
+				if(count($status_history_array) > 0) {
+					$last_status = $status_history_array[0];
+					if($last_status->status == Braintree\Subscription::CANCELED) {
+						if($last_status->subscriptionSource == Braintree\Subscription::RECURRING) {
+							$subscriptionStatus = 'expired';
+							$subExpiresDate = $subCanceledDate;
+						}
+					}
+				}
+				$db_subscription->setSubStatus($subscriptionStatus);
 				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-				$db_subscription->setSubCanceledDate($api_subscription->updatedAt);
+				$db_subscription->setSubCanceledDate($subCanceledDate);
 				$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
+				$db_subscription->setSubExpiresDate($subExpiresDate);
+				$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
 				break;
 			case Braintree\Subscription::EXPIRED :
 				$db_subscription->setSubStatus('expired');
@@ -297,10 +339,23 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				//break;
 		}
 		//
-		$db_subscription->setSubPeriodStartedDate($api_subscription->billingPeriodStartDate == NULL ? 
-				$api_subscription->createdAt : $api_subscription->billingPeriodStartDate);
-		$db_subscription->setSubPeriodEndsDate($api_subscription->billingPeriodEndDate == NULL ? 
-				$api_subscription->nextBillingDate : $api_subscription->billingPeriodEndDate);
+		$subPeriodStartedDate = NULL;
+		if($api_subscription->billingPeriodStartDate == NULL) {
+			$subPeriodStartedDate = clone $api_subscription->createdAt;
+		} else {
+			$subPeriodStartedDate = clone $api_subscription->billingPeriodStartDate;
+		}
+		$db_subscription->setSubPeriodStartedDate($subPeriodStartedDate);
+		$db_subscription = BillingsSubscriptionDAO::updateSubStartedDate($db_subscription);
+		$subPeriodEndsDate = NULL;
+		if($api_subscription->billingPeriodEndDate == NULL) {
+			$subPeriodEndsDate = clone $api_subscription->nextBillingDate;
+		} else {
+			$subPeriodEndsDate = clone $api_subscription->billingPeriodEndDate;
+		}
+		$subPeriodEndsDate->setTime(23, 59, 59);//force the time to the end of the day (API always gives 00:00:00)
+		$db_subscription->setSubPeriodEndsDate($subPeriodEndsDate);
+		$db_subscription = BillingsSubscriptionDAO::updateSubEndsDate($db_subscription);
 		//
 		$db_subscription->setUpdateType($update_type);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateType($db_subscription);
@@ -308,7 +363,9 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateId($db_subscription);
 		//$db_subscription->setDeleted('false');//STATIC
-		// 
+		//
+		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+		//
 		config::getLogger()->addInfo("braintree dbsubscription update for userid=".$user->getId().", braintree_subscription_uuid=".$api_subscription->id.", id=".$db_subscription->getId()." done successfully");
 		return($db_subscription);
 	}

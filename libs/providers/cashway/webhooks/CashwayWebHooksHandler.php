@@ -25,7 +25,6 @@ class CashwayWebHooksHandler {
 	private function doProcessNotification($post_data, $update_type, $updateId) {
 		config::getLogger()->addInfo('Processing cashway hook notification...');
 		$data = json_decode($post_data, true);
-		$db_subscription_before_update = NULL;
 		$db_subscription = NULL;
 		//TODO : Merge to be done later
 		$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
@@ -107,9 +106,6 @@ class CashwayWebHooksHandler {
 						pg_query("ROLLBACK");
 						throw $e;
 					}
-				}
-				if(isset($db_subscription)) {
-					$subscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 				}
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].' done successfully');
 				break;

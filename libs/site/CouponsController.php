@@ -54,6 +54,35 @@ class CouponsController extends BillingsController {
 			//
 		}
 	}
+
+	public function getList(Request $request, Response $response, array $args)
+	{
+		try {
+			$data = $request->getQueryParams();
+	
+			$userBillingUuid = null;
+	
+			if (empty($data['userBillingUuid'])) {
+				$msg = "'userBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+	
+			$userBillingUuid = $data['userBillingUuid'];
+			$couponsCampaignBillingUuid = empty($data['couponsCampaignBillingUuid']) ? null : $data['couponsCampaignBillingUuid'];
+	
+			$couponsHandler = new CouponsHandler();
+			$listCoupons = $couponsHandler->doGetList($userBillingUuid, $couponsCampaignBillingUuid);
+	
+			return $this->returnObjectAsJson($response, 'coupons', $listCoupons);
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting coupons, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
 	
 	public function create(Request $request, Response $response, array $args) {
 		try {
@@ -74,15 +103,15 @@ class CouponsController extends BillingsController {
 			}
 
 			$couponOpts = array();
-			if (isset($data['couponsOpts'])) {
-				if(!is_array($data['couponsOpts'])) {
+			if (isset($data['couponOpts'])) {
+				if(!is_array($data['couponOpts'])) {
 					//exception
-					$msg = "field 'couponsOpts' must be an array";
+					$msg = "field 'couponOpts' must be an array";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 
-				$couponOpts = $data['couponsOpts'];
+				$couponOpts = $data['couponOpts'];
 			}
 
 			$userBillingUuid = $data['userBillingUuid'];
