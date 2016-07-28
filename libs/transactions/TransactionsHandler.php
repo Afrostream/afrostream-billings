@@ -13,7 +13,6 @@ class TransactionsHandler {
 	}
 	
 	public function doUpdateTransactionsByUser(User $user) {
-
 		try {
 			config::getLogger()->addInfo("transactions updating for userid=".$user->getId()."...");
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
@@ -50,6 +49,30 @@ class TransactionsHandler {
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while transactions updating for userid=".$user->getId().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("transactions updating failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+	}
+	
+	public function doUpdateTransactionByTransactionProviderUuid($provider_name, $transactionProviderUuid) {
+		try {
+			config::getLogger()->addInfo("transaction updating for transactionProviderUuid=".$transactionProviderUuid."...");
+			switch($provider_name) {
+				case 'stripe' :
+					$transactionsHandler = new StripeTransactionsHandler();
+					$transactionsHandler->doUpdateTransactionByTransactionProviderUuid($transactionProviderUuid);
+					break;
+				default:
+					//nothing to do (unknown)
+					break;
+			}
+			config::getLogger()->addInfo("transaction updating for transactionProviderUuid=".$transactionProviderUuid." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while transaction updating for transactionProviderUuid=".$transactionProviderUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("transaction updating failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while transaction updating for transactionProviderUuid=".$transactionProviderUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("transaction updating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 	}

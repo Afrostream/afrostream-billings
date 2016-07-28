@@ -21,16 +21,38 @@ class BillingsImportStripeTransactions
     {
     	try {
     		ScriptsConfig::getLogger()->addInfo("importing transactions from stripe...");
-	        $hasMore = true;
+    		$hasMoreCharges = true;
+    		$options = ['limit' => self::STRIPE_LIMIT];
+    		while ($hasMoreCharges) {
+    			if (isset($offsetCharges)) {
+    		 		$options['starting_after'] = $offsetCharges;
+    		 	}
+    		 	$listCharges = \Stripe\Charge::all($options);
+    		 	$hasMoreCharges = $listCharges['has_more'];
+    		 	$list = $listCharges['data'];
+    		 	$offsetCharges = end($list);
+    		 	reset($list);
+    		
+    			foreach($list as $charge) {
+    		 		try {
+    		 			if(is_null($charge->customer)) {
+    		 				$this->doImportTransaction($charge);
+    		 			}
+    		 		} catch (Exception $e) {
+    		 			ScriptsConfig::getLogger()->addError("unexpected exception while importing stand-alone transaction with id=".$charge->id." from stripe, message=".$e->getMessage());
+    		 		}
+    		 	}
+    		}
+	        $hasMoreCustomers = true;
 	        $options = ['limit' => self::STRIPE_LIMIT];
-	        while ($hasMore) {
-	            if (isset($offset)) {
-	                $options['starting_after'] = $offset;
+	        while ($hasMoreCustomers) {
+	            if (isset($offsetCustomers)) {
+	                $options['starting_after'] = $offsetCustomers;
 	            }
 	            $listCustomers = \Stripe\Customer::all($options);
-	            $hasMore = $listCustomers['has_more'];
+	            $hasMoreCustomers = $listCustomers['has_more'];
 	            $list = $listCustomers['data'];
-	            $offset = end($list);
+	            $offsetCustomers = end($list);
 	            reset($list);
 	
 	            foreach($list as $customer) {
@@ -47,6 +69,14 @@ class BillingsImportStripeTransactions
 	    ScriptsConfig::getLogger()->addInfo("importing transactions from stripe done");
     }
 
+    protected function doImportTransaction(Stripe\Charge $charge)
+    {
+    	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe...");
+    	$transactionHandler = new TransactionsHandler();
+    	$transactionHandler->doUpdateTransactionByTransactionProviderUuid('stripe', $charge->id);
+    	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe done successfully");
+    }
+    
     protected function doImportUserTransactions(Stripe\Customer $customer)
     {
         ScriptsConfig::getLogger()->addInfo("importing transactions from stripe account with account_code=".$customer->id."...");
