@@ -70,7 +70,8 @@ class AfrCouponsHandler {
 						'metadata' => [
 								'AfrSource' => 'afrBillingApi',
 								'AfrOrigin' => 'coupon',
-								'AfrCouponBillingUuid' => $couponBillingUuid
+								'AfrCouponBillingUuid' => $couponBillingUuid,
+								'AfrUserBillingUuid' => $user->getUserBillingUuid()
 						]
 				];
 				

@@ -101,7 +101,7 @@ class StripeTransactionsHandler {
 		$userId = ($user == NULL ? NULL : $user->getId());
 		$subId = NULL;
 		$couponId = NULL;
-		$metadata = $stripeChargeTransaction->metadata;
+		$metadata = $stripeChargeTransaction->metadata->__toArray();
 		$afrOrigin = NULL;
 		if(array_key_exists('AfrOrigin', $metadata)) {
 		 	$afrOrigin = $metadata['AfrOrigin'];
@@ -109,28 +109,66 @@ class StripeTransactionsHandler {
 		$searchForSubId = false;
 		switch($afrOrigin) {
 			case 'subscription' :
-				//TODO
+				if(array_key_exists('AfrSubscriptionBillingUuid', $metadata)) {
+					$subscription_billing_uuid = $metadata['AfrSubscriptionBillingUuid'];
+					$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscription_billing_uuid);
+					if($subscription == NULL) {
+						$msg = "todo : subscription IS NULL";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
+					}
+					$subId = $subscription->getId();
+				} else {
+					$msg = "todo : AfrSubscriptionBillingUuid NOT FOUND";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($userId == NULL) {
+					if(array_key_exists('AfrUserBillingUuid', $metadata)) {
+						$user_billing_uuid = $metadata['AfrUserBillingUuid'];
+						$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
+						if($user == NULL) {
+							$msg = "todo : user IS NULL";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
+						}
+						$userId = $user->getId();
+					}
+				}
 				break;
 			case 'coupon' :
 				if(array_key_exists('AfrCouponBillingUuid', $metadata)) {
 					$coupon_billing_uuid = $metadata['AfrCouponBillingUuid'];
-					$couponId = CouponDAO::getCouponByCouponBillingUuid($coupon_billing_uuid);
-					if($couponId == NULL) {
-						$msg = "todo : couponId IS NULL";
+					$coupon = CouponDAO::getCouponByCouponBillingUuid($coupon_billing_uuid);
+					if($coupon == NULL) {
+						$msg = "todo : coupon IS NULL";
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
 					}
+					$couponId = $coupon->getId();
 				} else {
 					$msg = "todo : AfrCouponBillingUuid NOT FOUND";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($userId == NULL) {
+					if(array_key_exists('AfrUserBillingUuid', $metadata)) {
+						$user_billing_uuid = $metadata['AfrUserBillingUuid'];
+						$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
+						if($user == NULL) {
+							$msg = "todo : user IS NULL";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						}
+						$userId = $user->getId();
+					}
 				}
 				break;
 			case NULL :
 				$searchForSubId = true;
 				break;
 			default :
-				$msg = "afrOrigin unknown : ".$afrOrigin;
+				$msg = "afrOrigin unknown value : ".$afrOrigin;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
@@ -147,6 +185,18 @@ class StripeTransactionsHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					$subId = $subscription->getId();
+				}
+			}
+			//should not happen
+			if($userId == NULL) {
+				if(isset($stripeChargeTransaction->customer)) {
+					$user = UserDAO::getUserByUserProviderUuid($providerid, $stripeChargeTransaction->customer);
+					if($user == NULL) {
+						$msg = "user with user_provider_uuid=".$stripeChargeTransaction->customer." not found";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
+					}
+					$userId = $user->getId();
 				}
 			}
 		}
@@ -283,7 +333,8 @@ class StripeTransactionsHandler {
 			}
 			$hasToBeProcessed = !$isRecurlyTransaction;
 			if($hasToBeProcessed) {
-				
+				$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $stripeChargeTransaction->id);
+				$this->createOrUpdateChargeFromProvider(NULL, NULL, $stripeChargeTransaction, $billingsTransaction);
 			} else {
 				config::getLogger()->addInfo("stripe charge transaction =".$stripeChargeTransaction->id." is ignored");
 			}

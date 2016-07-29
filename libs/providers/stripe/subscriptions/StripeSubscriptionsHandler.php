@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../../utils/utils.php';
 
 use \Stripe\Subscription;
 
@@ -22,6 +23,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      * @param InternalPlanOpts         $internalPlanOpts
      * @param Plan                     $plan
      * @param PlanOpts                 $planOpts
+     * @param string                   $subscription_billing_uuid
      * @param string                   $subscriptionProviderUuid
      * @param BillingInfoOpts          $billingInfoOpts
      * @param BillingsSubscriptionOpts $subOpts
@@ -38,22 +40,29 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         InternalPlanOpts $internalPlanOpts,
         Plan $plan,
         PlanOpts $planOpts,
+    	$subscription_billing_uuid,
         $subscriptionProviderUuid,
         BillingInfoOpts $billingInfoOpts,
         BillingsSubscriptionOpts $subOpts
     )
     {
-        if ($internalPlan->getCycle() == PlanCycle::once) {
-            $subscription = $this->chargeCustomer($user, $plan, $subOpts, $internalPlan);
-        } else {
-            if ($subscriptionProviderUuid) {
-                $subscription = $this->getSubscription($subscriptionProviderUuid, $user);
+    	if (isset($subscriptionProviderUuid)) {
+    		$subscription = $this->getSubscription($subscriptionProviderUuid, $user);
+    	} else {
+	        if ($internalPlan->getCycle() == PlanCycle::once) {
+	        	$metadata = [
+	        		'AfrSource' => 'afrBillingApi',
+	        		'AfrOrigin' => 'subscription',
+	        		'AfrSubscriptionBillingUuid' => $subscription_billing_uuid,
+	        		'AfrUserBillingUuid' => $user->getUserBillingUuid()
+	        	];
+	            $subscription = $this->chargeCustomer($user, $plan, $subOpts, $internalPlan, $metadata);
             } else {
                 $subscription = $this->createSubscription($user, $plan, $subOpts);
             }
         }
 
-        return $this->getNewBillingSubscription($provider, $user, $plan, $subscription);
+        return $this->getNewBillingSubscription($provider, $user, $plan, $subscription, $subscription_billing_uuid);
     }
 
     /**
@@ -140,9 +149,10 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
 
             $billingSubscription = $this->findRecordedSubscriptionByProviderId($recordedSubscriptions, $subscription['id']);
 
-            // subscriptino not found, so we create it
+            // subscription not found, so we create it
             if (is_null($billingSubscription)) {
-                $billingSubscription = $this->getNewBillingSubscription($provider, $user, $plan, $subscription);
+            	$subscription_billing_uuid = guid();
+                $billingSubscription = $this->getNewBillingSubscription($provider, $user, $plan, $subscription, $subscription_billing_uuid);
                 $this->createDbSubscriptionFromApiSubscription($billingSubscription);
             } else {
                 // we found one update and record it
@@ -456,7 +466,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      *
      * @return Subscription
      */
-    protected function chargeCustomer(User $user, Plan $plan, BillingsSubscriptionOpts $subOpts, InternalPlan $internalPlan)
+    protected function chargeCustomer(User $user, Plan $plan, BillingsSubscriptionOpts $subOpts, InternalPlan $internalPlan, array $metadata)
     {
         if (is_null($subOpts->getOpt('customerBankAccountToken'))) {
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription. Missing stripe token');
@@ -469,16 +479,13 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             $customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
             $customer->source = $subOpts->getOpt('customerBankAccountToken');
             $customer->save();
-
+			
             $chargeData = array(
                 "amount" => $internalPlan->getAmountInCents(),
                 "currency" => $internalPlan->getCurrency(),
-                'customer' => $user->getUserProviderUuid(),
+                "customer" => $user->getUserProviderUuid(),
                 "description" => $plan->getPlanUuid(),
-                "metadata" => [
-                    'AfrSource' => 'afrBillingApi',
-                    'AfrOrigin' => 'subscription'
-                ]
+                "metadata" => $metadata
             );
 
             $this->log("Charge customer,  amount : %s, currency : %s, customer : %s, description : %s", $chargeData);
@@ -586,10 +593,10 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      *
      * @return BillingsSubscription
      */
-    protected function getNewBillingSubscription(Provider $provider, User $user, Plan $plan, Subscription $subscription)
+    protected function getNewBillingSubscription(Provider $provider, User $user, Plan $plan, Subscription $subscription, $subscription_billing_uuid)
     {
         $billingSubscription = new BillingsSubscription();
-        $billingSubscription->setSubscriptionBillingUuid(guid());
+        $billingSubscription->setSubscriptionBillingUuid($subscription_billing_uuid);
         $billingSubscription->setProviderId($provider->getId());
         $billingSubscription->setUserId($user->getId());
         $billingSubscription->setPlanId($plan->getId());

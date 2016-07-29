@@ -9,7 +9,7 @@ class NetsizeUsersHandler {
 	public function __construct() {
 	}
 	
-	public function doCreateUser($user_reference_uuid, $user_provider_uuid, array $user_opts_array) {
+	public function doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, array $user_opts_array) {
 		try {
 			config::getLogger()->addInfo("netsize user creation...");
 			if(isset($user_provider_uuid)) {

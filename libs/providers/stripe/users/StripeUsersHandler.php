@@ -10,12 +10,12 @@ class StripeUsersHandler
         \Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
     }
 
-    public function doCreateUser($userReferenceUuid, $userProviderUuid, array $userOpts)
+    public function doCreateUser($userReferenceUuid, $user_billing_uuid, $userProviderUuid, array $userOpts)
     {
         if ($userProviderUuid) {
             $user = $this->getUser($userProviderUuid);
         } else {
-            $user = $this->createUser($userOpts, $userReferenceUuid);
+            $user = $this->createUser($userOpts, $user_billing_uuid);
         }
 
         return $user['id'];
@@ -51,7 +51,7 @@ class StripeUsersHandler
      *
      * @return \Stripe\Customer
      */
-    protected function createUser(array $userOpts, $userReferenceUuid)
+    protected function createUser(array $userOpts, $user_billing_uuid)
     {
         checkUserOptsArray($userOpts, 'stripe');
 
@@ -61,7 +61,7 @@ class StripeUsersHandler
                 'firstName' => $userOpts['firstName'],
                 'lastName' => $userOpts['lastName'],
                 'AfrSource' => 'afrBillingApi',
-                'AfrUserReferenceUuid' => $userReferenceUuid
+                'AfrUserBillingUuid' => $user_billing_uuid
             ]
         ]);
 
