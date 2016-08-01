@@ -6,6 +6,7 @@ require_once __DIR__ . '/../utils/utils.php';
 require_once __DIR__ . '/../providers/recurly/transactions/RecurlyTransactionsHandler.php';
 require_once __DIR__ . '/../providers/gocardless/transactions/GocardlessTransactionsHandler.php';
 require_once __DIR__ . '/../providers/stripe/transactions/StripeTransactionsHandler.php';
+require_once __DIR__ . '/../providers/braintree/transactions/BraintreeTransactionsHandler.php';
 
 class TransactionsHandler {
 	
@@ -35,6 +36,10 @@ class TransactionsHandler {
 					break;
 				case 'stripe' :
 					$transactionsHandler = new StripeTransactionsHandler();
+					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts);
+					break;
+				case 'braintree' :
+					$transactionsHandler = new BraintreeTransactionsHandler();
 					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts);
 					break;
 				default:
