@@ -59,7 +59,7 @@ class RecurlyTransactionsHandler {
 		}
 	}
 	
-	private function createOrUpdateFromProvider(User $user, UserOpts $userOpts, Recurly_Transaction $recurlyTransaction, BillingsTransaction $billingsTransaction = NULL, $country = NULL) {
+	public function createOrUpdateFromProvider(User $user, UserOpts $userOpts, Recurly_Transaction $recurlyTransaction, BillingsTransaction $billingsTransaction = NULL, $country = NULL) {
 		config::getLogger()->addInfo("creating/updating transactions from recurly transactions...");
 		$subId = NULL;
 		if($recurlyTransaction->source == 'subscription') {
