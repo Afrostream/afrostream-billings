@@ -17,17 +17,24 @@ class BillingsImportStripeTransactions
         \Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
     }
 
-    public function doImportTransactions()
+    public function doImportTransactions(DateTime $from = NULL, DateTime $to = NULL)
     {
     	try {
     		ScriptsConfig::getLogger()->addInfo("importing transactions from stripe...");
+    		$paramsCharges = array();
+    		$paramsCharges['limit'] = self::STRIPE_LIMIT;
+    		if(isset($from)) {
+    			$paramsCharges['created']['gte'] = $from->getTimestamp();
+    		}
+    		if(isset($to)) {
+    			$paramsCharges['created']['lte'] = $to->getTimestamp();
+    		}
     		$hasMoreCharges = true;
-    		$options = ['limit' => self::STRIPE_LIMIT];
     		while ($hasMoreCharges) {
     			if (isset($offsetCharges)) {
-    		 		$options['starting_after'] = $offsetCharges;
+    		 		$paramsCharges['starting_after'] = $offsetCharges->id;
     		 	}
-    		 	$listCharges = \Stripe\Charge::all($options);
+    		 	$listCharges = \Stripe\Charge::all($paramsCharges);
     		 	$hasMoreCharges = $listCharges['has_more'];
     		 	$list = $listCharges['data'];
     		 	$offsetCharges = end($list);
@@ -37,6 +44,8 @@ class BillingsImportStripeTransactions
     		 		try {
     		 			if(is_null($charge->customer)) {
     		 				$this->doImportTransaction($charge);
+    		 			} else {
+    		 				ScriptsConfig::getLogger()->addInfo("ignoring stand-alone transaction with id =".$charge->id.", it is linked to a customer");
     		 			}
     		 		} catch (Exception $e) {
     		 			ScriptsConfig::getLogger()->addError("unexpected exception while importing stand-alone transaction with id=".$charge->id." from stripe, message=".$e->getMessage());
@@ -44,12 +53,13 @@ class BillingsImportStripeTransactions
     		 	}
     		}
 	        $hasMoreCustomers = true;
-	        $options = ['limit' => self::STRIPE_LIMIT];
+	        $paramsCustomers = array();
+	        $paramsCustomers['limit'] = self::STRIPE_LIMIT;
 	        while ($hasMoreCustomers) {
 	            if (isset($offsetCustomers)) {
-	                $options['starting_after'] = $offsetCustomers;
+	                $paramsCustomers['starting_after'] = $offsetCustomers->id;
 	            }
-	            $listCustomers = \Stripe\Customer::all($options);
+	            $listCustomers = \Stripe\Customer::all($paramsCustomers);
 	            $hasMoreCustomers = $listCustomers['has_more'];
 	            $list = $listCustomers['data'];
 	            $offsetCustomers = end($list);
@@ -57,7 +67,7 @@ class BillingsImportStripeTransactions
 	
 	            foreach($list as $customer) {
 	            	try {
-						$this->doImportUserTransactions($customer);
+						$this->doImportUserTransactions($customer, $from, $to);
 					} catch (Exception $e) {
 						ScriptsConfig::getLogger()->addError("unexpected exception while importing transactions from stripe with account_code=".$customer->id.", message=".$e->getMessage());
 					}
@@ -77,7 +87,7 @@ class BillingsImportStripeTransactions
     	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe done successfully");
     }
     
-    protected function doImportUserTransactions(Stripe\Customer $customer)
+    protected function doImportUserTransactions(Stripe\Customer $customer, DateTime $from = NULL, DateTime $to = NULL)
     {
         ScriptsConfig::getLogger()->addInfo("importing transactions from stripe account with account_code=".$customer->id."...");
         $user = UserDAO::getUserByUserProviderUuid($this->providerId, $customer->id);
@@ -87,7 +97,7 @@ class BillingsImportStripeTransactions
         }
 	
         $transactionHandler = new TransactionsHandler();
-        $transactionHandler->doUpdateTransactionsByUser($user);
+        $transactionHandler->doUpdateTransactionsByUser($user, $from, $to);
         ScriptsConfig::getLogger()->addInfo("importing transactions from stripe account with account_code=".$customer->id." done successfully");
     }
  

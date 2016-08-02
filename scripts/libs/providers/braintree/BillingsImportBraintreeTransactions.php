@@ -13,7 +13,7 @@ class BillingsImportBraintreeTransactions {
 		$this->providerid = ProviderDAO::getProviderByName('braintree')->getId();
 	}
 	
-	public function doImportTransactions() {
+	public function doImportTransactions(DateTime $from = NULL, DateTime $to = NULL) {
 		try {
 			ScriptsConfig::getLogger()->addInfo("importing transactions from braintree...");
 			//
@@ -26,7 +26,7 @@ class BillingsImportBraintreeTransactions {
 				
 			foreach ($braintreeCustomers as $braintreeCustomer) {
 				try {
-					$this->doImportUserTransactions($braintreeCustomer);
+					$this->doImportUserTransactions($braintreeCustomer, $from, $to);
 				} catch (Exception $e) {
 					ScriptsConfig::getLogger()->addError("unexpected exception while importing transactions from braintree with account_code=".$braintreeCustomer->id.", message=".$e->getMessage());
 				}
@@ -38,14 +38,14 @@ class BillingsImportBraintreeTransactions {
 	}
 	
 	
-	public function doImportUserTransactions(Braintree\Customer $braintreeCustomer) {
+	public function doImportUserTransactions(Braintree\Customer $braintreeCustomer, DateTime $from = NULL, DateTime $to = NULL) {
 		ScriptsConfig::getLogger()->addInfo("importing transactions from braintree account with account_code=".$braintreeCustomer->id."...");
 		$user = UserDAO::getUserByUserProviderUuid($this->providerid, $braintreeCustomer->id);
 		if($user == NULL) {
 			throw new Exception("user with account_code=".$braintreeCustomer->id." does not exist in billings database");
 		}
 		$transactionHandler = new TransactionsHandler();
-		$transactionHandler->doUpdateTransactionsByUser($user);
+		$transactionHandler->doUpdateTransactionsByUser($user, $from, $to);
 		ScriptsConfig::getLogger()->addInfo("importing transactions from braintree account with account_code=".$braintreeCustomer->id." done successfully");
 	}
 	

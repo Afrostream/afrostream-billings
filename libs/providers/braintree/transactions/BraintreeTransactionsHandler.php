@@ -9,7 +9,7 @@ class BraintreeTransactionsHandler {
 	public function __construct() {
 	}
 	
-	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts) {
+	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL) {
 		try {
 			config::getLogger()->addInfo("updating braintree transactions...");
 			//
@@ -18,14 +18,35 @@ class BraintreeTransactionsHandler {
 			Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
 			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
 			//
-			$braintreeChargeTransactions = Braintree\Transaction::search([
-					Braintree\TransactionSearch::customerId()->is($user->getUserProviderUuid()),
-					Braintree\TransactionSearch::type()->is(Braintree\Transaction::SALE)
-			]);
+			$search_query = [Braintree\TransactionSearch::customerId()->is($user->getUserProviderUuid())];
+			if(isset($from)) {
+				$search_query[] = Braintree\TransactionSearch::createdAt()->greaterThanOrEqualTo($from);
+			}
+			if(isset($to)) {
+				$search_query[] = Braintree\TransactionSearch::createdAt()->lessThanOrEqualTo($to);
+			}
+			$braintreeTransactions = Braintree\Transaction::search($search_query);
 			//
-			foreach ($braintreeChargeTransactions as $braintreeChargeTransaction) {
-				$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $braintreeChargeTransaction->id);
-				$this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeChargeTransaction, $billingsTransaction);
+			foreach ($braintreeTransactions as $braintreeTransaction) {
+				switch($braintreeTransaction->type) {
+					case Braintree\Transaction::SALE :
+						$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $braintreeTransaction->id);
+						$this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeTransaction, $billingsTransaction);
+						break;
+					case Braintree\Transaction::CREDIT :
+						if(isset($braintreeTransaction->refundedTransactionId)) {
+							$braintreeChargeTransaction = Braintree\Transaction::find($braintreeTransaction->refundedTransactionId);
+							$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $braintreeChargeTransaction->id);
+							$billingsTransaction = $this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeChargeTransaction, $billingsTransaction);
+							$this->updateRefundsFromProvider($user, $userOpts, $braintreeChargeTransaction, $billingsTransaction);
+						} else {
+							config::getLogger()->addWarning("Braintree credit Transaction with transaction_provider_uuid=".$braintreeTransaction->id." should be linked to a charge Transaction");
+						}
+						break;
+					default :
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown braintree transaction type : ".$braintreeTransactionType);
+						break;
+				}
 			}
 			//
 			config::getLogger()->addInfo("updating braintree transactions done successfully");
@@ -69,9 +90,10 @@ class BraintreeTransactionsHandler {
 			$billingsTransaction->setAmountInCents($braintreeChargeTransaction->amount * 100);
 			$billingsTransaction->setCurrency($braintreeChargeTransaction->currencyIsoCode);
 			$billingsTransaction->setCountry(NULL);//TODO
-			$billingsTransaction->setTransactionStatus(self::getMappedTransactionStatus($braintreeChargeTransaction->status));
-			$billingsTransaction->setTransactionType(self::getMappedTransactionType($braintreeChargeTransaction->type));
+			$billingsTransaction->setTransactionStatus(self::getMappedTransactionStatus($braintreeChargeTransaction));
+			$billingsTransaction->setTransactionType(self::getMappedTransactionType($braintreeChargeTransaction));
 			$billingsTransaction->setInvoiceProviderUuid($braintreeChargeTransaction->orderId);
+			$billingsTransaction->setMessage("provider_status=".$braintreeChargeTransaction->status);
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -86,9 +108,10 @@ class BraintreeTransactionsHandler {
 			$billingsTransaction->setAmountInCents($braintreeChargeTransaction->amount * 100);
 			$billingsTransaction->setCurrency($braintreeChargeTransaction->currencyIsoCode);
 			$billingsTransaction->setCountry(NULL);//TODO
-			$billingsTransaction->setTransactionStatus(self::getMappedTransactionStatus($braintreeChargeTransaction->status));
-			$billingsTransaction->setTransactionType(self::getMappedTransactionType($braintreeChargeTransaction->type));
+			$billingsTransaction->setTransactionStatus(self::getMappedTransactionStatus($braintreeChargeTransaction));
+			$billingsTransaction->setTransactionType(self::getMappedTransactionType($braintreeChargeTransaction));
 			$billingsTransaction->setInvoiceProviderUuid($braintreeChargeTransaction->orderId);
+			$billingsTransaction->setMessage("provider_status=".$braintreeChargeTransaction->status);
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		$this->updateRefundsFromProvider($user, $userOpts, $braintreeChargeTransaction, $billingsTransaction);
@@ -133,9 +156,10 @@ class BraintreeTransactionsHandler {
 			$billingsRefundTransaction->setAmountInCents($braintreeRefundTransaction->amount * 100);
 			$billingsRefundTransaction->setCurrency($braintreeRefundTransaction->currencyIsoCode);
 			$billingsRefundTransaction->setCountry($billingsTransaction->getCountry());//Country = Country of the Charge
-			$billingsRefundTransaction->setTransactionStatus(self::getMappedTransactionStatus($braintreeRefundTransaction->status));
-			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
+			$billingsRefundTransaction->setTransactionStatus(self::getMappedTransactionStatus($braintreeRefundTransaction));
+			$billingsRefundTransaction->setTransactionType(self::getMappedTransactionType($braintreeRefundTransaction));
 			$billingsRefundTransaction->setInvoiceProviderUuid($braintreeRefundTransaction->orderId);
+			$billingsRefundTransaction->setMessage("provider_status=".$braintreeRefundTransaction->status);
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -151,26 +175,28 @@ class BraintreeTransactionsHandler {
 			$billingsRefundTransaction->setAmountInCents($braintreeRefundTransaction->amount * 100);
 			$billingsRefundTransaction->setCurrency($braintreeRefundTransaction->currencyIsoCode);
 			$billingsRefundTransaction->setCountry($billingsTransaction->getCountry());//Country = Country of the Charge
-			$billingsRefundTransaction->setTransactionStatus(self::getMappedTransactionStatus($braintreeRefundTransaction->status));
-			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
+			$billingsRefundTransaction->setTransactionStatus(self::getMappedTransactionStatus($braintreeRefundTransaction));
+			$billingsRefundTransaction->setTransactionType(self::getMappedTransactionType($braintreeRefundTransaction));
 			$billingsRefundTransaction->setInvoiceProviderUuid($braintreeRefundTransaction->orderId);
+			$billingsRefundTransaction->setMessage("provider_status=".$braintreeRefundTransaction->status);
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from braintree refund transaction done successfully");
 		return($billingsRefundTransaction);
 	}
 	
-	private static function getMappedTransactionStatus($braintreeTransactionStatus) {
+	private static function getMappedTransactionStatus(Braintree\Transaction $braintreeTransaction) {
 		$billingTransactionStatus = NULL;
-		switch ($braintreeTransactionStatus) {
+		#See : https://developers.braintreepayments.com/reference/general/statuses#transaction
+		switch ($braintreeTransaction->status) {
+			case Braintree\Transaction::AUTHORIZED :
+				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::waiting);
+				break;
 			case Braintree\Transaction::AUTHORIZATION_EXPIRED :
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::canceled);
 				break;
-			case Braintree\Transaction::AUTHORIZING :
-				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::waiting);
-				break;
-			case Braintree\Transaction::AUTHORIZED :
-				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::waiting);
+			case Braintree\Transaction::PROCESSOR_DECLINED :
+				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::declined);
 				break;
 			case Braintree\Transaction::GATEWAY_REJECTED :
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::declined);
@@ -178,23 +204,17 @@ class BraintreeTransactionsHandler {
 			case Braintree\Transaction::FAILED :
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::failed);
 				break;
-			case Braintree\Transaction::PROCESSOR_DECLINED :
-				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::declined);
-				break;
-			case Braintree\Transaction::SETTLED :
-				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::success);
-				break;
-			case Braintree\Transaction::SETTLING :
-				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::waiting);
+			case Braintree\Transaction::VOIDED :
+				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::canceled);
 				break;
 			case Braintree\Transaction::SUBMITTED_FOR_SETTLEMENT :
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::waiting);
 				break;
-			case Braintree\Transaction::VOIDED :
-				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::canceled);
-				break;
-			case Braintree\Transaction::UNRECOGNIZED :
-				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::failed);
+			case Braintree\Transaction::SETTLING :
+				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::waiting);
+				break;				
+			case Braintree\Transaction::SETTLED :
+				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::success);
 				break;
 			case Braintree\Transaction::SETTLEMENT_DECLINED :
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::declined);
@@ -202,19 +222,21 @@ class BraintreeTransactionsHandler {
 			case Braintree\Transaction::SETTLEMENT_PENDING :
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::waiting);
 				break;
+			case Braintree\Transaction::UNRECOGNIZED :
+			case Braintree\Transaction::AUTHORIZING :
 			case Braintree\Transaction::SETTLEMENT_CONFIRMED :
-				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::success);
-				break;
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), "unexpected braintree transaction status : ".$braintreeTransaction->status);
+				break;	
 			default :
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown braintree transaction status : ".$braintreeTransactionStatus);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown braintree transaction status : ".$braintreeTransaction->status);
 				break;
 		}
 		return($billingTransactionStatus);
 	}
 	
-	private static function getMappedTransactionType($braintreeTransactionType) {
+	private static function getMappedTransactionType(Braintree\Transaction $braintreeTransaction) {
 		$billingTransactionType = NULL;
-		switch ($braintreeTransactionType) {
+		switch ($braintreeTransaction->type) {
 			case Braintree\Transaction::SALE :
 				$billingTransactionType = new BillingsTransactionType(BillingsTransactionType::purchase);
 				break;
@@ -222,7 +244,7 @@ class BraintreeTransactionsHandler {
 				$billingTransactionType = new BillingsTransactionType(BillingsTransactionType::refund);
 				break;
 			default :
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown braintree transaction type : ".$braintreeTransactionType);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown braintree transaction type : ".$braintreeTransaction->type);
 				break;				
 		}
 		return($billingTransactionType);

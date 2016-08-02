@@ -9,9 +9,19 @@ class RecurlyTransactionsHandler {
 	public function __construct() {
 	}
 	
-	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts) {
+	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL) {
 		try {
 			config::getLogger()->addInfo("updating recurly transactions...");
+			if(isset($from)) {
+				$msg = "recurly does not support date ranges for transactions, 'from' field must be NULL";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(isset($to)) {
+				$msg = "recurly does not support date ranges for transactions, 'to' field must be NULL";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			}
 			//
 			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
@@ -78,13 +88,14 @@ class RecurlyTransactionsHandler {
 			$billingsTransaction->setAmountInCents($recurlyTransaction->amount_in_cents);
 			$billingsTransaction->setCurrency($recurlyTransaction->currency);
 			$billingsTransaction->setCountry($country);
-			$billingsTransaction->setTransactionStatus(self::getMappedTransactionStatus($recurlyTransaction->status));
-			$billingsTransaction->setTransactionType(self::getMappedTransactionType($recurlyTransaction->action));
+			$billingsTransaction->setTransactionStatus(self::getMappedTransactionStatus($recurlyTransaction));
+			$billingsTransaction->setTransactionType(self::getMappedTransactionType($recurlyTransaction));
 			if(isset($recurlyTransaction->invoice)) {
 				$billingsTransaction->setInvoiceProviderUuid($recurlyTransaction->invoice->get()->uuid);
 			} else {
 				$billingsTransaction->setInvoiceProviderUuid(NULL);
 			}
+			$billingsTransaction->setMessage("provider_status=".$recurlyTransaction->status);
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -99,22 +110,23 @@ class RecurlyTransactionsHandler {
 			$billingsTransaction->setAmountInCents($recurlyTransaction->amount_in_cents);
 			$billingsTransaction->setCurrency($recurlyTransaction->currency);
 			$billingsTransaction->setCountry($country);
-			$billingsTransaction->setTransactionStatus(self::getMappedTransactionStatus($recurlyTransaction->status));
-			$billingsTransaction->setTransactionType(self::getMappedTransactionType($recurlyTransaction->action));
+			$billingsTransaction->setTransactionStatus(self::getMappedTransactionStatus($recurlyTransaction));
+			$billingsTransaction->setTransactionType(self::getMappedTransactionType($recurlyTransaction));
 			if(isset($recurlyTransaction->invoice)) {
 				$billingsTransaction->setInvoiceProviderUuid($recurlyTransaction->invoice->get()->uuid);
 			} else {
 				$billingsTransaction->setInvoiceProviderUuid(NULL);
 			}
+			$billingsTransaction->setMessage("provider_status=".$recurlyTransaction->status);
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating transactions from recurly transactions done successfully");
 		return($billingsTransaction);
 	}
 	
-	private static function getMappedTransactionStatus($recurlyTransactionStatus) {
+	private static function getMappedTransactionStatus(Recurly_Transaction $recurlyTransaction) {
 		$billingTransactionStatus = NULL;
-		switch ($recurlyTransactionStatus) {
+		switch ($recurlyTransaction->status) {
 			case 'success' :
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::success);
 				break;
@@ -125,15 +137,15 @@ class RecurlyTransactionsHandler {
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::void);
 				break;
 			default :
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown recurly transaction status : ".$recurlyTransactionStatus);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown recurly transaction status : ".$recurlyTransaction->status);
 				break;
 		}
 		return($billingTransactionStatus);
 	}
 	
-	private static function getMappedTransactionType($recurlyTransactionType) {
+	private static function getMappedTransactionType(Recurly_Transaction $recurlyTransaction) {
 		$billingTransactionType = NULL;
-		switch ($recurlyTransactionType) {
+		switch ($recurlyTransaction->action) {
 			case 'purchase' :
 				$billingTransactionType = new BillingsTransactionType(BillingsTransactionType::purchase);
 				break;
@@ -144,7 +156,7 @@ class RecurlyTransactionsHandler {
 				$billingTransactionType = new BillingsTransactionType(BillingsTransactionType::verify);
 				break;
 			default :
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown recurly transaction type : ".$recurlyTransactionType);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown recurly transaction type : ".$recurlyTransaction->action);
 				break;				
 		}
 		return($billingTransactionType);

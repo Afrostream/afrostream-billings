@@ -13,7 +13,7 @@ class GocardlessTransactionsHandler {
 	public function __construct() {
 	}
 	
-	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts) {
+	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL) {
 		try {
 			config::getLogger()->addInfo("updating gocardless transactions...");
 			//
@@ -24,15 +24,19 @@ class GocardlessTransactionsHandler {
 			//
 			$customer = $client->customers()->get($user->getUserProviderUuid());
 			//
-			$paginator = $client->payments()->all(
-					['params' =>
-							[
-									'customer' => $customer->id
-							]
-					]);
+			$params = array();
+			$params['customer'] = $customer->id;
+			if(isset($from)) {
+				$params['created_at[gte]'] = $from->format('Y-m-d\TH:i:s\Z');
+			}
+			if(isset($to)) {
+				$params['created_at[lte]'] = $to->format('Y-m-d\TH:i:s\Z');
+			}
+			//CHARGES
+			$payments_paginator = $client->payments()->all(['params' => $params]);
 			//
 			$country = $customer->country_code;
-			foreach($paginator as $payment_entry) {
+			foreach($payments_paginator as $payment_entry) {
 				$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $payment_entry->id);
 				$this->createOrUpdateChargeFromProvider($user, $userOpts, $payment_entry, $billingsTransaction, $country);
 			}
@@ -91,6 +95,7 @@ class GocardlessTransactionsHandler {
 			$billingsTransaction->setTransactionStatus(self::getChargeMappedTransactionStatus($gocardlessChargeTransaction));
 			$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
 			$billingsTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
+			$billingsTransaction->setMessage("provider_status=".$gocardlessChargeTransaction->status);
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -109,6 +114,7 @@ class GocardlessTransactionsHandler {
 			$billingsTransaction->setTransactionStatus(self::getChargeMappedTransactionStatus($gocardlessChargeTransaction));
 			$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
 			$billingsTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
+			$billingsTransaction->setMessage("provider_status=".$gocardlessChargeTransaction->status);
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		$this->updateRefundsFromProvider($user, $userOpts, $gocardlessChargeTransaction, $billingsTransaction);
@@ -155,6 +161,7 @@ class GocardlessTransactionsHandler {
 			$billingsRefundTransaction->setTransactionStatus(self::getRefundMappedTransactionStatus($gocardlessRefundTransaction));
 			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
+			$billingsRefundTransaction->setMessage("provider_status=".$gocardlessRefundTransaction->status);
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -173,6 +180,7 @@ class GocardlessTransactionsHandler {
 			$billingsRefundTransaction->setTransactionStatus(self::getRefundMappedTransactionStatus($gocardlessRefundTransaction));
 			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
+			$billingsRefundTransaction->setMessage("provider_status=".$gocardlessRefundTransaction->status);
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from gocardless refund transaction done successfully");

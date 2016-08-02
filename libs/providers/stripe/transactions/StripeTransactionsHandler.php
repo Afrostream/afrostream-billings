@@ -14,18 +14,25 @@ class StripeTransactionsHandler {
 		$this->provider = ProviderDAO::getProviderByName('stripe');
 	}
 	
-	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts) {
+	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL) {
 		try {
 			config::getLogger()->addInfo("updating stripe transactions...");
 			//CHARGES
-			$params = ['customer' => $user->getUserProviderUuid()];
-			$options = ['limit' => self::STRIPE_LIMIT];
+			$paramsCharges = array();
+			$paramsCharges['limit'] = self::STRIPE_LIMIT;
+			$paramsCharges = ['customer' => $user->getUserProviderUuid()];
+			if(isset($from)) {
+				$paramsCharges['created']['gte'] = $from->getTimestamp();
+			}
+			if(isset($to)) {
+				$paramsCharges['created']['lte'] = $to->getTimestamp();
+			}
 			$hasMoreCharges = true;
 			while ($hasMoreCharges) {
 				if (isset($offsetCharges)) {
-					$options['starting_after'] = $offsetCharges;
+					$options['starting_after'] = $offsetCharges->id;
 				}
-				$stripeChargeTransactionsResponse = \Stripe\Charge::all($params, $options);
+				$stripeChargeTransactionsResponse = \Stripe\Charge::all($paramsCharges);
 				$hasMoreCharges = $stripeChargeTransactionsResponse['has_more'];
 				$stripeChargeTransactions = $stripeChargeTransactionsResponse['data'];
 				$offsetCharges = end($stripeChargeTransactions);
@@ -61,14 +68,19 @@ class StripeTransactionsHandler {
 	
 	private static function getChargeMappedTransactionStatus(\Stripe\Charge $stripeChargeTransaction) {
 		$billingTransactionStatus = NULL;
-		if($stripeChargeTransaction->paid) {
-			if($stripeChargeTransaction->captured) {
+		switch ($stripeChargeTransaction->status) {
+			case 'succeeded' :
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::success);
-			} else {
+				break;
+			case 'pending' :
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::waiting);
-			}
-		} else {
-			$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::declined);
+				break;
+			case 'failed' :
+				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::failed);
+				break;
+			default :
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown stripe charge transaction status : ".$stripeChargeTransaction->status);
+				break;
 		}
 		return($billingTransactionStatus);
 	}
@@ -89,7 +101,7 @@ class StripeTransactionsHandler {
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::canceled);
 				break;
 			default :
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown stripe refund transaction type : ".$stripeRefundTransaction->status);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown stripe refund transaction status : ".$stripeRefundTransaction->status);
 				break;
 		}
 		return($billingTransactionStatus);
@@ -107,71 +119,80 @@ class StripeTransactionsHandler {
 		 	$afrOrigin = $metadata['AfrOrigin'];
 		}
 		$searchForSubId = false;
-		switch($afrOrigin) {
-			case 'subscription' :
-				if(array_key_exists('AfrSubscriptionBillingUuid', $metadata)) {
-					$subscription_billing_uuid = $metadata['AfrSubscriptionBillingUuid'];
-					$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscription_billing_uuid);
-					if($subscription == NULL) {
-						$msg = "todo : subscription IS NULL";
-						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
-					}
-					$subId = $subscription->getId();
-				} else {
-					$msg = "todo : AfrSubscriptionBillingUuid NOT FOUND";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				if($userId == NULL) {
-					if(array_key_exists('AfrUserBillingUuid', $metadata)) {
-						$user_billing_uuid = $metadata['AfrUserBillingUuid'];
-						$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
-						if($user == NULL) {
-							$msg = "todo : user IS NULL";
+		if(isset($afrOrigin)) {
+			switch($afrOrigin) {
+				case 'subscription' :
+					if(array_key_exists('AfrSubscriptionBillingUuid', $metadata)) {
+						$subscription_billing_uuid = $metadata['AfrSubscriptionBillingUuid'];
+						$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscription_billing_uuid);
+						if($subscription == NULL) {
+							$msg = "AfrSubscriptionBillingUuid=".$subscription_billing_uuid." in metadata cannot be found";
 							config::getLogger()->addError($msg);
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
 						}
-						$userId = $user->getId();
-					}
-				}
-				break;
-			case 'coupon' :
-				if(array_key_exists('AfrCouponBillingUuid', $metadata)) {
-					$coupon_billing_uuid = $metadata['AfrCouponBillingUuid'];
-					$coupon = CouponDAO::getCouponByCouponBillingUuid($coupon_billing_uuid);
-					if($coupon == NULL) {
-						$msg = "todo : coupon IS NULL";
+						$subId = $subscription->getId();
+					} else {
+						$msg = "'AfrSubscriptionBillingUuid' field is missing in metadata";
 						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
-					$couponId = $coupon->getId();
-				} else {
-					$msg = "todo : AfrCouponBillingUuid NOT FOUND";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				if($userId == NULL) {
-					if(array_key_exists('AfrUserBillingUuid', $metadata)) {
-						$user_billing_uuid = $metadata['AfrUserBillingUuid'];
-						$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
-						if($user == NULL) {
-							$msg = "todo : user IS NULL";
+					if($userId == NULL) {
+						if(array_key_exists('AfrUserBillingUuid', $metadata)) {
+							$user_billing_uuid = $metadata['AfrUserBillingUuid'];
+							$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
+							if($user == NULL) {
+								$msg = "AfrUserBillingUuid=".$user_billing_uuid." in metadata cannot be found";
+								config::getLogger()->addError($msg);
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
+							}
+							$userId = $user->getId();
+						} else {
+							$msg = "'AfrUserBillingUuid' field is missing in metadata";
 							config::getLogger()->addError($msg);
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						}
-						$userId = $user->getId();
 					}
-				}
-				break;
-			case NULL :
-				$searchForSubId = true;
-				break;
-			default :
-				$msg = "afrOrigin unknown value : ".$afrOrigin;
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
+					break;
+				case 'coupon' :
+					if(array_key_exists('AfrCouponBillingUuid', $metadata)) {
+						$coupon_billing_uuid = $metadata['AfrCouponBillingUuid'];
+						$coupon = CouponDAO::getCouponByCouponBillingUuid($coupon_billing_uuid);
+						if($coupon == NULL) {
+							$msg = "AfrCouponBillingUuid=".$coupon_billing_uuid." in metadata cannot be found";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
+						}
+						$couponId = $coupon->getId();
+					} else {
+						$msg = "'AfrCouponBillingUuid' field is missing in metadata";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					if($userId == NULL) {
+						if(array_key_exists('AfrUserBillingUuid', $metadata)) {
+							$user_billing_uuid = $metadata['AfrUserBillingUuid'];
+							$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
+							if($user == NULL) {
+								$msg = "AfrUserBillingUuid=".$user_billing_uuid." in metadata cannot be found";
+								config::getLogger()->addError($msg);
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							}
+							$userId = $user->getId();
+						} else {
+							$msg = "'AfrUserBillingUuid' field is missing in metadata";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						}
+					}
+					break;
+				default :
+					$msg = "afrOrigin unknown value : ".$afrOrigin;
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
+		} else {
+			$searchForSubId = true;
 		}
 		if($searchForSubId) {
 			if(isset($stripeChargeTransaction->invoice)) {
@@ -185,7 +206,15 @@ class StripeTransactionsHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					$subId = $subscription->getId();
+				} else {
+					$msg = "no subscription linked to the invoice";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);					
 				}
+			} else {
+				$msg = "no invoice linked to the transaction, so subscription cannot be found";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
 			}
 			//should not happen
 			if($userId == NULL) {
@@ -223,6 +252,7 @@ class StripeTransactionsHandler {
 			} else {
 				$billingsTransaction->setInvoiceProviderUuid(NULL);
 			}
+			$billingsTransaction->setMessage("provider_status=".$stripeChargeTransaction->status);
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -245,6 +275,7 @@ class StripeTransactionsHandler {
 			} else {
 				$billingsTransaction->setInvoiceProviderUuid(NULL);
 			}
+			$billingsTransaction->setMessage("provider_status=".$stripeChargeTransaction->status);
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		$this->updateRefundsFromProvider($user, $userOpts, $stripeChargeTransaction, $billingsTransaction);
@@ -253,14 +284,15 @@ class StripeTransactionsHandler {
 	}
 	
 	private function updateRefundsFromProvider(User $user = NULL, UserOpts $userOpts = NULL, \Stripe\Charge $stripeChargeTransaction, BillingsTransaction $billingsTransaction) {
-		$params = ['charge' => $stripeChargeTransaction->id];
-		$options = ['limit' => self::STRIPE_LIMIT];
+		$params = array();
+		$params['charge'] = $stripeChargeTransaction->id;
+		$params['limit'] = self::STRIPE_LIMIT;
 		$hasMoreRefunds = true;
 		while ($hasMoreRefunds) {
 			if (isset($offsetRefunds)) {
-				$options['starting_after'] = $offsetRefunds;
+				$params['starting_after'] = $offsetRefunds->id;
 			}
-			$stripeRefundTransactionsResponse = \Stripe\Refund::all($params, $options);
+			$stripeRefundTransactionsResponse = \Stripe\Refund::all($params);
 			$hasMoreRefunds = $stripeRefundTransactionsResponse['has_more'];
 			$stripeRefundTransactions = $stripeRefundTransactionsResponse['data'];
 			$offsetRefunds = end($stripeRefundTransactions);
@@ -293,6 +325,7 @@ class StripeTransactionsHandler {
 			$billingsRefundTransaction->setTransactionStatus(self::getRefundMappedTransactionStatus($stripeRefundTransaction));
 			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
 			$billingsRefundTransaction->setInvoiceProviderUuid($billingsTransaction->getInvoiceProviderUuid());
+			$billingsRefundTransaction->setMessage("provider_status=".$stripeRefundTransaction->status);
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -311,6 +344,7 @@ class StripeTransactionsHandler {
 			$billingsRefundTransaction->setTransactionStatus(self::getRefundMappedTransactionStatus($stripeRefundTransaction));
 			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
 			$billingsRefundTransaction->setInvoiceProviderUuid($billingsTransaction->getInvoiceProviderUuid());
+			$billingsRefundTransaction->setMessage("provider_status=".$stripeRefundTransaction->status);
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from stripe refund transaction done successfully");

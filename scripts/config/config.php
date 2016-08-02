@@ -74,6 +74,8 @@ if(getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE' === false)) {
 #logger, #db_conn, ...
 
 class ScriptsConfig {
+	
+	public static $timezone = "Europe/Paris";
 
 	private static $logger;
 

@@ -17,7 +17,7 @@ class BillingsImportGocardlessTransactions {
 		$this->providerid = ProviderDAO::getProviderByName('gocardless')->getId();
 	}
 	
-	public function doImportTransactions() {
+	public function doImportTransactions(DateTime $from = NULL, DateTime $to = NULL) {
 		try {
 			ScriptsConfig::getLogger()->addInfo("importing transactions from gocardless...");
 			//
@@ -34,7 +34,7 @@ class BillingsImportGocardlessTransactions {
 			//
 			foreach ($paginator as $customer_entry) {
 				try {
-					$this->doImportUserTransactions($customer_entry);
+					$this->doImportUserTransactions($customer_entry, $from, $to);
 				} catch (Exception $e) {
 					ScriptsConfig::getLogger()->addError("unexpected exception while importing transactions from gocardless with account_code=".$customer_entry->id.", message=".$e->getMessage());
 				}
@@ -46,16 +46,17 @@ class BillingsImportGocardlessTransactions {
 	}
 	
 	
-	public function doImportUserTransactions(Customer $gocardlessCustomer) {
+	public function doImportUserTransactions(Customer $gocardlessCustomer, DateTime $from = NULL, DateTime $to = NULL) {
 		ScriptsConfig::getLogger()->addInfo("importing transactions from gocardless account with account_code=".$gocardlessCustomer->id."...");
 		$user = UserDAO::getUserByUserProviderUuid($this->providerid, $gocardlessCustomer->id);
 		if($user == NULL) {
 			throw new Exception("user with account_code=".$gocardlessCustomer->id." does not exist in billings database");
 		}
 		$transactionHandler = new TransactionsHandler();
-		$transactionHandler->doUpdateTransactionsByUser($user);
+		$transactionHandler->doUpdateTransactionsByUser($user, $from, $to);
 		ScriptsConfig::getLogger()->addInfo("importing transactions from gocardless account with account_code=".$gocardlessCustomer->id." done successfully");
-	}	
+	}
+	
 }
 
 ?>

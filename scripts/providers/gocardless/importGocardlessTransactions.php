@@ -18,6 +18,30 @@ foreach ($argv as $arg) {
 			$_GET[$e[0]]=0;
 }
 
+$dateFormat = "Ymd";
+
+$from = NULL;
+$fromStr = NULL;
+
+if(isset($_GET["-from"])) {
+	$fromStr = $_GET["-from"];
+	$from = DateTime::createFromFormat($dateFormat, $fromStr);
+	$from->setTimezone(new DateTimeZone(ScriptsConfig::$timezone));
+}
+
+print_r("using from=".$fromStr."\n");
+
+$to = NULL;
+$toStr = NULL;
+
+if(isset($_GET["-to"])) {
+	$toStr = $_GET["-to"];
+	$to = DateTime::createFromFormat($dateFormat, $toStr);
+	$to->setTimezone(new DateTimeZone(ScriptsConfig::$timezone));
+}
+
+print_r("using to=".$toStr."\n");
+
 $firstId = NULL;
 
 if(isset($_GET["-firstId"])) {
@@ -54,7 +78,7 @@ print_r("processing...\n");
 
 $billingsImportGocardlessTransactions = new BillingsImportGocardlessTransactions();
 
-$billingsImportGocardlessTransactions->doImportTransactions();
+$billingsImportGocardlessTransactions->doImportTransactions($from, $to);
 
 print_r("processing done\n");
 

@@ -13,7 +13,7 @@ class TransactionsHandler {
 	public function __construct() {
 	}
 	
-	public function doUpdateTransactionsByUser(User $user) {
+	public function doUpdateTransactionsByUser(User $user, DateTime $from = NULL, DateTime $to = NULL) {
 		try {
 			config::getLogger()->addInfo("transactions updating for userid=".$user->getId()."...");
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
@@ -28,19 +28,19 @@ class TransactionsHandler {
 			switch($provider->getName()) {
 				case 'recurly' :
 					$transactionsHandler = new RecurlyTransactionsHandler();
-					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts);
+					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts, $from, $to);
 					break;
 				case 'gocardless' :
 					$transactionsHandler = new GocardlessTransactionsHandler();
-					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts);
+					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts, $from, $to);
 					break;
 				case 'stripe' :
 					$transactionsHandler = new StripeTransactionsHandler();
-					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts);
+					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts, $from, $to);
 					break;
 				case 'braintree' :
 					$transactionsHandler = new BraintreeTransactionsHandler();
-					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts);
+					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts, $from, $to);
 					break;
 				default:
 					//nothing to do (unknown)
