@@ -1,6 +1,7 @@
 <?php
 
 use GoCardlessPro\Client;
+use GoCardlessPro\Resources\Customer;
 use GoCardlessPro\Resources\Payment;
 use GoCardlessPro\Resources\Refund;
 
@@ -35,10 +36,8 @@ class GocardlessTransactionsHandler {
 			//CHARGES
 			$payments_paginator = $client->payments()->all(['params' => $params]);
 			//
-			$country = $customer->country_code;
 			foreach($payments_paginator as $payment_entry) {
-				$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $payment_entry->id);
-				$this->createOrUpdateChargeFromProvider($user, $userOpts, $payment_entry, $billingsTransaction, $country);
+				$this->createOrUpdateChargeFromProvider($user, $userOpts, $customer, $payment_entry);
 			}
 			//
 			config::getLogger()->addInfo("updating gocardless transactions done successfully");
@@ -53,8 +52,10 @@ class GocardlessTransactionsHandler {
 		}
 	}
 	
-	private function createOrUpdateChargeFromProvider(User $user, UserOpts $userOpts, Payment $gocardlessChargeTransaction, BillingsTransaction $billingsTransaction = NULL, $country = NULL) {
+	public function createOrUpdateChargeFromProvider(User $user, UserOpts $userOpts, Customer $gocardlessCustomer, Payment $gocardlessChargeTransaction) {
 		config::getLogger()->addInfo("creating/updating charge transaction from gocardless charge transaction...");
+		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $gocardlessChargeTransaction->id);
+		$country = $gocardlessCustomer->country_code;
 		if($country == NULL) {
 			$client = new Client(array(
 					'access_token' => getEnv('GOCARDLESS_API_KEY'),

@@ -30,13 +30,8 @@ class RecurlyTransactionsHandler {
 			//
 			$recurlyTransactions = Recurly_TransactionList::getForAccount($user->getUserProviderUuid());
 			//
-			$country = NULL;
-			if(isset($recurlyAccount->billing_info)) {
-				$country = $recurlyAccount->billing_info->get()->country;
-			}
 			foreach ($recurlyTransactions as $recurlyTransaction) {
-				$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $recurlyTransaction->uuid);
-				$this->createOrUpdateFromProvider($user, $userOpts, $recurlyTransaction, $billingsTransaction, $country);
+				$this->createOrUpdateFromProvider($user, $userOpts, $recurlyAccount, $recurlyTransaction);
 			}
 			//
 			config::getLogger()->addInfo("updating recurly transactions done successfully");
@@ -59,8 +54,13 @@ class RecurlyTransactionsHandler {
 		}
 	}
 	
-	public function createOrUpdateFromProvider(User $user, UserOpts $userOpts, Recurly_Transaction $recurlyTransaction, BillingsTransaction $billingsTransaction = NULL, $country = NULL) {
+	public function createOrUpdateFromProvider(User $user, UserOpts $userOpts, Recurly_Account $recurlyAccount, Recurly_Transaction $recurlyTransaction) {
 		config::getLogger()->addInfo("creating/updating transactions from recurly transactions...");
+		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $recurlyTransaction->uuid);
+		$country = NULL;
+		if(isset($recurlyAccount->billing_info)) {
+			$country = $recurlyAccount->billing_info->get()->country;
+		}
 		$subId = NULL;
 		if($recurlyTransaction->source == 'subscription') {
 			$subscription_provider_uuid = $recurlyTransaction->subscription->get()->uuid;
