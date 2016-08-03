@@ -110,7 +110,7 @@ class StripeTransactionsHandler {
 	
 	private function createOrUpdateChargeFromProvider(User $user = NULL, UserOpts $userOpts = NULL, \Stripe\Customer $stripeCustomer = NULL, \Stripe\Charge $stripeChargeTransaction) {
 		config::getLogger()->addInfo("creating/updating charge transaction from stripe charge transaction...");
-		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $stripeChargeTransaction->id);
+		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $stripeChargeTransaction->id);
 		$userId = ($user == NULL ? NULL : $user->getId());
 		$subId = NULL;
 		$couponId = NULL;
