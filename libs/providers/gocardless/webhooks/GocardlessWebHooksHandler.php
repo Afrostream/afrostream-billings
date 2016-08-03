@@ -240,6 +240,28 @@ class GocardlessWebHooksHandler {
 	}
 	
 	private function doProcessPayment(array $notification_as_array, $update_type, $updateId) {
+		$exception = NULL;
+		try {
+			$this->doProcessPaymentForCheckingValidity($notification_as_array, $update_type, $updateId);
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while processing payment for checking validity, message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			if($exception == NULL) { $exception = $e; }
+		}
+		try {
+			$this->doProcessPaymentForBackup($notification_as_array, $update_type, $updateId);
+		} catch(Exception $e)
+		{
+			$msg = "an unknown exception occurred while processing payment for backup, message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			if($exception == NULL) { $exception = $e; }
+		}
+		if(isset($exception)) {
+			throw $exception;
+		}
+	}
+	
+	private function doProcessPaymentForCheckingValidity(array $notification_as_array, $update_type, $updateId) {
 		switch($notification_as_array['action']) {
 			case 'cancelled' :
 			case 'failed' :
@@ -297,32 +319,27 @@ class GocardlessWebHooksHandler {
 		}
 	}
 	
-	private function doProcessRefund(array $notification_as_array, $update_type, $updateId) {
-		config::getLogger()->addInfo('Processing gocardless hook refund, action='.$notification_as_array['action'].'...');
+	private function doProcessPaymentForBackup(array $notification_as_array, $update_type, $updateId) {
+		config::getLogger()->addInfo('Processing gocardless hook payment for backup, action='.$notification_as_array['action'].'...');
 		//
 		$client = new Client(array(
 				'access_token' => getEnv('GOCARDLESS_API_KEY'),
 				'environment' => getEnv('GOCARDLESS_API_ENV')
 		));
 		//
-		$refund_provider_uuid = $notification_as_array['links']['refund'];
-		config::getLogger()->addInfo('Processing gocardless hook refund, refund_provider_uuid='.refund_provider_uuid);
-		$api_refund = NULL;
+		$payment_provider_uuid = $notification_as_array['links']['payment'];
+		config::getLogger()->addInfo('Processing gocardless hook payment for backup, payment_provider_uuid='.payment_provider_uuid);
 		$api_payment = NULL;
 		$api_customer = NULL;
 		try {
 			//
-			config::getLogger()->addInfo('Processing gocardless hook refund, getting api_refund...');
-			$api_refund = $client->refunds()->get($refund_provider_uuid);
-			config::getLogger()->addInfo('Processing gocardless hook refund, getting api_refund done successfully');			
+			config::getLogger()->addInfo('Processing gocardless hook payment for backup, getting api_payment...');
+			$api_payment = $client->payments()->get($payment_provider_uuid);
+			config::getLogger()->addInfo('Processing gocardless hook payment for backup, getting api_payment done successfully');
 			//
-			config::getLogger()->addInfo('Processing gocardless hook refund, getting api_payment...');
-			$api_payment = $client->payments()->get($api_refund->links->payment);
-			config::getLogger()->addInfo('Processing gocardless hook refund, getting api_payment done successfully');
-			//
-			config::getLogger()->addInfo('Processing gocardless hook refund, getting api_customer...');
+			config::getLogger()->addInfo('Processing gocardless hook payment for backup, getting api_customer...');
 			$api_customer = $client->customers()->get($api_payment->links->customer);
-			config::getLogger()->addInfo('Processing gocardless hook refund, getting api_customer done successfully');			
+			config::getLogger()->addInfo('Processing gocardless hook payment for backup, getting api_customer done successfully');
 		} catch (GoCardlessProException $e) {
 			$msg = "a GoCardlessProException occurred while getting gocardless informations from api, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("getting gocardless informations failed : ".$msg);
@@ -339,16 +356,74 @@ class GocardlessWebHooksHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$user = UserDAO::getUserByUserProviderUuid($provider->getId(), $customer_provider_uuid);
+		$user = UserDAO::getUserByUserProviderUuid($provider->getId(), $api_customer->id);
 		if($user == NULL) {
-			$msg = 'searching user with customer_provider_uuid='.$customer_provider_uuid.' failed, no user found';
+			$msg = 'searching user with customer_provider_uuid='.$api_customer->id.' failed, no user found';
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler();
 		$gocardlessTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment);
-		config::getLogger()->addInfo('Processing gocardless hook refund, action='.$notification_as_array['action'].' done successfully');
+		config::getLogger()->addInfo('Processing gocardless hook payment for backup, action='.$notification_as_array['action'].' done successfully');
+	}
+	
+	private function doProcessRefund(array $notification_as_array, $update_type, $updateId) {
+		$this->doProcessRefundForBackup($notification_as_array, $update_type, $updateId);
+	}
+	
+	private function doProcessRefundForBackup(array $notification_as_array, $update_type, $updateId) {
+		config::getLogger()->addInfo('Processing gocardless hook refund for backup, action='.$notification_as_array['action'].'...');
+		//
+		$client = new Client(array(
+				'access_token' => getEnv('GOCARDLESS_API_KEY'),
+				'environment' => getEnv('GOCARDLESS_API_ENV')
+		));
+		//
+		$refund_provider_uuid = $notification_as_array['links']['refund'];
+		config::getLogger()->addInfo('Processing gocardless hook refund for backup, refund_provider_uuid='.refund_provider_uuid);
+		$api_refund = NULL;
+		$api_payment = NULL;
+		$api_customer = NULL;
+		try {
+			//
+			config::getLogger()->addInfo('Processing gocardless hook refund for backup, getting api_refund...');
+			$api_refund = $client->refunds()->get($refund_provider_uuid);
+			config::getLogger()->addInfo('Processing gocardless hook refund for backup, getting api_refund done successfully');			
+			//
+			config::getLogger()->addInfo('Processing gocardless hook refund for backup, getting api_payment...');
+			$api_payment = $client->payments()->get($api_refund->links->payment);
+			config::getLogger()->addInfo('Processing gocardless hook refund for backup, getting api_payment done successfully');
+			//
+			config::getLogger()->addInfo('Processing gocardless hook refund for backup, getting api_customer...');
+			$api_customer = $client->customers()->get($api_payment->links->customer);
+			config::getLogger()->addInfo('Processing gocardless hook refund for backup, getting api_customer done successfully');			
+		} catch (GoCardlessProException $e) {
+			$msg = "a GoCardlessProException occurred while getting gocardless informations from api, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("getting gocardless informations failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
+		} catch (Exception $e) {
+			$msg = "an unknown exception occurred while getting gocardless informations from api, message=".$e->getMessage();
+			config::getLogger()->addError("getting gocardless informations failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
+		}
+		//provider
+		$provider = ProviderDAO::getProviderByName('gocardless');
+		if($provider == NULL) {
+			$msg = "provider named 'gocardless' not found";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$user = UserDAO::getUserByUserProviderUuid($provider->getId(), $api_customer->id);
+		if($user == NULL) {
+			$msg = 'searching user with customer_provider_uuid='.$api_customer->id.' failed, no user found';
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler();
+		$gocardlessTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment);
+		config::getLogger()->addInfo('Processing gocardless hook refund for backup, action='.$notification_as_array['action'].' done successfully');
 	}
 	
 }
