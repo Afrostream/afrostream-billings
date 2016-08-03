@@ -330,6 +330,8 @@ class GocardlessWebHooksHandler {
 		$payment_provider_uuid = $notification_as_array['links']['payment'];
 		config::getLogger()->addInfo('Processing gocardless hook payment for backup, payment_provider_uuid='.payment_provider_uuid);
 		$api_payment = NULL;
+		$api_mandate = NULL;
+		$api_customer_bank_account = NULL;
 		$api_customer = NULL;
 		try {
 			//
@@ -337,8 +339,16 @@ class GocardlessWebHooksHandler {
 			$api_payment = $client->payments()->get($payment_provider_uuid);
 			config::getLogger()->addInfo('Processing gocardless hook payment for backup, getting api_payment done successfully');
 			//
+			config::getLogger()->addInfo('Processing gocardless hook payment for backup, getting api_mandate...');
+			$api_mandate = $client->mandates()->get($api_payment->links->mandate);
+			config::getLogger()->addInfo('Processing gocardless hook payment for backup, getting api_mandate done successfully');
+			//
+			config::getLogger()->addInfo('Processing gocardless hook payment for backup, getting api_customer_bank_account...');
+			$api_customer_bank_account = $client->customerBankAccounts()->get($api_mandate->links->customer_bank_account);
+			config::getLogger()->addInfo('Processing gocardless hook payment for backup, getting api_customer_bank_account done successfully');
+			//
 			config::getLogger()->addInfo('Processing gocardless hook payment for backup, getting api_customer...');
-			$api_customer = $client->customers()->get($api_payment->links->customer);
+			$api_customer = $client->customers()->get($api_customer_bank_account->links->customer);
 			config::getLogger()->addInfo('Processing gocardless hook payment for backup, getting api_customer done successfully');
 		} catch (GoCardlessProException $e) {
 			$msg = "a GoCardlessProException occurred while getting gocardless informations from api, error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -384,6 +394,8 @@ class GocardlessWebHooksHandler {
 		config::getLogger()->addInfo('Processing gocardless hook refund for backup, refund_provider_uuid='.refund_provider_uuid);
 		$api_refund = NULL;
 		$api_payment = NULL;
+		$api_mandate = NULL;
+		$api_customer_bank_account = NULL;
 		$api_customer = NULL;
 		try {
 			//
@@ -395,8 +407,16 @@ class GocardlessWebHooksHandler {
 			$api_payment = $client->payments()->get($api_refund->links->payment);
 			config::getLogger()->addInfo('Processing gocardless hook refund for backup, getting api_payment done successfully');
 			//
+			config::getLogger()->addInfo('Processing gocardless hook refund for backup, getting api_mandate...');
+			$api_mandate = $client->mandates()->get($api_payment->links->mandate);
+			config::getLogger()->addInfo('Processing gocardless hook refund for backup, getting api_mandate done successfully');
+			//
+			config::getLogger()->addInfo('Processing gocardless hook refund for backup, getting api_customer_bank_account...');
+			$api_customer_bank_account = $client->customerBankAccounts()->get($api_mandate->links->customer_bank_account);
+			config::getLogger()->addInfo('Processing gocardless hook refund for backup, getting api_customer_bank_account done successfully');
+			//
 			config::getLogger()->addInfo('Processing gocardless hook refund for backup, getting api_customer...');
-			$api_customer = $client->customers()->get($api_payment->links->customer);
+			$api_customer = $client->customers()->get($api_customer_bank_account->links->customer);
 			config::getLogger()->addInfo('Processing gocardless hook refund for backup, getting api_customer done successfully');			
 		} catch (GoCardlessProException $e) {
 			$msg = "a GoCardlessProException occurred while getting gocardless informations from api, error_code=".$e->getCode().", error_message=".$e->getMessage();
