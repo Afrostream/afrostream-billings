@@ -17,6 +17,7 @@ class StripeTransactionsHandler {
 	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL) {
 		try {
 			config::getLogger()->addInfo("updating stripe transactions...");
+			$stripeCustomer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
 			//CHARGES
 			$paramsCharges = array();
 			$paramsCharges['limit'] = self::STRIPE_LIMIT;
@@ -46,8 +47,7 @@ class StripeTransactionsHandler {
 					}
 					$hasToBeProcessed = !$isRecurlyTransaction;
 					if($hasToBeProcessed) {
-						$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $stripeChargeTransaction->id);
-						$this->createOrUpdateChargeFromProvider($user, $userOpts, $stripeChargeTransaction, $billingsTransaction);
+						$this->createOrUpdateChargeFromProvider($user, $userOpts, $stripeCustomer, $stripeChargeTransaction);
 					} else {
 						config::getLogger()->addInfo("stripe charge transaction =".$stripeChargeTransaction->id." is ignored");
 					}
@@ -108,8 +108,9 @@ class StripeTransactionsHandler {
 	}
 	
 	
-	private function createOrUpdateChargeFromProvider(User $user = NULL, UserOpts $userOpts = NULL, \Stripe\Charge $stripeChargeTransaction, BillingsTransaction $billingsTransaction = NULL) {
+	private function createOrUpdateChargeFromProvider(User $user = NULL, UserOpts $userOpts = NULL, \Stripe\Customer $stripeCustomer = NULL, \Stripe\Charge $stripeChargeTransaction) {
 		config::getLogger()->addInfo("creating/updating charge transaction from stripe charge transaction...");
+		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $stripeChargeTransaction->id);
 		$userId = ($user == NULL ? NULL : $user->getId());
 		$subId = NULL;
 		$couponId = NULL;

@@ -27,24 +27,21 @@ class BraintreeTransactionsHandler {
 			}
 			$braintreeTransactions = Braintree\Transaction::search($search_query);
 			//
-			foreach ($braintreeTransactions as $braintreeTransaction) {
-				switch($braintreeTransaction->type) {
+			foreach ($braintreeTransactions as $braintreeCurrentTransaction) {
+				switch($braintreeCurrentTransaction->type) {
 					case Braintree\Transaction::SALE :
-						$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $braintreeTransaction->id);
-						$this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeTransaction, $billingsTransaction);
+						$this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeCurrentTransaction);
 						break;
 					case Braintree\Transaction::CREDIT :
-						if(isset($braintreeTransaction->refundedTransactionId)) {
-							$braintreeChargeTransaction = Braintree\Transaction::find($braintreeTransaction->refundedTransactionId);
-							$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $braintreeChargeTransaction->id);
-							$billingsTransaction = $this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeChargeTransaction, $billingsTransaction);
-							$this->updateRefundsFromProvider($user, $userOpts, $braintreeChargeTransaction, $billingsTransaction);
+						if(isset($braintreeCurrentTransaction->refundedTransactionId)) {
+							$braintreeChargeTransaction = Braintree\Transaction::find($braintreeCurrentTransaction->refundedTransactionId);
+							$this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeChargeTransaction);
 						} else {
-							config::getLogger()->addWarning("Braintree credit Transaction with transaction_provider_uuid=".$braintreeTransaction->id." should be linked to a charge Transaction");
+							config::getLogger()->addWarning("Braintree credit Transaction with transaction_provider_uuid=".$braintreeCurrentTransaction->id." should be linked to a charge Transaction");
 						}
 						break;
 					default :
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown braintree transaction type : ".$braintreeTransactionType);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown braintree transaction type : ".$braintreeCurrentTransaction->type);
 						break;
 				}
 			}
@@ -61,8 +58,9 @@ class BraintreeTransactionsHandler {
 		}
 	}
 	
-	private function createOrUpdateChargeFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeChargeTransaction, BillingsTransaction $billingsTransaction = NULL) {
+	private function createOrUpdateChargeFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeChargeTransaction) {
 		config::getLogger()->addInfo("creating/updating transactions from braintree transactions...");
+		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $braintreeChargeTransaction->id);
 		$subId = NULL;
 		if(isset($braintreeChargeTransaction->subscriptionId)) {
 			$subscription_provider_uuid = $braintreeChargeTransaction->subscriptionId;
