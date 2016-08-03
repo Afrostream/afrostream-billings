@@ -368,8 +368,7 @@ class StripeTransactionsHandler {
 			}
 			$hasToBeProcessed = !$isRecurlyTransaction;
 			if($hasToBeProcessed) {
-				$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $stripeChargeTransaction->id);
-				$this->createOrUpdateChargeFromProvider(NULL, NULL, $stripeChargeTransaction, $billingsTransaction);
+				$this->createOrUpdateChargeFromProvider(NULL, NULL, NULL, $stripeChargeTransaction);
 			} else {
 				config::getLogger()->addInfo("stripe charge transaction =".$stripeChargeTransaction->id." is ignored");
 			}
