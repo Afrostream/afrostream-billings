@@ -162,7 +162,7 @@ class GocardlessTransactionsHandler {
 			$billingsRefundTransaction->setTransactionStatus(self::getRefundMappedTransactionStatus($gocardlessRefundTransaction));
 			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
-			$billingsRefundTransaction->setMessage("provider_status=".$gocardlessRefundTransaction->status);
+			$billingsRefundTransaction->setMessage("provider_status=none");
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -181,7 +181,7 @@ class GocardlessTransactionsHandler {
 			$billingsRefundTransaction->setTransactionStatus(self::getRefundMappedTransactionStatus($gocardlessRefundTransaction));
 			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
-			$billingsRefundTransaction->setMessage("provider_status=".$gocardlessRefundTransaction->status);
+			$billingsRefundTransaction->setMessage("provider_status=none");
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from gocardless refund transaction done successfully");
