@@ -232,7 +232,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->id);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, NULL, guid(), $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, NULL, NULL, guid(), $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
 				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
@@ -248,7 +248,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		config::getLogger()->addInfo("gocardless dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan = NULL, InternalPlanOpts $internalPlanOpts = NULL, Plan $plan = NULL , PlanOpts $planOpts = NULL, BillingsSubscriptionOpts $subOpts = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan = NULL, InternalPlanOpts $internalPlanOpts = NULL, Plan $plan = NULL , PlanOpts $planOpts = NULL, BillingsSubscriptionOpts $subOpts = NULL, BillingInfoOpts $billingInfoOpts = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
 		//
 		$client = new Client(array(
 			'access_token' => getEnv('GOCARDLESS_API_KEY'),
@@ -256,10 +256,10 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		));
 		//
 		$api_subscription = $client->subscriptions()->get($sub_uuid);
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan = NULL, InternalPlanOpts $internalPlanOpts = NULL, Plan $plan = NULL, PlanOpts $planOpts = NULL, BillingsSubscriptionOpts $subOpts = NULL, $subscription_billing_uuid, Subscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan = NULL, InternalPlanOpts $internalPlanOpts = NULL, Plan $plan = NULL, PlanOpts $planOpts = NULL, BillingsSubscriptionOpts $subOpts = NULL, BillingInfoOpts $billingInfoOpts = NULL, $subscription_billing_uuid, Subscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("gocardless dbsubscription creation for userid=".$user->getId().", gocardless_subscription_uuid=".$api_subscription->id."...");
 		if($plan == NULL) {
 			if(!isset($api_subscription->metadata->internal_plan_uuid)) {

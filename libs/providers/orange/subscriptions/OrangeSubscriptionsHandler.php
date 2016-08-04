@@ -12,12 +12,12 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 	public function __construct() {
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfoOpts $billingInfoOpts = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
 		$api_subscription = self::checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeApiToken'], $plan->getPlanUuid());
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $subscription_billing_uuid, OrangeSubscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfoOpts $billingInfoOpts = NULL, $subscription_billing_uuid, OrangeSubscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("orange dbsubscription creation for userid=".$user->getId().", providerPlanUuid=".$plan->getPlanUuid()."...");
 		//CREATE
 		$start_date = (new DateTime())->setTimezone(new DateTimeZone(config::$timezone));
@@ -247,7 +247,7 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 					$db_subscription = self::getDbSubscriptionByProviderPlanId($db_subscriptions, $plan->getId());
 					if($db_subscription == NULL) {
 						//CREATE
-						$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, guid(), $orange_subscription, 'api', 0);
+						$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $orange_subscription, 'api', 0);
 					} else {
 						//UPDATE
 						$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $orange_subscription, $db_subscription, 'api', 0);

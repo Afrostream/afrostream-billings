@@ -57,6 +57,7 @@ class SubscriptionsHandler {
 			config::getLogger()->addInfo("subscription creating...");
 			$this->checkBillingInfoOptsArray($billing_info_opts_array);
 			$billingInfoOpts = new BillingInfoOpts();
+			$billingInfoOpts->setBillingInfoBillingUuid(guid());
 			$billingInfoOpts->setOpts($billing_info_opts_array);
 			$subOpts = new BillingsSubscriptionOpts();
 			$subOpts->setOpts($sub_opts_array);
@@ -179,7 +180,7 @@ class SubscriptionsHandler {
 						break;
 					case 'netsize' : 
 						$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
-						$sub_uuid = $netsizeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid,$subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						$sub_uuid = $netsizeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
 						break;						
 					default:
 						$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -197,11 +198,11 @@ class SubscriptionsHandler {
 					switch($provider->getName()) {
 						case 'recurly' :
 							$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-							$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts,  $subscription_billing_uuid, $sub_uuid, 'api', 0);
+							$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'gocardless' :
 							$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
-							$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
+							$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'celery' :
 							$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -210,39 +211,39 @@ class SubscriptionsHandler {
 							break;
 						case 'bachat' :
 							$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
-							$db_subscription = $bachatSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
+							$db_subscription = $bachatSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'idipper' :
 							$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
-							$db_subscription = $idipperSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);							
+							$db_subscription = $idipperSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);							
 							break;
 						case 'afr' :
 							$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
-							$db_subscription = $afrSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
+							$db_subscription = $afrSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'cashway' :
 							$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
-							$db_subscription = $cashwaySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
+							$db_subscription = $cashwaySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'orange' :
 							$orangeSubscriptionsHandler = new OrangeSubscriptionsHandler();
-							$db_subscription = $orangeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
+							$db_subscription = $orangeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'bouygues' :
 							$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
-							$db_subscription = $bouyguesSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
+							$db_subscription = $bouyguesSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'stripe':
 							$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
-							$db_subscription = $stripeSubscriptionHandler->createDbSubscriptionFromApiSubscription($billingSubscription, $subOpts, $subscription_billing_uuid);
+							$db_subscription = $stripeSubscriptionHandler->createDbSubscriptionFromApiSubscription($billingSubscription, $subOpts, $billingInfoOpts, $subscription_billing_uuid);
 							break;
 						case 'braintree' :
 							$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
-							$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
+							$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'netsize' :
 							$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
-							$db_subscription = $netsizeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
+							$db_subscription = $netsizeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						default:
 							$msg = "record new: unsupported feature for provider named : ".$provider->getName();

@@ -64,7 +64,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		return($sub_uuid);
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfoOpts $billingInfoOpts = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
 		$api_subscription = new BillingsSubscription();
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('active');
@@ -86,10 +86,10 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 		}
 		$api_subscription->setSubPeriodEndsDate($end_date);
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $subscription_billing_uuid /*unused*/, BillingsSubscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfoOpts $billingInfoOpts = NULL, $subscription_billing_uuid /*unused*/, BillingsSubscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("bachat dbsubscription creation for userid=".$user->getId().", bachat_subscription_uuid=".$api_subscription->getSubUid()."...");
 		if($subOpts == NULL) {
 			$msg = "subOpts is NULL";

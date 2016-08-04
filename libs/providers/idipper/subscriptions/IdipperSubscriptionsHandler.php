@@ -66,7 +66,7 @@ class IdipperSubscriptionsHandler extends SubscriptionsHandler {
 		return($sub_uuid);
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfoOpts $billingInfoOpts = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
 		//Verification : Just that abonne = 1 for the good Rubrique (we cannot do more)
 		$idipperClient = new IdipperClient();
 		$utilisateurRequest = new UtilisateurRequest();
@@ -114,10 +114,10 @@ class IdipperSubscriptionsHandler extends SubscriptionsHandler {
 		$api_subscription->setSubActivatedDate($start_date);
 		$api_subscription->setSubPeriodStartedDate($start_date);
 		$api_subscription->setSubPeriodEndsDate($end_date);
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $subscription_billing_uuid, BillingsSubscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfoOpts $billingInfoOpts = NULL, $subscription_billing_uuid, BillingsSubscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("idipper dbsubscription creation for userid=".$user->getId().", idipper_subscription_uuid=".$api_subscription->getSubUid()."...");
 		//CREATE
 		$db_subscription = new BillingsSubscription();

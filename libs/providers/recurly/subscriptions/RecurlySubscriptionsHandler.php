@@ -182,7 +182,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->uuid);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, guid(), $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
 				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
@@ -198,17 +198,17 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		config::getLogger()->addInfo("recurly dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfoOpts $billingInfoOpts = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
 		//
 		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 		//
 		$api_subscription = Recurly_Subscription::get($sub_uuid);
 		//
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfoOpts, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $subscription_billing_uuid, Recurly_Subscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfoOpts $billingInfoOpts = NULL, $subscription_billing_uuid, Recurly_Subscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("recurly dbsubscription creation for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid."...");
 		//CREATE
 		$db_subscription = new BillingsSubscription();
@@ -247,6 +247,10 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setDeleted('false');
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
+		if(isset($billingInfoOpts)) {
+			$billingInfoOpts = BillingInfoOptsDAO::addBillingInfoOpts($billingInfoOpts);
+			$db_subscription->setBillingInfoId($billingInfoOpts->getBillingInfoId());
+		}
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS
 		if(isset($subOpts)) {
