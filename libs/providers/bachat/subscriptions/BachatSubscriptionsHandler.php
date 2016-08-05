@@ -136,7 +136,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		//BILLING_INFO
 		if(isset($billingInfo)) {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
-			$db_subscription->setBillingInfoId($billingInfo->getBillingInfoId());
+			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS
