@@ -25,7 +25,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      * @param PlanOpts                 $planOpts
      * @param string                   $subscription_billing_uuid
      * @param string                   $subscriptionProviderUuid
-     * @param BillingInfoOpts          $billingInfoOpts
+     * @param BillingInfoOpts          $billingInfo
      * @param BillingsSubscriptionOpts $subOpts
      *
      * @throws BillingsException
@@ -42,7 +42,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         PlanOpts $planOpts,
     	$subscription_billing_uuid,
         $subscriptionProviderUuid,
-        BillingInfoOpts $billingInfoOpts,
+        BillingInfo $billingInfo,
         BillingsSubscriptionOpts $subOpts
     )
     {

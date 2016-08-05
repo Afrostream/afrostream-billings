@@ -1500,6 +1500,17 @@ class BillingsSubscriptionDAO {
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
 	
+	//UpdateBillingInfoId
+	public static function updateBillingInfoId(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, billinginfoid = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getBillingInfoId(),
+						$subscription->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
 	public static function getBillingsSubscriptionsByUserId($userId) {
 		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS WHERE BS.deleted = false AND BS.userid = $1 ORDER BY BS.sub_activated_date DESC";
 		$result = pg_query_params(config::getDbConn(), $query, array($userId));
@@ -1889,7 +1900,7 @@ class BillingsSubscription implements JsonSerializable {
 			'subPeriodStartedDate' => dbGlobal::toISODate($this->sub_period_started_date),
 			'subPeriodEndsDate' => dbGlobal::toISODate($this->sub_period_ends_date),
 			'subOpts' => (BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($this->_id)->jsonSerialize()),
-			'billingInfoOpts' => ($this->billinginfoid == NULL) ? NULL : (BillingInfoOptsDAO::getBillingInfoOptsByBillingInfoId($this->billinginfoid)->jsonSerialize())
+			'billingInfo' => ($this->billinginfoid == NULL) ? NULL : (BillingInfoDAO::getBillingInfoByBillingInfoId($this->billinginfoid)->jsonSerialize())
 		];
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->planid));
 		$internalPlan->setShowProviderPlans(false);
@@ -2009,19 +2020,193 @@ class BillingsSubscriptionOptsDAO {
 	}
 }
 
-class BillingInfoOpts implements JsonSerializable {
-
+class BillingInfo implements JsonSerializable {
+	
+	private $_id;
 	private $billinginfo_billing_uuid;
-	private $billinginfoid;
-	private $opts = array();
+	private $firstName;
+	private $lastName;
+	private $email;
+	private $iban;
+	private $countryCode;
+	private $billingInfoOpts;
 	
+	public function __construct() {
+	}
 	
+	public static function getInstance(array $billing_info_array) {
+		$out = new BillingInfo();
+		if(array_key_exists('billingInfoBillingUuid', $billing_info_array)) {
+			$out->setBillingInfoBillingUuid($billing_info_array['billingInfoBillingUuid']);
+		}
+		if(array_key_exists('firstName', $billing_info_array)) {
+			$out->setFirstName($billing_info_array['firstName']);
+		}
+		if(array_key_exists('lastName', $billing_info_array)) {
+			$out->setLastName($billing_info_array['lastName']);
+		}
+		if(array_key_exists('email', $billing_info_array)) {
+			$out->setEmail($billing_info_array['email']);
+		}
+		if(array_key_exists('iban', $billing_info_array)) {
+			$out->setIban($billing_info_array['iban']);
+		}
+		if(array_key_exists('countryCode', $billing_info_array)) {
+			$out->setCountryCode($billing_info_array['countryCode']);
+		}
+		if(array_key_exists('billingInfoOpts', $billing_info_array)) {
+			$out->setBillingInfoOpts(BillingInfoOpts::getInstance($billing_info_opts_array['billingInfoOpts']));
+		}
+		return($out);
+	}
+
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getId() {
+		return($this->_id);
+	}
+
 	public function setBillingInfoBillingUuid($id) {
 		$this->billinginfo_billing_uuid = $id;
 	}
 	
 	public function getBillingInfoBillingUuid() {
 		return($this->billinginfo_billing_uuid);
+	}
+	
+	public function setFirstName($str) {
+		$this->firstName = $str;
+	}
+	
+	public function getFirstName() {
+		return($this->firstName);
+	}
+	
+	public function setLastName($str) {
+		$this->lastName = $str;
+	}
+	
+	public function getLastName() {
+		return($this->lastName);
+	}
+	
+	public function setEmail($str) {
+		$this->email = $str;
+	}
+	
+	public function getEmail() {
+		return($this->email);
+	}
+	
+	public function setIban($str) {
+		$this->iban = $str;
+	}
+	
+	public function getIban() {
+		return($this->iban);
+	}
+	
+	public function setCountryCode($str) {
+		$this->countryCode = $str;
+	}
+	
+	public function getCountryCode() {
+		return($this->countryCode);
+	}
+	
+	public function setBillingInfoOpts(BillingInfoOpts $billingInfoOpts) {
+		$this->billingInfoOpts = $billingInfoOpts;
+	}
+	
+	public function getBillingInfoOpts() {
+		return($this->billingInfoOpts);
+	}
+	
+	public function jsonSerialize() {
+		$return = array();
+		$return['billingInfoBillingUuid'] = $this->billinginfo_billing_uuid;
+		$return['firstName'] = $this->firstName;
+		$return['lastName'] = $this->lastName;
+		$return['email'] = $this->email;
+		$return['iban'] = $this->iban;
+		$return['countryCode'] = $this->countryCode;
+		$return['billingInfoOpts'] = ($this->billingInfoOpts == NULL ? NULL : $this->billingInfoOpts);
+		return($return);
+	}
+	
+}
+
+class BillingInfoDAO {
+	
+	private static $sfields = '_id, billinginfo_billing_uuid, first_name, last_name, email, iban, country_code';
+	
+	private static function getBillingInfoFromRow($row) {
+		$out = new BillingInfo();
+		$out->setId($row['_id']);
+		$out->setBillingInfoBillingUuid($row['billinginfo_billing_uuid']);
+		$out->setFirstName($row['first_name']);
+		$out->setLastName($row['last_name']);
+		$out->setEmail($row['email']);
+		$out->setIban($row['iban']);
+		$out->setCountryCode($row['country_code']);
+		$out->setBillingInfoOpts(BillingInfoOptsDAO::getBillingInfoOptsByBillingInfoId($row['_id']));
+		return($out);
+	}
+	
+	public static function getBillingInfoByBillingInfoId($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_billing_infos WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingInfoFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		return($out);
+	}
+	
+	public static function addBillingInfo(BillingInfo $billingInfo) {
+		$query = "INSERT INTO billing_billing_infos (billinginfo_billing_uuid, first_name, last_name, email, iban, country_code)"; 
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query, array(
+				$billingInfo->getBillingInfoBillingUuid(),
+				$billingInfo->getFirstName(),
+				$billingInfo->getLastName(),
+				$billingInfo->getEmail(),
+				$billingInfo->getIban(),
+				$billingInfo->getCountryCode()				
+		));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		$billinginfoid = $row[0];
+		$billingInfoOpts = $billingInfo->getBillingInfoOpts();
+		if(isset($billingInfoOpts)) {
+			$billingInfoOpts->setBillingInfoId($billinginfoid);
+			$billingInfoOpts = BillingInfoOptsDAO::addBillingInfoOpts($billingInfoOpts);
+			$billingInfo->setBillingInfoOpts($billingInfoOpts);
+		}
+		return(self::getBillingInfoByBillingInfoId($billinginfoid));
+	}
+	
+}
+
+class BillingInfoOpts implements JsonSerializable {
+
+	private $billinginfoid;
+	private $opts = array();
+	
+	public function __construct() {
+	}
+	
+	public static function getInstance(array $billing_info_opts_array) {
+		$out = new BillingInfoOpts();
+		$out->setOpts($billing_info_opts_array);
+		return($out);
 	}
 	
 	public function setBillingInfoId($id) {
@@ -2054,10 +2239,7 @@ class BillingInfoOpts implements JsonSerializable {
 	}
 	
 	public function jsonSerialize() {
-		$return = array();
-		$return['billingInfoBillingUuid'] = $this->billinginfo_billing_uuid;
-		$return = array_merge($return, $this->opts);
-		return($return);
+		return($this->opts);
 	}
 	
 }
@@ -2065,50 +2247,36 @@ class BillingInfoOpts implements JsonSerializable {
 class BillingInfoOptsDAO {
 
 	public static function getBillingInfoOptsByBillingInfoId($id) {
-		$out = NULL;
-		$query = "SELECT _id, billinginfo_billing_uuid FROM billing_billing_infos WHERE _id = $1";
+		$query = "SELECT _id, billinginfoid, key, value FROM billing_billing_infos_opts WHERE deleted = false AND billinginfoid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
-		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = new BillingInfoOpts();
-			$out->setBillingInfoBillingUuid($row['billinginfo_billing_uuid']);
+	
+		$out = new BillingInfoOpts();
+		$out->setBillingInfoId($id);
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out->setOpt($row["key"], $row["value"]);
 		}
 		// free result
 		pg_free_result($result);
-		if(isset($out)) {
-			$query = "SELECT _id, billinginfoid, key, value FROM billing_billing_infos_opts WHERE deleted = false AND billinginfoid = $1";
-			$result = pg_query_params(config::getDbConn(), $query, array($id));
-		
-			while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-				$out->setOpt($row["key"], $row["value"]);
-			}
-			// free result
-			pg_free_result($result);
-		}
+	
 		return($out);
 	}
-
+	
 	public static function addBillingInfoOpts(BillingInfoOpts $billingInfoOpts) {
-		$query = "INSERT INTO billing_billing_infos (billinginfo_billing_uuid) VALUES ($1) RETURNING _id";
-		$result = pg_query_params(config::getDbConn(), $query, array($billingInfoOpts->getBillingInfoBillingUuid()));
-		$row = pg_fetch_row($result);
-		// free result
-		pg_free_result($result);
-		$billinginfoid = $row[0];
 		foreach ($billingInfoOpts->getOpts() as $k => $v) {
 			if(isset($v) && is_scalar($v)) {
 				$query = "INSERT INTO billing_billing_infos_opts (billinginfoid, key, value)";
 				$query.= " VALUES ($1, $2, $3) RETURNING _id";
 				$result = pg_query_params(config::getDbConn(), $query,
-						array($billinginfoid,
+						array($billingInfoOpts->getBillingInfoId(),
 								trim($k),
 								trim($v)));
 				// free result
 				pg_free_result($result);
 			}
 		}
-		return(self::getBillingInfoOptsByBillingInfoId($billinginfoid));
+		return(self::getBillingInfoOptsByBillingInfoId($billingInfoOpts->getBillingInfoId()));
 	}
-
+	
 }
 
 class BillingsWebHookDAO {
