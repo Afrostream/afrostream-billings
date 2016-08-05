@@ -1348,8 +1348,8 @@ class BillingsSubscriptionDAO {
 						dbGlobal::toISODate($subscription->getSubPeriodEndsDate()),
 						$subscription->getUpdateType(),
 						$subscription->getUpdateId(),
-						$subscription->getDeleted()),
-						$subscription->getBillingInfoId());
+						$subscription->getDeleted(),
+						$subscription->getBillingInfoId()));
 		$row = pg_fetch_row($result);
 		// free result
 		pg_free_result($result);
