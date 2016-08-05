@@ -56,6 +56,7 @@ class SubscriptionsHandler {
 		try {
 			config::getLogger()->addInfo("subscription creating...");
 			$billingInfo = BillingInfo::getInstance($billing_info_array);
+			$billingInfo->setBillingInfoBillingUuid(guid());
 			$subOpts = new BillingsSubscriptionOpts();
 			$subOpts->setOpts($sub_opts_array);
 			$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
