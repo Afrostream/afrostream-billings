@@ -32,7 +32,10 @@ class ChargeHookObserver implements HookInterface
             return;
         }
         
+        config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' is being processed...');
+        
         if ($event['data']['object']['object'] !== 'charge') {
+        	config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' ignored, object is not a charge oject');
         	return null;
         }
 
@@ -47,7 +50,7 @@ class ChargeHookObserver implements HookInterface
         	$isRecurlyTransaction = true;
         }
         $hasToBeProcessed = !$isRecurlyTransaction;
-        if($hasToBeProcessed) {    
+        if($hasToBeProcessed) {
 	        $api_customer = NULL;
 	        $user = NULL;
 	        $userOpts = NULL;
@@ -61,9 +64,14 @@ class ChargeHookObserver implements HookInterface
 	        	}
 	        	$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 	        }
+	        config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' sent to Handler...');
 	        $stripeTransactionsHandler = new StripeTransactionsHandler();
 	        $stripeTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment);
+	        config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' sent to Handler done successfully');
+        } else {
+        	config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' has been ignored');
         }
+        config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' has been processed successfully');
     }
 
 }

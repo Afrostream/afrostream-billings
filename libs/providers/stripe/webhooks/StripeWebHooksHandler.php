@@ -58,7 +58,7 @@ class StripeWebHooksHandler
     {
         $postedEvent = json_decode($billingsWebHook->getPostData(), true);
 
-        $this->log('Process new event '.$postedEvent['id']);
+        $this->log('Process new event id='.$postedEvent['id'].', type='.$postedEvent['type'].'...');
 
         // request event to be sure it's a real one
         $event = \Stripe\Event::retrieve($postedEvent['id']);
@@ -75,6 +75,8 @@ class StripeWebHooksHandler
         foreach ($this->observers as $hookObserver) {
             $hookObserver->event($event, $provider);
         }
+        
+        $this->log('Process new event id='.$postedEvent['id'].', type='.$postedEvent['type'].' done successfully');
     }
 
     /**
