@@ -233,7 +233,7 @@ class SubscriptionsHandler {
 							break;
 						case 'stripe':
 							$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
-							$db_subscription = $stripeSubscriptionHandler->createDbSubscriptionFromApiSubscription($billingSubscription, $subOpts, $billingInfo, $subscription_billing_uuid);
+							$db_subscription = $stripeSubscriptionHandler->createDbSubscriptionFromApiSubscription($billingSubscription, $subOpts, $billingInfo, $subscription_billing_uuid, 'api', 0);
 							break;
 						case 'braintree' :
 							$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
@@ -1214,3 +1214,5 @@ class SubscriptionsHandler {
 	}
 	
 }
+
+?>

@@ -1,12 +1,8 @@
 <?php
 
 function guid( $opt = false ) {       //  Set to true/false as your default way to do this.
-	if(function_exists('com_create_guid')) {
-    	if( $opt ) { return com_create_guid(); }
-        	else { return trim( com_create_guid(), '{}' ); }
-    } else {
       mt_srand( (double)microtime() * 10000 );    // optional for php 4.2.0 and up.
-      $charid = strtoupper( md5(uniqid(rand(), true)) );
+      $charid = strtolower( md5(uniqid(rand(), true)) );//postgresql compatibility : lowered as it does
       $hyphen = chr( 45 );    // "-"
       $left_curly = $opt ? chr(123) : "";     //  "{"
       $right_curly = $opt ? chr(125) : "";    //  "}"
@@ -18,7 +14,6 @@ function guid( $opt = false ) {       //  Set to true/false as your default way 
       . substr( $charid, 20, 12 )
       . $right_curly;
       return $uuid;
-	}
 }
 
 function checkUserOptsArray(array $user_opts_as_array, $providerName) {

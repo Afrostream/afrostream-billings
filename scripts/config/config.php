@@ -7,6 +7,8 @@ date_default_timezone_set("Europe/Paris");
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 
+#DATABASE
+
 if(getEnv('AFR_DB_HOST') === false) {
 	putEnv('AFR_DB_HOST=ec2-54-228-194-210.eu-west-1.compute.amazonaws.com');
 }
@@ -26,6 +28,8 @@ if(getEnv('AFR_DB_USER') === false) {
 if(getEnv('AFR_DB_PASSWORD') === false) {
 	putEnv('AFR_DB_PASSWORD=pt7eht3e9v3lnehhh27m7sfeol');
 }
+
+#BOUYGUES
 
 if(getEnv('BOUYGUES_MERCHANTID') === false) {
 	putEnv('BOUYGUES_MERCHANTID=0');
@@ -63,12 +67,22 @@ if(getEnv('BOUYGUES_PROXY_PWD') === false) {
 	putEnv('BOUYGUES_PROXY_PWD=');
 }
 
-if(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR' === false)) {
+if(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR') === false) {
 	putEnv('BOUYGUES_STORE_LAST_TIME_HOUR=0');
 }
 
-if(getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE' === false)) {
+if(getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE') === false) {
 	putEnv('BOUYGUES_STORE_LAST_TIME_MINUTE=25');
+}
+
+#PAYPAL
+
+if(getEnv('PAYPAL_API_CLIENT_ID') === false) {
+	putEnv('PAYPAL_API_CLIENT_ID=');
+}
+
+if(getEnv('PAYPAL_API_SECRET') === false) {
+	putEnv('PAYPAL_API_SECRET=');
 }
 
 #logger, #db_conn, ...

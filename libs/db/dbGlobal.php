@@ -1332,7 +1332,7 @@ class BillingsSubscriptionDAO {
 	public static function addBillingsSubscription(BillingsSubscription $subscription) {
 		$query = "INSERT INTO billing_subscriptions (subscription_billing_uuid, providerid, userid, planid,";
 		$query.= " sub_uuid, sub_status, sub_activated_date, sub_canceled_date, sub_expires_date,";
-		$query.= " sub_period_started_date, sub_period_ends_date,  update_type, updateid, deleted, billinginfoid)";
+		$query.= " sub_period_started_date, sub_period_ends_date, update_type, updateid, deleted, billinginfoid)";
 		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$subscription->getSubscriptionBillingUuid(),
@@ -2024,6 +2024,8 @@ class BillingInfo implements JsonSerializable {
 	
 	private $_id;
 	private $billinginfo_billing_uuid;
+	private $creationDate;
+	private $updatedDate;
 	private $firstName;
 	private $lastName;
 	private $email;
@@ -2074,6 +2076,22 @@ class BillingInfo implements JsonSerializable {
 	
 	public function getBillingInfoBillingUuid() {
 		return($this->billinginfo_billing_uuid);
+	}
+	
+	public function getCreationDate() {
+		return($this->creationDate);
+	}
+	
+	public function setCreationDate(DateTime $date) {
+		$this->creationDate = $date;
+	}
+	
+	public function getUpdatedDate() {
+		return($this->updatedDate);
+	}
+	
+	public function setUpdatedDate(DateTime $date) {
+		$this->updatedDate = $date;
 	}
 	
 	public function setFirstName($str) {
@@ -2127,12 +2145,14 @@ class BillingInfo implements JsonSerializable {
 	public function jsonSerialize() {
 		$return = array();
 		$return['billingInfoBillingUuid'] = $this->billinginfo_billing_uuid;
+		$return['creationDate'] = dbGlobal::toISODate($this->creationDate);
+		$return['updatedDate'] = dbGlobal::toISODate($this->updatedDate);
 		$return['firstName'] = $this->firstName;
 		$return['lastName'] = $this->lastName;
 		$return['email'] = $this->email;
 		$return['iban'] = $this->iban;
 		$return['countryCode'] = $this->countryCode;
-		$return['billingInfoOpts'] = ($this->billingInfoOpts == NULL ? NULL : $this->billingInfoOpts);
+		$return['billingInfoOpts'] = ($this->billingInfoOpts == NULL) ? NULL : $this->billingInfoOpts;
 		return($return);
 	}
 	
@@ -2140,12 +2160,14 @@ class BillingInfo implements JsonSerializable {
 
 class BillingInfoDAO {
 	
-	private static $sfields = '_id, billinginfo_billing_uuid, first_name, last_name, email, iban, country_code';
+	private static $sfields = '_id, billinginfo_billing_uuid, creation_date, updated_date, first_name, last_name, email, iban, country_code';
 	
 	private static function getBillingInfoFromRow($row) {
 		$out = new BillingInfo();
 		$out->setId($row['_id']);
 		$out->setBillingInfoBillingUuid($row['billinginfo_billing_uuid']);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		$out->setUpdatedDate($row["updated_date"] == NULL ? NULL : new DateTime($row["updated_date"]));
 		$out->setFirstName($row['first_name']);
 		$out->setLastName($row['last_name']);
 		$out->setEmail($row['email']);
@@ -2191,6 +2213,16 @@ class BillingInfoDAO {
 			$billingInfo->setBillingInfoOpts($billingInfoOpts);
 		}
 		return(self::getBillingInfoByBillingInfoId($billinginfoid));
+	}
+	
+	public static function updateCountryCode(BillingInfo $billingInfo) {
+		$query = "UPDATE billing_billing_infos SET updated_date = CURRENT_TIMESTAMP, country_code = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInfo->getCountryCode(),
+						$billingInfo->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInfoByBillingInfoId($billingInfo->getId()));
 	}
 	
 }

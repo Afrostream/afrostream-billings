@@ -2,13 +2,13 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
-require_once __DIR__ . '/../../libs/providers/braintree/BillingsImportBraintreeTransactions.php';
+require_once __DIR__ . '/../../libs/providers/braintree/BillingsImportBraintreeBillingInfos.php';
 
 /*
  * Tool
  */
 
-print_r("starting tool to import braintree transactions...\n");
+print_r("starting tool to import braintree billinginfos...\n");
 
 foreach ($argv as $arg) {
     $e=explode("=",$arg);
@@ -17,30 +17,6 @@ foreach ($argv as $arg) {
     else
         $_GET[$e[0]]=0;
 }
-
-$dateFormat = "Ymd";
-
-$from = NULL;
-$fromStr = NULL;
-
-if(isset($_GET["-from"])) {
-	$fromStr = $_GET["-from"];
-	$from = DateTime::createFromFormat($dateFormat, $fromStr);
-	$from->setTimezone(new DateTimeZone(ScriptsConfig::$timezone));
-}
-
-print_r("using from=".$fromStr."\n");
-
-$to = NULL;
-$toStr = NULL;
-
-if(isset($_GET["-to"])) {
-	$toStr = $_GET["-to"];
-	$to = DateTime::createFromFormat($dateFormat, $toStr);
-	$to->setTimezone(new DateTimeZone(ScriptsConfig::$timezone));
-}
-
-print_r("using to=".$toStr."\n");
 
 $firstId = NULL;
 
@@ -76,9 +52,9 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsImportBraintreeTransactions = new BillingsImportBraintreeTransactions();
+$billingsImportBraintreeBillingInfos = new BillingsImportBraintreeBillingInfos();
 
-$billingsImportBraintreeTransactions->doImportTransactions($from, $to);
+$billingsImportBraintreeBillingInfos->doImportBillingInfos();
 
 print_r("processing done\n");
 
