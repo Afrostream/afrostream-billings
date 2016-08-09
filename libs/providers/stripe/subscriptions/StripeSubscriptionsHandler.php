@@ -502,9 +502,10 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
                 throw new \Exception('Payment refused');
             }
 
+            $subOpts->setOpt('chargeId', $charge['id']);
 
             $subscription = new Subscription();
-            $subscription['id'] = $charge['id'];
+            $subscription['id'] = guid();
             $subscription['created'] = $charge['created'];
             $subscription['canceled_at'] = null;
             $subscription['current_period_start'] = $charge['created'];
