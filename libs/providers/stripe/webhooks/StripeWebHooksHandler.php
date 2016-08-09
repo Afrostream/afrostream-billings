@@ -28,8 +28,9 @@ class StripeWebHooksHandler
      */
     public function __construct()
     {
-        $this->observers = new \SplObjectStorage();
-        \Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+    	\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+    	$this->observers = new \SplObjectStorage();
+        $this->loadHooks();
     }
 
     /**
@@ -61,8 +62,9 @@ class StripeWebHooksHandler
         $this->log('Process new event id='.$postedEvent['id'].', type='.$postedEvent['type'].'...');
 
         // request event to be sure it's a real one
+        
         $event = \Stripe\Event::retrieve($postedEvent['id']);
-
+        
         // bad event, return quietly
         if (empty($event['id']) || empty($event['data']['object'])) {
             $this->log('Bad event , no id or no object found in event');
@@ -73,7 +75,7 @@ class StripeWebHooksHandler
 
         // send event to observers
         foreach ($this->observers as $hookObserver) {
-            $hookObserver->event($event, $provider);
+			$hookObserver->event($event, $provider);
         }
         
         $this->log('Process new event id='.$postedEvent['id'].', type='.$postedEvent['type'].' done successfully');

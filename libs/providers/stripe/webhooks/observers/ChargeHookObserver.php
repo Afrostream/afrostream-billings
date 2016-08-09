@@ -28,8 +28,8 @@ class ChargeHookObserver implements HookInterface
 
     public function event(Event $event, Provider $provider)
     {
-        if (!array_key_exists($event['type'], self::REQUESTED_HOOK_TYPES)) {
-            return;
+        if (!in_array($event['type'], self::REQUESTED_HOOK_TYPES)) {
+        	return;
         }
         
         config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' is being processed...');
