@@ -62,6 +62,7 @@ class BraintreeTransactionsHandler {
 		config::getLogger()->addInfo("creating/updating transactions from braintree transaction id=".$braintreeChargeTransaction->id."...");
 		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $braintreeChargeTransaction->id);
 		$subId = NULL;
+		$country = NULL;
 		if(isset($braintreeChargeTransaction->subscriptionId)) {
 			$subscription_provider_uuid = $braintreeChargeTransaction->subscriptionId;
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($user->getProviderId(), $subscription_provider_uuid);
@@ -71,6 +72,16 @@ class BraintreeTransactionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);	
 			}
 			$subId = $subscription->getId();
+			$billingInfoId = $subscription->getBillingInfoId();
+			if(isset($billingInfoId)) {
+				$billingInfo = BillingInfoDAO::getBillingInfoByBillingInfoId($billingInfoId);
+				if($billingInfo == NULL) {
+					$msg = "billingInfo with id=".$billingInfoId." not found";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);					
+				}
+				$country = $billingInfo->getCountryCode();
+			}
 		}
 		$couponId = NULL;
 		$invoiceId = NULL;
@@ -87,7 +98,7 @@ class BraintreeTransactionsHandler {
 			$billingsTransaction->setTransactionCreationDate($braintreeChargeTransaction->createdAt);
 			$billingsTransaction->setAmountInCents($braintreeChargeTransaction->amount * 100);
 			$billingsTransaction->setCurrency($braintreeChargeTransaction->currencyIsoCode);
-			$billingsTransaction->setCountry(NULL);//TODO
+			$billingsTransaction->setCountry($country);
 			$billingsTransaction->setTransactionStatus(self::getMappedTransactionStatus($braintreeChargeTransaction));
 			$billingsTransaction->setTransactionType(self::getMappedTransactionType($braintreeChargeTransaction));
 			$billingsTransaction->setInvoiceProviderUuid($braintreeChargeTransaction->orderId);
@@ -105,7 +116,7 @@ class BraintreeTransactionsHandler {
 			$billingsTransaction->setTransactionCreationDate($braintreeChargeTransaction->createdAt);
 			$billingsTransaction->setAmountInCents($braintreeChargeTransaction->amount * 100);
 			$billingsTransaction->setCurrency($braintreeChargeTransaction->currencyIsoCode);
-			$billingsTransaction->setCountry(NULL);//TODO
+			$billingsTransaction->setCountry($country);
 			$billingsTransaction->setTransactionStatus(self::getMappedTransactionStatus($braintreeChargeTransaction));
 			$billingsTransaction->setTransactionType(self::getMappedTransactionType($braintreeChargeTransaction));
 			$billingsTransaction->setInvoiceProviderUuid($braintreeChargeTransaction->orderId);
