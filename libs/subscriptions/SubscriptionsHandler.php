@@ -140,6 +140,7 @@ class SubscriptionsHandler {
 					case 'stripe':
 						$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
 						$billingSubscription = $stripeSubscriptionHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
+						$sub_uuid = $billingSubscription->getSubUid();
 						break;
 					case 'celery' :
 						$msg = "unsupported feature for provider named : ".$provider->getName();

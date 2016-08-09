@@ -108,8 +108,8 @@ class StripeTransactionsHandler {
 	}
 	
 	
-	private function createOrUpdateChargeFromProvider(User $user = NULL, UserOpts $userOpts = NULL, \Stripe\Customer $stripeCustomer = NULL, \Stripe\Charge $stripeChargeTransaction) {
-		config::getLogger()->addInfo("creating/updating charge transaction from stripe charge transaction...");
+	public function createOrUpdateChargeFromProvider(User $user = NULL, UserOpts $userOpts = NULL, \Stripe\Customer $stripeCustomer = NULL, \Stripe\Charge $stripeChargeTransaction) {
+		config::getLogger()->addInfo("creating/updating charge transaction from stripe charge transaction id=".$stripeChargeTransaction->id."...");
 		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $stripeChargeTransaction->id);
 		$userId = ($user == NULL ? NULL : $user->getId());
 		$subId = NULL;
@@ -280,7 +280,7 @@ class StripeTransactionsHandler {
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		$this->updateRefundsFromProvider($user, $userOpts, $stripeChargeTransaction, $billingsTransaction);
-		config::getLogger()->addInfo("creating/updating charge transaction from stripe charge transaction done successfully");
+		config::getLogger()->addInfo("creating/updating charge transaction from stripe charge transaction id=".$stripeChargeTransaction->id." done successfully");
 		return($billingsTransaction);
 	}
 	
@@ -306,7 +306,7 @@ class StripeTransactionsHandler {
 	}
 	
 	private function createOrUpdateRefundFromProvider(User $user = NULL, UserOpts $userOpts = NULL, \Stripe\Refund $stripeRefundTransaction, BillingsTransaction $billingsTransaction) {
-		config::getLogger()->addInfo("creating/updating refund transaction from stripe refund transaction...");
+		config::getLogger()->addInfo("creating/updating refund transaction from stripe refund transaction id=".$stripeRefundTransaction->id."...");
 		$billingsRefundTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $stripeRefundTransaction->id);
 		if($billingsRefundTransaction == NULL) {
 			//CREATE
@@ -348,7 +348,7 @@ class StripeTransactionsHandler {
 			$billingsRefundTransaction->setMessage("provider_status=".$stripeRefundTransaction->status);
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
-		config::getLogger()->addInfo("creating/updating refund transaction from stripe refund transaction done successfully");
+		config::getLogger()->addInfo("creating/updating refund transaction from stripe refund transaction id=".$stripeRefundTransaction->id." done successfully");
 		return($billingsRefundTransaction);
 	}
 	

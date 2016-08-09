@@ -55,7 +55,7 @@ class RecurlyTransactionsHandler {
 	}
 	
 	public function createOrUpdateFromProvider(User $user, UserOpts $userOpts, Recurly_Account $recurlyAccount, Recurly_Transaction $recurlyTransaction) {
-		config::getLogger()->addInfo("creating/updating transactions from recurly transactions...");
+		config::getLogger()->addInfo("creating/updating transactions from recurly transaction id=".$recurlyTransaction->uuid."...");
 		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $recurlyTransaction->uuid);
 		$country = NULL;
 		if(isset($recurlyAccount->billing_info)) {
@@ -120,7 +120,7 @@ class RecurlyTransactionsHandler {
 			$billingsTransaction->setMessage("provider_status=".$recurlyTransaction->status);
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
-		config::getLogger()->addInfo("creating/updating transactions from recurly transactions done successfully");
+		config::getLogger()->addInfo("creating/updating transactions from recurly transaction id=".$recurlyTransaction->uuid." done successfully");
 		return($billingsTransaction);
 	}
 	
