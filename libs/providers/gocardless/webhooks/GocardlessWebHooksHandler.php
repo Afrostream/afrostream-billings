@@ -166,45 +166,6 @@ class GocardlessWebHooksHandler {
 						//UPDATE
 						$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, $update_type, $updateId);
 					}
-					//WHEN ? (not given by the gocardless API)
-					switch($notification_as_array['action']) {
-						case 'created' :
-							//nothing to do
-							break;
-						case 'customer_approval_granted' :
-							//nothing to do
-							break;
-						case 'customer_approval_denied' :
-							//? HOW TO CHECK ?
-							$subscriptionsHandler = new SubscriptionsHandler();
-							$expires_date = new DateTime($notification_as_array['created_at']);
-							$subscriptionsHandler->doExpireSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), $expires_date, false);
-							break;
-						case 'payment_created' :
-							//nothing to do
-							break;
-						case 'cancelled' :
-							if($api_subscription->status == 'cancelled') {//CHECK
-								if(isset($api_subscription->metadata->status)
-										&&
-									$api_subscription->metadata->status == 'expired')
-								{
-									$subscriptionsHandler = new SubscriptionsHandler();
-									$expires_date = new DateTime($notification_as_array['created_at']);
-									$subscriptionsHandler->doExpireSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), $expires_date, false);
-								} else {
-									$subscriptionsHandler = new SubscriptionsHandler();
-									$cancel_date = new DateTime($notification_as_array['created_at']);
-									$subscriptionsHandler->doCancelSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), $cancel_date, false);
-								}
-							}
-							break;
-						default :
-							$msg = "unknown action : ".$notification_as_array['action'];
-							config::getLogger()->addError($msg);
-							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-							//break;
-					}
 					//COMMIT
 					pg_query("COMMIT");
 				} catch(Exception $e) {
@@ -328,7 +289,7 @@ class GocardlessWebHooksHandler {
 		));
 		//
 		$payment_provider_uuid = $notification_as_array['links']['payment'];
-		config::getLogger()->addInfo('Processing gocardless hook payment for backup, payment_provider_uuid='.payment_provider_uuid);
+		config::getLogger()->addInfo('Processing gocardless hook payment for backup, payment_provider_uuid='.$payment_provider_uuid);
 		$api_payment = NULL;
 		$api_mandate = NULL;
 		$api_customer_bank_account = NULL;
@@ -391,7 +352,7 @@ class GocardlessWebHooksHandler {
 		));
 		//
 		$refund_provider_uuid = $notification_as_array['links']['refund'];
-		config::getLogger()->addInfo('Processing gocardless hook refund for backup, refund_provider_uuid='.refund_provider_uuid);
+		config::getLogger()->addInfo('Processing gocardless hook refund for backup, refund_provider_uuid='.$refund_provider_uuid);
 		$api_refund = NULL;
 		$api_payment = NULL;
 		$api_mandate = NULL;
