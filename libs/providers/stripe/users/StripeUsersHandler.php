@@ -62,6 +62,7 @@ class StripeUsersHandler
                 'firstName' => $userOpts['firstName'],
                 'lastName' => $userOpts['lastName'],
                 'AfrSource' => 'afrBillingApi',
+            	'AfrOrigin' => 'user',
                 'AfrUserBillingUuid' => $user_billing_uuid
             ]
         ]);
