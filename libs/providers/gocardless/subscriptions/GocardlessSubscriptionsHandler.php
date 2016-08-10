@@ -17,7 +17,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 	public function __construct() {
 	}
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts, BillingsSubscriptionOpts $subOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("gocardless subscription creation...");
@@ -52,7 +52,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$sub_uuid = $subscription_provider_uuid;
 			} else {
 				checkSubOptsArray($subOpts->getOpts(), 'gocardless', 'create');
-				$this->checkBillingInfos($billingInfoOpts, $user);
+				$this->checkBillingInfos($billingInfo, $user);
 				$amount = $internalPlan->getAmountInCents();
 				$currency = $internalPlan->getCurrency();
 				if(!array_key_exists($internalPlan->getPeriodUnit()->getValue(), GocardlessPlansHandler::$supported_periods)) {
@@ -95,6 +95,11 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						break;
+				}
+				if(!array_key_exists('customerBankAccountToken', $subOpts->getOpts())) {
+					$msg = "subOpts field 'customerBankAccountToken' field is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$customer_bank_account_token = $subOpts->getOpts()['customerBankAccountToken'];
 				//
@@ -232,7 +237,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->id);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, NULL, $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, NULL, NULL, guid(), $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
 				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
@@ -248,7 +253,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		config::getLogger()->addInfo("gocardless dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan = NULL, InternalPlanOpts $internalPlanOpts = NULL, Plan $plan = NULL , PlanOpts $planOpts = NULL, BillingsSubscriptionOpts $subOpts = NULL, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan = NULL, InternalPlanOpts $internalPlanOpts = NULL, Plan $plan = NULL , PlanOpts $planOpts = NULL, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
 		//
 		$client = new Client(array(
 			'access_token' => getEnv('GOCARDLESS_API_KEY'),
@@ -256,10 +261,10 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		));
 		//
 		$api_subscription = $client->subscriptions()->get($sub_uuid);
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan = NULL, InternalPlanOpts $internalPlanOpts = NULL, Plan $plan = NULL, PlanOpts $planOpts = NULL, BillingsSubscriptionOpts $subOpts = NULL, Subscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan = NULL, InternalPlanOpts $internalPlanOpts = NULL, Plan $plan = NULL, PlanOpts $planOpts = NULL, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, Subscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("gocardless dbsubscription creation for userid=".$user->getId().", gocardless_subscription_uuid=".$api_subscription->id."...");
 		if($plan == NULL) {
 			if(!isset($api_subscription->metadata->internal_plan_uuid)) {
@@ -300,7 +305,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//CREATE
 		$db_subscription = new BillingsSubscription();
-		$db_subscription->setSubscriptionBillingUuid(guid());
+		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
 		$db_subscription->setProviderId($provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
@@ -308,6 +313,8 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		switch ($api_subscription->status) {
 			case 'active' :
 				$db_subscription->setSubStatus('active');
+				//we do not really know
+				$db_subscription->setSubActivatedDate(new DateTime($api_subscription->created_at));
 				break;
 			case 'cancelled' :
 				$db_subscription->setSubStatus('canceled');
@@ -326,6 +333,8 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$db_subscription->setSubStatus('expired');
 				//we do not really know
 				$db_subscription->setSubExpiresDate(new DateTime($api_subscription->created_at));
+				//NC : Because considered as an immediate cancel
+				$db_subscription->setSubCanceledDate(new DateTime($api_subscription->created_at));
 				break;
 			default :
 				$msg = "unknown subscription status : ".$api_subscription->status;
@@ -333,7 +342,6 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				//break;
 		}
-		$db_subscription->setSubActivatedDate(new DateTime($api_subscription->created_at));
 		//
 		$start_date = new DateTime($api_subscription->created_at);
 		$start_date->setTimezone(new DateTimeZone(config::$timezone));
@@ -368,6 +376,11 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setDeleted('false');
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
+		//BILLING_INFO
+		if(isset($billingInfo)) {
+			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
+			$db_subscription->setBillingInfoId($billingInfo->getId());
+		}
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS
 		if(isset($subOpts)) {
@@ -383,6 +396,8 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		config::getLogger()->addInfo("gocardless dbsubscription update for userid=".$user->getId().", gocardless_subscription_uuid=".$api_subscription->id.", id=".$db_subscription->getId()."...");
 		//UPDATE
 		$db_subscription_before_update = clone $db_subscription;
+		//
+		$now = new DateTime();
 		//
 		if($plan == NULL) {
 			if(!isset($api_subscription->metadata->internal_plan_uuid)) {
@@ -426,32 +441,62 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		switch ($api_subscription->status) {
 			case 'active' :
 				$db_subscription->setSubStatus('active');
+				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
+				if($db_subscription->getSubActivatedDate() == NULL) {
+					$db_subscription->setSubActivatedDate($now);
+					$db_subscription = BillingsSubscriptionDAO::updateSubActivatedDate($db_subscription);
+				}
 				break;
 			case 'cancelled' :
-				if(isset($api_subscription->metadata->status)
-				&&
-				$api_subscription->metadata->status == 'expired')
+				if(
+					(isset($api_subscription->metadata->status)
+						&&
+					($api_subscription->metadata->status == 'expired'))
+					|| 
+					($db_subscription->getSubStatus() == 'expired')
+				)
 				{
+					//if expired, stay expired
 					$db_subscription->setSubStatus('expired');
+					$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
+					if($db_subscription->getSubExpiresDate() == NULL) {
+						$db_subscription->setSubExpiresDate($now);
+						$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+					}
 				} else {
-					if($db_subscription->getSubStatus() == 'expired')
-					{
-						//if expired, stay expired
-						$db_subscription->setSubStatus('expired');
-					} else {
-						//canceled
-						$db_subscription->setSubStatus('canceled');
+					//canceled
+					$db_subscription->setSubStatus('canceled');
+					$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
+					if($db_subscription->getSubCanceledDate() == NULL) {
+						$db_subscription->setSubCanceledDate($now);
+						$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
 					}
 				}
 				break;
 			case 'pending_customer_approval' :
 				$db_subscription->setSubStatus('future');
+				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
 				break;
 			case 'finished' :
 				$db_subscription->setSubStatus('expired');
+				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
+				if($db_subscription->getSubExpiresDate() == NULL) {
+					$db_subscription->setSubExpiresDate($now);
+					$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+				}
 				break;
 			case 'customer_approval_denied' :
 				$db_subscription->setSubStatus('expired');
+				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
+				if($db_subscription->getSubExpiresDate() == NULL) {
+					$db_subscription->setSubExpiresDate($now);
+					$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+				}
+				//NC : Because considered as an immediate cancel
+				if($db_subscription->getSubCanceledDate() == NULL) {
+					$db_subscription->setSubCanceledDate($now);
+					$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
+				}
 				break;
 			default :
 				$msg = "unknown subscription status : ".$api_subscription->status;
@@ -459,18 +504,6 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				//break;
 		}
-		$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-		//
-		$db_subscription->setSubActivatedDate(new DateTime($api_subscription->created_at));
-		$db_subscription = BillingsSubscriptionDAO::updateSubActivatedDate($db_subscription);
-		//
-		//NOT GIVEN : $db_subscription->setSubCanceledDate(NULL);
-		//NOT GIVEN : $db_subscription->setSubExpiresDate(NULL);
-		//To be calculated from billings api
-		//NOT GIVEN : $db_subscription->setSubPeriodStartedDate(NULL);
-		//NOT GIVEN : To be calculated from billings api
-		//$db_subscription->setSubPeriodEndsDate(NULL);
-		//NOT GIVEN : collection_mode
 		$db_subscription->setUpdateType($update_type);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateType($db_subscription);
 		//
@@ -754,10 +787,10 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
 	}
 
-	protected function checkBillingInfos(BillingInfoOpts $billingInfoOpts, User $user)
+	protected function checkBillingInfos(BillingInfo $billingInfo, User $user)
 	{
 		//if no iban suplied, return true
-		$iban = $billingInfoOpts->getOpt('iban');
+		$iban = $billingInfo->getIban();
 		if(!empty($iban)) {
 			$iban = preg_replace('/\s+/','', $iban);//remove all spaces
 			$usersIban = UsersIbanDao::getIban($iban);

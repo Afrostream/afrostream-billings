@@ -138,6 +138,7 @@ class CouponsHandler {
 			$provider = $provider_from_user;
 			//
 			$coupon_billing_uuid = guid();
+			$coupon_provider_uuid = NULL;
 			switch($provider->getName()) {
 				case 'cashway' :
 					$cashwayCouponsHandler = new CashwayCouponsHandler();

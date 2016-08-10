@@ -70,7 +70,8 @@ class AfrCouponsHandler {
 						'metadata' => [
 								'AfrSource' => 'afrBillingApi',
 								'AfrOrigin' => 'coupon',
-								'AfrCouponCode' => $couponCode
+								'AfrCouponBillingUuid' => $couponBillingUuid,
+								'AfrUserBillingUuid' => $user->getUserBillingUuid()
 						]
 				];
 				
@@ -113,7 +114,7 @@ class AfrCouponsHandler {
 				}
 				break;
 			default :
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), 'TODO : unsupported feature for CouponsCampaignType='.$couponsCampaign->getCouponType()->getValue());
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), 'unsupported feature for CouponsCampaignType='.$couponsCampaign->getCouponType()->getValue());
 				break;
 		}
 		

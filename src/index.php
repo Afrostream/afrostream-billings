@@ -287,7 +287,17 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
     	"userBillingUuid" : "UserBillingUUID",				//given when creating a user
     	"internalPlanUuid" : "InternalPlanUuid",			//Plan (internal name)	 
     	"subscriptionProviderUuid" : "SubscriptionProviderUUID",//given by the provider when subscription is created from provider side
-    	"billingInfoOpts" : {								//nothing for now
+    	"billingInfo" : {
+    		"firstName" : "firstNameValue",
+    		"lastName" : "lastNameValue",
+    		"email" : "emailValue",
+    		"iban" : "ibanValue",
+    		"countryCode" : "countryCodeValue",
+    		"billingInfoOpts" : {
+        		"key1": "value1",
+        		"key2": "value2",
+        		"key3": "value3"    			
+    		}	
     	},
     	"subOpts": {
         	"key1": "value1",

@@ -122,18 +122,15 @@ class SubscriptionsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(!isset($data['billingInfoOpts'])) {
-				//exception
-				$msg = "field 'billingInfoOpts' is missing";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			} else {
-				if(!is_array($data['billingInfoOpts'])) {
+			$billing_info_array = array();
+			if(isset($data['billingInfo'])) {
+				if(!is_array($data['billingInfo'])) {
 					//exception
-					$msg = "field 'billingInfoOpts' must be an array";
+					$msg = "field 'billingInfo' must be an array";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
+				$billing_info_array = $data['billingInfo'];
 			}
 			$sub_opts = array();
 			if(isset($data['subOpts'])) {
@@ -147,13 +144,12 @@ class SubscriptionsController extends BillingsController {
 			}
 			$user_billing_uuid = $data['userBillingUuid'];
 			$internal_plan_uuid = $data['internalPlanUuid'];
-			$billing_info_opts = $data['billingInfoOpts'];
 			$subscription_provider_uuid = NULL;
 			if(isset($data['subscriptionProviderUuid'])) {
 				$subscription_provider_uuid = $data['subscriptionProviderUuid'];
 			}
 			$subscriptionsHandler = new SubscriptionsHandler();
-			$subscription = $subscriptionsHandler->doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, $billing_info_opts, $sub_opts);
+			$subscription = $subscriptionsHandler->doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, $billing_info_array, $sub_opts);
 			return($this->returnObjectAsJson($response, 'subscription', $subscription));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while creating a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();

@@ -1,18 +1,20 @@
 <?php
+
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
-require_once __DIR__.'/observers/HookInterface.php';
-require_once __DIR__.'/observers/CancelSubscription.php';
-require_once __DIR__.'/observers/EmailCanceledSubscription.php';
-require_once __DIR__.'/observers/EmailCreatedSubscription.php';
-require_once __DIR__.'/observers/UpdateSubscription.php';
+require_once __DIR__ . '/observers/HookInterface.php';
+require_once __DIR__ . '/observers/CancelSubscription.php';
+require_once __DIR__ . '/observers/EmailCanceledSubscription.php';
+require_once __DIR__ . '/observers/EmailCreatedSubscription.php';
+require_once __DIR__ . '/observers/UpdateSubscription.php';
+require_once __DIR__ . '/observers/ChargeHookObserver.php';
 
 /**
  * Handler for stripe web hook
  *
  * Web hook are event sent by stripe who reflect the modification on stripe side
- * like subscriptino updated, customer canceled a subscription,...
+ * like subscription updated, customer canceled a subscription,...
  */
 class StripeWebHooksHandler
 {
@@ -26,8 +28,9 @@ class StripeWebHooksHandler
      */
     public function __construct()
     {
-        $this->observers = new \SplObjectStorage();
-        \Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+    	\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+    	$this->observers = new \SplObjectStorage();
+        $this->loadHooks();
     }
 
     /**
@@ -56,11 +59,12 @@ class StripeWebHooksHandler
     {
         $postedEvent = json_decode($billingsWebHook->getPostData(), true);
 
-        $this->log('Process new event '.$postedEvent['id']);
+        $this->log('Process new event id='.$postedEvent['id'].', type='.$postedEvent['type'].'...');
 
         // request event to be sure it's a real one
+        
         $event = \Stripe\Event::retrieve($postedEvent['id']);
-
+        
         // bad event, return quietly
         if (empty($event['id']) || empty($event['data']['object'])) {
             $this->log('Bad event , no id or no object found in event');
@@ -71,8 +75,10 @@ class StripeWebHooksHandler
 
         // send event to observers
         foreach ($this->observers as $hookObserver) {
-            $hookObserver->event($event, $provider);
+			$hookObserver->event($event, $provider);
         }
+        
+        $this->log('Process new event id='.$postedEvent['id'].', type='.$postedEvent['type'].' done successfully');
     }
 
     /**
@@ -83,7 +89,8 @@ class StripeWebHooksHandler
         $this->addHookObserver(new CancelSubscription())
             //->addHookObserver(new EmailCanceledSubscription())
             //->addHookObserver(new EmailCreatedSubscription())
-            ->addHookObserver(new UpdateSubscription());
+            ->addHookObserver(new UpdateSubscription())
+        	->addHookObserver(new ChargeHookObserver());
     }
 
     protected function log($message, array $values =  [])

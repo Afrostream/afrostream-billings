@@ -202,54 +202,55 @@ class UsersHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//user creation provider side
+			$user_billing_uuid = guid();
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlyUsersHandler = new RecurlyUsersHandler();
-					$user_provider_uuid = $recurlyUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $recurlyUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'gocardless' :
 					$gocardlessUsersHandler = new GocardlessUsersHandler();
-					$user_provider_uuid = $gocardlessUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $gocardlessUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'celery' :
 					$celeryUsersHandler = new CeleryUsersHandler();
-					$user_provider_uuid = $celeryUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $celeryUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'bachat' :
 					$bachatUsersHandler = new BachatUsersHandler();
-					$user_provider_uuid = $bachatUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $bachatUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'idipper' :
 					$idipperUsersHandler = new IdipperUsersHandler();
-					$user_provider_uuid = $idipperUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $idipperUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'afr' :
 					$afrUsersHandler = new AfrUsersHandler();
-					$user_provider_uuid = $afrUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $afrUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'cashway' :
 					$cashwayUsersHandler = new CashwayUsersHandler();
-					$user_provider_uuid = $cashwayUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $cashwayUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'orange' :
 					$orangeUsersHandler = new OrangeUsersHandler();
-					$user_provider_uuid = $orangeUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $orangeUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'bouygues' :
 					$bouyguesUsersHandler = new BouyguesUsersHandler();
-					$user_provider_uuid = $bouyguesUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $bouyguesUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'stripe':
 					$stripeUserHandler = new StripeUsersHandler();
-					$user_provider_uuid = $stripeUserHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $stripeUserHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'braintree' :
 					$braintreeUsersHandler = new BraintreeUsersHandler();
-					$user_provider_uuid = $braintreeUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $braintreeUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'netsize' :
 					$netsizeUsersHandler = new NetsizeUsersHandler();
-					$user_provider_uuid = $netsizeUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $netsizeUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider_name;
@@ -263,7 +264,7 @@ class UsersHandler {
 				pg_query("BEGIN");
 				//USER
 				$db_user = new User();
-				$db_user->setUserBillingUuid(guid());
+				$db_user->setUserBillingUuid($user_billing_uuid);
 				$db_user->setProviderId($provider->getId());
 				$db_user->setUserReferenceUuid($user_reference_uuid);
 				$db_user->setUserProviderUuid($user_provider_uuid);

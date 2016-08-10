@@ -1,7 +1,9 @@
 <?php
+
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../../utils/utils.php';
 
 use \Stripe\Subscription;
 
@@ -22,8 +24,9 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      * @param InternalPlanOpts         $internalPlanOpts
      * @param Plan                     $plan
      * @param PlanOpts                 $planOpts
+     * @param string                   $subscription_billing_uuid
      * @param string                   $subscriptionProviderUuid
-     * @param BillingInfoOpts          $billingInfoOpts
+     * @param BillingInfo			   $billingInfo
      * @param BillingsSubscriptionOpts $subOpts
      *
      * @throws BillingsException
@@ -38,22 +41,29 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         InternalPlanOpts $internalPlanOpts,
         Plan $plan,
         PlanOpts $planOpts,
+    	$subscription_billing_uuid,
         $subscriptionProviderUuid,
-        BillingInfoOpts $billingInfoOpts,
+        BillingInfo $billingInfo,
         BillingsSubscriptionOpts $subOpts
     )
     {
-        if ($internalPlan->getCycle() == PlanCycle::once) {
-            $subscription = $this->chargeCustomer($user, $plan, $subOpts, $internalPlan);
-        } else {
-            if ($subscriptionProviderUuid) {
-                $subscription = $this->getSubscription($subscriptionProviderUuid, $user);
+    	if (isset($subscriptionProviderUuid)) {
+    		$subscription = $this->getSubscription($subscriptionProviderUuid, $user);
+    	} else {
+    		$metadata = [
+    				'AfrSource' => 'afrBillingApi',
+    				'AfrOrigin' => 'subscription',
+    				'AfrSubscriptionBillingUuid' => $subscription_billing_uuid,
+    				'AfrUserBillingUuid' => $user->getUserBillingUuid()
+    		];
+	        if ($internalPlan->getCycle() == PlanCycle::once) {
+	            $subscription = $this->chargeCustomer($user, $plan, $subOpts, $internalPlan, $metadata);
             } else {
-                $subscription = $this->createSubscription($user, $plan, $subOpts);
+                $subscription = $this->createSubscription($user, $plan, $subOpts, $internalPlan, $metadata);
             }
         }
 
-        return $this->getNewBillingSubscription($provider, $user, $plan, $subscription);
+        return $this->getNewBillingSubscription($provider, $user, $plan, $subscription, $subscription_billing_uuid);
     }
 
     /**
@@ -68,7 +78,9 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      */
     public function createDbSubscriptionFromApiSubscription(
         BillingsSubscription $billingSubscription,
-        BillingsSubscriptionOpts $subOpts = null,
+        BillingsSubscriptionOpts $subOpts = NULL,
+    	BillingInfo $billingInfo = NULL,
+    	$subscription_billing_uuid,
         $updateType = 'api',
         $updateId = 0
     )
@@ -87,6 +99,11 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             ]
         );
 
+        if(isset($billingInfo)) {
+        	$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
+        	$billingSubscription->setBillingInfoId($billingInfo->getId());
+        }
+        
         $billingSubscription = BillingsSubscriptionDAO::addBillingsSubscription($billingSubscription);
 
         $this->log('Subscription id : '.$billingSubscription->getId());
@@ -140,9 +157,10 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
 
             $billingSubscription = $this->findRecordedSubscriptionByProviderId($recordedSubscriptions, $subscription['id']);
 
-            // subscriptino not found, so we create it
+            // subscription not found, so we create it
             if (is_null($billingSubscription)) {
-                $billingSubscription = $this->getNewBillingSubscription($provider, $user, $plan, $subscription);
+            	$subscription_billing_uuid = guid();
+                $billingSubscription = $this->getNewBillingSubscription($provider, $user, $plan, $subscription, $subscription_billing_uuid);
                 $this->createDbSubscriptionFromApiSubscription($billingSubscription);
             } else {
                 // we found one update and record it
@@ -401,7 +419,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      *
      * @return string
      */
-    protected function createSubscription(User $user, Plan $plan, BillingsSubscriptionOpts $subOpts)
+    protected function createSubscription(User $user, Plan $plan, BillingsSubscriptionOpts $subOpts, InternalPlan $internalPlan, array $metadata)
     {
         if (is_null($subOpts->getOpt('customerBankAccountToken'))) {
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription. Missing stripe token');
@@ -411,10 +429,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             "customer" => $user->getUserProviderUuid(),
             "plan" => $plan->getPlanUuid(),
             'source' => $subOpts->getOpt('customerBankAccountToken'),
-            "metadata" => [
-                'AfrSource' => 'afrBillingApi',
-                'AfrOrigin' => 'subscription'
-            ]
+            "metadata" => $metadata
         ];
 
         $logMessage = 'Create subscription : customer : %s, plan : %s, source : %s';
@@ -456,7 +471,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      *
      * @return Subscription
      */
-    protected function chargeCustomer(User $user, Plan $plan, BillingsSubscriptionOpts $subOpts, InternalPlan $internalPlan)
+    protected function chargeCustomer(User $user, Plan $plan, BillingsSubscriptionOpts $subOpts, InternalPlan $internalPlan, array $metadata)
     {
         if (is_null($subOpts->getOpt('customerBankAccountToken'))) {
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription. Missing stripe token');
@@ -469,16 +484,13 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             $customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
             $customer->source = $subOpts->getOpt('customerBankAccountToken');
             $customer->save();
-
+			
             $chargeData = array(
                 "amount" => $internalPlan->getAmountInCents(),
                 "currency" => $internalPlan->getCurrency(),
-                'customer' => $user->getUserProviderUuid(),
+                "customer" => $user->getUserProviderUuid(),
                 "description" => $plan->getPlanUuid(),
-                "metadata" => [
-                    'AfrSource' => 'afrBillingApi',
-                    'AfrOrigin' => 'subscription'
-                ]
+                "metadata" => $metadata
             );
 
             $this->log("Charge customer,  amount : %s, currency : %s, customer : %s, description : %s", $chargeData);
@@ -490,9 +502,10 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
                 throw new \Exception('Payment refused');
             }
 
+            $subOpts->setOpt('chargeId', $charge['id']);
 
             $subscription = new Subscription();
-            $subscription['id'] = $charge['id'];
+            $subscription['id'] = guid();
             $subscription['created'] = $charge['created'];
             $subscription['canceled_at'] = null;
             $subscription['current_period_start'] = $charge['created'];
@@ -586,10 +599,10 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      *
      * @return BillingsSubscription
      */
-    protected function getNewBillingSubscription(Provider $provider, User $user, Plan $plan, Subscription $subscription)
+    protected function getNewBillingSubscription(Provider $provider, User $user, Plan $plan, Subscription $subscription, $subscription_billing_uuid)
     {
         $billingSubscription = new BillingsSubscription();
-        $billingSubscription->setSubscriptionBillingUuid(guid());
+        $billingSubscription->setSubscriptionBillingUuid($subscription_billing_uuid);
         $billingSubscription->setProviderId($provider->getId());
         $billingSubscription->setUserId($user->getId());
         $billingSubscription->setPlanId($plan->getId());
@@ -597,11 +610,10 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $billingSubscription->setSubStatus($this->getStatusFromProvider($subscription));
         $billingSubscription->setSubActivatedDate($this->createDate($subscription['created']));
         $billingSubscription->setSubCanceledDate($this->createDate($subscription['canceled_at']));
-        $billingSubscription->setSubExpiresDate(null);
+        $billingSubscription->setSubExpiresDate(NULL);
         $billingSubscription->setSubPeriodStartedDate($this->createDate($subscription['current_period_start']));
         $billingSubscription->setSubPeriodEndsDate($this->createDate($subscription['current_period_end']));
         $billingSubscription->setDeleted('false');
-
         return $billingSubscription;
     }
 
@@ -657,3 +669,5 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
     }
     
 }
+
+?>
