@@ -215,7 +215,7 @@ class GocardlessTransactionsHandler {
 			case 'failed' :
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::failed);
 				break;
-			case 'charge_back' :
+			case 'charged_back' :
 				$billingTransactionStatus = new BillingsTransactionStatus(BillingsTransactionStatus::declined);
 				break;
 			default :
