@@ -25,6 +25,7 @@ class BillingsImportRecurlyTransactions {
 			foreach ($recurlyAccounts as $recurlyAccount) {
 				try {
 					$this->doImportUserTransactions($recurlyAccount);
+					usleep(getEnv('RECURLY_IMPORT_TRANSACTIONS_SLEEPING_TIME_IN_MILLIS') * 1000);
 				} catch (Exception $e) {
 					ScriptsConfig::getLogger()->addError("unexpected exception while importing transactions from recurly with account_code=".$recurlyAccount->account_code.", message=".$e->getMessage());
 				}

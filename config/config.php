@@ -86,8 +86,13 @@ if(getEnv('RECURLY_POSTPONE_TO') === false) {
 if(getEnv('RECURLY_WH_HTTP_AUTH_USER') === false) {
 	putEnv('RECURLY_WH_HTTP_AUTH_USER=admin');
 }
+
 if(getEnv('RECURLY_WH_HTTP_AUTH_PWD') === false) {
 	putEnv('RECURLY_WH_HTTP_AUTH_PWD=pwd');
+}
+
+if(getEnv('RECURLY_IMPORT_TRANSACTIONS_SLEEPING_TIME_IN_MILLIS') === false) {
+	putEnv('RECURLY_IMPORT_TRANSACTIONS_SLEEPING_TIME_IN_MILLIS=250');
 }
 
 #Gocardless API
