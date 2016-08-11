@@ -64,7 +64,7 @@ class BillingsImportBraintreeBillingInfos {
 		}
 		//
 		$payment = NULL;
-		if(isset($currentBraintreeTransaction->paypalDetails->paymentId)) {
+		if(!is_null($currentBraintreeTransaction->paypalDetails->paymentId)) {
 			$paypalPaymentId = $currentBraintreeTransaction->paypalDetails->paymentId;
 			ScriptsConfig::getLogger()->addInfo("importing paypal data from paymentId=".$paypalPaymentId."...");
 			$payment = Payment::get($paypalPaymentId, $apiContext);
