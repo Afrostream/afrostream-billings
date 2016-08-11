@@ -42,8 +42,7 @@ class BillingsImportBraintreeBillingInfos {
 						foreach ($paymentMethod->subscriptions as $customer_subscription) {
 							$currentBraintreeSubscription = Braintree\Subscription::find($customer_subscription->id);
 							$currentBraintreeTransactions = $currentBraintreeSubscription->transactions;
-							if(count($currentBraintreeTransactions) > 0) {
-								$currentBraintreeTransaction = $currentBraintreeTransactions[0];
+							foreach($currentBraintreeTransactions as $currentBraintreeTransaction) {
 								$this->doImportSubscriptionBillingInfo($currentBraintreeSubscription, $currentBraintreeTransaction, $apiContext);
 							}
 						}
@@ -64,32 +63,37 @@ class BillingsImportBraintreeBillingInfos {
 			throw new Exception("subscription with subscription_provider_id=".$currentBraintreeSubscription->id." does not exist in billings database");
 		}
 		//
-		$paypalPaymentId = $currentBraintreeTransaction->paypalDetails->paymentId;
-		ScriptsConfig::getLogger()->addInfo("importing paypal data from paymentId=".$paypalPaymentId."...");
-		$payment = Payment::get($paypalPaymentId, $apiContext);
-		ScriptsConfig::getLogger()->addInfo("importing paypal data from paymentId=".$paypalPaymentId." done successfully");
-		//
-
-		$countryCode = $payment->payer->payer_info->country_code;
-		if(isset($countryCode)) {
-			ScriptsConfig::getLogger()->addInfo("importing paypal data, countryCode=".$countryCode);
-			$billingInfo = NULL;
-			if($subscription->getBillingInfoId() == NULL) {
-				//CREATE
-				$billingInfo = new BillingInfo();
-				$billingInfo->setBillingInfoBillingUuid(guid());
-				$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
-				$subscription->setBillingInfoId($billingInfo->getId());
-				$subscription = BillingsSubscriptionDAO::updateBillingInfoId($subscription);
+		$payment = NULL;
+		if(isset($currentBraintreeTransaction->paypalDetails->paymentId)) {
+			$paypalPaymentId = $currentBraintreeTransaction->paypalDetails->paymentId;
+			ScriptsConfig::getLogger()->addInfo("importing paypal data from paymentId=".$paypalPaymentId."...");
+			$payment = Payment::get($paypalPaymentId, $apiContext);
+			ScriptsConfig::getLogger()->addInfo("importing paypal data from paymentId=".$paypalPaymentId." done successfully");
+		}
+		if(isset($payment)) {
+			$countryCode = $payment->payer->payer_info->country_code;
+			if(isset($countryCode)) {
+				ScriptsConfig::getLogger()->addInfo("importing paypal data, countryCode=".$countryCode);
+				$billingInfo = NULL;
+				if($subscription->getBillingInfoId() == NULL) {
+					//CREATE
+					$billingInfo = new BillingInfo();
+					$billingInfo->setBillingInfoBillingUuid(guid());
+					$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
+					$subscription->setBillingInfoId($billingInfo->getId());
+					$subscription = BillingsSubscriptionDAO::updateBillingInfoId($subscription);
+				} else {
+					//GET
+					$billingInfo = BillingInfoDAO::getBillingInfoByBillingInfoId($subscription->getBillingInfoId());
+				}
+				//UPDATE
+				$billingInfo->setCountryCode($countryCode);
+				$billingInfo = BillingInfoDAO::updateCountryCode($billingInfo);
 			} else {
-				//GET
-				$billingInfo = BillingInfoDAO::getBillingInfoByBillingInfoId($subscription->getBillingInfoId());
+				ScriptsConfig::getLogger()->addInfo("importing paypal data, no countryCode found");
 			}
-			//UPDATE
-			$billingInfo->setCountryCode($countryCode);
-			$billingInfo = BillingInfoDAO::updateCountryCode($billingInfo);
 		} else {
-			ScriptsConfig::getLogger()->addInfo("importing paypal data, no countryCode found");
+			ScriptsConfig::getLogger()->addInfo("importing paypal data ignored, no paymentId found");
 		}
 	}
 	
