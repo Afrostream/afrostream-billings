@@ -22,24 +22,41 @@ $dateFormat = "Ymd";
 
 $from = NULL;
 $fromStr = NULL;
-
-if(isset($_GET["-from"])) {
-	$fromStr = $_GET["-from"];
-	$from = DateTime::createFromFormat($dateFormat, $fromStr);
-	$from->setTimezone(new DateTimeZone(ScriptsConfig::$timezone));
-}
-
-print_r("using from=".$fromStr."\n");
-
 $to = NULL;
 $toStr = NULL;
 
-if(isset($_GET["-to"])) {
-	$toStr = $_GET["-to"];
-	$to = DateTime::createFromFormat($dateFormat, $toStr);
-	$to->setTimezone(new DateTimeZone(ScriptsConfig::$timezone));
+if(isset($_GET["-lastdays"])) {
+	$lastdays = $_GET["-lastdays"];
+	$minusOneDay = new DateInterval("P1D");
+	$minusOneDay->invert = 1;
+	$yesterday = new DateTime();
+	$yesterday->setTimezone(new DateTimeZone(ScriptsConfig::$timezone));
+	$yesterday->setTime(23, 59, 59);
+	$yesterday->add($minusOneDay);
+	$to = $yesterday;
+	$toStr = $to->format($dateFormat);
+	$intervalToRemove = new DateInterval("P".$lastdays."D");
+	$intervalToRemove->invert = 1;
+	$firstDay = new DateTime();
+	$firstDay->setTimezone(new DateTimeZone(ScriptsConfig::$timezone));
+	$firstDay->setTime(0, 0, 0);
+	$firstDay->add($intervalToRemove);
+	$from = $firstDay;
+	$fromStr = $from->format($dateFormat);
+} else {
+	if(isset($_GET["-from"])) {
+		$fromStr = $_GET["-from"];
+		$from = DateTime::createFromFormat($dateFormat, $fromStr);
+		$from->setTimezone(new DateTimeZone(ScriptsConfig::$timezone));
+	}
+	if(isset($_GET["-to"])) {
+		$toStr = $_GET["-to"];
+		$to = DateTime::createFromFormat($dateFormat, $toStr);
+		$to->setTimezone(new DateTimeZone(ScriptsConfig::$timezone));
+	}
 }
 
+print_r("using from=".$fromStr."\n");
 print_r("using to=".$toStr."\n");
 
 $firstId = NULL;

@@ -297,7 +297,6 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user opts updating...");
-			checkUserOptsValues($user_opts_array);
 			$db_user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
 			if($db_user == NULL) {
 				$msg = "unknown userBillingUuid : ".$userBillingUuid;
@@ -310,6 +309,7 @@ class UsersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			checkUserOptsValues($user_opts_array, $provider->getName());
 			$db_user_opts = UserOptsDAO::getUserOptsByUserId($db_user->getId());
 			$current_user_opts_array = $db_user_opts->getOpts();
 			try {
