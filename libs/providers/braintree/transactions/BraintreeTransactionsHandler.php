@@ -19,11 +19,9 @@ class BraintreeTransactionsHandler {
 			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
 			//
 			$search_query = [Braintree\TransactionSearch::customerId()->is($user->getUserProviderUuid())];
-			if(isset($from)) {
-				$search_query[] = Braintree\TransactionSearch::createdAt()->greaterThanOrEqualTo($from);
-			}
-			if(isset($to)) {
-				$search_query[] = Braintree\TransactionSearch::createdAt()->lessThanOrEqualTo($to);
+			//NC : WARNING : greaterThanOrEqualTo / lessThanOrEqualTo does not seem to work...
+			if(isset($from) || isset($to)) {
+				$search_query[] = Braintree\TransactionSearch::createdAt()->between($from, $to);
 			}
 			$braintreeTransactions = Braintree\Transaction::search($search_query);
 			//
