@@ -44,12 +44,13 @@ class BraintreeWebHooksHandler {
 				break;
 		}
 
-		if (in_array($notification->kind, [
+		//NC : NO MORE IN REALTIME
+		/*if (in_array($notification->kind, [
 			Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_SUCCESSFULLY,
 			Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_UNSUCCESSFULLY
 		])) {
 			$this->notifyCharge($notification);
-		}
+		}*/
 
 		config::getLogger()->addInfo('Processing braintree hook notification done successfully');
 	}

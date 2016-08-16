@@ -324,7 +324,99 @@ EOL;
 		
 		return $out;		
 	}
-
+	
+	public static function getSucceededTransactionEvents(DateTime $dateStart, Datetime $dateEnd) {
+		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
+		$date_start_str = dbGlobal::toISODate($dateStart);
+		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
+		$date_end_str = dbGlobal::toISODate($dateEnd);
+		
+		$query =<<<EOL
+		SELECT BP.name as provider_name,
+		BT.transaction_billing_uuid as transaction_billing_uuid,
+		BT.transaction_provider_uuid as transaction_provider_uuid,
+		BT.transaction_type as transaction_type,
+		BT.transaction_status as transaction_status,
+		CAST((amount_in_cents) AS FLOAT)/100 as amount,
+		BT.currency as currency
+		FROM billing_transactions BT
+		INNER JOIN billing_providers BP ON (BT.providerid = BP._id)
+		AND (BT.updated_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+EOL;
+		$query = sprintf($query, $date_start_str, $date_end_str);
+		
+		$result = pg_query(config::getDbConn(), $query);
+		$out = array();
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = $row;
+		}
+		return $out;
+	}
+	
+	public static function getNumberOfSucceededTransactionEvents(DateTime $dateStart, Datetime $dateEnd) {
+		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
+		$date_start_str = dbGlobal::toISODate($dateStart);
+		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
+		$date_end_str = dbGlobal::toISODate($dateEnd);
+		$query =<<<EOL
+		SELECT BP.name as provider_name,
+		BT.transaction_type as transaction_type, 
+		count(*) as counter,
+		CAST(sum(amount_in_cents) AS FLOAT)/100 as amount,
+		BT.currency as currency
+		FROM billing_transactions BT
+		INNER JOIN billing_providers BP ON (BT.providerid = BP._id)
+		WHERE BT.transaction_status = 'success'
+		AND (BT.updated_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		GROUP BY BP._id, BT.transaction_type, BT.currency
+EOL;
+		$query = sprintf($query, $date_start_str, $date_end_str);
+		$result = pg_query(config::getDbConn(), $query);
+		$out = array();
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			if(isset($out['total'])) {
+				$out['total']+= $row['counter'];
+			} else {
+				$out['total'] = $row['counter'];
+			}
+			if(isset($out['currencies'][$row['currency']])) {
+				$out['currencies'][$row['currency']]+= $row['amount'];
+			} else {
+				$out['currencies'][$row['currency']] = $row['amount'];
+			}
+			if(isset($out['providers'][$row['provider_name']]['total'])) {
+				$out['providers'][$row['provider_name']]['total']+= $row['counter'];
+			} else {
+				$out['providers'][$row['provider_name']]['total'] = $row['counter'];
+			}
+			if(isset($out['providers'][$row['provider_name']]['currencies'][$row['currency']])) {
+				$out['providers'][$row['provider_name']]['currencies'][$row['currency']]+= $row['amount'];
+			} else {
+				$out['providers'][$row['provider_name']]['currencies'][$row['currency']] = $row['amount'];
+			}
+			if(isset($out['transaction_types'][$row['transaction_type']]['total'])) {
+				$out['transaction_types'][$row['transaction_type']]['total']+= $row['counter'];
+			} else {
+				$out['transaction_types'][$row['transaction_type']]['total'] = $row['counter'];
+			}
+			if(isset($out['transaction_types'][$row['transaction_type']]['currencies'][$row['currency']])) {
+			 	$out['transaction_types'][$row['transaction_type']]['currencies'][$row['currency']] += $row['amount'];
+			} else {
+				$out['transaction_types'][$row['transaction_type']]['currencies'][$row['currency']] = $row['amount'];
+			}
+			if(isset($out['providers'][$row['provider_name']]['transaction_types'][$row['transaction_type']]['total'])) {
+				$out['providers'][$row['provider_name']]['transaction_types'][$row['transaction_type']]['total']+= $row['counter'];
+			} else {
+				$out['providers'][$row['provider_name']]['transaction_types'][$row['transaction_type']]['total'] = $row['counter'];
+			}
+			if(isset($out['providers'][$row['provider_name']]['transaction_types'][$row['transaction_type']]['currencies'][$row['currency']])) {
+				$out['providers'][$row['provider_name']]['transaction_types'][$row['transaction_type']]['currencies'][$row['currency']]+= $row['amount'];				
+			} else {
+				$out['providers'][$row['provider_name']]['transaction_types'][$row['transaction_type']]['currencies'][$row['currency']] = $row['amount'];
+			}
+		}
+		return($out);
+	}
 }
 
 ?>

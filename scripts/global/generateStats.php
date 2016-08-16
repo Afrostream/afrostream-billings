@@ -18,6 +18,8 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
+sendMessage("********** SUBSCRIPTIONS **********");
+
 sendMessage("*** TOTAL ***");
 
 $numberOfSubscriptions = dbStats::getNumberOfSubscriptions();
@@ -30,6 +32,11 @@ $minusOneDay->invert = 1;
 $yesterday = new DateTime();
 $yesterday->setTimezone(new DateTimeZone(config::$timezone));
 $yesterday->add($minusOneDay);
+
+$yesterdayBeginningOfDay = clone $yesterday;
+$yesterdayBeginningOfDay->setTime(0,0,0);
+$yesterdayEndOfDay = clone $yesterday;
+$yesterdayEndOfDay->setTime(23,59,59);
 
 $numberOfActivatedSubscriptionsYesterday = dbStats::getNumberOfActivatedSubscriptions($yesterday);
 $numberOfExpiredSubscriptionsYesterday = dbStats::getNumberOfExpiredSubscriptions($yesterday);
@@ -93,6 +100,63 @@ if($numberOfCanceledSubscriptionsYesterday['total'] > 0) {
 	foreach ($numberOfCanceledSubscriptionsYesterdayByProvider as $provider_name => $counters) {
 		sendMessage($provider_name."=".$counters['total']);
 	}
+}
+
+sendMessage("********** TRANSACTIONS **********");
+
+$numberOfSucceededTransactionEvents = dbStats::getNumberOfSucceededTransactionEvents($yesterdayBeginningOfDay, $yesterdayEndOfDay);
+
+if(count($numberOfSucceededTransactionEvents) > 0) {
+
+	sendMessage("*** TOTAL ***");
+	$msg = "number of transactions=".$numberOfSucceededTransactionEvents['total'];
+	$globalCurrencies = $numberOfSucceededTransactionEvents['currencies'];
+	$first = true;
+	foreach ($globalCurrencies as $currency => $amount) {
+		if($first) {
+			$first = false;
+			$msg.= ", amounts :";
+		}
+		$msg.= " amount=".$amount." ".$currency;
+	}
+	sendMessage($msg);
+	sendMessage("*** BY TRANSACTION_TYPE ***");
+	$byTransactionTypes = $numberOfSucceededTransactionEvents['transaction_types'] ;
+	foreach ($byTransactionTypes as $key => $value) {
+		$msg = "transaction_type=".$key." : number of transactions=".$value['total'];
+		$first = true;
+		$currencies = $value['currencies'];
+		foreach($currencies as $currency => $amount) {
+			if($first) {
+				$first = false;
+				$msg.= ", amounts :";
+			}
+			$msg.= " amount=".$amount." ".$currency;
+		}
+		sendMessage($msg);
+	}
+	sendMessage("*** BY PROVIDER ***");
+	$byProviders = $numberOfSucceededTransactionEvents['providers'];
+	foreach($byProviders as $key => $value) {
+		$msg = "provider=".$key." : \n";
+		$transactionTypes = $value['transaction_types'];
+		foreach ($transactionTypes as $transaction_type => $transaction_type_values) {
+			$msg.= "	transaction_type=".$transaction_type." : number of transactions=".$transaction_type_values['total'];
+			$first = true;
+			$currencies = $transaction_type_values['currencies'];
+			foreach($currencies as $currency => $amount) {
+				if($first) {
+					$first = false;
+					$msg.= ", amounts :";
+				}
+				$msg.= " amount=".$amount." ".$currency;
+			}
+			$msg.= "\n";
+		}
+		sendMessage($msg);
+	}
+} else {
+	sendMessage("total=0");
 }
 
 print_r("processing done\n");
