@@ -31,7 +31,14 @@ class RecurlyTransactionsHandler {
 			$recurlyTransactions = Recurly_TransactionList::getForAccount($user->getUserProviderUuid());
 			//
 			foreach ($recurlyTransactions as $recurlyTransaction) {
-				$this->createOrUpdateFromProvider($user, $userOpts, $recurlyAccount, $recurlyTransaction);
+				try {
+					config::getLogger()->addInfo("updating recurly transaction id=".$recurlyTransaction->uuid."...");
+					$this->createOrUpdateFromProvider($user, $userOpts, $recurlyAccount, $recurlyTransaction);
+					config::getLogger()->addInfo("updating recurly transaction id=".$recurlyTransaction->uuid." done successfully");
+				} catch(Exception $e) {
+					$msg = "an unknown exception occurred while updating recurly transaction id=".$recurlyTransaction->uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+					config::getLogger()->addError($msg);
+				}
 			}
 			//
 			config::getLogger()->addInfo("updating recurly transactions done successfully");

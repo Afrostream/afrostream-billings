@@ -102,8 +102,8 @@ if($numberOfCanceledSubscriptionsYesterday['total'] > 0) {
 	}
 }
 
-sendMessage("********** TRANSACTIONS **********");
-
+sendMessage("********** --- SUSPENDED --- TRANSACTIONS --- SUSPENDED --- **********");
+/*
 $numberOfSucceededTransactionEvents = dbStats::getNumberOfSucceededTransactionEvents($yesterdayBeginningOfDay, $yesterdayEndOfDay);
 
 if(count($numberOfSucceededTransactionEvents) > 0) {
@@ -126,7 +126,7 @@ if(count($numberOfSucceededTransactionEvents) > 0) {
 		$msg = "transaction_type=".$key." : number of transactions=".$value['total'];
 		$first = true;
 		$currencies = $value['currencies'];
-		foreach($currencies as $currency => $amount) {
+		foreach ($currencies as $currency => $amount) {
 			if($first) {
 				$first = false;
 				$msg.= ", amounts :";
@@ -137,7 +137,7 @@ if(count($numberOfSucceededTransactionEvents) > 0) {
 	}
 	sendMessage("*** BY PROVIDER ***");
 	$byProviders = $numberOfSucceededTransactionEvents['providers'];
-	foreach($byProviders as $key => $value) {
+	foreach ($byProviders as $key => $value) {
 		$msg = "provider=".$key." : \n";
 		$transactionTypes = $value['transaction_types'];
 		foreach ($transactionTypes as $transaction_type => $transaction_type_values) {
@@ -158,6 +158,18 @@ if(count($numberOfSucceededTransactionEvents) > 0) {
 } else {
 	sendMessage("total=0");
 }
+*/
+/*sendMessage("********** COUPONS **********");
+
+$numberOfCouponsActivated = dbStats::getNumberOfCouponsActivated($yesterdayBeginningOfDay, $yesterdayEndOfDay);
+
+if(count($numberOfCouponsActivated) > 0) {
+	foreach ($numberOfCouponsActivated as $key => $value) {
+		
+	}
+} else {
+	sendMessage("total=0");
+}*/
 
 print_r("processing done\n");
 

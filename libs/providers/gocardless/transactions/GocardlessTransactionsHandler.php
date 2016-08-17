@@ -37,7 +37,14 @@ class GocardlessTransactionsHandler {
 			$payments_paginator = $client->payments()->all(['params' => $params]);
 			//
 			foreach($payments_paginator as $payment_entry) {
-				$this->createOrUpdateChargeFromProvider($user, $userOpts, $customer, $payment_entry);
+				try {
+					config::getLogger()->addInfo("updating gocardless transaction id=".$payment_entry->id."...");
+					$this->createOrUpdateChargeFromProvider($user, $userOpts, $customer, $payment_entry);
+					config::getLogger()->addInfo("updating gocardless transaction id=".$payment_entry->id." done successfully");
+				} catch(Exception $e) {
+					$msg = "an unknown exception occurred while updating gocardless transaction id=".$payment_entry->id.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+					config::getLogger()->addError($msg);
+				}
 			}
 			//
 			config::getLogger()->addInfo("updating gocardless transactions done successfully");
