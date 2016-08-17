@@ -20,7 +20,7 @@ class BillingsImportRecurlyTransactions {
 			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 			//
-			$recurlyAccounts = Recurly_AccountList::get();
+			$recurlyAccounts = Recurly_AccountList::getActive();
 				
 			foreach ($recurlyAccounts as $recurlyAccount) {
 				try {

@@ -39,17 +39,24 @@ class StripeTransactionsHandler {
 				$offsetCharges = end($stripeChargeTransactions);
 				reset($stripeChargeTransactions);
 				foreach ($stripeChargeTransactions as $stripeChargeTransaction) {
-					$metadata = $stripeChargeTransaction->metadata->__toArray();
-					$hasToBeProcessed = false;
-					$isRecurlyTransaction = false;
-					if(array_key_exists('recurlyTransactionId', $metadata)) {
-						$isRecurlyTransaction = true;
-					}
-					$hasToBeProcessed = !$isRecurlyTransaction;
-					if($hasToBeProcessed) {
-						$this->createOrUpdateChargeFromProvider($user, $userOpts, $stripeCustomer, $stripeChargeTransaction);
-					} else {
-						config::getLogger()->addInfo("stripe charge transaction =".$stripeChargeTransaction->id." is ignored");
+					try {
+						config::getLogger()->addInfo("updating stripe transaction id=".$stripeChargeTransaction->id."...");
+						$metadata = $stripeChargeTransaction->metadata->__toArray();
+						$hasToBeProcessed = false;
+						$isRecurlyTransaction = false;
+						if(array_key_exists('recurlyTransactionId', $metadata)) {
+							$isRecurlyTransaction = true;
+						}
+						$hasToBeProcessed = !$isRecurlyTransaction;
+						if($hasToBeProcessed) {
+							$this->createOrUpdateChargeFromProvider($user, $userOpts, $stripeCustomer, $stripeChargeTransaction);
+						} else {
+							config::getLogger()->addInfo("stripe charge transaction =".$stripeChargeTransaction->id." is ignored");
+						}
+						config::getLogger()->addInfo("updating stripe transaction id=".$stripeChargeTransaction->id." done successfully");
+					} catch (Exception $e) {
+						$msg = "an unknown exception occurred while updating stripe transaction id=".$stripeChargeTransaction->id.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+						config::getLogger()->addError($msg);					
 					}
 				}
 			}

@@ -90,14 +90,23 @@ class BillingsImportStripeTransactions
     protected function doImportUserTransactions(Stripe\Customer $customer, DateTime $from = NULL, DateTime $to = NULL)
     {
         ScriptsConfig::getLogger()->addInfo("importing transactions from stripe account with account_code=".$customer->id."...");
-        $user = UserDAO::getUserByUserProviderUuid($this->providerId, $customer->id);
-
-        if($user == NULL) {
-            throw new Exception("user with account_code=".$customer->id." does not exist in billings database");
+        $metadata = $customer->metadata->__toArray();
+        $hasToBeProcessed = false;
+        $isRecurlyCustomer = false;
+        if(array_key_exists('recurlyAccountCode', $metadata)) {
+        	$isRecurlyCustomer = true;
         }
-	
-        $transactionHandler = new TransactionsHandler();
-        $transactionHandler->doUpdateTransactionsByUser($user, $from, $to);
+        $hasToBeProcessed = !$isRecurlyCustomer;
+        if($hasToBeProcessed) {
+	        $user = UserDAO::getUserByUserProviderUuid($this->providerId, $customer->id);
+	        if($user == NULL) {
+	            throw new Exception("user with account_code=".$customer->id." does not exist in billings database");
+	        }
+	        $transactionHandler = new TransactionsHandler();
+	        $transactionHandler->doUpdateTransactionsByUser($user, $from, $to);
+        } else {
+        	config::getLogger()->addInfo("stripe account with account_code=".$customer->id." is ignored");
+        }
         ScriptsConfig::getLogger()->addInfo("importing transactions from stripe account with account_code=".$customer->id." done successfully");
     }
  

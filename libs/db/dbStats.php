@@ -417,6 +417,40 @@ EOL;
 		}
 		return($out);
 	}
+	
+	public function getNumberOfCouponsGenerated(DateTime $dateStart, DateTime $dateEnd) {
+		
+	}
+	
+	public function getNumberOfCouponsActivated(DateTime $dateStart, DateTime $dateEnd) {
+
+		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
+		$date_start_str = dbGlobal::toISODate($dateStart);
+		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
+		$date_end_str = dbGlobal::toISODate($dateEnd);
+		
+		$query =<<<EOL
+		SELECT BP.name AS provider_name,
+		count(*) as counter,
+		BCC.coupon_type as coupon_type
+		FROM
+		billing_coupons BC
+		INNER JOIN billing_providers BP ON (BC.providerid = BP._id)
+		INNER JOIN billing_coupons_campaigns BCC ON (BC.couponscampaignsid = BCC._id)
+		WHERE
+		(BC.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		GROUP BY BP._id, BCC._id
+EOL;
+		$query = sprintf($query, $date_start_str, $date_end_str);
+		
+		$result = pg_query(config::getDbConn(), $query);
+		$out = array();
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out['providers'][$row];
+		}
+		return $out;		
+	}
+	
 }
 
 ?>

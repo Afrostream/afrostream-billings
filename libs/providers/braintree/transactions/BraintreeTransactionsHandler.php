@@ -26,21 +26,28 @@ class BraintreeTransactionsHandler {
 			$braintreeTransactions = Braintree\Transaction::search($search_query);
 			//
 			foreach ($braintreeTransactions as $braintreeCurrentTransaction) {
-				switch($braintreeCurrentTransaction->type) {
-					case Braintree\Transaction::SALE :
-						$this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeCurrentTransaction);
-						break;
-					case Braintree\Transaction::CREDIT :
-						if(isset($braintreeCurrentTransaction->refundedTransactionId)) {
-							$braintreeChargeTransaction = Braintree\Transaction::find($braintreeCurrentTransaction->refundedTransactionId);
-							$this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeChargeTransaction);
-						} else {
-							config::getLogger()->addWarning("Braintree credit Transaction with transaction_provider_uuid=".$braintreeCurrentTransaction->id." should be linked to a charge Transaction");
-						}
-						break;
-					default :
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown braintree transaction type : ".$braintreeCurrentTransaction->type);
-						break;
+				try {
+					config::getLogger()->addInfo("updating braintree transaction id=".$braintreeCurrentTransaction->id."...");
+					switch($braintreeCurrentTransaction->type) {
+						case Braintree\Transaction::SALE :
+							$this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeCurrentTransaction);
+							break;
+						case Braintree\Transaction::CREDIT :
+							if(isset($braintreeCurrentTransaction->refundedTransactionId)) {
+								$braintreeChargeTransaction = Braintree\Transaction::find($braintreeCurrentTransaction->refundedTransactionId);
+								$this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeChargeTransaction);
+							} else {
+								config::getLogger()->addWarning("Braintree credit Transaction with transaction_provider_uuid=".$braintreeCurrentTransaction->id." should be linked to a charge Transaction");
+							}
+							break;
+						default :
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown braintree transaction type : ".$braintreeCurrentTransaction->type);
+							break;
+					}
+					config::getLogger()->addInfo("updating braintree transaction id=".$braintreeCurrentTransaction->id." done successfully");
+				} catch (Exception $e) {
+					$msg = "an unknown exception occurred while updating braintree transaction id=".$braintreeCurrentTransaction->id.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+					config::getLogger()->addError($msg);
 				}
 			}
 			//
