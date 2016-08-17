@@ -97,7 +97,7 @@ foreach ($couponsActivated as $coupon) {
 }
 
 //transactions
-
+/*
 $channelTransactions = getEnv('SLACK_STATS_TRANSACTIONS_CHANNEL');
 
 $succeededTransactionEvents = dbStats::getSucceededTransactionEvents($start_date, $end_date);
@@ -112,7 +112,7 @@ foreach ($succeededTransactionEvents as $succeededTransactionEvent) {
 	$msg.= "transaction_billing_uuid=".$succeededTransactionEvent['transaction_billing_uuid'];
 	sendMessage($msg, $channelTransactions);
 	sendMessage('---------------------------------------------------', $channelTransactions);
-}
+}*/
 
 print_r("processing done\n");
 
