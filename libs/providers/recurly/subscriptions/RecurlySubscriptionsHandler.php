@@ -57,11 +57,18 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				
 				$account->billing_info = $billing_info;
 				$subscription->account = $account;
-				
+				//couponCode
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
 					if(strlen($couponCode) > 0) {
 						$subscription->coupon_code = $couponCode;
+					}
+				}
+				//startsAt
+				if(array_key_exists('startsAt', $subOpts->getOpts())) {
+					$startsAt = $subOpts->getOpts()['startsAt'];
+					if(strlen($startsAt) > 0) {
+						$subscription->starts_at = $startsAt;
 					}
 				}
 				
