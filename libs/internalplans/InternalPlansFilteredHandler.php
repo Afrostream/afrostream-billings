@@ -62,7 +62,7 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 						//SPECIFIC
 						$lastChanceDateStr = "2016-10-31 23:59:59";
 						$lastChanceDate = DateTime::createFromFormat("Y-m-d H:i:s", $lastChanceDateStr, new DateTimeZone(config::$timezone));
-						$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
+						$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($lastSubscription->getPlanId()));
 						if(	($internalPlan->getPeriodUnit() == PlanPeriodUnit::year)
 								&&
 							($lastSubscription->getSubPeriodEndsDate() < $lastChanceDate)) {
