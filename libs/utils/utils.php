@@ -276,17 +276,58 @@ function doSortSubscriptions(&$subscriptions) {
 	//more recent firt
 	usort($subscriptions,
 			function(BillingsSubscription $a, BillingsSubscription $b) {
-				if((null !== $a->getSubActivatedDate()) && (null !== $b->getSubActivatedDate())) {
-					return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), dbGlobal::toISODate($a->getSubActivatedDate())));
-				} else if(null !== $a->getSubActivatedDate()) {
-					return(strcmp("", dbGlobal::toISODate($a->getSubActivatedDate())));
-				} else if(null !== $b->getSubActivatedDate()) {
-					return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), ""));
+				if($a->getIsActive() == 'yes' && $b->getIsActive() == 'yes')
+				{
+					if((null !== $a->getSubActivatedDate()) && (null !== $b->getSubActivatedDate())) {
+						return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), dbGlobal::toISODate($a->getSubActivatedDate())));
+					} else if(null !== $a->getSubActivatedDate()) {
+						return(strcmp("", dbGlobal::toISODate($a->getSubActivatedDate())));
+					} else if(null !== $b->getSubActivatedDate()) {
+						return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), ""));
+					} else {
+						return(strcmp(dbGlobal::toISODate($b->getCreationDate()), dbGlobal::toISODate($a->getCreationDate())));
+					}
+				} else if($a->getIsActive() == 'yes') {
+					/* A IS ACTIVE */
+					return(-1);
+				} else if ($b->getIsActive() == 'yes') {
+					/* B IS ACTIVE */
+					return(1);
 				} else {
-					return(strcmp(dbGlobal::toISODate($b->getCreationDate()), dbGlobal::toISODate($a->getCreationDate())));
+					/* A AND B ARE INACTIVE */
+					if($a->getSubStatus() == 'future' && $b->getSubStatus() == 'future') {
+						/* SAME AS ACTIVE BUT ORDERING IS INVERTED */
+						if((null !== $a->getSubActivatedDate()) && (null !== $b->getSubActivatedDate())) {
+							return(strcmp(dbGlobal::toISODate($a->getSubActivatedDate()), dbGlobal::toISODate($b->getSubActivatedDate())));
+						} else if(null !== $a->getSubActivatedDate()) {
+							return(strcmp(dbGlobal::toISODate($a->getSubActivatedDate()), ""));
+						} else if(null !== $b->getSubActivatedDate()) {
+							return(strcmp("", dbGlobal::toISODate($b->getSubActivatedDate())));
+						} else {
+							return(strcmp(dbGlobal::toISODate($a->getCreationDate()), dbGlobal::toISODate($b->getCreationDate())));
+						}	
+					} else if($a->getSubStatus() == 'future') {
+						/* A IS FUTURE */
+						return(-1);
+					} else if($b->getSubStatus() == 'future') {
+						/* B IS FUTURE */
+						return(1);
+					} else {
+						/* A AND B ARE PAST */
+						/* SAME AS ACTIVE */
+						if((null !== $a->getSubActivatedDate()) && (null !== $b->getSubActivatedDate())) {
+							return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), dbGlobal::toISODate($a->getSubActivatedDate())));
+						} else if(null !== $a->getSubActivatedDate()) {
+							return(strcmp("", dbGlobal::toISODate($a->getSubActivatedDate())));
+						} else if(null !== $b->getSubActivatedDate()) {
+							return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), ""));
+						} else {
+							return(strcmp(dbGlobal::toISODate($b->getCreationDate()), dbGlobal::toISODate($a->getCreationDate())));
+						}
+					}
 				}
 			}
-			);
+		);
 }
 
 ?>
