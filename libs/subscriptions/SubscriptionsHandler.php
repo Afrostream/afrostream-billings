@@ -1244,12 +1244,14 @@ class SubscriptionsHandler {
 			foreach ($subscriptions as $subscription) {
 				if($subscription->getId() != $currentBillingsSubscription->getId()) {
 					if($subscription->getSubStatus() == 'future') {
-						$futureSubActivatedDate = $subscription->getSubActivatedDate();
+						//NC : Quite risky : For now, we do not filter with dates. We wait for first expirations to decide if we filter or not
+						/*$futureSubActivatedDate = $subscription->getSubActivatedDate();
 						$currentSubExpiresDate = $currentBillingsSubscription->getSubExpiresDate();
 						$diffInSeconds = $futureSubActivatedDate->format('U') - $currentSubExpiresDate->format('U');
 						if($diffInSeconds == 0) {
 							return(true);
-						}
+						}*/
+						return(true);
 					}
 				}
 			}
