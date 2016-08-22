@@ -326,7 +326,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 				//nothing todo : already done or in process
 			} else {
 				//
-				if($subscription->getSubPeriodEndsDate() < $expires_date) {
+				if($subscription->getSubPeriodEndsDate() <= $expires_date) {
 					$subscription->setSubExpiresDate($expires_date);
 					$subscription->setSubStatus("expired");
 				} else {

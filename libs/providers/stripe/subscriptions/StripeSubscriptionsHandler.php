@@ -633,7 +633,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
     			//nothing todo : already done or in process
     		} else {
     			//
-    			if($subscription->getSubPeriodEndsDate() >= $expires_date) {
+    			if($subscription->getSubPeriodEndsDate() > $expires_date) {
     				//exception
     				$msg = "cannot expire a subscription that has not ended yet";
     				config::getLogger()->addError($msg);

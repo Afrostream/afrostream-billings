@@ -569,7 +569,7 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				if($subscription->getSubPeriodEndsDate() >= $expires_date) {
+				if($subscription->getSubPeriodEndsDate() > $expires_date) {
 					//exception
 					$msg = "cannot expire a subscription that has not ended yet";
 					config::getLogger()->addError($msg);

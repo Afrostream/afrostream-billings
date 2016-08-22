@@ -306,7 +306,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				//nothing to do : already done or in process
 			} else {
 				//
-				if($subscription->getSubPeriodEndsDate() < $expires_date) {
+				if($subscription->getSubPeriodEndsDate() <= $expires_date) {
 					$subscription->setSubExpiresDate($expires_date);
 					$subscription->setSubStatus("expired");
 				} else {
