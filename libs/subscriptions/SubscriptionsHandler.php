@@ -1240,7 +1240,7 @@ class SubscriptionsHandler {
 	
 	private function hasFutureSubscription(User $user, BillingsSubscription $currentBillingsSubscription) {
 		$subscriptions = $this->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid());
-		if($count($subscriptions) > 0) {
+		if(count($subscriptions) > 0) {
 			foreach ($subscriptions as $subscription) {
 				if($subscription->getId() != $currentBillingsSubscription->getId()) {
 					if($subscription->getSubStatus() == 'future') {
