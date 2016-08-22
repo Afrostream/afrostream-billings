@@ -60,10 +60,16 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 					} else {
 						$lastSubscription = $subscriptions[0];
 						//SPECIFIC
+						$lastChanceSubActivatedDateStr = "2015-10-31 23:59:59";
+						$lastChanceSubActivatedDate = DateTime::createFromFormat("Y-m-d H:i:s", $lastChanceSubActivatedDateStr, new DateTimeZone(config::$timezone));
 						$lastChanceDateStr = "2016-10-31 23:59:59";
 						$lastChanceDate = DateTime::createFromFormat("Y-m-d H:i:s", $lastChanceDateStr, new DateTimeZone(config::$timezone));
 						$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($lastSubscription->getPlanId()));
 						if(	($internalPlan->getPeriodUnit() == PlanPeriodUnit::year)
+								&&
+							($lastSubscription->getSubActivatedDate() != NULL)
+								&&
+							($lastSubscription->getSubActivatedDate() <= $lastChanceSubActivatedDate)
 								&&
 							($lastSubscription->getSubPeriodEndsDate() < $lastChanceDate)) {
 							//AMBASSADORS
