@@ -1245,8 +1245,8 @@ class SubscriptionsHandler {
 				if($subscription->getId() != $currentBillingsSubscription->getId()) {
 					if($subscription->getSubStatus() == 'future') {
 						$futureSubActivatedDate = $subscription->getSubActivatedDate();
-						$currentSubPeriodEndsDate = $currentBillingsSubscription->getSubPeriodEndsDate();
-						$diffInSeconds = $futureSubActivatedDate->format('U') - $currentSubPeriodEndsDate->format('U');
+						$currentSubExpiresDate = $currentBillingsSubscription->getSubExpiresDate();
+						$diffInSeconds = $futureSubActivatedDate->format('U') - $currentSubExpiresDate->format('U');
 						if($diffInSeconds == 0) {
 							return(true);
 						}
