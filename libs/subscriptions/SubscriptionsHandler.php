@@ -1084,7 +1084,7 @@ class SubscriptionsHandler {
 	private function doSendEmail($subscription_after_update, $event, $sendgrid_template_id) {
 		try {
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail...");
-			if(getEnv('EVENT_EMAIL_ACTIVATED') == 1) {
+			if(getEnv('EVENT_EMAIL_ACTIVATED') != 1) {
 				config::getLogger()->addInfo("event by email : email is inactive");
 				return;
 			}
