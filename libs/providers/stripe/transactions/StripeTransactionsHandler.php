@@ -14,7 +14,7 @@ class StripeTransactionsHandler {
 		$this->provider = ProviderDAO::getProviderByName('stripe');
 	}
 	
-	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL) {
+	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL, $updateType) {
 		try {
 			config::getLogger()->addInfo("updating stripe transactions...");
 			$stripeCustomer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
@@ -49,7 +49,7 @@ class StripeTransactionsHandler {
 						}
 						$hasToBeProcessed = !$isRecurlyTransaction;
 						if($hasToBeProcessed) {
-							$this->createOrUpdateChargeFromProvider($user, $userOpts, $stripeCustomer, $stripeChargeTransaction);
+							$this->createOrUpdateChargeFromProvider($user, $userOpts, $stripeCustomer, $stripeChargeTransaction, $updateType);
 						} else {
 							config::getLogger()->addInfo("stripe charge transaction =".$stripeChargeTransaction->id." is ignored");
 						}
@@ -115,7 +115,7 @@ class StripeTransactionsHandler {
 	}
 	
 	
-	public function createOrUpdateChargeFromProvider(User $user = NULL, UserOpts $userOpts = NULL, \Stripe\Customer $stripeCustomer = NULL, \Stripe\Charge $stripeChargeTransaction) {
+	public function createOrUpdateChargeFromProvider(User $user = NULL, UserOpts $userOpts = NULL, \Stripe\Customer $stripeCustomer = NULL, \Stripe\Charge $stripeChargeTransaction, $updateType) {
 		config::getLogger()->addInfo("creating/updating charge transaction from stripe charge transaction id=".$stripeChargeTransaction->id."...");
 		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $stripeChargeTransaction->id);
 		$userId = ($user == NULL ? NULL : $user->getId());
@@ -261,6 +261,7 @@ class StripeTransactionsHandler {
 				$billingsTransaction->setInvoiceProviderUuid(NULL);
 			}
 			$billingsTransaction->setMessage("provider_status=".$stripeChargeTransaction->status);
+			$billingsTransaction->setUpdateType($updateType);
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -284,14 +285,15 @@ class StripeTransactionsHandler {
 				$billingsTransaction->setInvoiceProviderUuid(NULL);
 			}
 			$billingsTransaction->setMessage("provider_status=".$stripeChargeTransaction->status);
+			$billingsTransaction->setUpdateType($updateType);
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
-		$this->updateRefundsFromProvider($user, $userOpts, $stripeChargeTransaction, $billingsTransaction);
+		$this->updateRefundsFromProvider($user, $userOpts, $stripeChargeTransaction, $billingsTransaction, $updateType);
 		config::getLogger()->addInfo("creating/updating charge transaction from stripe charge transaction id=".$stripeChargeTransaction->id." done successfully");
 		return($billingsTransaction);
 	}
 	
-	private function updateRefundsFromProvider(User $user = NULL, UserOpts $userOpts = NULL, \Stripe\Charge $stripeChargeTransaction, BillingsTransaction $billingsTransaction) {
+	private function updateRefundsFromProvider(User $user = NULL, UserOpts $userOpts = NULL, \Stripe\Charge $stripeChargeTransaction, BillingsTransaction $billingsTransaction, $updateType) {
 		$params = array();
 		$params['charge'] = $stripeChargeTransaction->id;
 		$params['limit'] = self::STRIPE_LIMIT;
@@ -307,12 +309,12 @@ class StripeTransactionsHandler {
 			reset($stripeRefundTransactions);
 			//
 			foreach ($stripeRefundTransactions as $stripeRefundTransaction) {
-				$this->createOrUpdateRefundFromProvider($user, $userOpts, $stripeRefundTransaction, $billingsTransaction);
+				$this->createOrUpdateRefundFromProvider($user, $userOpts, $stripeRefundTransaction, $billingsTransaction, $updateType);
 			}
 		}
 	}
 	
-	private function createOrUpdateRefundFromProvider(User $user = NULL, UserOpts $userOpts = NULL, \Stripe\Refund $stripeRefundTransaction, BillingsTransaction $billingsTransaction) {
+	private function createOrUpdateRefundFromProvider(User $user = NULL, UserOpts $userOpts = NULL, \Stripe\Refund $stripeRefundTransaction, BillingsTransaction $billingsTransaction, $updateType) {
 		config::getLogger()->addInfo("creating/updating refund transaction from stripe refund transaction id=".$stripeRefundTransaction->id."...");
 		$billingsRefundTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $stripeRefundTransaction->id);
 		if($billingsRefundTransaction == NULL) {
@@ -334,6 +336,7 @@ class StripeTransactionsHandler {
 			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
 			$billingsRefundTransaction->setInvoiceProviderUuid($billingsTransaction->getInvoiceProviderUuid());
 			$billingsRefundTransaction->setMessage("provider_status=".$stripeRefundTransaction->status);
+			$billingsRefundTransaction->setUpdateType($updateType);
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -353,13 +356,14 @@ class StripeTransactionsHandler {
 			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
 			$billingsRefundTransaction->setInvoiceProviderUuid($billingsTransaction->getInvoiceProviderUuid());
 			$billingsRefundTransaction->setMessage("provider_status=".$stripeRefundTransaction->status);
+			$billingsRefundTransaction->setUpdateType($updateType);
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from stripe refund transaction id=".$stripeRefundTransaction->id." done successfully");
 		return($billingsRefundTransaction);
 	}
 	
-	public function doUpdateTransactionByTransactionProviderUuid($transactionProviderUuid) {
+	public function doUpdateTransactionByTransactionProviderUuid($transactionProviderUuid, $updateType) {
 		try {
 			$stripeChargeTransaction = \Stripe\Charge::retrieve($transactionProviderUuid);
 			if(isset($stripeChargeTransaction->customer)) {
@@ -375,7 +379,7 @@ class StripeTransactionsHandler {
 			}
 			$hasToBeProcessed = !$isRecurlyTransaction;
 			if($hasToBeProcessed) {
-				$this->createOrUpdateChargeFromProvider(NULL, NULL, NULL, $stripeChargeTransaction);
+				$this->createOrUpdateChargeFromProvider(NULL, NULL, NULL, $stripeChargeTransaction, $updateType);
 			} else {
 				config::getLogger()->addInfo("stripe charge transaction =".$stripeChargeTransaction->id." is ignored");
 			}

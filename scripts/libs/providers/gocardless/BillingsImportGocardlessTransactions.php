@@ -53,7 +53,7 @@ class BillingsImportGocardlessTransactions {
 			throw new Exception("user with account_code=".$gocardlessCustomer->id." does not exist in billings database");
 		}
 		$transactionHandler = new TransactionsHandler();
-		$transactionHandler->doUpdateTransactionsByUser($user, $from, $to);
+		$transactionHandler->doUpdateTransactionsByUser($user, $from, $to, 'import');
 		ScriptsConfig::getLogger()->addInfo("importing transactions from gocardless account with account_code=".$gocardlessCustomer->id." done successfully");
 	}
 	
