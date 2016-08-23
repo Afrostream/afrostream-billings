@@ -103,7 +103,7 @@ class BillingsImportStripeTransactions
 	            throw new Exception("user with account_code=".$customer->id." does not exist in billings database");
 	        }
 	        $transactionHandler = new TransactionsHandler();
-	        $transactionHandler->doUpdateTransactionsByUser($user, $from, $to);
+	        $transactionHandler->doUpdateTransactionsByUser($user, $from, $to, 'import');
         } else {
         	config::getLogger()->addInfo("stripe account with account_code=".$customer->id." is ignored");
         }
