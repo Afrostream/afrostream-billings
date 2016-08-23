@@ -44,7 +44,7 @@ class BillingsImportRecurlyTransactions {
 			throw new Exception("user with account_code=".$recurlyAccount->account_code." does not exist in billings database");
 		}
 		$transactionHandler = new TransactionsHandler();
-		$transactionHandler->doUpdateTransactionsByUser($user);
+		$transactionHandler->doUpdateTransactionsByUser($user, NULL, NULL, 'import');
 		ScriptsConfig::getLogger()->addInfo("importing transactions from recurly account with account_code=".$recurlyAccount->account_code." done successfully");
 	}	
 }

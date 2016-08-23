@@ -13,7 +13,7 @@ class TransactionsHandler {
 	public function __construct() {
 	}
 	
-	public function doUpdateTransactionsByUser(User $user, DateTime $from = NULL, DateTime $to = NULL) {
+	public function doUpdateTransactionsByUser(User $user, DateTime $from = NULL, DateTime $to = NULL, $updateType) {
 		try {
 			config::getLogger()->addInfo("transactions updating for userid=".$user->getId()."...");
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
@@ -28,19 +28,19 @@ class TransactionsHandler {
 			switch($provider->getName()) {
 				case 'recurly' :
 					$transactionsHandler = new RecurlyTransactionsHandler();
-					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts, $from, $to);
+					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts, $from, $to, $updateType);
 					break;
 				case 'gocardless' :
 					$transactionsHandler = new GocardlessTransactionsHandler();
-					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts, $from, $to);
+					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts, $from, $to, $updateType);
 					break;
 				case 'stripe' :
 					$transactionsHandler = new StripeTransactionsHandler();
-					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts, $from, $to);
+					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts, $from, $to, $updateType);
 					break;
 				case 'braintree' :
 					$transactionsHandler = new BraintreeTransactionsHandler();
-					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts, $from, $to);
+					$transactionsHandler->doUpdateTransactionsByUser($user, $userOpts, $from, $to, $updateType);
 					break;
 				default:
 					//nothing to do (unknown)
@@ -58,13 +58,13 @@ class TransactionsHandler {
 		}
 	}
 	
-	public function doUpdateTransactionByTransactionProviderUuid($provider_name, $transactionProviderUuid) {
+	public function doUpdateTransactionByTransactionProviderUuid($provider_name, $transactionProviderUuid, $updateType) {
 		try {
 			config::getLogger()->addInfo("transaction updating for transactionProviderUuid=".$transactionProviderUuid."...");
 			switch($provider_name) {
 				case 'stripe' :
 					$transactionsHandler = new StripeTransactionsHandler();
-					$transactionsHandler->doUpdateTransactionByTransactionProviderUuid($transactionProviderUuid);
+					$transactionsHandler->doUpdateTransactionByTransactionProviderUuid($transactionProviderUuid, $updateType);
 					break;
 				default:
 					//nothing to do (unknown)

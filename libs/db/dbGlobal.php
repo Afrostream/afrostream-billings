@@ -4333,6 +4333,7 @@ class BillingsTransaction {
 	private $transactionType;
 	private $invoiceProviderUuid;
 	private $message;
+	private $updateType;
 	
 	public function getId() {
 		return($this->_id);
@@ -4484,6 +4485,14 @@ class BillingsTransaction {
 	public function getMessage() {
 		return($this->message);
 	}
+	
+	public function getUpdateType() {
+		return($this->updateType);
+	}
+	
+	public function setUpdateType($updateType) {
+		$this->updateType = $updateType;
+	}
 }
 
 class BillingsTransactionDAO {
@@ -4492,7 +4501,7 @@ class BillingsTransactionDAO {
 	_id, transactionlinkid, providerid, userid, subid, couponid, invoiceid, 
 	transaction_billing_uuid, transaction_provider_uuid,
 	creation_date, updated_date, transaction_creation_date, 
-	amount_in_cents, currency, country, transaction_status, transaction_type, invoice_provider_uuid, message
+	amount_in_cents, currency, country, transaction_status, transaction_type, invoice_provider_uuid, message, update_type
 EOL;
 
 	private static function getBillingsTransactionFromRow($row) {
@@ -4516,6 +4525,7 @@ EOL;
 		$out->setTransactionType($row["transaction_type"] == NULL ? NULL : new BillingsTransactionType($row["transaction_type"]));
 		$out->setInvoiceProviderUuid($row["invoice_provider_uuid"]);
 		$out->setMessage($row["message"]);
+		$out->setUpdateType($row["update_type"]);
 		return($out);
 	}
 
@@ -4539,40 +4549,8 @@ EOL;
 		$query.= " (transactionlinkid, providerid, userid, subid, couponid, invoiceid,"; 
 		$query.= " transaction_billing_uuid, transaction_provider_uuid,";
 		$query.= " transaction_creation_date,"; 
-		$query.= " amount_in_cents, currency, country, transaction_status, transaction_type, invoice_provider_uuid, message)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING _id";
-		$result = pg_query_params(config::getDbConn(), $query,
-				array(	$billingsTransaction->getTransactionLinkId(),
-						$billingsTransaction->getProviderId(),
-						$billingsTransaction->getUserId(),
-						$billingsTransaction->getSubId(),
-						$billingsTransaction->getCouponId(),
-						$billingsTransaction->getInvoiceId(),
-						$billingsTransaction->getTransactionBillingUuid(),
-						$billingsTransaction->getTransactionProviderUuid(),
-						dbGlobal::toISODate($billingsTransaction->getTransactionCreationDate()),
-						$billingsTransaction->getAmoutInCents(),
-						$billingsTransaction->getCurrency(),
-						$billingsTransaction->getCountry(),
-						$billingsTransaction->getTransactionStatus(),
-						$billingsTransaction->getTransactionType(),
-						$billingsTransaction->getInvoiceProviderUuid(),
-						$billingsTransaction->getMessage()
-				));
-		$row = pg_fetch_row($result);
-		// free result
-		pg_free_result($result);
-		return(self::getBillingsTransactionById($row[0]));
-	}
-	
-	public static function updateBillingsTransaction(BillingsTransaction $billingsTransaction) {
-		$query = "UPDATE billing_transactions";
-		$query.= " SET updated_date = CURRENT_TIMESTAMP,";
-		$query.= " transactionlinkid = $1, providerid = $2, userid = $3, subid = $4, couponid = $5, invoiceid = $6,"; 
-		$query.= " transaction_billing_uuid = $7, transaction_provider_uuid = $8,";
-		$query.= " transaction_creation_date = $9,"; 
-		$query.= " amount_in_cents = $10, currency = $11, country = $12, transaction_status = $13, transaction_type = $14, invoice_provider_uuid = $15, message = $16";
-		$query.= " WHERE _id = $17";
+		$query.= " amount_in_cents, currency, country, transaction_status, transaction_type, invoice_provider_uuid, message, update_type)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$billingsTransaction->getTransactionLinkId(),
 						$billingsTransaction->getProviderId(),
@@ -4590,6 +4568,40 @@ EOL;
 						$billingsTransaction->getTransactionType(),
 						$billingsTransaction->getInvoiceProviderUuid(),
 						$billingsTransaction->getMessage(),
+						$billingsTransaction->getUpdateType()
+				));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		return(self::getBillingsTransactionById($row[0]));
+	}
+	
+	public static function updateBillingsTransaction(BillingsTransaction $billingsTransaction) {
+		$query = "UPDATE billing_transactions";
+		$query.= " SET updated_date = CURRENT_TIMESTAMP,";
+		$query.= " transactionlinkid = $1, providerid = $2, userid = $3, subid = $4, couponid = $5, invoiceid = $6,"; 
+		$query.= " transaction_billing_uuid = $7, transaction_provider_uuid = $8,";
+		$query.= " transaction_creation_date = $9,"; 
+		$query.= " amount_in_cents = $10, currency = $11, country = $12, transaction_status = $13, transaction_type = $14, invoice_provider_uuid = $15, message = $16, update_type = $17";
+		$query.= " WHERE _id = $18";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingsTransaction->getTransactionLinkId(),
+						$billingsTransaction->getProviderId(),
+						$billingsTransaction->getUserId(),
+						$billingsTransaction->getSubId(),
+						$billingsTransaction->getCouponId(),
+						$billingsTransaction->getInvoiceId(),
+						$billingsTransaction->getTransactionBillingUuid(),
+						$billingsTransaction->getTransactionProviderUuid(),
+						dbGlobal::toISODate($billingsTransaction->getTransactionCreationDate()),
+						$billingsTransaction->getAmoutInCents(),
+						$billingsTransaction->getCurrency(),
+						$billingsTransaction->getCountry(),
+						$billingsTransaction->getTransactionStatus(),
+						$billingsTransaction->getTransactionType(),
+						$billingsTransaction->getInvoiceProviderUuid(),
+						$billingsTransaction->getMessage(),
+						$billingsTransaction->getUpdateType(),
 						$billingsTransaction->getId()));
 		// free result
 		pg_free_result($result);

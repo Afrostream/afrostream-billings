@@ -9,7 +9,7 @@ class BraintreeTransactionsHandler {
 	public function __construct() {
 	}
 	
-	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL) {
+	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL, $updateType) {
 		try {
 			config::getLogger()->addInfo("updating braintree transactions...");
 			//
@@ -30,12 +30,12 @@ class BraintreeTransactionsHandler {
 					config::getLogger()->addInfo("updating braintree transaction id=".$braintreeCurrentTransaction->id."...");
 					switch($braintreeCurrentTransaction->type) {
 						case Braintree\Transaction::SALE :
-							$this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeCurrentTransaction);
+							$this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeCurrentTransaction, $updateType);
 							break;
 						case Braintree\Transaction::CREDIT :
 							if(isset($braintreeCurrentTransaction->refundedTransactionId)) {
 								$braintreeChargeTransaction = Braintree\Transaction::find($braintreeCurrentTransaction->refundedTransactionId);
-								$this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeChargeTransaction);
+								$this->createOrUpdateChargeFromProvider($user, $userOpts, $braintreeChargeTransaction, $updateType);
 							} else {
 								config::getLogger()->addWarning("Braintree credit Transaction with transaction_provider_uuid=".$braintreeCurrentTransaction->id." should be linked to a charge Transaction");
 							}
@@ -63,7 +63,7 @@ class BraintreeTransactionsHandler {
 		}
 	}
 	
-	private function createOrUpdateChargeFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeChargeTransaction) {
+	private function createOrUpdateChargeFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeChargeTransaction, $updateType) {
 		config::getLogger()->addInfo("creating/updating transactions from braintree transaction id=".$braintreeChargeTransaction->id."...");
 		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $braintreeChargeTransaction->id);
 		$subId = NULL;
@@ -108,6 +108,7 @@ class BraintreeTransactionsHandler {
 			$billingsTransaction->setTransactionType(self::getMappedTransactionType($braintreeChargeTransaction));
 			$billingsTransaction->setInvoiceProviderUuid($braintreeChargeTransaction->orderId);
 			$billingsTransaction->setMessage("provider_status=".$braintreeChargeTransaction->status);
+			$billingsTransaction->setUpdateType($updateType);
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -126,14 +127,15 @@ class BraintreeTransactionsHandler {
 			$billingsTransaction->setTransactionType(self::getMappedTransactionType($braintreeChargeTransaction));
 			$billingsTransaction->setInvoiceProviderUuid($braintreeChargeTransaction->orderId);
 			$billingsTransaction->setMessage("provider_status=".$braintreeChargeTransaction->status);
+			$billingsTransaction->setUpdateType($updateType);
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
-		$this->updateRefundsFromProvider($user, $userOpts, $braintreeChargeTransaction, $billingsTransaction);
+		$this->updateRefundsFromProvider($user, $userOpts, $braintreeChargeTransaction, $billingsTransaction, $updateType);
 		config::getLogger()->addInfo("creating/updating transactions from braintree transaction id=".$braintreeChargeTransaction->id." done successfully");
 		return($billingsTransaction);
 	}
 	
-	private function updateRefundsFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeChargeTransaction, BillingsTransaction $billingsTransaction) {
+	private function updateRefundsFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeChargeTransaction, BillingsTransaction $billingsTransaction, $updateType) {
 		//
 		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
 		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
@@ -148,11 +150,11 @@ class BraintreeTransactionsHandler {
 		}
 		
 		foreach ($braintreeRefundTransactions as $braintreeRefundTransaction) {
-			$this->createOrUpdateRefundFromProvider($user, $userOpts, $braintreeRefundTransaction, $billingsTransaction);
+			$this->createOrUpdateRefundFromProvider($user, $userOpts, $braintreeRefundTransaction, $billingsTransaction, $updateType);
 		}
 	}
 	
-	private function createOrUpdateRefundFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeRefundTransaction, BillingsTransaction $billingsTransaction) {
+	private function createOrUpdateRefundFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeRefundTransaction, BillingsTransaction $billingsTransaction, $updateType) {
 		config::getLogger()->addInfo("creating/updating refund transaction from braintree refund transaction id=".$braintreeRefundTransaction->id."...");
 		$billingsRefundTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $braintreeRefundTransaction->id);
 		if($billingsRefundTransaction == NULL) {
@@ -174,6 +176,7 @@ class BraintreeTransactionsHandler {
 			$billingsRefundTransaction->setTransactionType(self::getMappedTransactionType($braintreeRefundTransaction));
 			$billingsRefundTransaction->setInvoiceProviderUuid($braintreeRefundTransaction->orderId);
 			$billingsRefundTransaction->setMessage("provider_status=".$braintreeRefundTransaction->status);
+			$billingsRefundTransaction->setUpdateType($updateType);
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -193,6 +196,7 @@ class BraintreeTransactionsHandler {
 			$billingsRefundTransaction->setTransactionType(self::getMappedTransactionType($braintreeRefundTransaction));
 			$billingsRefundTransaction->setInvoiceProviderUuid($braintreeRefundTransaction->orderId);
 			$billingsRefundTransaction->setMessage("provider_status=".$braintreeRefundTransaction->status);
+			$billingsRefundTransaction->setUpdateType($updateType);
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from braintree refund transaction id=".$braintreeRefundTransaction->id." done successfully");

@@ -66,7 +66,7 @@ class ChargeHookObserver implements HookInterface
 	        }
 	        config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' sent to Handler...');
 	        $stripeTransactionsHandler = new StripeTransactionsHandler();
-	        $stripeTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment);
+	        $stripeTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment, 'hook');
 	        config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' sent to Handler done successfully');
         } else {
         	config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' has been ignored');

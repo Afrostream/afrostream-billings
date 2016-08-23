@@ -9,7 +9,7 @@ class RecurlyTransactionsHandler {
 	public function __construct() {
 	}
 	
-	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL) {
+	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL, $updateType) {
 		try {
 			config::getLogger()->addInfo("updating recurly transactions...");
 			if(isset($from)) {
@@ -33,7 +33,7 @@ class RecurlyTransactionsHandler {
 			foreach ($recurlyTransactions as $recurlyTransaction) {
 				try {
 					config::getLogger()->addInfo("updating recurly transaction id=".$recurlyTransaction->uuid."...");
-					$this->createOrUpdateFromProvider($user, $userOpts, $recurlyAccount, $recurlyTransaction);
+					$this->createOrUpdateFromProvider($user, $userOpts, $recurlyAccount, $recurlyTransaction, $updateType);
 					config::getLogger()->addInfo("updating recurly transaction id=".$recurlyTransaction->uuid." done successfully");
 				} catch(Exception $e) {
 					$msg = "an unknown exception occurred while updating recurly transaction id=".$recurlyTransaction->uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -61,7 +61,7 @@ class RecurlyTransactionsHandler {
 		}
 	}
 	
-	public function createOrUpdateFromProvider(User $user, UserOpts $userOpts, Recurly_Account $recurlyAccount, Recurly_Transaction $recurlyTransaction) {
+	public function createOrUpdateFromProvider(User $user, UserOpts $userOpts, Recurly_Account $recurlyAccount, Recurly_Transaction $recurlyTransaction, $updateType) {
 		config::getLogger()->addInfo("creating/updating transactions from recurly transaction id=".$recurlyTransaction->uuid."...");
 		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $recurlyTransaction->uuid);
 		$country = NULL;
@@ -103,6 +103,7 @@ class RecurlyTransactionsHandler {
 				$billingsTransaction->setInvoiceProviderUuid(NULL);
 			}
 			$billingsTransaction->setMessage("provider_status=".$recurlyTransaction->status);
+			$billingsTransaction->setUpdateType($updateType);
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -125,6 +126,7 @@ class RecurlyTransactionsHandler {
 				$billingsTransaction->setInvoiceProviderUuid(NULL);
 			}
 			$billingsTransaction->setMessage("provider_status=".$recurlyTransaction->status);
+			$billingsTransaction->setUpdateType($updateType);
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating transactions from recurly transaction id=".$recurlyTransaction->uuid." done successfully");
