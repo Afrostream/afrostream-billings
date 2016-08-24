@@ -97,22 +97,22 @@ foreach ($couponsActivated as $coupon) {
 }
 
 //transactions
-/*
+
 $channelTransactions = getEnv('SLACK_STATS_TRANSACTIONS_CHANNEL');
 
-$succeededTransactionEvents = dbStats::getSucceededTransactionEvents($start_date, $end_date);
+$transactionEvents = dbStats::getTransactionEvents($start_date, $end_date, array('purchase', 'refund'), array('success', 'declined', 'void', 'failed', 'canceled'));
 
 sendMessage("**************************************************", $channelTransactions);
-sendMessage(count($succeededTransactionEvents)." transactions between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelTransactions);
+sendMessage(count($transactionEvents)." transactions between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelTransactions);
 
-foreach ($succeededTransactionEvents as $succeededTransactionEvent) {
-	$msg = $succeededTransactionEvent['provider_name']." ".$succeededTransactionEvent['transaction_type']." ".$succeededTransactionEvent['transaction_status']."\n";
-	$msg.= $succeededTransactionEvent['amount']." ".$succeededTransactionEvent['currency']."\n";
-	$msg.= "transaction_provider_uuid=".$succeededTransactionEvent['transaction_provider_uuid']."\n";
-	$msg.= "transaction_billing_uuid=".$succeededTransactionEvent['transaction_billing_uuid'];
+foreach ($transactionEvents as $transactionEvent) {
+	$msg = $transactionEvent['provider_name']." ".$transactionEvent['transaction_type']." ".$transactionEvent['transaction_status']."\n";
+	$msg.= $transactionEvent['amount']." ".$transactionEvent['currency']."\n";
+	$msg.= "transaction_provider_uuid=".$transactionEvent['transaction_provider_uuid']."\n";
+	$msg.= "transaction_billing_uuid=".$transactionEvent['transaction_billing_uuid'];
 	sendMessage($msg, $channelTransactions);
 	sendMessage('---------------------------------------------------', $channelTransactions);
-}*/
+}
 
 print_r("processing done\n");
 

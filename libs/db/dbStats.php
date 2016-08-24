@@ -325,28 +325,53 @@ EOL;
 		return $out;		
 	}
 	
-	public static function getSucceededTransactionEvents(DateTime $dateStart, Datetime $dateEnd) {
+	public static function getTransactionEvents(DateTime $dateStart, Datetime $dateEnd, array $transactionTypes, array $transactionStatus) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
 		$date_end_str = dbGlobal::toISODate($dateEnd);
-		
-		$query =<<<EOL
-		SELECT BP.name as provider_name,
-		BT.transaction_billing_uuid as transaction_billing_uuid,
-		BT.transaction_provider_uuid as transaction_provider_uuid,
-		BT.transaction_type as transaction_type,
-		BT.transaction_status as transaction_status,
-		CAST((amount_in_cents) AS FLOAT)/100 as amount,
-		BT.currency as currency
-		FROM billing_transactions BT
-		INNER JOIN billing_providers BP ON (BT.providerid = BP._id)
-		AND (BT.updated_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
-		AND BT.update_type = 'hook'
-EOL;
-		$query = sprintf($query, $date_start_str, $date_end_str);
-		
-		$result = pg_query(config::getDbConn(), $query);
+		$params = array();
+		$i = 1;
+		$query = "SELECT BP.name as provider_name,";
+		$query.= " BT.transaction_billing_uuid as transaction_billing_uuid,	BT.transaction_provider_uuid as transaction_provider_uuid,";
+		$query.= " BT.transaction_type as transaction_type,	BT.transaction_status as transaction_status,";
+		$query.= " CAST((amount_in_cents) AS FLOAT)/100 as amount, BT.currency as currency";
+		$query.= " FROM billing_transactions BT";
+		$query.= " INNER JOIN billing_providers BP ON (BT.providerid = BP._id)";
+		$query.= " WHERE (BT.updated_date AT TIME ZONE 'Europe/Paris') BETWEEN '".$date_start_str."' AND '".$date_end_str."'";
+		$query.= " AND BT.update_type = 'hook'";
+		$firstLoop = true;
+		if(count($transactionTypes) > 0) {
+			foreach ($transactionTypes as $transactionTypeEntry) {
+				if($firstLoop == true) {
+					$firstLoop = false;
+					$query.= " AND BT.transaction_type IN ($".$i;
+				} else {
+					$query.= ", $".$i;
+				}
+				$params[] = $transactionTypeEntry;
+				//done
+				$i++;
+			}
+			$query.= ")";
+		}
+		$firstLoop = true;
+		if(count($transactionStatus) > 0) {
+			foreach ($transactionStatus as $transactionStatusEntry) {
+				if($firstLoop == true) {
+					$firstLoop = false;
+					$query.= " AND BT.transaction_status IN ($".$i;
+				} else {
+					$query.= ", $".$i;
+				}
+				$params[] = $transactionStatusEntry;
+				//done
+				$i++;
+			}
+			$query.= ")";
+		}
+		$query.= " ORDER BY BT.updated_date ASC";
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out[] = $row;
@@ -354,26 +379,53 @@ EOL;
 		return $out;
 	}
 	
-	public static function getNumberOfSucceededTransactionEvents(DateTime $dateStart, Datetime $dateEnd) {
+	public static function getNumberOfTransactionEvents(DateTime $dateStart, Datetime $dateEnd, array $transactionTypes, array $transactionStatus) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
 		$date_end_str = dbGlobal::toISODate($dateEnd);
-		$query =<<<EOL
-		SELECT BP.name as provider_name,
-		BT.transaction_type as transaction_type, 
-		count(*) as counter,
-		CAST(sum(amount_in_cents) AS FLOAT)/100 as amount,
-		BT.currency as currency
-		FROM billing_transactions BT
-		INNER JOIN billing_providers BP ON (BT.providerid = BP._id)
-		WHERE BT.transaction_status = 'success'
-		AND (BT.updated_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
-		AND BT.update_type = 'hook'
-		GROUP BY BP._id, BT.transaction_type, BT.currency
-EOL;
-		$query = sprintf($query, $date_start_str, $date_end_str);
-		$result = pg_query(config::getDbConn(), $query);
+		$params = array();
+		$i = 1;
+		$query = "SELECT BP.name as provider_name, BT.transaction_type as transaction_type,";
+		$query.= " count(*) as counter,CAST(sum(amount_in_cents) AS FLOAT)/100 as amount,";
+		$query.= " BT.currency as currency";
+		$query.= " FROM billing_transactions BT";
+		$query.= " INNER JOIN billing_providers BP ON (BT.providerid = BP._id)";
+		$query.= " WHERE (BT.updated_date AT TIME ZONE 'Europe/Paris') BETWEEN '".$date_start_str."' AND '".$date_end_str."'";
+		$query.= " AND BT.update_type = 'hook'";
+		$firstLoop = true;
+		if(count($transactionTypes) > 0) {
+			foreach ($transactionTypes as $transactionTypeEntry) {
+				if($firstLoop == true) {
+					$firstLoop = false;
+					$query.= " AND BT.transaction_type IN ($".$i;
+				} else {
+					$query.= ", $".$i;
+				}
+				$params[] = $transactionTypeEntry;
+				//done
+				$i++;
+			}
+			$query.= ")";
+		}
+		$firstLoop = true;
+		if(count($transactionStatus) > 0) {
+			foreach ($transactionStatus as $transactionStatusEntry) {
+				if($firstLoop == true) {
+					$firstLoop = false;
+					$query.= " AND BT.transaction_status IN ($".$i;
+				} else {
+					$query.= ", $".$i;
+				}
+				$params[] = $transactionStatusEntry;
+				//done
+				$i++;
+			}
+			$query.= ")";
+		}
+		$query.= " GROUP BY BP._id, BT.transaction_type, BT.currency";
+		$query.= " ORDER BY BP._id, BT.transaction_type, BT.currency";
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			if(isset($out['total'])) {

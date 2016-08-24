@@ -102,15 +102,15 @@ if($numberOfCanceledSubscriptionsYesterday['total'] > 0) {
 	}
 }
 
-sendMessage("********** --- SUSPENDED --- TRANSACTIONS --- SUSPENDED --- **********");
-/*
-$numberOfSucceededTransactionEvents = dbStats::getNumberOfSucceededTransactionEvents($yesterdayBeginningOfDay, $yesterdayEndOfDay);
+sendMessage("********** TRANSACTIONS **********");
 
-if(count($numberOfSucceededTransactionEvents) > 0) {
+$numberOfTransactionEvents = dbStats::getNumberOfTransactionEvents($yesterdayBeginningOfDay, $yesterdayEndOfDay, array('purchase', 'refund'), array('success', 'declined', 'void', 'failed', 'canceled'));
+
+if(count($numberOfTransactionEvents) > 0) {
 
 	sendMessage("*** TOTAL ***");
-	$msg = "number of transactions=".$numberOfSucceededTransactionEvents['total'];
-	$globalCurrencies = $numberOfSucceededTransactionEvents['currencies'];
+	$msg = "number of transactions=".$numberOfTransactionEvents['total'];
+	$globalCurrencies = $numberOfTransactionEvents['currencies'];
 	$first = true;
 	foreach ($globalCurrencies as $currency => $amount) {
 		if($first) {
@@ -121,7 +121,7 @@ if(count($numberOfSucceededTransactionEvents) > 0) {
 	}
 	sendMessage($msg);
 	sendMessage("*** BY TRANSACTION_TYPE ***");
-	$byTransactionTypes = $numberOfSucceededTransactionEvents['transaction_types'] ;
+	$byTransactionTypes = $numberOfTransactionEvents['transaction_types'] ;
 	foreach ($byTransactionTypes as $key => $value) {
 		$msg = "transaction_type=".$key." : number of transactions=".$value['total'];
 		$first = true;
@@ -136,7 +136,7 @@ if(count($numberOfSucceededTransactionEvents) > 0) {
 		sendMessage($msg);
 	}
 	sendMessage("*** BY PROVIDER ***");
-	$byProviders = $numberOfSucceededTransactionEvents['providers'];
+	$byProviders = $numberOfTransactionEvents['providers'];
 	foreach ($byProviders as $key => $value) {
 		$msg = "provider=".$key." : \n";
 		$transactionTypes = $value['transaction_types'];
@@ -158,7 +158,7 @@ if(count($numberOfSucceededTransactionEvents) > 0) {
 } else {
 	sendMessage("total=0");
 }
-*/
+
 /*sendMessage("********** COUPONS **********");
 
 $numberOfCouponsActivated = dbStats::getNumberOfCouponsActivated($yesterdayBeginningOfDay, $yesterdayEndOfDay);
