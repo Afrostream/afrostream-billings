@@ -214,7 +214,7 @@ class RecurlyWebHooksHandler {
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$recurlyTransactionsHandler = new RecurlyTransactionsHandler();
-		$recurlyTransactionsHandler->createOrUpdateFromProvider($user, $userOpts, $api_customer, $api_payment, 'hook');
+		$recurlyTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment, 'hook');
 		config::getLogger()->addInfo('Processing recurly hook payment, notification_type='.$notification->type.' done successfully');
 	}
 	
@@ -256,7 +256,7 @@ class RecurlyWebHooksHandler {
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$recurlyTransactionsHandler = new RecurlyTransactionsHandler();
-		$recurlyTransactionsHandler->createOrUpdateFromProvider($user, $userOpts, $api_customer, $api_refund, 'hook');
+		$recurlyTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_refund->original_transaction->get(), 'hook');
 		config::getLogger()->addInfo('Processing recurly hook refund, notification_type='.$notification->type.' done successfully');
 	}
 }

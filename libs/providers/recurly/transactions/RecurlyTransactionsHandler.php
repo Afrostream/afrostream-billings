@@ -33,7 +33,20 @@ class RecurlyTransactionsHandler {
 			foreach ($recurlyTransactions as $recurlyTransaction) {
 				try {
 					config::getLogger()->addInfo("updating recurly transaction id=".$recurlyTransaction->uuid."...");
-					$this->createOrUpdateFromProvider($user, $userOpts, $recurlyAccount, $recurlyTransaction, $updateType);
+					switch($recurlyTransaction->action) {
+						case 'purchase' :
+							$this->createOrUpdateChargeFromProvider($user, $userOpts, $recurlyAccount, $recurlyTransaction, $updateType);
+							break;
+						case 'verify' :
+							$this->createOrUpdateChargeFromProvider($user, $userOpts, $recurlyAccount, $recurlyTransaction, $updateType);
+							break;
+						case 'refund' :
+							$this->createOrUpdateChargeFromProvider($user, $userOpts, $recurlyAccount, $recurlyTransaction->original_transaction->get(), $updateType);
+							break;
+						default :
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown recurly transaction type : ".$recurlyTransaction->action);
+							break;
+					}
 					config::getLogger()->addInfo("updating recurly transaction id=".$recurlyTransaction->uuid." done successfully");
 				} catch(Exception $e) {
 					$msg = "an unknown exception occurred while updating recurly transaction id=".$recurlyTransaction->uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -61,7 +74,7 @@ class RecurlyTransactionsHandler {
 		}
 	}
 	
-	public function createOrUpdateFromProvider(User $user, UserOpts $userOpts, Recurly_Account $recurlyAccount, Recurly_Transaction $recurlyTransaction, $updateType) {
+	public function createOrUpdateChargeFromProvider(User $user, UserOpts $userOpts, Recurly_Account $recurlyAccount, Recurly_Transaction $recurlyTransaction, $updateType) {
 		config::getLogger()->addInfo("creating/updating transactions from recurly transaction id=".$recurlyTransaction->uuid."...");
 		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $recurlyTransaction->uuid);
 		$country = NULL;
@@ -129,8 +142,75 @@ class RecurlyTransactionsHandler {
 			$billingsTransaction->setUpdateType($updateType);
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
+		if($recurlyTransaction->action == 'purchase') {
+			$this->updateRefundsFromProvider($user, $userOpts, $recurlyTransaction, $billingsTransaction, $updateType);
+		}
 		config::getLogger()->addInfo("creating/updating transactions from recurly transaction id=".$recurlyTransaction->uuid." done successfully");
 		return($billingsTransaction);
+	}
+	
+	private function updateRefundsFromProvider(User $user, UserOpts $userOpts, Recurly_Transaction $recurlyTransaction, BillingsTransaction $billingsTransaction, $updateType) {
+		$recurlyRefundTransactions = Recurly_TransactionList::getForAccount($user->getUserProviderUuid(), ['type' => 'refund']);
+		foreach($recurlyRefundTransactions as $recurlyRefundTransaction) {
+			if($recurlyTransaction->uuid == $recurlyRefundTransaction->original_transaction->get()->uuid) {
+				$this->createOrUpdateRefundFromProvider($user, $userOpts, $recurlyRefundTransaction, $billingsTransaction, $updateType);
+			}
+		}
+	}
+	
+	private function createOrUpdateRefundFromProvider(User $user, UserOpts $userOpts, Recurly_Transaction $recurlyRefundTransaction, BillingsTransaction $billingsTransaction, $updateType) {
+		config::getLogger()->addInfo("creating/updating refund transaction from recurly refund transaction id=".$recurlyRefundTransaction->uuid."...");
+		$billingsRefundTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $recurlyRefundTransaction->uuid);
+		if($billingsRefundTransaction == NULL) {
+			//CREATE
+			$billingsRefundTransaction = new BillingsTransaction();
+			$billingsRefundTransaction->setProviderId($user->getProviderId());
+			$billingsRefundTransaction->setUserId($user->getId());
+			$billingsRefundTransaction->setSubId($billingsTransaction->getSubId());
+			$billingsRefundTransaction->setCouponId($billingsTransaction->getCouponId());
+			$billingsRefundTransaction->setInvoiceId($billingsTransaction->getInvoiceId());
+			$billingsRefundTransaction->setTransactionBillingUuid(guid());
+			$billingsRefundTransaction->setTransactionProviderUuid($recurlyRefundTransaction->uuid);
+			$billingsRefundTransaction->setTransactionCreationDate($recurlyRefundTransaction->created_at);
+			$billingsRefundTransaction->setAmountInCents($recurlyRefundTransaction->amount_in_cents);
+			$billingsRefundTransaction->setCurrency($recurlyRefundTransaction->currency);
+			$billingsRefundTransaction->setCountry($billingsTransaction->getCountry());//Country = Country of the Charge
+			$billingsRefundTransaction->setTransactionStatus(self::getMappedTransactionStatus($recurlyRefundTransaction));
+			$billingsRefundTransaction->setTransactionType(self::getMappedTransactionType($recurlyRefundTransaction));
+			if(isset($recurlyRefundTransaction->invoice)) {
+				$billingsRefundTransaction->setInvoiceProviderUuid($recurlyRefundTransaction->invoice->get()->uuid);
+			} else {
+				$billingsRefundTransaction->setInvoiceProviderUuid(NULL);
+			}
+			$billingsRefundTransaction->setMessage("provider_status=".$recurlyRefundTransaction->status);
+			$billingsRefundTransaction->setUpdateType($updateType);
+			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
+		} else {
+			//UPDATE
+			$billingsRefundTransaction->setProviderId($user->getProviderId());
+			$billingsRefundTransaction->setUserId($user->getId());
+			$billingsRefundTransaction->setSubId($billingsTransaction->getSubId());
+			$billingsRefundTransaction->setCouponId($billingsTransaction->getCouponId());
+			$billingsRefundTransaction->setInvoiceId($billingsTransaction->getInvoiceId());
+			//NO !!! : $billingsTransaction->setTransactionBillingUuid(guid());
+			$billingsRefundTransaction->setTransactionProviderUuid($recurlyRefundTransaction->uuid);
+			$billingsRefundTransaction->setTransactionCreationDate($recurlyRefundTransaction->created_at);
+			$billingsRefundTransaction->setAmountInCents($recurlyRefundTransaction->amount_in_cents);
+			$billingsRefundTransaction->setCurrency($recurlyRefundTransaction->currency);
+			$billingsRefundTransaction->setCountry($billingsTransaction->getCountry());//Country = Country of the Charge
+			$billingsRefundTransaction->setTransactionStatus(self::getMappedTransactionStatus($recurlyRefundTransaction));
+			$billingsRefundTransaction->setTransactionType(self::getMappedTransactionType($recurlyRefundTransaction));
+			if(isset($recurlyRefundTransaction->invoice)) {
+				$billingsRefundTransaction->setInvoiceProviderUuid($recurlyRefundTransaction->invoice->get()->uuid);
+			} else {
+				$billingsRefundTransaction->setInvoiceProviderUuid(NULL);
+			}
+			$billingsRefundTransaction->setMessage("provider_status=".$recurlyRefundTransaction->status);
+			$billingsRefundTransaction->setUpdateType($updateType);
+			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
+		}
+		config::getLogger()->addInfo("creating/updating refund transaction from recurly refund transaction id=".$recurlyRefundTransaction->uuid." done successfully");
+		return($billingsRefundTransaction);
 	}
 	
 	private static function getMappedTransactionStatus(Recurly_Transaction $recurlyTransaction) {
