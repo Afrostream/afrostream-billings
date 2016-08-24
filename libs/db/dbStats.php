@@ -342,6 +342,7 @@ EOL;
 		FROM billing_transactions BT
 		INNER JOIN billing_providers BP ON (BT.providerid = BP._id)
 		AND (BT.updated_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		AND BT.update_type = 'hook'
 EOL;
 		$query = sprintf($query, $date_start_str, $date_end_str);
 		
@@ -368,6 +369,7 @@ EOL;
 		INNER JOIN billing_providers BP ON (BT.providerid = BP._id)
 		WHERE BT.transaction_status = 'success'
 		AND (BT.updated_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		AND BT.update_type = 'hook'
 		GROUP BY BP._id, BT.transaction_type, BT.currency
 EOL;
 		$query = sprintf($query, $date_start_str, $date_end_str);
