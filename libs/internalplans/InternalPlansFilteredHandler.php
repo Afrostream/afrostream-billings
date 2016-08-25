@@ -13,7 +13,7 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 	
 	public function doGetInternalPlans($provider_name = NULL, $contextBillingUuid = NULL, $contextCountry = NULL, $isVisible = NULL, $country = NULL, $filtered_array = NULL) {
 		$contextBillingUuid = $this->selectContextBillingUuid($contextBillingUuid, $filtered_array);
-		$contextCountry = $this->selectContextCountry($contextCountry, $filtered_array);
+		$contextCountry = $this->selectContextCountry($contextCountry, $country, $filtered_array);
 		$internalPlans = parent::doGetInternalPlans($provider_name, $contextBillingUuid, $contextCountry, $isVisible, $country);
 		$internalPlansFiltered = array();
 		if(isset($filtered_array)) {
@@ -107,11 +107,14 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 		return($contextBillingUuid);
 	}
 
-	private function selectContextCountry($currentContextCountry = NULL, $filtered_array = NULL) {
+	private function selectContextCountry($currentContextCountry = NULL, $currentCountry = NULL, $filtered_array = NULL) {
 		$contextCountry = NULL;
 		if(isset($currentContextCountry)) {
 			$contextCountry = $currentContextCountry;
-			config::getLogger()->addInfo("contextCountry set to : ".$contextCountry);
+			config::getLogger()->addInfo("contextCountry set to (contextCountry) : ".$contextCountry);
+		} else if(isset($currentCountry)) {
+			$contextCountry = $currentCountry;
+			config::getLogger()->addInfo("contextCountry set to (country) : ".$contextCountry);
 		} else if(isset($filtered_array)) {
 			$filterEnabled = false;
 			if(array_key_exists('filterEnabled', $filtered_array)) {
@@ -120,6 +123,7 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 			if($filterEnabled === true) {
 				if(array_key_exists('filterCountry', $filtered_array)) {
 					$contextCountry = $filtered_array['filterCountry'];
+					config::getLogger()->addInfo("contextCountry set to (filterCountry) : ".$contextCountry);
 				}
 			} else {
 				config::getLogger()->addInfo("no contextCountry, filter NOT enabled");
