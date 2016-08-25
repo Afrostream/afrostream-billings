@@ -4549,8 +4549,8 @@ EOL;
 		$query.= " (transactionlinkid, providerid, userid, subid, couponid, invoiceid,"; 
 		$query.= " transaction_billing_uuid, transaction_provider_uuid,";
 		$query.= " transaction_creation_date,"; 
-		$query.= " amount_in_cents, currency, country, transaction_status, transaction_type, invoice_provider_uuid, message, update_type)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING _id";
+		$query.= " amount_in_cents, currency, country, transaction_status, transaction_type, invoice_provider_uuid, message, update_type, status_changed_date)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$billingsTransaction->getTransactionLinkId(),
 						$billingsTransaction->getProviderId(),
@@ -4568,7 +4568,8 @@ EOL;
 						$billingsTransaction->getTransactionType(),
 						$billingsTransaction->getInvoiceProviderUuid(),
 						$billingsTransaction->getMessage(),
-						$billingsTransaction->getUpdateType()
+						$billingsTransaction->getUpdateType(),
+						dbGlobal::toISODate($billingsTransaction->getTransactionCreationDate())
 				));
 		$row = pg_fetch_row($result);
 		// free result
