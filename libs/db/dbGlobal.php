@@ -4577,8 +4577,16 @@ EOL;
 	}
 	
 	public static function updateBillingsTransaction(BillingsTransaction $billingsTransaction) {
+		$currentBillingsTransaction = self::getBillingsTransactionById($billingsTransaction->getId());
+		$status_changed_date_has_to_be_set = false;
+		if($currentBillingsTransaction->getTransactionStatus() != $billingsTransaction->getTransactionStatus()) {
+			$status_changed_date_has_to_be_set = true;
+		}
 		$query = "UPDATE billing_transactions";
 		$query.= " SET updated_date = CURRENT_TIMESTAMP,";
+		if($status_changed_date_has_to_be_set == true) {
+			$query.= " status_changed_date = CURRENT_TIMESTAMP,";
+		}
 		$query.= " transactionlinkid = $1, providerid = $2, userid = $3, subid = $4, couponid = $5, invoiceid = $6,"; 
 		$query.= " transaction_billing_uuid = $7, transaction_provider_uuid = $8,";
 		$query.= " transaction_creation_date = $9,"; 
