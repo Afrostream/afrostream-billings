@@ -45,7 +45,11 @@ class BillingsImportBraintreeTransactions {
 			throw new Exception("user with account_code=".$braintreeCustomer->id." does not exist in billings database");
 		}
 		$transactionHandler = new TransactionsHandler();
-		$transactionHandler->doUpdateTransactionsByUser($user, $from, $to, 'import');
+		$updateType = 'import';
+		if(isset($from) || isset($to)) {
+			$updateType = 'sync';
+		}
+		$transactionHandler->doUpdateTransactionsByUser($user, $from, $to, $updateType);
 		ScriptsConfig::getLogger()->addInfo("importing transactions from braintree account with account_code=".$braintreeCustomer->id." done successfully");
 	}
 	

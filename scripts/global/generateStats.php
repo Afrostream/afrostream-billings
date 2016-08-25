@@ -104,7 +104,7 @@ if($numberOfCanceledSubscriptionsYesterday['total'] > 0) {
 
 sendMessage("********** TRANSACTIONS **********");
 
-$numberOfTransactionEvents = dbStats::getNumberOfCreatedTransactions($yesterdayBeginningOfDay, $yesterdayEndOfDay, array('purchase', 'refund'), array('success'));
+$numberOfTransactionEvents = dbStats::getNumberOfTransactions($yesterdayBeginningOfDay, $yesterdayEndOfDay, array('purchase', 'refund'), array('success'));
 
 if(count($numberOfTransactionEvents) > 0) {
 
