@@ -100,7 +100,7 @@ foreach ($couponsActivated as $coupon) {
 
 $channelTransactions = getEnv('SLACK_STATS_TRANSACTIONS_CHANNEL');
 
-$transactionEvents = dbStats::getTransactionEvents($start_date, $end_date, array('purchase', 'refund'), array('success', 'declined', 'void', 'failed', 'canceled'));
+$transactionEvents = dbStats::getUpdatedTransactions($start_date, $end_date, array('purchase', 'refund'), array('success', 'declined', 'void', 'failed', 'canceled'));
 
 sendMessage("**************************************************", $channelTransactions);
 sendMessage(count($transactionEvents)." transactions between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelTransactions);

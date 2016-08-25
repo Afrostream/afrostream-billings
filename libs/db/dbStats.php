@@ -325,7 +325,7 @@ EOL;
 		return $out;		
 	}
 	
-	public static function getTransactionEvents(DateTime $dateStart, Datetime $dateEnd, array $transactionTypes, array $transactionStatus) {
+	public static function getUpdatedTransactions(DateTime $dateStart, Datetime $dateEnd, array $transactionTypes, array $transactionStatus) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
@@ -379,7 +379,7 @@ EOL;
 		return $out;
 	}
 	
-	public static function getNumberOfTransactionEvents(DateTime $dateStart, Datetime $dateEnd, array $transactionTypes, array $transactionStatus) {
+	public static function getNumberOfCreatedTransactions(DateTime $dateStart, Datetime $dateEnd, array $transactionTypes, array $transactionStatus) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
@@ -391,7 +391,7 @@ EOL;
 		$query.= " BT.currency as currency";
 		$query.= " FROM billing_transactions BT";
 		$query.= " INNER JOIN billing_providers BP ON (BT.providerid = BP._id)";
-		$query.= " WHERE (BT.updated_date AT TIME ZONE 'Europe/Paris') BETWEEN '".$date_start_str."' AND '".$date_end_str."'";
+		$query.= " WHERE (BT.transaction_creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '".$date_start_str."' AND '".$date_end_str."'";
 		$query.= " AND BT.update_type = 'hook'";
 		$firstLoop = true;
 		if(count($transactionTypes) > 0) {
