@@ -392,7 +392,6 @@ EOL;
 		$query.= " FROM billing_transactions BT";
 		$query.= " INNER JOIN billing_providers BP ON (BT.providerid = BP._id)";
 		$query.= " WHERE (BT.transaction_creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '".$date_start_str."' AND '".$date_end_str."'";
-		$query.= " AND BT.update_type = 'hook'";
 		$firstLoop = true;
 		if(count($transactionTypes) > 0) {
 			foreach ($transactionTypes as $transactionTypeEntry) {
