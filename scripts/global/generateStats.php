@@ -159,17 +159,59 @@ if(count($numberOfTransactionEvents) > 0) {
 	sendMessage("total=0");
 }
 
-/*sendMessage("********** COUPONS **********");
+sendMessage("********** COUPONS **********");
+
+sendMessage("*** GENERATED YESTERDAY ***");
+
+$numberOfCouponsGenerated = dbStats::getNumberOfCouponsGenerated($yesterdayBeginningOfDay, $yesterdayEndOfDay);
+
+sendMessage("total generated=".$numberOfCouponsGenerated['total']);
+
+if($numberOfCouponsGenerated['total'] > 0) {
+	sendMessage("*** BY COUPON_TYPE ***");
+	$numberOfCouponsGeneratedByCouponType = $numberOfCouponsGenerated['coupon_types'];
+	foreach ($numberOfCouponsGeneratedByCouponType as $couponType => $details) {
+		$msg = "coupon_type=".$couponType." : total=".$details['total'];
+		sendMessage($msg);
+	}
+	sendMessage("*** BY PROVIDER ***");
+	$numberOfCouponsGeneratedByProvider = $numberOfCouponsGenerated['providers'];
+	foreach ($numberOfCouponsGeneratedByProvider as $provider_name => $details) {
+		$msg = "provider=".$provider_name." : \n";
+		$couponTypes = $details['coupon_types'];
+		foreach ($couponTypes as $couponType => $couponTypeValues) {
+			$msg.= "	coupon_type=".$couponType." : total=".$couponTypeValues['total'];
+			$msg.= "\n";
+		}
+		sendMessage($msg);
+	}
+}
+
+sendMessage("*** ACTIVATED YESTERDAY ***");
 
 $numberOfCouponsActivated = dbStats::getNumberOfCouponsActivated($yesterdayBeginningOfDay, $yesterdayEndOfDay);
 
-if(count($numberOfCouponsActivated) > 0) {
-	foreach ($numberOfCouponsActivated as $key => $value) {
-		
+sendMessage("total activated=".$numberOfCouponsActivated['total']);
+
+if($numberOfCouponsActivated['total'] > 0) {
+	sendMessage("*** BY COUPON_TYPE ***");
+	$numberOfCouponsActivatedByCouponType = $numberOfCouponsActivated['coupon_types'];
+	foreach ($numberOfCouponsActivatedByCouponType as $couponType => $details) {
+		$msg = "coupon_type=".$couponType." : total=".$details['total'];
+		sendMessage($msg);
 	}
-} else {
-	sendMessage("total=0");
-}*/
+	sendMessage("*** BY PROVIDER ***");
+	$numberOfCouponsActivatedByProvider = $numberOfCouponsActivated['providers'];
+	foreach ($numberOfCouponsActivatedByProvider as $provider_name => $details) {
+		$msg = "provider=".$provider_name." : \n";
+		$couponTypes = $details['coupon_types'];
+		foreach ($couponTypes as $couponType => $couponTypeValues) {
+			$msg.= "	coupon_type=".$couponType." : total=".$couponTypeValues['total'];
+			$msg.= "\n";
+		}
+		sendMessage($msg);
+	}	
+}
 
 print_r("processing done\n");
 

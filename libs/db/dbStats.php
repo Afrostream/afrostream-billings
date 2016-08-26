@@ -224,20 +224,25 @@ class dbStats {
 		$date_end_str = dbGlobal::toISODate($dateEnd);
 
 		$query =<<<EOL
-		SELECT plans.name AS plan_name, bp.name AS provider_name, buo.value AS user_email
-		FROM 
+		SELECT bcc.coupon_type AS coupon_type,
+		plans.name AS plan_name,
+		bp.name AS provider_name,
+		buo.value AS user_email,
+		(CASE WHEN bco.value IS NULL THEN buo.value ELSE bco.value END) AS recipient_email
+		FROM
 		billing_coupons AS bc
-		JOIN billing_providers AS bp ON bc.providerid=bp._id
-		JOIN billing_plans AS plans ON bc.providerplanid=plans._id
-		JOIN billing_users AS bu ON bc.userid=bu._id
-		JOIN billing_users_opts AS buo ON bu._id=buo.userid
+		INNER JOIN billing_providers AS bp ON (bc.providerid = bp._id)
+		INNER JOIN billing_plans AS plans ON (bc.providerplanid = plans._id)
+		INNER JOIN billing_users AS bu ON (bc.userid = bu._id)
+		INNER JOIN billing_users_opts AS buo ON (bu._id = buo.userid)
+		INNER JOIN billing_coupons_campaigns AS bcc ON (bc.couponscampaignsid = bcc._id)
+		LEFT JOIN billing_coupons_opts AS bco ON (bc._id = bco.couponid AND bco.key = 'recipientEmail' AND bco.deleted = false)
 		WHERE
 		bc.coupon_status='redeemed'
 		AND (bc.redeemed_date  AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
 		AND buo.key = 'email'
-		AND buo.deleted=false	
+		AND buo.deleted = false
 EOL;
-
 		$query = sprintf($query, $date_start_str, $date_end_str);
 
 		$result = pg_query(config::getDbConn(), $query);
@@ -266,18 +271,23 @@ EOL;
 		$date_end_str = dbGlobal::toISODate($dateEnd);
 
 		$query =<<<EOL
-		SELECT plans.name AS plan_name, bp.name AS provider_name, buo.value AS user_email
-		FROM 
+		SELECT bcc.coupon_type AS coupon_type,
+		plans.name AS plan_name,
+		bp.name AS provider_name,
+		buo.value AS user_email,
+		buo.value AS recipient_email
+		FROM
 		billing_coupons AS bc
-		INNER JOIN billing_providers AS bp ON bc.providerid=bp._id
-		INNER JOIN billing_plans AS plans ON bc.providerplanid=plans._id
-		INNER JOIN billing_users AS bu ON bc.userid=bu._id
-		INNER JOIN billing_users_opts AS buo ON bu._id=buo.userid
+		INNER JOIN billing_providers AS bp ON (bc.providerid=bp._id)
+		INNER JOIN billing_plans AS plans ON (bc.providerplanid=plans._id)
+		INNER JOIN billing_users AS bu ON (bc.userid=bu._id)
+		INNER JOIN billing_users_opts AS buo ON (bu._id=buo.userid)
+		INNER JOIN billing_coupons_campaigns AS bcc ON (bc.couponscampaignsid = bcc._id)
 		WHERE
 		bp.name = 'cashway'
 		AND (bc.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
 		AND buo.key = 'email'
-		AND buo.deleted = false	
+		AND buo.deleted = false
 EOL;
 
 		$query = sprintf($query, $date_start_str, $date_end_str);
@@ -299,14 +309,19 @@ EOL;
 		$date_end_str = dbGlobal::toISODate($dateEnd);
 		
 		$query =<<<EOL
-		SELECT plans.name AS plan_name, bp.name AS provider_name, buo.value AS user_email
+		SELECT bcc.coupon_type AS coupon_type,
+		plans.name AS plan_name,
+		bp.name AS provider_name,
+		buo.value AS user_email,
+		(CASE WHEN bco.value IS NULL THEN buo.value ELSE bco.value END) AS recipient_email
 		FROM 
 		billing_coupons AS bc
-		INNER JOIN billing_providers AS bp ON bc.providerid=bp._id
-		INNER JOIN billing_plans AS plans ON bc.providerplanid=plans._id
-		INNER JOIN billing_users AS bu ON bc.userid=bu._id
-		INNER JOIN billing_users_opts AS buo ON bu._id=buo.userid
-		INNER JOIN billing_coupons_campaigns AS bcc ON bc.couponscampaignsid=bcc._id
+		INNER JOIN billing_providers AS bp ON (bc.providerid=bp._id)
+		INNER JOIN billing_plans AS plans ON (bc.providerplanid=plans._id)
+		INNER JOIN billing_users AS bu ON (bc.userid=bu._id)
+		INNER JOIN billing_users_opts AS buo ON (bu._id=buo.userid)
+		INNER JOIN billing_coupons_campaigns AS bcc ON (bc.couponscampaignsid=bcc._id)
+		LEFT JOIN billing_coupons_opts AS bco ON (bc._id=bco.couponid AND bco.key = 'recipientEmail' AND bco.deleted = false)
 		WHERE
 		bp.name = 'afr'
 		AND (bc.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
@@ -425,6 +440,7 @@ EOL;
 		$query.= " ORDER BY BP._id, BT.transaction_type, BT.currency";
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
+		$out['total'] = 0;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			if(isset($out['total'])) {
 				$out['total']+= $row['counter'];
@@ -470,12 +486,8 @@ EOL;
 		return($out);
 	}
 	
-	public function getNumberOfCouponsGenerated(DateTime $dateStart, DateTime $dateEnd) {
+	public static function getNumberOfCouponsGenerated(DateTime $dateStart, DateTime $dateEnd) {
 		
-	}
-	
-	public function getNumberOfCouponsActivated(DateTime $dateStart, DateTime $dateEnd) {
-
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
@@ -491,14 +503,84 @@ EOL;
 		INNER JOIN billing_coupons_campaigns BCC ON (BC.couponscampaignsid = BCC._id)
 		WHERE
 		(BC.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
-		GROUP BY BP._id, BCC._id
+		GROUP BY BP._id, BCC._id ORDER BY BP._id
 EOL;
 		$query = sprintf($query, $date_start_str, $date_end_str);
 		
 		$result = pg_query(config::getDbConn(), $query);
 		$out = array();
+		$out['total'] = 0;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out['providers'][$row];
+			if(isset($out['total'])) {
+				$out['total']+= $row['counter'];
+			} else {
+				$out['total'] = $row['counter'];
+			}
+			if(isset($out['coupon_types'][$row['coupon_type']]['total'])) {
+				$out['coupon_types'][$row['coupon_type']]['total']+= $row['counter'];
+			} else {
+				$out['coupon_types'][$row['coupon_type']]['total'] = $row['counter'];
+			}
+			if(isset($out['providers'][$row['provider_name']]['total'])) {
+				$out['providers'][$row['provider_name']]['total']+= $row['counter'];
+			} else {
+				$out['providers'][$row['provider_name']]['total'] = $row['counter'];
+			}
+			if(isset($out['providers'][$row['provider_name']]['coupon_types'][$row['coupon_type']]['total'])) {
+				$out['providers'][$row['provider_name']]['coupon_types'][$row['coupon_type']]['total']+= $row['counter'];
+			} else {
+				$out['providers'][$row['provider_name']]['coupon_types'][$row['coupon_type']]['total'] = $row['counter'];
+			}
+		}
+		return $out;	
+	}
+	
+	public static function getNumberOfCouponsActivated(DateTime $dateStart, DateTime $dateEnd) {
+
+		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
+		$date_start_str = dbGlobal::toISODate($dateStart);
+		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
+		$date_end_str = dbGlobal::toISODate($dateEnd);
+		
+		$query =<<<EOL
+		SELECT BP.name AS provider_name,
+		count(*) as counter,
+		BCC.coupon_type as coupon_type
+		FROM
+		billing_coupons BC
+		INNER JOIN billing_providers BP ON (BC.providerid = BP._id)
+		INNER JOIN billing_coupons_campaigns BCC ON (BC.couponscampaignsid = BCC._id)
+		WHERE
+		BC.coupon_status='redeemed'
+		AND (BC.redeemed_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		GROUP BY BP._id, BCC._id ORDER BY BP._id
+EOL;
+		$query = sprintf($query, $date_start_str, $date_end_str);
+		
+		$result = pg_query(config::getDbConn(), $query);
+		$out = array();
+		$out['total'] = 0;
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			if(isset($out['total'])) {
+				$out['total']+= $row['counter'];
+			} else {
+				$out['total'] = $row['counter'];
+			}
+			if(isset($out['coupon_types'][$row['coupon_type']]['total'])) {
+				$out['coupon_types'][$row['coupon_type']]['total']+= $row['counter'];
+			} else {
+				$out['coupon_types'][$row['coupon_type']]['total'] = $row['counter'];
+			}
+			if(isset($out['providers'][$row['provider_name']]['total'])) {
+				$out['providers'][$row['provider_name']]['total']+= $row['counter'];
+			} else {
+				$out['providers'][$row['provider_name']]['total'] = $row['counter'];
+			}
+			if(isset($out['providers'][$row['provider_name']]['coupon_types'][$row['coupon_type']]['total'])) {
+				$out['providers'][$row['provider_name']]['coupon_types'][$row['coupon_type']]['total']+= $row['counter'];
+			} else {
+				$out['providers'][$row['provider_name']]['coupon_types'][$row['coupon_type']]['total'] = $row['counter'];
+			}
 		}
 		return $out;		
 	}
