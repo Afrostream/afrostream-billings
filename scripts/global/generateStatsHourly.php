@@ -55,7 +55,8 @@ sendMessage("**************************************************", $channelCoupon
 sendMessage(count($couponsActivated)." activated coupons between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
-	$msg = sprintf('%s %s (%s)', $coupon['user_email'], $coupon['plan_name'], $coupon['provider_name']);
+	$msg = sprintf('couponType=%s creator=%s recipient=%s planName=%s (%s)', 
+			$coupon['coupon_type'], $coupon['user_email'], $coupon['recipient_email'], $coupon['plan_name'], $coupon['provider_name']);
 	sendMessage($msg, $channelCoupons);
 	sendMessage('---------------------------------------------------', $channelCoupons);
 }
@@ -67,7 +68,8 @@ sendMessage("**************************************************", $channelCoupon
 sendMessage(count($couponsActivated)." generated cashway coupons between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
-	$msg = sprintf('%s %s (%s)', $coupon['user_email'], $coupon['plan_name'], $coupon['provider_name']);
+	$msg = sprintf('couponType=%s creator=%s recipient=%s planName=%s (%s)', 
+			$coupon['coupon_type'], $coupon['user_email'], $coupon['recipient_email'], $coupon['plan_name'], $coupon['provider_name']);
 	sendMessage($msg, $channelCoupons);
 	sendMessage('---------------------------------------------------', $channelCoupons);
 }
@@ -79,7 +81,8 @@ sendMessage("**************************************************", $channelCoupon
 sendMessage(count($couponsActivated)." generated sponsorship coupons between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
-	$msg = sprintf('%s %s (%s)', $coupon['user_email'], $coupon['plan_name'], $coupon['provider_name']);
+	$msg = sprintf('couponType=%s creator=%s recipient=%s planName=%s (%s)', 
+			$coupon['coupon_type'], $coupon['user_email'], $coupon['recipient_email'], $coupon['plan_name'], $coupon['provider_name']);
 	sendMessage($msg, $channelCoupons);
 	sendMessage('---------------------------------------------------', $channelCoupons);
 }
@@ -91,7 +94,8 @@ sendMessage("**************************************************", $channelCoupon
 sendMessage(count($couponsActivated)." generated standard coupons between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
-	$msg = sprintf('%s %s (%s)', $coupon['user_email'], $coupon['plan_name'], $coupon['provider_name']);
+	$msg = sprintf('couponType=%s creator=%s recipient=%s planName=%s (%s)', 
+			$coupon['coupon_type'], $coupon['user_email'], $coupon['recipient_email'], $coupon['plan_name'], $coupon['provider_name']);
 	sendMessage($msg, $channelCoupons);
 	sendMessage('---------------------------------------------------', $channelCoupons);
 }
