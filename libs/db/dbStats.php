@@ -29,6 +29,8 @@ class dbStats {
 			$total+= $row['counter'];
 			$out['providers'][$row['provider_name']]['total'] = $row['counter'];
 		}
+		// free result
+		pg_free_result($result);
 		$out['total'] = $total;
 		return($out);
 	}
@@ -63,6 +65,8 @@ class dbStats {
 			$total+= $row['counter'];
 			$out['providers'][$row['provider_name']]['total'] = $row['counter'];
 		}
+		// free result
+		pg_free_result($result);
 		$out['total'] = $total;
 		return($out);
 	}
@@ -96,6 +100,8 @@ class dbStats {
 			$out['providers'][$row['provider_name']]['returning'] = $row['counter_returning'];
 			$out['providers'][$row['provider_name']]['new'] = $row['counter'] - $row['counter_returning'];
 		}
+		// free result
+		pg_free_result($result);
 		$out['total'] = $total;
 		$out['returning'] = $total_returning;
 		$out['new'] = $total_new;
@@ -132,6 +138,8 @@ class dbStats {
 			$sub['provider_name'] = $row['provider_name'];
 			$out[] = $sub;
 		}
+		// free result
+		pg_free_result($result);
 		return($out);
 	}
 	
@@ -173,6 +181,8 @@ class dbStats {
 			$out['providers'][$row['provider_name']]['expired_cause_pb'] = $row['expired_cause_pb_counter'];
 			$out['providers'][$row['provider_name']]['expired_cause_ended'] = $row['expired_cause_ended_counter'];
 		}
+		// free result
+		pg_free_result($result);
 		$out['total'] = $total;
 		$out['expired_cause_pb'] = $total_expired_cause_pb;
 		$out['expired_cause_ended'] = $expired_cause_ended;
@@ -203,6 +213,8 @@ class dbStats {
 			$total+= $row['counter'];
 			$out['providers'][$row['provider_name']]['total'] = $row['counter'];
 		}
+		// free result
+		pg_free_result($result);
 		$out['total'] = $total;
 		return($out);
 	}
@@ -250,7 +262,8 @@ EOL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out[] = $row;
 		}
-
+		// free result
+		pg_free_result($result);
 		return $out;
 	}
 
@@ -297,7 +310,8 @@ EOL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out[] = $row;
 		}
-
+		// free result
+		pg_free_result($result);
 		return $out;
 	}
 	
@@ -336,7 +350,8 @@ EOL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out[] = $row;
 		}
-		
+		// free result
+		pg_free_result($result);
 		return $out;		
 	}
 	
@@ -390,6 +405,8 @@ EOL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out[] = $row;
 		}
+		// free result
+		pg_free_result($result);
 		return $out;
 	}
 	
@@ -483,6 +500,8 @@ EOL;
 				$out['providers'][$row['provider_name']]['transaction_types'][$row['transaction_type']]['currencies'][$row['currency']] = $row['amount'];
 			}
 		}
+		// free result
+		pg_free_result($result);
 		return($out);
 	}
 	
@@ -532,6 +551,8 @@ EOL;
 				$out['providers'][$row['provider_name']]['coupon_types'][$row['coupon_type']]['total'] = $row['counter'];
 			}
 		}
+		// free result
+		pg_free_result($result);
 		return $out;	
 	}
 	
@@ -582,6 +603,8 @@ EOL;
 				$out['providers'][$row['provider_name']]['coupon_types'][$row['coupon_type']]['total'] = $row['counter'];
 			}
 		}
+		// free result
+		pg_free_result($result);
 		return $out;		
 	}
 	
