@@ -23,6 +23,10 @@ class dbExports {
 			ELSE
 		(SELECT transaction_billing_uuid FROM billing_transactions WHERE _id = BS.transactionlinkid)
 		END) as related_transaction_billing_uuid,
+		(CASE WHEN BS.transactionlinkid IS NULL THEN NULL
+			ELSE
+		(SELECT transaction_creation_date FROM billing_transactions WHERE _id = BS.transactionlinkid)
+		END) as related_transaction_creation_date,
 		(CASE WHEN BS.transaction_type = 'purchase' THEN BS.amount_in_cents 
 			ELSE 
 		NULL

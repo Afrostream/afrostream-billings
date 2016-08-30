@@ -38,12 +38,10 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 			$dailyDateFormat = "Ymd";
 			$minusOneDay = new DateInterval("P1D");
 			$minusOneDay->invert = 1;
-			$lastdaysCount = 31;
+			$lastdaysCount = getEnv('TRANSACTIONS_EXPORTS_DAILY_NUMBER_OF_DAYS');
 			$dayToProcess = clone $now;
 			$dailyCounter = 0;
 			while($dailyCounter < $lastdaysCount) {
-				$dailyCounter++;
-				//
 				$dayToProcess->add($minusOneDay);
 				$dayToProcessBeginningOfDay = clone $dayToProcess;
 				$dayToProcessBeginningOfDay->setTime(0,0,0);
@@ -52,8 +50,7 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 				//
 				$dailyFileName = "transactions-exports-daily-".$dayToProcessBeginningOfDay->format($dailyDateFormat).".csv";
 				$dailyKey = getEnv('AWS_ENV').'/'.getEnv('AWS_FOLDER_TRANSACTIONS').'/daily/'.$dailyFileName;
-				if($s3->doesObjectExist($bucket, $dailyKey) == false)
-				{
+				if($s3->doesObjectExist($bucket, $dailyKey) == false) {
 					$export_transactions_file_path = NULL;
 					if(($export_transactions_file_path = tempnam('', 'tmp')) === false) {
 						throw new Exception('file for exporting transactions cannot be created');
@@ -64,15 +61,16 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 							'Key' => $dailyKey,
 							'SourceFile' => $export_transactions_file_path
 					));
-					if($dailyCounter == $lastdaysCount) {
+					if($dailyCounter == 0) {
 						//ONLY SEND BY EMAIL THE LAST ONE
-						if(strlen(getEnv('TRANSACTIONS_EXPORTS_DAILY_EMAIL_TOS')) > 0) {
+						if(getEnv('TRANSACTIONS_EXPORTS_DAILY_EMAIL_ACTIVATED') == 1) {
 							$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
 							$email = new SendGrid\Email();
 							$email->setTos(explode(';', getEnv('TRANSACTIONS_EXPORTS_DAILY_EMAIL_TOS')))
+							->setBccs(explode(';', getEnv('TRANSACTIONS_EXPORTS_DAILY_EMAIL_BCCS')))
 							->setFrom(getEnv('TRANSACTIONS_EXPORTS_EMAIL_FROM'))
 							->setFromName(getEnv('TRANSACTIONS_EXPORTS_EMAIL_FROMNAME'))
-							->setSubject('Afrostream Daily Transactions Export : '.$dayToProcessBeginningOfDay->format($dailyDateFormat))
+							->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Daily Transactions Export : '.$dayToProcessBeginningOfDay->format($dailyDateFormat))
 							->setText('See File attached')
 							->addAttachment($export_transactions_file_path, $dailyFileName);
 							$sendgrid->send($email);
@@ -82,19 +80,20 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 					unlink($export_transactions_file_path);
 					$export_transactions_file_path = NULL;
 				}
+				//DONE
+				$dailyCounter++;
 			}
 			//MONTH
-			$firstDayToProceedLastMonth = 5;
+			$firstDayToProceedLastMonth = getEnv('TRANSACTIONS_EXPORTS_MONTHLY_FIRST_DAY_OF_MONTH');
 			$monthlyDateFormat = "Ym";
 			$minusOneMonth = new DateInterval("P1M");
 			$minusOneMonth->invert = 1;
-			$lastmonthsCount = 3;
+			$lastmonthsCount = getEnv('TRANSACTIONS_EXPORTS_MONTHLY_NUMBER_OF_MONTHS');
 			$monthToProcess = clone $now;
 			$monthlyCounter = 0;
 			$dayOfMonth = $now->format('j');
 			if($dayOfMonth >= $firstDayToProceedLastMonth) {
 				while($monthlyCounter < $lastmonthsCount) {
-					$monthlyCounter++;
 					$monthToProcess->add($minusOneMonth);
 					$monthToProcessBeginning = clone $monthToProcess;
 					$monthToProcessBeginning->modify('first day of this month');
@@ -104,8 +103,7 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 					$monthToProcessEnd->setTime(23,59,59);
 					$monthyFileName = "transactions-exports-monthy-".$monthToProcessBeginning->format($monthlyDateFormat).".csv";
 					$monthlyKey = getEnv('AWS_ENV').'/'.getEnv('AWS_FOLDER_TRANSACTIONS').'/monthly/'.$monthyFileName;
-					if($s3->doesObjectExist($bucket, $monthlyKey) == false)
-					{
+					if($s3->doesObjectExist($bucket, $monthlyKey) == false) {
 						$export_transactions_file_path = NULL;
 						if(($export_transactions_file_path = tempnam('', 'tmp')) === false) {
 							throw new Exception('file for exporting transactions cannot be created');
@@ -116,15 +114,16 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 								'Key' => $monthlyKey,
 								'SourceFile' => $export_transactions_file_path
 						));
-						if($monthlyCounter == $lastmonthsCount) {
+						if($monthlyCounter == 0) {
 							//ONLY SEND BY EMAIL THE LAST ONE
-							if(strlen(getEnv('TRANSACTIONS_EXPORTS_MONTHLY_EMAIL_TOS')) > 0) {
+							if(getEnv('TRANSACTIONS_EXPORTS_MONTHLY_EMAIL_ACTIVATED') == 1) {
 								$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
 								$email = new SendGrid\Email();
 								$email->setTos(explode(';', getEnv('TRANSACTIONS_EXPORTS_MONTHLY_EMAIL_TOS')))
+								->setBccs(explode(';', getEnv('TRANSACTIONS_EXPORTS_MONTHLY_EMAIL_BCCS')))
 								->setFrom(getEnv('TRANSACTIONS_EXPORTS_EMAIL_FROM'))
 								->setFromName(getEnv('TRANSACTIONS_EXPORTS_EMAIL_FROMNAME'))
-								->setSubject('Afrostream Monthly Transactions Export : '.$monthToProcessBeginning->format($monthlyDateFormat))
+								->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Monthly Transactions Export : '.$monthToProcessBeginning->format($monthlyDateFormat))
 								->setText('See File attached')
 								->addAttachment($export_transactions_file_path, $monthyFileName);
 								$sendgrid->send($email);
@@ -134,6 +133,8 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 						unlink($export_transactions_file_path);
 						$export_transactions_file_path = NULL;
 					}
+					//DONE
+					$monthlyCounter++;
 				}
 			}
 			//DONE

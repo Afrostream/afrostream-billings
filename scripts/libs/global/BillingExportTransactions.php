@@ -22,6 +22,7 @@ class BillingExportTransactions {
 		$fields[] = 'transaction_type';
 		$fields[] = 'transaction_status';
 		$fields[] = 'related_transaction_billing_uuid';
+		$fields[] = 'related_transaction_creation_date';
 		$fields[] = 'purchase_amount_in_cents';
 		$fields[] = 'refund_amount_in_cents';
 		$fields[] = 'currency';

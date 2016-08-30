@@ -7,6 +7,10 @@ date_default_timezone_set("Europe/Paris");
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 
+if(getEnv('BILLINGS_ENV') === false) {
+	putEnv('BILLINGS_ENV=staging');
+}
+
 #DATABASE
 
 if(getEnv('AFR_DB_HOST') === false) {
@@ -83,6 +87,104 @@ if(getEnv('PAYPAL_API_CLIENT_ID') === false) {
 
 if(getEnv('PAYPAL_API_SECRET') === false) {
 	putEnv('PAYPAL_API_SECRET=');
+}
+
+#AMAZON
+
+#AWS_ACCESS_KEY_ID
+
+if(getEnv('AWS_ACCESS_KEY_ID') === false) {
+	putEnv('AWS_ACCESS_KEY_ID=');
+}
+
+#AWS_SECRET_ACCESS_KEY
+
+if(getEnv('AWS_SECRET_ACCESS_KEY') === false) {
+	putEnv('AWS_SECRET_ACCESS_KEY=');
+}
+
+#AWS_ENV ( 'staging' / 'production' )
+
+if(getEnv('AWS_ENV') === false) {
+	putEnv('AWS_ENV=staging');
+}
+
+#AWS_BUCKET_BILLINGS
+
+if(getEnv('AWS_BUCKET_BILLINGS_EXPORTS') === false) {
+	putEnv('AWS_BUCKET_BILLINGS_EXPORTS=afrostream-exports-billings');
+}
+
+#AWS_FOLDER_TRANSACTIONS
+
+if(getEnv('AWS_FOLDER_TRANSACTIONS') === false) {
+	putEnv('AWS_FOLDER_TRANSACTIONS=transactions');
+}
+
+#AWS_REGION
+
+if(getEnv('AWS_REGION') === false) {
+	putEnv('AWS_REGION=eu-central-1');
+}
+
+#AWS_VERSION
+
+if(getEnv('AWS_VERSION') === false) {
+	putEnv('AWS_VERSION=latest');
+}
+
+#TRANSACTIONS EXPORTS
+
+//EMAIL
+
+if(getEnv('TRANSACTIONS_EXPORTS_DAILY_EMAIL_ACTIVATED') === false) {
+	putEnv('TRANSACTIONS_EXPORTS_DAILY_EMAIL_ACTIVATED=1');
+}
+
+if(getEnv('TRANSACTIONS_EXPORTS_MONTHLY_EMAIL_ACTIVATED') === false) {
+	putEnv('TRANSACTIONS_EXPORTS_MONTHLY_EMAIL_ACTIVATED=1');
+}
+
+//EMAIL FROM (COMMON)
+
+if(getEnv('TRANSACTIONS_EXPORTS_EMAIL_FROM') === false) {
+	putEnv('TRANSACTIONS_EXPORTS_EMAIL_FROM=exports@afrostream.tv');
+}
+
+if(getEnv('TRANSACTIONS_EXPORTS_EMAIL_FROMNAME') === false) {
+	putEnv('TRANSACTIONS_EXPORTS_EMAIL_FROMNAME=Afrostream Export');
+}
+
+//EMAIL TOS
+
+if(getEnv('TRANSACTIONS_EXPORTS_DAILY_EMAIL_TOS') === false) {
+	putEnv('TRANSACTIONS_EXPORTS_DAILY_EMAIL_TOS=exports@afrostream.tv');
+}
+
+if(getEnv('TRANSACTIONS_EXPORTS_MONTHLY_EMAIL_TOS') === false) {
+	putEnv('TRANSACTIONS_EXPORTS_MONTHLY_EMAIL_TOS=exports@afrostream.tv');
+}
+
+//EMAIL BCCS
+
+if(getEnv('TRANSACTIONS_EXPORTS_DAILY_EMAIL_BCCS') === false) {
+	putEnv('TRANSACTIONS_EXPORTS_DAILY_EMAIL_BCCS=');
+}
+
+if(getEnv('TRANSACTIONS_EXPORTS_MONTHLY_EMAIL_BCCS') === false) {
+	putEnv('TRANSACTIONS_EXPORTS_MONTHLY_EMAIL_BCCS=');
+}
+
+if(getEnv('TRANSACTIONS_EXPORTS_DAILY_NUMBER_OF_DAYS') === false) {
+	putEnv('TRANSACTIONS_EXPORTS_DAILY_NUMBER_OF_DAYS=31');
+}
+
+if(getEnv('TRANSACTIONS_EXPORTS_MONTHLY_FIRST_DAY_OF_MONTH') === false) {
+	putEnv('TRANSACTIONS_EXPORTS_MONTHLY_FIRST_DAY_OF_MONTH=5');
+}
+
+if(getEnv('TRANSACTIONS_EXPORTS_MONTHLY_NUMBER_OF_MONTHS') === false) {
+	putEnv('TRANSACTIONS_EXPORTS_MONTHLY_NUMBER_OF_MONTHS=1');
 }
 
 #logger, #db_conn, ...
