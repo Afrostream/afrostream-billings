@@ -81,7 +81,7 @@ sendMessage("*** UPCOMING ***");
 sendMessage("total upcoming=".$numberOfFutureSubscriptionsYesterday['total']);
 
 if($numberOfFutureSubscriptionsYesterday['total'] > 0) {
-	sendMessage("total activated details :");
+	sendMessage("total upcoming details :");
 	$numberOfFutureSubscriptionsYesterdayByProvider = $numberOfFutureSubscriptionsYesterday['providers'];
 	foreach ($numberOfFutureSubscriptionsYesterdayByProvider as $provider_name => $counters) {
 		sendMessage($provider_name."=".$counters['total']);
