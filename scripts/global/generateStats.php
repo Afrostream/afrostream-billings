@@ -41,6 +41,7 @@ $yesterdayEndOfDay->setTime(23,59,59);
 $numberOfActivatedSubscriptionsYesterday = dbStats::getNumberOfActivatedSubscriptions($yesterday);
 $numberOfExpiredSubscriptionsYesterday = dbStats::getNumberOfExpiredSubscriptions($yesterday);
 $numberOfCanceledSubscriptionsYesterday = dbStats::getNumberOfCanceledSubscriptions($yesterday);
+$numberOfFutureSubscriptionsYesterday = dbStats::getNumberOfFutureSubscriptions($yesterday);
 
 sendMessage("total since launch=".$numberOfSubscriptions['total']);
 
@@ -58,7 +59,9 @@ if($numberOfActiveSubscriptions['total'] > 0) {
 	}
 }
 
-sendMessage("*** ACTIVATED YESTERDAY ***");
+sendMessage("*** YESTERDAY ***");
+
+sendMessage("*** ACTIVATED ***");
 
 sendMessage("total activated=".$numberOfActivatedSubscriptionsYesterday['total']);
 
@@ -73,7 +76,19 @@ if($numberOfActivatedSubscriptionsYesterday['total'] > 0) {
 	}
 }
 
-sendMessage("*** EXPIRED YESTERDAY ***");
+sendMessage("*** UPCOMING ***");
+
+sendMessage("total upcoming=".$numberOfFutureSubscriptionsYesterday['total']);
+
+if($numberOfFutureSubscriptionsYesterday['total'] > 0) {
+	sendMessage("total activated details :");
+	$numberOfFutureSubscriptionsYesterdayByProvider = $numberOfFutureSubscriptionsYesterday['providers'];
+	foreach ($numberOfFutureSubscriptionsYesterdayByProvider as $provider_name => $counters) {
+		sendMessage($provider_name."=".$counters['total']);
+	}
+}
+
+sendMessage("*** EXPIRED ***");
 
 sendMessage("total expired=".$numberOfExpiredSubscriptionsYesterday['total']);
 
@@ -90,7 +105,7 @@ if($numberOfExpiredSubscriptionsYesterday['total'] > 0) {
 	}
 }
 
-sendMessage("*** CANCELED (human action) YESTERDAY ***");
+sendMessage("*** CANCELED (human action) ***");
 
 sendMessage("canceled=".$numberOfCanceledSubscriptionsYesterday['total']);
 
@@ -106,7 +121,9 @@ sendMessage("********** TRANSACTIONS **********");
 
 $numberOfTransactionEvents = dbStats::getNumberOfTransactions($yesterdayBeginningOfDay, $yesterdayEndOfDay, array('purchase', 'refund'), array('success'));
 
-if(count($numberOfTransactionEvents) > 0) {
+sendMessage("*** YESTERDAY ***");
+
+if($numberOfTransactionEvents['total'] > 0) {
 
 	sendMessage("*** TOTAL ***");
 	$msg = "number of transactions=".$numberOfTransactionEvents['total'];
@@ -161,7 +178,9 @@ if(count($numberOfTransactionEvents) > 0) {
 
 sendMessage("********** COUPONS **********");
 
-sendMessage("*** GENERATED YESTERDAY ***");
+sendMessage("*** YESTERDAY ***");
+
+sendMessage("*** GENERATED ***");
 
 $numberOfCouponsGenerated = dbStats::getNumberOfCouponsGenerated($yesterdayBeginningOfDay, $yesterdayEndOfDay);
 
@@ -187,7 +206,7 @@ if($numberOfCouponsGenerated['total'] > 0) {
 	}
 }
 
-sendMessage("*** ACTIVATED YESTERDAY ***");
+sendMessage("*** ACTIVATED ***");
 
 $numberOfCouponsActivated = dbStats::getNumberOfCouponsActivated($yesterdayBeginningOfDay, $yesterdayEndOfDay);
 

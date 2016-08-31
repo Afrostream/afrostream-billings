@@ -257,6 +257,36 @@ class dbStats {
 		$out['total'] = $total;
 		return($out);
 	}
+	
+	public static function getNumberOfFutureSubscriptions(DateTime $date) {
+		$date->setTimezone(new DateTimeZone(config::$timezone));
+		$date_as_str = dbGlobal::toISODate($date);
+		$query = "SELECT BP.name as provider_name, count(*) as counter FROM billing_subscriptions BS";
+		$query.= " INNER JOIN billing_providers BP";
+		$query.= " ON (BS.providerid = BP._id)";
+		$query.= " INNER JOIN billing_users BU";
+		$query.= " ON (BS.userid = BU._id)";
+		$query.= " LEFT JOIN billing_users_opts BUO";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
+		$query.= " WHERE";
+		$query.= " (BUO.value not like '%yopmail.com' OR BUO.value is null)";
+		$query.= " AND";
+		$query.= " BS.sub_status = 'future'";
+		$query.= " AND";
+		$query.= " date(BS.creation_date AT TIME ZONE 'Europe/Paris') = date('".$date_as_str."')";
+		$query.= " GROUP BY BP._id";
+		$result = pg_query(config::getDbConn(), $query);
+		$total = 0;
+		$out = array();
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$total+= $row['counter'];
+			$out['providers'][$row['provider_name']]['total'] = $row['counter'];
+		}
+		// free result
+		pg_free_result($result);
+		$out['total'] = $total;
+		return($out);
+	}
 
 	/**
 	 * Get activated coupons between two supplied dates
