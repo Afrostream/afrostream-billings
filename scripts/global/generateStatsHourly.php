@@ -36,22 +36,31 @@ $dateInterval = new DateInterval("PT1H");
 $dateInterval->invert = 1;
 
 $start_date = $start_date->add($dateInterval);
-
-$subscriptions = dbStats::getActivatedSubscriptions($start_date, $end_date);
+//subscriptions
 $channelSubscriptions = getEnv('SLACK_STATS_CHANNEL');
+//activated subscriptions
 sendMessage("**************************************************", $channelSubscriptions);
-
-sendMessage(count($subscriptions)." new subscribers between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelSubscriptions);
+$subscriptions = dbStats::getActivatedSubscriptions($start_date, $end_date);
+sendMessage(count($subscriptions)." new subscriptions between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelSubscriptions);
 
 foreach ($subscriptions as $subscription) {
 	sendMessage($subscription['email']." ".$subscription['internal_plan_name']." (".$subscription['provider_name'].')', $channelSubscriptions);
 }
 
-//activated coupons
-$couponsActivated = dbStats::getCouponsActivation($start_date, $end_date);
-$channelCoupons = getEnv('SLACK_STATS_COUPONS_CHANNEL');
+//future subscriptions
+sendMessage("**************************************************", $channelSubscriptions);
+$futureSubscriptions = dbStats::getFutureSubscriptions($start_date, $end_date);
+sendMessage(count($futureSubscriptions)." new subscriptions in future between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelSubscriptions);
 
+foreach ($futureSubscriptions as $futureSubscription) {
+	sendMessage($futureSubscription['email']." ".$futureSubscription['internal_plan_name']." activation_date=".$futureSubscription['sub_activated_date']." (".$futureSubscription['provider_name'].')', $channelSubscriptions);
+}
+
+//coupons
+$channelCoupons = getEnv('SLACK_STATS_COUPONS_CHANNEL');
+//activated coupons
 sendMessage("**************************************************", $channelCoupons);
+$couponsActivated = dbStats::getCouponsActivation($start_date, $end_date);
 sendMessage(count($couponsActivated)." activated coupons between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
@@ -61,10 +70,9 @@ foreach ($couponsActivated as $coupon) {
 	sendMessage('---------------------------------------------------', $channelCoupons);
 }
 
-//cahsway coupons
-$couponsActivated = dbStats::getCouponsCashwayGenerated($start_date, $end_date);
-
+//cashway coupons
 sendMessage("**************************************************", $channelCoupons);
+$couponsActivated = dbStats::getCouponsCashwayGenerated($start_date, $end_date);
 sendMessage(count($couponsActivated)." generated cashway coupons between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
@@ -75,9 +83,8 @@ foreach ($couponsActivated as $coupon) {
 }
 
 //afr sponsorship coupons
-$couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new CouponCampaignType(CouponCampaignType::sponsorship));
-
 sendMessage("**************************************************", $channelCoupons);
+$couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new CouponCampaignType(CouponCampaignType::sponsorship));
 sendMessage(count($couponsActivated)." generated sponsorship coupons between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
@@ -88,9 +95,8 @@ foreach ($couponsActivated as $coupon) {
 }
 
 //afr standard coupons
-$couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new CouponCampaignType(CouponCampaignType::standard));
-
 sendMessage("**************************************************", $channelCoupons);
+$couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new CouponCampaignType(CouponCampaignType::standard));
 sendMessage(count($couponsActivated)." generated standard coupons between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
@@ -101,12 +107,9 @@ foreach ($couponsActivated as $coupon) {
 }
 
 //transactions
-
 $channelTransactions = getEnv('SLACK_STATS_TRANSACTIONS_CHANNEL');
-
-$transactionEvents = dbStats::getTransactions($start_date, $end_date, array('purchase', 'refund'), array('success', 'declined', 'void', 'failed', 'canceled'));
-
 sendMessage("**************************************************", $channelTransactions);
+$transactionEvents = dbStats::getTransactions($start_date, $end_date, array('purchase', 'refund'), array('success', 'declined', 'void', 'failed', 'canceled'));
 sendMessage(count($transactionEvents)." transactions between ".$start_date->format('H')."H and ".$end_date->format('H')."H : ", $channelTransactions);
 
 foreach ($transactionEvents as $transactionEvent) {
