@@ -19,10 +19,11 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 		}
 		$subscriptions = $this->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid());
 		if(count($subscriptions) > 0) {
-			if($this->haveSubscriptionsWithStatus($subscriptions, 'future')) {
+			//HACK / FIX : Remove check because of CASHWAY
+			/*if($this->haveSubscriptionsWithStatus($subscriptions, 'future')) {
 				$msg = "you already have a future subscription";
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_FUTURE_ALREADY_EXISTS);				
-			}
+			}*/
 			$lastSubscription = $subscriptions[0];
 			if($lastSubscription->getIsActive() == 'yes') {
 				//NC : DO NOT BLOCK UNTIL WE REALLY KNOW THAT SUBSCRIPTIONS AUTO-RENEW OR NOT (VERY SOON !!!)
