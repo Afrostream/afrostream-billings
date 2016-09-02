@@ -24,7 +24,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 		
 			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, 'subs_expire_canceled');
 			//
-			$limit = 3;
+			$limit = 100;
 			//will select all day strictly before today
 			$sub_period_ends_date = clone $this->today;
 			$sub_period_ends_date->setTime(0, 0, 0);
