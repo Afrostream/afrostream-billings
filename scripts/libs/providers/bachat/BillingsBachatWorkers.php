@@ -48,7 +48,6 @@ class BillingsBachatWorkers extends BillingsWorkers {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), "PAR_REN file cannot be open (for write)");
 				}
 				ScriptsConfig::getLogger()->addInfo("PAR_REN file successfully created here : ".$current_par_ren_file_path);
-				$offset = 0;
 				$limit = 100;
 				//will select all day strictly before today
 				$sub_period_ends_date = clone $this->today;
@@ -59,11 +58,17 @@ class BillingsBachatWorkers extends BillingsWorkers {
 					$status_array[] = 'pending_active';
 				}
 				//
-				while(count($endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, $offset, $provider->getId(), $sub_period_ends_date, $status_array)) > 0) {
-					ScriptsConfig::getLogger()->addInfo("processing...current offset=".$offset);
-					$offset = $offset + $limit;
+				$idx = 0;
+				$lastId = NULL;
+				$totalCounter = NULL;
+				do {
+					$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $provider->getId(), $sub_period_ends_date, $status_array, $lastId);
+					if(is_null($totalCounter)) {$totalCounter = $endingBillingsSubscriptions['total_counter'];}
+					$idx+= count($endingBillingsSubscriptions['subscriptions']);
+					$lastId = $endingBillingsSubscriptions['lastId'];
 					//
-					foreach($endingBillingsSubscriptions as $endingBillingsSubscription) {
+					ScriptsConfig::getLogger()->addInfo("processing...total_counter=".$totalCounter.", idx=".$idx);
+					foreach($endingBillingsSubscriptions['subscriptions'] as $endingBillingsSubscription) {
 						//
 						$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($endingBillingsSubscription->getId(), "request_renew");
 						$billingsSubscriptionActionLogs[] = $billingsSubscriptionActionLog;
@@ -76,7 +81,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 							ScriptsConfig::getLogger()->addError($msg);
 						}
 					}
-				}
+				} while ($idx < $totalCounter && count($endingBillingsSubscriptions['subscriptions']) > 0);
 				fclose($current_par_ren_file_res);
 				$current_par_ren_file_res = NULL;
 				if(($current_par_ren_file_res = fopen($current_par_ren_file_path, "r")) === false) {
@@ -287,7 +292,6 @@ class BillingsBachatWorkers extends BillingsWorkers {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), "PAR_CAN file cannot be open (for write)");
 				}
 				ScriptsConfig::getLogger()->addInfo("PAR_CAN file successfully created here : ".$current_par_can_file_path);
-				$offset = 0;
 				$limit = 100;
 				//
 				$status_array = array('requesting_canceled');
@@ -295,11 +299,17 @@ class BillingsBachatWorkers extends BillingsWorkers {
 					$status_array[] = 'pending_canceled';
 				}
 				//
-				while(count($requestingCanceledBillingsSubscriptions = BillingsSubscriptionDAO::getRequestingCanceledBillingsSubscriptions($limit, $offset, $provider->getId(), $status_array)) > 0) {
-					ScriptsConfig::getLogger()->addInfo("processing...current offset=".$offset);
-					$offset = $offset + $limit;
+				$idx = 0;
+				$lastId = NULL;
+				$totalCounter = NULL;
+				do {
+					$requestingCanceledBillingsSubscriptions = BillingsSubscriptionDAO::getRequestingCanceledBillingsSubscriptions($limit, 0, $provider->getId(), $status_array, $lastId);
+					if(is_null($totalCounter)) {$totalCounter = $requestingCanceledBillingsSubscriptions['total_counter'];}
+					$idx+= count($requestingCanceledBillingsSubscriptions['subscriptions']);
+					$lastId = $requestingCanceledBillingsSubscriptions['lastId'];
 					//
-					foreach($requestingCanceledBillingsSubscriptions as $requestingCanceledBillingsSubscription) {
+					ScriptsConfig::getLogger()->addInfo("processing...total_counter=".$totalCounter.", idx=".$idx);
+					foreach($requestingCanceledBillingsSubscriptions['subscriptions'] as $requestingCanceledBillingsSubscription) {
 						//
 						$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($requestingCanceledBillingsSubscription->getId(), "request_cancel");
 						$billingsSubscriptionActionLogs[] = $billingsSubscriptionActionLog;
@@ -312,7 +322,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 							ScriptsConfig::getLogger()->addError($msg);
 						}
 					}
-				}
+				} while($idx < $totalCounter && count($requestingCanceledBillingsSubscriptions['subscriptions']) > 0);
 				fclose($current_par_can_file_res);
 				$current_par_can_file_res = NULL;
 				if(($current_par_can_file_res = fopen($current_par_can_file_path, "r")) === false) {

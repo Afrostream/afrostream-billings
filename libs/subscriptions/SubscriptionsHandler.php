@@ -7,7 +7,6 @@ require_once __DIR__ . '/../providers/celery/subscriptions/CelerySubscriptionsHa
 require_once __DIR__ . '/../providers/recurly/subscriptions/RecurlySubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/gocardless/subscriptions/GocardlessSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/bachat/subscriptions/BachatSubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/idipper/subscriptions/IdipperSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/afr/subscriptions/AfrSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/cashway/subscriptions/CashwaySubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/orange/subscriptions/OrangeSubscriptionsHandler.php';
@@ -151,10 +150,6 @@ class SubscriptionsHandler {
 						$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 						$sub_uuid = $bachatSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
 						break;
-					case 'idipper' :
-						$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
-						$sub_uuid = $idipperSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
-						break;
 					case 'afr' :
 						$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
 						$sub_uuid = $afrSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);						
@@ -211,10 +206,6 @@ class SubscriptionsHandler {
 						case 'bachat' :
 							$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 							$db_subscription = $bachatSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
-							break;
-						case 'idipper' :
-							$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
-							$db_subscription = $idipperSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);							
 							break;
 						case 'afr' :
 							$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
@@ -301,10 +292,6 @@ class SubscriptionsHandler {
 					break;
 				case 'bachat' :
 					$subscriptionsHandler = new BachatSubscriptionsHandler();
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
-				case 'idipper' :
-					$subscriptionsHandler = new IdipperSubscriptionsHandler();
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				case 'afr' :
@@ -409,9 +396,6 @@ class SubscriptionsHandler {
 					break;
 				case 'bachat' :
 					//nothing to do (owned)
-					break;
-				case 'idipper' :
-					//TODO
 					break;
 				case 'afr' :
 					//nothing to do (owned)
@@ -534,10 +518,6 @@ class SubscriptionsHandler {
 					$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 					$db_subscription = $bachatSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
 					break;
-				case 'idipper' :
-					$idipperSubscriptionHandler = new IdipperSubscriptionsHandler();
-					$db_subscription = $idipperSubscriptionHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
-					break;
 				case 'orange' :
 					$orangeSubscriptionHandler = new OrangeSubscriptionsHandler();
 					$db_subscription = $orangeSubscriptionHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
@@ -606,10 +586,6 @@ class SubscriptionsHandler {
 				case 'bachat' :
 					$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 					$db_subscription = $bachatSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
-					break;
-				case 'idipper' :
-					$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
-					$db_subscription = $idipperSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
 				case 'stripe':
 					$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
@@ -683,10 +659,6 @@ class SubscriptionsHandler {
 				case 'bachat' :
 					$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 					$db_subscription = $bachatSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
-					break;
-				case 'idipper' :
-					$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
-					$db_subscription = $idipperSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
 				case 'afr' :
 					$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
@@ -839,10 +811,6 @@ class SubscriptionsHandler {
 			case 'bachat' :
 				$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 				$bachatSubscriptionsHandler->doFillSubscription($subscription);
-				break;
-			case 'idipper' :
-				$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
-				$idipperSubscriptionsHandler->doFillSubscription($subscription);
 				break;
 			case 'afr' :
 				$afrSubscriptionsHandler = new AfrSubscriptionsHandler();

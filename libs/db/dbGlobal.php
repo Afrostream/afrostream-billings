@@ -1257,7 +1257,7 @@ class BillingsSubscriptionDAO {
 	public static function init() {
 		BillingsSubscriptionDAO::$sfields = "BS._id, BS.subscription_billing_uuid, BS.providerid, BS.userid, BS.planid, BS.creation_date, BS.updated_date, BS.sub_uuid, BS.sub_status,".
 			" BS.sub_activated_date, BS.sub_canceled_date, BS.sub_expires_date, BS.sub_period_started_date, BS.sub_period_ends_date,".
-			"BS.update_type, BS.updateid, BS.deleted, BS.billinginfoid";
+			" BS.update_type, BS.updateid, BS.deleted, BS.billinginfoid";
 	}
 	
 	private static function getBillingsSubscriptionFromRow($row) {
@@ -1550,9 +1550,16 @@ class BillingsSubscriptionDAO {
 		pg_free_result($result);
 	}
 	
-	public static function getEndingBillingsSubscriptions($limit = 0, $offset = 0, $providerId = NULL, DateTime $sub_period_ends_date, $status_array = array('active'), $cycle_array = NULL, $providerIdsToIgnore_array = NULL) {
+	public static function getEndingBillingsSubscriptions($limit = 0,
+			$offset = 0,
+			$providerId = NULL,
+			DateTime $sub_period_ends_date,
+			$status_array = array('active'),
+			$cycle_array = NULL,
+			$providerIdsToIgnore_array = NULL,
+			$afterId = NULL) {
 		$params = array();
-		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS";
+		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
 		if(isset($cycle_array)) {
 			$query.= " INNER JOIN billing_plans BP ON (BS.planid = BP._id)";
@@ -1606,14 +1613,21 @@ class BillingsSubscriptionDAO {
 		}
 		$sub_period_ends_date_str = dbGlobal::toISODate($sub_period_ends_date);
 		$query.= " AND BS.sub_period_ends_date < '".$sub_period_ends_date_str."'";//STRICT
-		$query.= " ORDER BY BU._id DESC";//LAST USERS FIRST
+		if(isset($afterId)) {
+			$query.= " AND BS._id > ".$afterId;
+		}
+		$query.= " ORDER BY BS._id ASC";
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
-	
+		$out['total_counter'] = 0;
+		$out['subscriptions'] = array();
+		$out['lastId'] = NULL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($out, self::getBillingsSubscriptionFromRow($row));
+			$out['total_counter'] = $row['total_counter'];
+			$out['subscriptions'][] = self::getBillingsSubscriptionFromRow($row);
+			$out['lastId'] = $row['_id'];
 		}
 		// free result
 		pg_free_result($result);
@@ -1621,9 +1635,13 @@ class BillingsSubscriptionDAO {
 		return($out);
 	}
 	
-	public static function getRequestingCanceledBillingsSubscriptions($limit = 0, $offset = 0, $providerId = NULL, $status_array = array('requesting_canceled')) {
+	public static function getRequestingCanceledBillingsSubscriptions($limit = 0,
+			$offset = 0,
+			$providerId = NULL,
+			$status_array = array('requesting_canceled'),
+			$afterId = NULL) {
 		$params = array();
-		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS";
+		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
 		$query.= " WHERE BU.deleted = false AND BS.deleted = false";
 		$query.= " AND BS.sub_status in (";
@@ -1642,14 +1660,21 @@ class BillingsSubscriptionDAO {
 			$params[] = $providerId;
 			$query.= " AND BU.providerid = $".(count($params));
 		}
-		$query.= " ORDER BY BU._id DESC";//LAST USERS FIRST
+		if(isset($afterId)) {
+			$query.= " AND BS._id > ".$afterId;
+		}
+		$query.= " ORDER BY BS._id ASC";
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
-		
+		$out['total_counter'] = 0;
+		$out['subscriptions'] = array();
+		$out['lastId'] = NULL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($out, self::getBillingsSubscriptionFromRow($row));
+			$out['total_counter'] = $row['total_counter'];
+			$out['subscriptions'][] = self::getBillingsSubscriptionFromRow($row);
+			$out['lastId'] = $row['_id'];
 		}
 		// free result
 		pg_free_result($result);

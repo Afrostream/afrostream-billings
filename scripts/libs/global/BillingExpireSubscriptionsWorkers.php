@@ -24,7 +24,6 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 		
 			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, 'subs_expire_canceled');
 			//
-			$offset = 0;
 			$limit = 100;
 			//will select all day strictly before today
 			$sub_period_ends_date = clone $this->today;
@@ -42,11 +41,17 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 				$providerIdsToIgnore[] = $provider->getId();
 			}
 			//
-			while(count($canceledBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, $offset, NULL, $sub_period_ends_date, array('canceled'), array('auto'), $providerIdsToIgnore)) > 0) {
-				ScriptsConfig::getLogger()->addInfo("processing...current offset=".$offset);
-				$offset = $offset + $limit;
+			$idx = 0;
+			$lastId = NULL;
+			$totalCounter = NULL;
+			do {
+				$canceledBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, NULL, $sub_period_ends_date, array('canceled'), array('auto'), $providerIdsToIgnore, $lastId);
+				if(is_null($totalCounter)) {$totalCounter = $canceledBillingsSubscriptions['total_counter'];}
+				$idx+= count($canceledBillingsSubscriptions['subscriptions']);
+				$lastId = $canceledBillingsSubscriptions['lastId'];
 				//
-				foreach($canceledBillingsSubscriptions as $canceledBillingsSubscription) {
+				ScriptsConfig::getLogger()->addInfo("processing...total_counter=".$totalCounter.", idx=".$idx);
+				foreach($canceledBillingsSubscriptions['subscriptions'] as $canceledBillingsSubscription) {
 					try {
 						$this->doExpireSubscription($canceledBillingsSubscription);
 					} catch(Exception $e) {
@@ -54,7 +59,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 						ScriptsConfig::getLogger()->addError($msg);
 					}
 				}
-			}
+			} while ($idx < $totalCounter && count($canceledBillingsSubscriptions['subscriptions']) > 0);
 			//DONE
 			$processingLog->setProcessingStatus('done');
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
@@ -87,7 +92,6 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 		
 			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, 'subs_expire_ended');
 			//
-			$offset = 0;
 			$limit = 100;
 			//will select all day strictly before today
 			$sub_period_ends_date = clone $this->today;
@@ -105,11 +109,17 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 				$providerIdsToIgnore[] = $provider->getId();
 			}
 			//
-			while(count($endedBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, $offset, NULL, $sub_period_ends_date, array('active'), array('once'), $providerIdsToIgnore)) > 0) {
-				ScriptsConfig::getLogger()->addInfo("processing...current offset=".$offset);
-				$offset = $offset + $limit;
+			$idx = 0;
+			$lastId = NULL;
+			$totalCounter = NULL;
+			do {
+				$endedBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, NULL, $sub_period_ends_date, array('active'), array('once'), $providerIdsToIgnore, $lastId);
+				if(is_null($totalCounter)) {$totalCounter = $endedBillingsSubscriptions['total_counter'];}
+				$idx+= count($endedBillingsSubscriptions['subscriptions']);
+				$lastId = $endedBillingsSubscriptions['lastId'];
 				//
-				foreach($endedBillingsSubscriptions as $endedBillingsSubscription) {
+				ScriptsConfig::getLogger()->addInfo("processing...total_counter=".$totalCounter.", idx=".$idx);
+				foreach($endedBillingsSubscriptions['subscriptions'] as $endedBillingsSubscription) {
 					try {
 						$this->doExpireSubscription($endedBillingsSubscription);
 					} catch(Exception $e) {
@@ -117,7 +127,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 						ScriptsConfig::getLogger()->addError($msg);
 					}
 				}
-			}
+			} while($idx < $totalCounter && count($endedBillingsSubscriptions['subscriptions']) > 0);
 			//DONE
 			$processingLog->setProcessingStatus('done');
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
