@@ -5,7 +5,6 @@ require_once __DIR__ . '/../providers/celery/users/CeleryUsersHandler.php';
 require_once __DIR__ . '/../providers/recurly/users/RecurlyUsersHandler.php';
 require_once __DIR__ . '/../providers/gocardless/users/GocardlessUsersHandler.php';
 require_once __DIR__ . '/../providers/bachat/users/BachatUsersHandler.php';
-require_once __DIR__ . '/../providers/idipper/users/IdipperUsersHandler.php';
 require_once __DIR__ . '/../providers/afr/users/AfrUsersHandler.php';
 require_once __DIR__ . '/../providers/cashway/users/CashwayUsersHandler.php';
 require_once __DIR__ . '/../providers/orange/users/OrangeUsersHandler.php';
@@ -219,10 +218,6 @@ class UsersHandler {
 				case 'bachat' :
 					$bachatUsersHandler = new BachatUsersHandler();
 					$user_provider_uuid = $bachatUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				case 'idipper' :
-					$idipperUsersHandler = new IdipperUsersHandler();
-					$user_provider_uuid = $idipperUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'afr' :
 					$afrUsersHandler = new AfrUsersHandler();

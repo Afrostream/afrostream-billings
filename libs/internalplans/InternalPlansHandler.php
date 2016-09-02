@@ -5,7 +5,6 @@ require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/recurly/plans/RecurlyPlansHandler.php';
 require_once __DIR__ . '/../providers/gocardless/plans/GocardlessPlansHandler.php';
 require_once __DIR__ . '/../providers/bachat/plans/BachatPlansHandler.php';
-require_once __DIR__ . '/../providers/idipper/plans/IdipperPlansHandler.php';
 require_once __DIR__ . '/../providers/afr/plans/AfrPlansHandler.php';
 require_once __DIR__ . '/../providers/stripe/plans/StripePlanHandler.php';
 
@@ -206,10 +205,6 @@ class InternalPlansHandler {
 				case 'bachat' :
 					$bachatPlansHandler = new BachatPlansHandler();
 					$provider_plan_uuid = $bachatPlansHandler->createProviderPlan($db_internal_plan);
-					break;
-				case 'idipper' :
-					$idipperPlansHandler = new IdipperPlansHandler();
-					$provider_plan_uuid = $idipperPlansHandler->createProviderPlan($db_internal_plan);
 					break;
 				case 'afr' :
 					$afrPlansHandler = new AfrPlansHandler();
