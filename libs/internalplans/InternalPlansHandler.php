@@ -54,10 +54,15 @@ class InternalPlansHandler {
 			$context_id = NULL;
 			if(isset($contextBillingUuid)) {
 				if($contextCountry == NULL) {
-					$contextCountry = "FR";//forced when not given (it is the case for now)
 					config::getLogger()->addInfo("contextCountry NOT given, it was forced to : ".$contextCountry);
+					$contextCountry = "FR";//forced when not given (it is the case for now)
 				}
 				$context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
+				if($context == NULL) {
+					config::getLogger()->addInfo("unknown context with contextBillingUuid : ".$contextBillingUuid." AND contextCountry : ".$contextCountry.", rollback to contextCountry=FR");
+					$contextCountry = "FR";//back to France
+					$context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
+				}
 				if($context == NULL) {
 					$msg = "unknown context with contextBillingUuid : ".$contextBillingUuid." AND contextCountry : ".$contextCountry.", no internalPlan given";
 					config::getLogger()->addInfo($msg);		
