@@ -70,6 +70,7 @@ class InternalPlansHandler {
 					$db_internal_plans = array();//no internalPlan
 				} else {
 					$context_id = $context->getId();
+					$country = $contextCountry;//Force country to the contextCountry
 					$db_internal_plans = InternalPlanDAO::getInternalPlans($provider_id, $context_id, $isVisible, $country);
 				}
 			} else {
