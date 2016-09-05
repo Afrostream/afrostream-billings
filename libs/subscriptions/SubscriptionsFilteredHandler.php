@@ -33,7 +33,21 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_AUTO_ALREADY_EXISTS);
 				}*/
 			}
-			$sub_opts_array['startsAt'] = dbGlobal::toISODate($lastSubscription->getSubPeriodEndsDate());
+			$now = new DateTime();
+			$lastDate = NULL;
+			if($lastSubscription->getSubStatus() == 'expired') {
+				$lastDate = $lastSubscription->getExpiresDate();
+			} else {
+				$lastDate = $lastSubscription->getSubPeriodEndsDate();
+			}
+			if(isset($lastDate)) {
+				if($lastDate < $now) {
+					$lastDate = NULL;//lastDate is in the PAST => NOT NEEDED
+				}
+			}
+			if(isset($lastDate)) {
+				$sub_opts_array['startsAt'] = dbGlobal::toISODate($lastDate);
+			}
 		}
 		return(parent::doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, $billing_info_array, $sub_opts_array));
 	}
