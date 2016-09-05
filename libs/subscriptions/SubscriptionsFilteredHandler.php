@@ -36,7 +36,7 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 			$now = new DateTime();
 			$lastDate = NULL;
 			if($lastSubscription->getSubStatus() == 'expired') {
-				$lastDate = $lastSubscription->getExpiresDate();
+				$lastDate = $lastSubscription->getSubExpiresDate();
 			} else {
 				$lastDate = $lastSubscription->getSubPeriodEndsDate();
 			}
