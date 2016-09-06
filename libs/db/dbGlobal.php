@@ -3400,13 +3400,19 @@ class CouponDAO {
 		return(self::getCouponById($coupon->getId()));		
 	}
 
-	public static function getCouponsByUserId($userid, $couponscampaignsid = NULL) {
-		$query = "SELECT ".self::$sfields." FROM billing_coupons BC WHERE BC.userid = $1";
+	public static function getCouponsByUserId($userid, $couponsCampaignType = NULL, $couponscampaignsid = NULL) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons BC";
+		$query.= " INNER JOIN billing_coupons_campaigns BCC ON (BCC._id = BC.couponscampaignsid)";
+		$query.= " WHERE BC.userid = $1";
 		$params = array();
 		$params[] = $userid;
+		if(isset($couponsCampaignType)) {
+			$params[] = $couponsCampaignType;
+			$query.= " AND BCC.coupon_type= $".(count($params));			
+		}
 		if(isset($couponscampaignsid)) {
-			$query.= " AND BC.couponscampaignsid= $2";
 			$params[] = $couponscampaignsid;
+			$query.= " AND BC.couponscampaignsid= $".(count($params));
 		}
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
