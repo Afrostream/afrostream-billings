@@ -3414,6 +3414,7 @@ class CouponDAO {
 			$params[] = $couponscampaignsid;
 			$query.= " AND BC.couponscampaignsid= $".(count($params));
 		}
+		$query.= " ORDER BY BC._id DESC";
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
 		$out = array();
