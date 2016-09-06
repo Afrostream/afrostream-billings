@@ -56,8 +56,10 @@ class AfrCouponsHandler {
 		
 		switch ($couponsCampaign->getCouponType()) {
 			case CouponCampaignType::standard :
-				if (is_null($billingCouponsOpts->getOpt('recipientEmail'))) {
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), 'You must provide a recipient mail');
+				if($couponsCampaign->getEmailsEnabled() == true) {
+					if (is_null($billingCouponsOpts->getOpt('recipientEmail'))) {
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), 'You must provide a recipient mail');
+					}
 				}
 				if (is_null($billingCouponsOpts->getOpt('customerBankAccountToken'))) {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating afr coupon. Missing stripe token');
@@ -86,29 +88,31 @@ class AfrCouponsHandler {
 				$billingCouponsOpts->setOpt('chargeId', $charge->id);
 				break;
 			case CouponCampaignType::sponsorship :
-				if (is_null($billingCouponsOpts->getOpt('recipientEmail'))) {
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), 'You must provide a recipient email');
-				}
-				$recipentEmail = $billingCouponsOpts->getOpt('recipientEmail');
-				//Check if ownerEmail <> recipientEmail
-				$ownerEmail = $userOpts->getOpt('email');
-				if($ownerEmail == $recipentEmail) {
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), 'self sponsorship is forbidden', ExceptionError::AFR_COUPON_SPS_SELF_FORBIDDEN);
-				}
-				//Check if user has not been already sponsored
-				$recipientEmailsTotalCounter = CouponDAO::getCouponsTotalNumberByRecipientEmails($recipentEmail, $couponsCampaign->getCouponType());
-				if($recipientEmailsTotalCounter > 0) {
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), 'recipient has already been sponsored', ExceptionError::AFR_COUPON_SPS_RECIPIENT_ALREADY_SPONSORED);
-				}
-				//Check if user has not already an active subscription
-				$recipientUsers = UserDAO::getUsersByEmail($recipentEmail);
-				$subscriptionsHandler = new SubscriptionsHandler();
-				foreach ($recipientUsers as $recipientUser) {
-					$recipientSubscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($recipientUser);
-					if(count($recipientSubscriptions) > 0) {
-						$lastSubscription = $recipientSubscriptions[0];
-						if($lastSubscription->getIsActive()) {
-							throw new BillingsException(new ExceptionType(ExceptionType::internal), 'recipient that has an active subscription cannot be sponsored', ExceptionError::AFR_COUPON_SPS_RECIPIENT_ACTIVE_FORBIDDEN);
+				if($couponsCampaign->getEmailsEnabled() == true) {
+					if (is_null($billingCouponsOpts->getOpt('recipientEmail'))) {
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), 'You must provide a recipient email');
+					}
+					$recipentEmail = $billingCouponsOpts->getOpt('recipientEmail');
+					//Check if ownerEmail <> recipientEmail
+					$ownerEmail = $userOpts->getOpt('email');
+					if($ownerEmail == $recipentEmail) {
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), 'self sponsorship is forbidden', ExceptionError::AFR_COUPON_SPS_SELF_FORBIDDEN);
+					}
+					//Check if user has not been already sponsored
+					$recipientEmailsTotalCounter = CouponDAO::getCouponsTotalNumberByRecipientEmails($recipentEmail, $couponsCampaign->getCouponType());
+					if($recipientEmailsTotalCounter > 0) {
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), 'recipient has already been sponsored', ExceptionError::AFR_COUPON_SPS_RECIPIENT_ALREADY_SPONSORED);
+					}
+					//Check if user has not already an active subscription
+					$recipientUsers = UserDAO::getUsersByEmail($recipentEmail);
+					$subscriptionsHandler = new SubscriptionsHandler();
+					foreach ($recipientUsers as $recipientUser) {
+						$recipientSubscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($recipientUser);
+						if(count($recipientSubscriptions) > 0) {
+							$lastSubscription = $recipientSubscriptions[0];
+							if($lastSubscription->getIsActive()) {
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), 'recipient that has an active subscription cannot be sponsored', ExceptionError::AFR_COUPON_SPS_RECIPIENT_ACTIVE_FORBIDDEN);
+							}
 						}
 					}
 				}
@@ -132,7 +136,7 @@ class AfrCouponsHandler {
 
 		$billingCouponsOpts = BillingsCouponsOptsDAO::addBillingsCouponsOpts($billingCouponsOpts);
 
-		$this->sendMails($user, $userOpts, $coupon, $billingCouponsOpts, $internalPlan, $couponsCampaign->getCouponType());
+		$this->sendMails($user, $userOpts, $coupon, $billingCouponsOpts, $internalPlan, $couponsCampaign);
 		return $coupon->getCode();
 	}
 
@@ -152,8 +156,11 @@ class AfrCouponsHandler {
 		return $strReturnString;
 	}
 
-	protected function sendMails(User $user, UserOpts $userOpts, Coupon $coupon, BillingsCouponsOpts $billingCouponsOpts, InternalPlan $internalPlan, CouponCampaignType $couponCampaignType)
+	protected function sendMails(User $user, UserOpts $userOpts, Coupon $coupon, BillingsCouponsOpts $billingCouponsOpts, InternalPlan $internalPlan, CouponsCampaign $couponsCampaign)
 	{
+		if($couponsCampaign->getEmailsEnabled() == false) {
+			return;
+		}
 		$amountInCentsTax = ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax());
 		$firstName        = $userOpts->getOpt('firstName');
 		$lastName         = $userOpts->getOpt('lastName');
@@ -193,25 +200,28 @@ class AfrCouponsHandler {
 			$value = array_fill(0, $nbRecipient, $value);
 		});
 
-		$this->sendMailToOwner($userMail, $substitutions, $couponCampaignType);
-		$this->sendMailToRecipient($billingCouponsOpts->getOpt('recipientEmail'), $substitutions, $couponCampaignType);
+		$this->sendMailToOwner($userMail, $substitutions, $couponsCampaign);
+		$this->sendMailToRecipient($billingCouponsOpts->getOpt('recipientEmail'), $substitutions, $couponsCampaign);
 	}
 
-	protected function sendMailToOwner($userMail, array $substitutions, CouponCampaignType $couponCampaignType)
+	protected function sendMailToOwner($userMail, array $substitutions, CouponsCampaign $couponsCampaign)
 	{
+		if($couponsCampaign->getEmailsEnabled() == false) {
+			return;
+		}
 		if (empty($userMail)) {
 			$userMail = getenv('SENDGRID_TO_IFNULL');
 		}
 
 		$bcc  = getenv('SENDGRID_BCC');
 		$template = NULL;
-		switch($couponCampaignType) {
+		switch($couponsCampaign->getCouponType()) {
 			case CouponCampaignType::sponsorship :
 				$template = getEnv('SENDGRID_TEMPLATE_COUPON_OWN_SPONSORSHIP_NEW');
 			 	break;
 			default :
 				$template = getEnv('SENDGRID_TEMPLATE_COUPON_OWN_STANDARD_NEW');
-				break;			
+				break;
 		}
 
 		$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
@@ -228,19 +238,21 @@ class AfrCouponsHandler {
 		if (!empty($bcc)) {
 			$email->setBcc($bcc);
 		}
-
 		$sendgrid->send($email);
 	}
 
-	protected function sendMailToRecipient($userMail, array $substitutions, CouponCampaignType $couponCampaignType)
+	protected function sendMailToRecipient($userMail, array $substitutions, CouponsCampaign $couponsCampaign)
 	{
+		if($couponsCampaign->getEmailsEnabled() == false) {
+			return;
+		}
 		if (empty($userMail)) {
 			$userMail = getenv('SENDGRID_TO_IFNULL');
 		}
 
 		$bcc  = getenv('SENDGRID_BCC');
 		$template = NULL;
-		switch($couponCampaignType) {
+		switch($couponsCampaign->getCouponType()) {
 			case CouponCampaignType::sponsorship :
 				$template = getEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_SPONSORSHIP_NEW');
 				break;
