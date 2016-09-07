@@ -3328,6 +3328,22 @@ class CouponDAO {
 		return($out);
 	}
 	
+	public static function getCouponBySubId($subId) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons BC WHERE BC.subid = $1";
+		$query_params = array($subId);
+		$result = pg_query_params(config::getDbConn(), $query, $query_params);
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getCouponFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);		
+	}
+	
 	public static function addCoupon(Coupon $coupon) {
 		$query = "INSERT INTO billing_coupons (coupon_billing_uuid, couponscampaignsid, providerid, providerplanid, code, expires_date, userid)";
 		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING _id";

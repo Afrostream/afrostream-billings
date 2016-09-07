@@ -78,6 +78,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::AFR_SUB_SPS_RECIPIENT_DIFFER);						
 					}
 				}
+				$this->doCheckSponsoring($user);
 			}
 			//OK
 			$sub_uuid = guid();
@@ -302,6 +303,22 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
 		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
+	}
+	
+	protected function doCheckSponsoring(User $user) {
+		$subscriptions = $this->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid());
+		foreach ($subscriptions as $subscription) {
+			$coupon = CouponDAO::getCouponBySubId($subscription->getId());
+			if(isset($coupon)) {
+				$couponsCampaign = CouponsCampaignDAO::getCouponsCampaignById($coupon->getCouponsCampaignId());
+				if(isset($couponsCampaign)) {
+					if($couponsCampaign->getCouponType() == 'sponsorship') {
+						//EXCEPTION
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), 'user has already been sponsored', ExceptionError::AFR_SUB_SPS_RECIPIENT_ALREADY_SPONSORED);
+					}
+				}
+			}
+		}
 	}
 	
 }
