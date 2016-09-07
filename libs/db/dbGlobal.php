@@ -2900,6 +2900,7 @@ class CouponsCampaign implements JsonSerializable {
 	private $generated_code_length;
 	private	$total_number;
 	private $coupon_type;
+	private $emails_enabled = false;
 	
 	public function getId() {
 		return($this->_id);
@@ -2983,12 +2984,20 @@ class CouponsCampaign implements JsonSerializable {
 
 	public function getCouponType()
 	{
-		return $this->coupon_type;
+		return($this->coupon_type);
 	}
 
 	public function setCouponType(CouponCampaignType $type)
 	{
 		$this->coupon_type = $type;
+	}
+	
+	public function getEmailsEnabled() {
+		return($this->emails_enabled);
+	}
+	
+	public function setEmailsEnabled($bool) {
+		$this->emails_enabled = $bool;
 	}
 	
 	public function jsonSerialize() {
@@ -2998,6 +3007,7 @@ class CouponsCampaign implements JsonSerializable {
 			'creationDate' => $this->creation_date,
 			'name' => $this->name,
 			'description' => $this->description,
+			'emailsEnabled' => $this->emails_enabled,
 			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize()))
 		];
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->providerplanid));
@@ -3010,7 +3020,8 @@ class CouponsCampaign implements JsonSerializable {
 
 class CouponsCampaignDAO {
 	
-	private static $sfields = "_id, coupons_campaigns_uuid, creation_date, name, description, providerid, providerplanid, prefix, generated_code_length, total_number, coupon_type";
+	private static $sfields = 
+	"_id, coupons_campaigns_uuid, creation_date, name, description, providerid, providerplanid, prefix, generated_code_length, total_number, coupon_type, emails_enabled";
 	
 	private static function getCouponsCampaignFromRow($row) {
 		$out = new CouponsCampaign();
@@ -3025,7 +3036,7 @@ class CouponsCampaignDAO {
 		$out->setGeneratedCodeLength($row["generated_code_length"]);
 		$out->setTotalNumber($row["total_number"]);
 		$out->setCouponType(new CouponCampaignType($row['coupon_type']));
-
+		$out->setEmailsEnabled($row["emails_enabled"] == 't' ? true : false);
 		return($out);
 	}
 	
@@ -3400,14 +3411,21 @@ class CouponDAO {
 		return(self::getCouponById($coupon->getId()));		
 	}
 
-	public static function getCouponsByUserId($userid, $couponscampaignsid = NULL) {
-		$query = "SELECT ".self::$sfields." FROM billing_coupons BC WHERE BC.userid = $1";
+	public static function getCouponsByUserId($userid, $couponsCampaignType = NULL, $couponscampaignsid = NULL) {
+		$query = "SELECT ".self::$sfields." FROM billing_coupons BC";
+		$query.= " INNER JOIN billing_coupons_campaigns BCC ON (BCC._id = BC.couponscampaignsid)";
+		$query.= " WHERE BC.userid = $1";
 		$params = array();
 		$params[] = $userid;
-		if(isset($couponscampaignsid)) {
-			$query.= " AND BC.couponscampaignsid= $2";
-			$params[] = $couponscampaignsid;
+		if(isset($couponsCampaignType)) {
+			$params[] = $couponsCampaignType;
+			$query.= " AND BCC.coupon_type= $".(count($params));			
 		}
+		if(isset($couponscampaignsid)) {
+			$params[] = $couponscampaignsid;
+			$query.= " AND BC.couponscampaignsid= $".(count($params));
+		}
+		$query.= " ORDER BY BC._id DESC";
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
 		$out = array();

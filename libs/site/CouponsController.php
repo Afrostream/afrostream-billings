@@ -71,8 +71,10 @@ class CouponsController extends BillingsController {
 			$userBillingUuid = $data['userBillingUuid'];
 			$couponsCampaignBillingUuid = empty($data['couponsCampaignBillingUuid']) ? null : $data['couponsCampaignBillingUuid'];
 	
+			$couponsCampaignType = empty($data['couponsCampaignType']) ? null : $data['couponsCampaignType'];
+			
 			$couponsHandler = new CouponsHandler();
-			$listCoupons = $couponsHandler->doGetList($userBillingUuid, $couponsCampaignBillingUuid);
+			$listCoupons = $couponsHandler->doGetList($userBillingUuid, $couponsCampaignType, $couponsCampaignBillingUuid);
 	
 			return $this->returnObjectAsJson($response, 'coupons', $listCoupons);
 		} catch(Exception $e) {

@@ -66,7 +66,7 @@ class CouponsHandler {
 		return($db_coupon);
 	}
 
-	public function doGetList($userBillingUuid, $couponsCampaignBillingUuid = null)
+	public function doGetList($userBillingUuid, $couponsCampaignType = null, $couponsCampaignBillingUuid = null)
 	{
 		$user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
 		if($user == NULL) {
@@ -88,7 +88,7 @@ class CouponsHandler {
 			$campaignId = $campaign->getId();
 		}
 
-		$list = CouponDAO::getCouponsByUserId($user->getId(), $campaignId);
+		$list = CouponDAO::getCouponsByUserId($user->getId(), $couponsCampaignType, $campaignId);
 
 		return $list;
 	}

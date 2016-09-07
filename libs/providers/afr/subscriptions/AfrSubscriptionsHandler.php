@@ -69,12 +69,14 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			if($couponsCampaign->getCouponType() == CouponCampaignType::sponsorship) {
-				$email = $userOpts->getOpt('email');
-				$recipientEmail = $couponOpts->getOpt('recipientEmail');
-				if(strcasecmp($email, $recipientEmail) != 0) {
-					$msg = "coupon cannot be used with another email";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::AFR_SUB_SPS_RECIPIENT_DIFFER);						
+				if($couponsCampaign->getEmailsEnabled() == true) {
+					$email = $userOpts->getOpt('email');
+					$recipientEmail = $couponOpts->getOpt('recipientEmail');
+					if(strcasecmp($email, $recipientEmail) != 0) {
+						$msg = "coupon cannot be used with another email";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::AFR_SUB_SPS_RECIPIENT_DIFFER);						
+					}
 				}
 			}
 			//OK
