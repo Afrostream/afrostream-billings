@@ -198,6 +198,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//COUPON
 		if(isset($coupon)) {
+			$couponOpts = BillingsCouponsOptsDAO::getBillingsCouponsOptsByCouponId($coupon->getId());
 			$coupon->setStatus("redeemed");
 			$coupon = CouponDAO::updateStatus($coupon);
 			$coupon->setRedeemedDate(new DateTime());
@@ -208,6 +209,18 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 			if($coupon->getUserId() == NULL) {
 				$coupon->setUserId($user->getId());
 				$coupon = CouponDAO::updateUserId($coupon);
+			}
+			$recipientEmail = NULL;
+			if(array_key_exists('email', $userOpts->getOpts())) {
+				$recipientEmail = $userOpts->getOpts()['email'];
+			}
+			if(isset($recipientEmail)) {
+				$current_coupon_opts_array = $couponOpts->getOpts();
+				if(array_key_exists('recipientEmail', $current_coupon_opts_array)) {
+					BillingsCouponsOptsDAO::updateBillingsCouponsOptsKey($coupon->getId(), 'recipientEmail', $recipientEmail);
+				} else {
+					BillingsCouponsOptsDAO::addBillingsCouponsOptsKey($coupon->getId(), 'recipientEmail', $recipientEmail);
+				}
 			}
 		}
 		//<-- DATABASE -->
