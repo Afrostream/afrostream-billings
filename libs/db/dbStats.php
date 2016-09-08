@@ -19,7 +19,7 @@ class dbStats {
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
-		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)";
 		$query.= " WHERE (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " GROUP BY BP._id";
 		$result = pg_query(config::getDbConn(), $query);
@@ -48,7 +48,7 @@ class dbStats {
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
-		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)";
 		$query.= " WHERE";
 		$query.= " (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " AND";
@@ -80,7 +80,7 @@ class dbStats {
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
-		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)";
 		$query.= " LEFT JOIN billing_users BUB ON (BU.user_reference_uuid = BUB.user_reference_uuid)";
 		$query.= " LEFT JOIN billing_subscriptions BSB ON (BSB.userid = BUB._id AND BSB._id < BS._id )";
 		$query.= " WHERE (BUO.value not like '%yopmail.com' OR BUO.value is null)";
@@ -122,7 +122,7 @@ class dbStats {
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
-		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)";
 		$query.= " WHERE (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " AND";
 		$query.= " (BS.sub_activated_date AT TIME ZONE 'Europe/Paris') >= '".$date_start_str."'";
@@ -158,7 +158,7 @@ class dbStats {
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
-		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)";
 		$query.= " WHERE (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " AND";
 		$query.= " BS.sub_status = 'future'";
@@ -197,7 +197,7 @@ class dbStats {
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
-		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)";
 		$query.= " WHERE";
 		$query.= " (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " AND";
@@ -237,7 +237,7 @@ class dbStats {
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
-		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)";
 		$query.= " WHERE";
 		$query.= " (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " AND";
@@ -267,7 +267,7 @@ class dbStats {
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
-		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = 'no')";
+		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)";
 		$query.= " WHERE";
 		$query.= " (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " AND";
