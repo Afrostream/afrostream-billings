@@ -22,10 +22,6 @@ sendMessage("********** SUBSCRIPTIONS **********");
 
 sendMessage("*** TOTAL ***");
 
-$numberOfSubscriptions = dbStats::getNumberOfSubscriptions();
-$numberOfActiveSubscriptions = dbStats::getNumberOfActiveSubscriptions();
-$numberOfExpiredSubscriptions = dbStats::getNumberOfExpiredSubscriptions(NULL);
-
 $minusOneDay = new DateInterval("P1D");
 $minusOneDay->invert = 1;
 
@@ -38,14 +34,32 @@ $yesterdayBeginningOfDay->setTime(0,0,0);
 $yesterdayEndOfDay = clone $yesterday;
 $yesterdayEndOfDay->setTime(23,59,59);
 
+$numberOfSubscriptions = dbStats::getNumberOfSubscriptions($yesterdayEndOfDay);
+$numberOfActiveSubscriptions = dbStats::getNumberOfActiveSubscriptions($yesterdayEndOfDay);
+$providerIdsToIgnore = array();
+$providerNamesToIgnore = ['orange', 'bouygues'];
+foreach ($providerNamesToIgnore as $providerNameToIgnore) {
+	$provider = ProviderDAO::getProviderByName($providerNameToIgnore);
+	if($provider == NULL) {
+		$msg = "unknown provider named : ".$providerNameToIgnore;
+		ScriptsConfig::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+	}
+	$providerIdsToIgnore[] = $provider->getId();
+}
+$numberOfActiveSubscriptionsExceptMultiscreen = dbStats::getNumberOfActiveSubscriptions($yesterdayEndOfDay, $providerIdsToIgnore);
+$numberOfExpiredSubscriptions = dbStats::getNumberOfExpiredSubscriptions(NULL, $yesterdayEndOfDay);
+
 $numberOfActivatedSubscriptionsYesterday = dbStats::getNumberOfActivatedSubscriptions($yesterday);
-$numberOfExpiredSubscriptionsYesterday = dbStats::getNumberOfExpiredSubscriptions($yesterday);
+$numberOfExpiredSubscriptionsYesterday = dbStats::getNumberOfExpiredSubscriptions($yesterdayBeginningOfDay, $yesterdayEndOfDay);
 $numberOfCanceledSubscriptionsYesterday = dbStats::getNumberOfCanceledSubscriptions($yesterday);
 $numberOfFutureSubscriptionsYesterday = dbStats::getNumberOfFutureSubscriptions($yesterday);
 
 sendMessage("total since launch=".$numberOfSubscriptions['total']);
 
 sendMessage("total active=".$numberOfActiveSubscriptions['total']);
+
+sendMessage("total active (except multiscreen)=".$numberOfActiveSubscriptionsExceptMultiscreen['total']);
 
 sendMessage("total inactive=".$numberOfExpiredSubscriptions['expired_cause_pb']);
 

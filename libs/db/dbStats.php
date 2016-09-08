@@ -12,7 +12,9 @@ class dbStats {
 	 * 				"gocardless" => 2222,
 	 * 				"bachat" => 2222
 	 */
-	public static function getNumberOfSubscriptions() {
+	public static function getNumberOfSubscriptions(DateTime $date) {
+		$date->setTimezone(new DateTimeZone(config::$timezone));
+		$date_as_str = dbGlobal::toISODate($date);
 		$query = "SELECT BP.name as provider_name, count(*) as counter FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
@@ -21,6 +23,7 @@ class dbStats {
 		$query.= " LEFT JOIN billing_users_opts BUO";
 		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)";
 		$query.= " WHERE (BUO.value not like '%yopmail.com' OR BUO.value is null)";
+		$query.= " AND BS.creation_date <='".$date_as_str."'";
 		$query.= " GROUP BY BP._id";
 		$result = pg_query(config::getDbConn(), $query);
 		$total = 0;
@@ -41,7 +44,10 @@ class dbStats {
 	 * 				"gocardless" => 2222,
 	 * 				"bachat" => 2222 
 	 */
-	public static function getNumberOfActiveSubscriptions() {
+	public static function getNumberOfActiveSubscriptions(DateTime $date, $providerIdsToIgnore_array = NULL) {
+		$date->setTimezone(new DateTimeZone(config::$timezone));
+		$date_as_str = dbGlobal::toISODate($date);
+		$params = array();
 		$query = "SELECT BP.name as provider_name, count(*) as counter FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
@@ -50,15 +56,24 @@ class dbStats {
 		$query.= " LEFT JOIN billing_users_opts BUO";
 		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)";
 		$query.= " WHERE";
-		$query.= " (BUO.value not like '%yopmail.com' OR BUO.value is null)";
-		$query.= " AND";
-		$query.= " ((CAST(BS.sub_status as varchar) like '%active' AND BP.name = 'recurly')";
-		$query.= " OR";
-		$query.= " (CAST(BS.sub_status as varchar) like '%active' AND BP.name <> 'recurly' AND sub_period_ends_date > date(CURRENT_TIMESTAMP))";
-		$query.= " OR";
-		$query.= " (CAST(BS.sub_status as varchar) like '%canceled' AND sub_period_ends_date > date(CURRENT_TIMESTAMP)))";
+		$query.= " BS.sub_activated_date <= '".$date_as_str."'";
+		$query.= " AND (BS.sub_expires_date IS NULL OR BS.sub_expires_date > '".$date_as_str."')";
+		if(isset($providerIdsToIgnore_array) && count($providerIdsToIgnore_array) > 0) {
+			$firstLoop = true;
+			$query.= " AND BU.providerid not in (";
+			foreach($providerIdsToIgnore_array as $providerIdToIgnore) {
+				$params[] = $providerIdToIgnore;
+				if($firstLoop) {
+					$firstLoop = false;
+					$query .= "$".(count($params));
+				} else {
+					$query .= ", $".(count($params));
+				}
+			}
+			$query.= ")";
+		}
 		$query.= " GROUP BY BP._id";
-		$result = pg_query(config::getDbConn(), $query);
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$total = 0;
 		$out = array();
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
@@ -182,15 +197,20 @@ class dbStats {
 		return($out);
 	}
 	
-	public static function getNumberOfExpiredSubscriptions(DateTime $date = NULL) {
-		$date_as_str = NULL;
-		if(isset($date)) {
-			$date->setTimezone(new DateTimeZone(config::$timezone));
-			$date_as_str = dbGlobal::toISODate($date);
+	public static function getNumberOfExpiredSubscriptions(DateTime $dateStart = NULL, DateTime $dateEnd = NULL) {
+		$date_start_str = NULL;
+		if(isset($dateStart)) {
+			$dateStart->setTimezone(new DateTimeZone(config::$timezone));
+			$date_start_str = dbGlobal::toISODate($dateStart);
+		}
+		$date_end_str = NULL;
+		if(isset($dateEnd)) {
+			$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
+			$date_end_str = dbGlobal::toISODate($dateEnd);
 		}
 		$query = "SELECT BP.name as provider_name, count(*) as counter,";
 		$query.= " sum(CASE WHEN (sub_expires_date = sub_canceled_date) THEN 1 ELSE 0 END) as expired_cause_pb_counter,";
-		$query.= " sum(CASE WHEN (sub_expires_date <> sub_canceled_date) THEN 1 ELSE 0 END) as expired_cause_ended_counter";
+		$query.= " sum(CASE WHEN (sub_canceled_date IS NULL OR sub_expires_date <> sub_canceled_date) THEN 1 ELSE 0 END) as expired_cause_ended_counter";
 		$query.= " FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
@@ -200,11 +220,13 @@ class dbStats {
 		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)";
 		$query.= " WHERE";
 		$query.= " (BUO.value not like '%yopmail.com' OR BUO.value is null)";
-		$query.= " AND";
-		$query.= " BS.sub_status = 'expired'";
-		if(isset($date_as_str)) {
+		if(isset($date_start_str)) {
 			$query.= " AND";
-			$query.= " date(BS.sub_expires_date AT TIME ZONE 'Europe/Paris') = date('".$date_as_str."')";
+			$query.= " BS.sub_expires_date >= '".$date_start_str."'";
+		}
+		if(isset($date_end_str)) {
+			$query.= " AND";
+			$query.= " BS.sub_expires_date <= '".$date_end_str."'";
 		}
 		$query.= " GROUP BY BP._id";
 		$result = pg_query(config::getDbConn(), $query);

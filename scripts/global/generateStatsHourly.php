@@ -24,18 +24,22 @@ $minutes = $now->format('i');
 
 $end_date = clone $now;
 
-if($minutes > 0) {
-	$dateInterval = new DateInterval("PT".$minutes."M");
-	$dateInterval->invert = 1;
-	$end_date = $end_date->add($dateInterval);
-}
+$intervalInMinutes = $minutes + 1;
+$dateInterval = new DateInterval("PT".$intervalInMinutes."M");
+$dateInterval->invert = 1;
+$end_date = $end_date->add($dateInterval);
+
 
 $start_date = clone $end_date;
 
-$dateInterval = new DateInterval("PT1H");
+$dateInterval = new DateInterval("PT59M");
 $dateInterval->invert = 1;
 
 $start_date = $start_date->add($dateInterval);
+//
+$start_date->setTime($start_date->format('H'), 0, 0);
+$end_date->setTime($end_date->format('H'), 59, 59);
+//
 //subscriptions
 $channelSubscriptions = getEnv('SLACK_STATS_CHANNEL');
 //activated subscriptions
