@@ -316,7 +316,7 @@ class UserOptsDAO {
 	
 	public static function updateUserOptsKey($userid, $key, $value) {
 		if(is_scalar($value)) {
-			$query = "UPDATE billing_users_opts SET value = $3 WHERE userid = $1 AND key = $2";
+			$query = "UPDATE billing_users_opts SET value = $3 WHERE userid = $1 AND key = $2 AND deleted = false";
 			$result = pg_query_params(config::getDbConn(), $query,
 					array($userid, $key, trim($value)));
 			// free result
@@ -325,7 +325,7 @@ class UserOptsDAO {
 	}
 	
 	public static function deleteUserOptsKey($userid, $key) {
-		$query = "UPDATE billing_users_opts SET deleted = true WHERE userid = $1 AND key = $2";
+		$query = "UPDATE billing_users_opts SET deleted = true WHERE userid = $1 AND key = $2 AND deleted = false";
 		$result = pg_query_params(config::getDbConn(), $query, array($userid, $key));
 		// free result
 		pg_free_result($result);
@@ -850,7 +850,7 @@ class InternalPlanOptsDAO {
 	
 	public static function updateInternalPlanOptsKey($internalplanid, $key, $value) {
 		if(is_scalar($value)) {
-			$query = "UPDATE billing_internal_plans_opts SET value = $3 WHERE internalplanid = $1 AND key = $2";
+			$query = "UPDATE billing_internal_plans_opts SET value = $3 WHERE internalplanid = $1 AND key = $2 AND deleted = false";
 			$result = pg_query_params(config::getDbConn(), $query, array($internalplanid, $key, trim($value)));
 			// free result
 			pg_free_result($result);
@@ -858,7 +858,7 @@ class InternalPlanOptsDAO {
 	}
 	
 	public static function deleteInternalPlanOptsKey($internalplanid, $key) {
-		$query = "UPDATE billing_internal_plans_opts SET deleted = true WHERE internalplanid = $1 AND key = $2";
+		$query = "UPDATE billing_internal_plans_opts SET deleted = true WHERE internalplanid = $1 AND key = $2 AND deleted = false";
 		$result = pg_query_params(config::getDbConn(), $query, array($internalplanid, $key));
 		// free result
 		pg_free_result($result);
@@ -2010,7 +2010,7 @@ class BillingsSubscriptionOptsDAO {
 
 	public static function updateBillingsSubscriptionOptsKey($subid, $key, $value) {
 		if(is_scalar($value)) {
-			$query = "UPDATE billing_subscriptions_opts SET value = $3 WHERE subid = $1 AND key = $2";
+			$query = "UPDATE billing_subscriptions_opts SET value = $3 WHERE subid = $1 AND key = $2 AND deleted = false";
 			$result = pg_query_params(config::getDbConn(), $query, array($subid, $key, trim($value)));
 			// free result
 			pg_free_result($result);
@@ -2018,7 +2018,7 @@ class BillingsSubscriptionOptsDAO {
 	}
 
 	public static function deleteBillingsSubscriptionOptsKey($subid, $key) {
-		$query = "UPDATE billing_subscriptions_opts SET deleted = true WHERE subid = $1 AND key = $2";
+		$query = "UPDATE billing_subscriptions_opts SET deleted = true WHERE subid = $1 AND key = $2 AND deleted = false";
 		$result = pg_query_params(config::getDbConn(), $query, array($userid, $key));
 		// free result
 		pg_free_result($result);
@@ -4309,7 +4309,7 @@ class BillingsCouponsOptsDAO {
 
 	public static function updateBillingsCouponsOptsKey($couponId, $key, $value) {
 		if(is_scalar($value)) {
-			$query = "UPDATE billing_coupons_opts SET value = $3 WHERE couponid = $1 AND key = $2";
+			$query = "UPDATE billing_coupons_opts SET value = $3 WHERE couponid = $1 AND key = $2 AND deleted = false";
 			$result = pg_query_params(config::getDbConn(), $query, array($couponId, $key, trim($value)));
 			// free result
 			pg_free_result($result);
@@ -4317,7 +4317,7 @@ class BillingsCouponsOptsDAO {
 	}
 
 	public static function deleteBillingsCouponsOptsKey($couponId, $key) {
-		$query = "UPDATE billing_coupons_opts SET deleted = true WHERE couponid = $1 AND key = $2";
+		$query = "UPDATE billing_coupons_opts SET deleted = true WHERE couponid = $1 AND key = $2 AND deleted = false";
 		$result = pg_query_params(config::getDbConn(), $query, array($couponId, $key));
 		// free result
 		pg_free_result($result);
