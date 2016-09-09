@@ -81,16 +81,21 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 								config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because user with userReferenceUuid=".$userReferenceUuid." is an expired ambassador");
 							}
 						} else {
-							//AS USUAL
-							if(	$lastSubscription->getSubStatus() == 'expired'
-								&& 
-								$lastSubscription->getSubExpiresDate() == $lastSubscription->getSubCanceledDate()) 
-							{
-								$contextBillingUuid = 'reactivation';
-								config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because last subscription expired because of failed payment for userReferenceUuid=".$userReferenceUuid);
+							if($lastSubscription->getIsActive() == 'yes') {
+								$contextBillingUuid = 'active';
+								config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because user with userReferenceUuid=".$userReferenceUuid." is an active subscriber");
 							} else {
-								$contextBillingUuid = 'returning';
-								config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because there is old subscriptions for userReferenceUuid=".$userReferenceUuid);
+								//AS USUAL
+								if(	($lastSubscription->getSubStatus() == 'expired')
+										&&
+									($lastSubscription->getSubExpiresDate() == $lastSubscription->getSubCanceledDate()))
+								{
+									$contextBillingUuid = 'reactivation';
+									config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because last subscription expired because of failed payment for userReferenceUuid=".$userReferenceUuid);
+								} else {
+									$contextBillingUuid = 'returning';
+									config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because there is old subscriptions for userReferenceUuid=".$userReferenceUuid);
+								}
 							}
 						}
 					}
