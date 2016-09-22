@@ -121,6 +121,12 @@ if(getEnv('AWS_FOLDER_TRANSACTIONS') === false) {
 	putEnv('AWS_FOLDER_TRANSACTIONS=transactions');
 }
 
+#AWS_FOLDER_SUBSCRIPTIONS
+
+if(getEnv('AWS_FOLDER_SUBSCRIPTIONS') === false) {
+	putEnv('AWS_FOLDER_SUBSCRIPTIONS=subscriptions');
+}
+
 #AWS_REGION
 
 if(getEnv('AWS_REGION') === false) {
