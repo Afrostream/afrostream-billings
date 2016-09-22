@@ -143,6 +143,64 @@ EOL;
 		return $out;
 	}
 	
+	public static function getBachatSubscriptionsInfosForChartmogul(
+			$limit = 0, $offset = 0) {
+				$query =<<<EOL
+		SELECT
+			customer_external_id,
+			customer_name,
+			customer_email,
+			customer_country,
+			customer_state,
+			plan_name,
+			plan_interval,
+			plan_interval_count,
+			quantity,
+			currency,
+			amount_paid,
+			started_at,
+			cancelled_at
+		FROM
+		(SELECT
+		BS.creation_date as creation_date,
+		BU.user_provider_uuid as customer_external_id,
+		(CASE WHEN length(BUOF.value) = 0 AND length(BUOL.value) = 0 THEN 'unknown' ELSE CONCAT(BUOF.value, ' ', BUOL.value) END) as customer_name,
+		(CASE WHEN length(BUO.value) = 0 THEN 'unknown@domain.com' ELSE BUO.value END) as customer_email,
+		'FR' as customer_country,
+		'' as customer_state,
+		BPL.plan_uuid as plan_name,
+		(CASE WHEN BIPL.period_unit = 'day' AND BIPL.period_length = '30' THEN 'month' ELSE BIPL.period_unit END) as plan_interval,
+		(CASE WHEN BIPL.period_unit = 'day' AND BIPL.period_length = '30' THEN 1 ELSE BIPL.period_length END) as plan_interval_count,
+		1 as quantity,
+		BIPL.currency as currency,
+		round(CAST(((extract(day from (BS.sub_period_ends_date - BS.sub_activated_date)) + 1 ) * BIPL.amount_in_cents / BIPL.period_length) as numeric)/100, 2) as amount_paid,
+		to_char(BS.sub_activated_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD 23:59') as started_at,
+		to_char(BS.sub_expires_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD 00:00') as cancelled_at
+		FROM billing_subscriptions BS
+		INNER JOIN billing_providers BP ON (BS.providerid = BP._id)
+		INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)
+		INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)
+		INNER JOIN billing_internal_plans BIPL ON (BIPLL.internal_plan_id = BIPL._id)
+		INNER JOIN billing_users BU ON (BS.userid = BU._id)
+		LEFT JOIN billing_users_opts BUO ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)
+		LEFT JOIN billing_users_opts BUOF ON (BU._id = BUOF.userid AND BUOF.key = 'firstName' AND BUOF.deleted = false)
+		LEFT JOIN billing_users_opts BUOL ON (BU._id = BUOL.userid AND BUOL.key = 'lastName' AND BUOL.deleted = false)
+		WHERE BU.deleted = false AND BS.deleted = false AND BP.name = 'bachat') as TT WHERE TT.amount_paid > 0 ORDER BY TT.creation_date ASC
+EOL;
+		if($limit > 0) { $query.= " LIMIT ".$limit; }
+		if($offset > 0) { $query.= " OFFSET ".$offset; }
+		$query = sprintf($query);
+		
+		$result = pg_query(config::getDbConn(), $query);
+		$out = array();
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = $row;
+		}
+		// free result
+		pg_free_result($result);
+		return $out;
+	}
+	
 }
 
 ?>
