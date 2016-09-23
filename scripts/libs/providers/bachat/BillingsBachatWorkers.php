@@ -32,7 +32,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_request_renew', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal bypassed - already done today -");
-				exit;
+				return;
 			}
 			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_renew');
 			$now = (new DateTime())->setTimezone(new DateTimeZone(self::$timezone));
@@ -277,7 +277,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_request_cancel', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions canceling bypassed - already done today -");
-				exit;
+				return;
 			}
 			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_cancel');
 			$now = (new DateTime())->setTimezone(new DateTimeZone(self::$timezone));
@@ -474,7 +474,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_renew', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal bypassed - already done today -");
-				exit;
+				return;
 			}
 			
 			ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions renewal file...");
@@ -715,7 +715,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_cancel', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions canceling bypassed - already done today -");
-				exit;
+				return;
 			}
 			
 			ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions cancel file...");
