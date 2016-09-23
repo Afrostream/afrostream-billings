@@ -26,7 +26,7 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_refresh', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("refreshing netsize subscriptions bypassed - already done today -");
-				exit;
+				return;
 			}
 				
 			ScriptsConfig::getLogger()->addInfo("refreshing netsize subscriptions...");

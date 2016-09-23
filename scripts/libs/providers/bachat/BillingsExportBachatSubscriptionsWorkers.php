@@ -22,7 +22,7 @@ class BillingsExportBachatSubscriptionsWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->providerid, 'subscriptions_export', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("exporting daily bachat subscriptions bypassed - already done today -");
-				exit;
+				return;
 			}
 			
 			ScriptsConfig::getLogger()->addInfo("exporting daily bachat subscriptions...");

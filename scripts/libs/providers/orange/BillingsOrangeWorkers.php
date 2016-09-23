@@ -26,7 +26,7 @@ class BillingsOrangeWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_refresh', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("refreshing orange subscriptions bypassed - already done today -");
-				exit;
+				return;
 			}
 				
 			ScriptsConfig::getLogger()->addInfo("refreshing orange subscriptions...");

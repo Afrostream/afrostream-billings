@@ -19,7 +19,7 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, 'transactions_export', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("exporting transactions bypassed - already done today -");
-				exit;
+				return;
 			}
 		
 			ScriptsConfig::getLogger()->addInfo("exporting transactions...");
