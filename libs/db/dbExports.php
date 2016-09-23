@@ -81,8 +81,26 @@ EOL;
 		return $out;
 	}
 	
+	/**
+	 * Some important informations :
+	 * - customer_name cannot be empty
+	 * - plan_interval must be in (day, month)
+	 * - amount_paid must be a positive float
+	 * - ordering is important (from older to most recent)
+	 * 
+	 * @param DateTime $dateStart
+	 * @param DateTime $dateEnd
+	 * @param number $limit
+	 * @param number $offset
+	 * 
+	 */
 	public static function getGocardlessSubscriptionsInfosForChartmogul(
+			DateTime $dateStart, DateTime $dateEnd,
 			$limit = 0, $offset = 0) {
+		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
+		$date_start_str = dbGlobal::toISODate($dateStart);
+		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
+		$date_end_str = dbGlobal::toISODate($dateEnd);
 		$query =<<<EOL
 		SELECT
 			customer_external_id,
@@ -101,6 +119,9 @@ EOL;
 		FROM
 		(SELECT
 		BS.creation_date as creation_date,
+		BS.sub_activated_date as sub_activated_date,
+		BS.sub_expires_date as sub_expires_date,
+		BU._id as billing_user_id,
 		BU.user_provider_uuid as customer_external_id,
 		(CASE WHEN length(BUOF.value) = 0 AND length(BUOL.value) = 0 THEN 'unknown' ELSE CONCAT(BUOF.value, ' ', BUOL.value) END) as customer_name,
 		(CASE WHEN length(BUO.value) = 0 THEN 'unknown@domain.com' ELSE BUO.value END) as customer_email,
@@ -127,16 +148,41 @@ EOL;
 		LEFT JOIN billing_users_opts BUO ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)
 		LEFT JOIN billing_users_opts BUOF ON (BU._id = BUOF.userid AND BUOF.key = 'firstName' AND BUOF.deleted = false) 
 		LEFT JOIN billing_users_opts BUOL ON (BU._id = BUOL.userid AND BUOL.key = 'lastName' AND BUOL.deleted = false) 
-		WHERE BU.deleted = false AND BS.deleted = false AND BP.name = 'gocardless') as TT WHERE TT.amount_paid > 0 ORDER BY TT.creation_date ASC
+		WHERE BU.deleted = false AND BS.deleted = false AND BP.name = 'gocardless'
+		AND ((BS.sub_activated_date AT TIME ZONE 'Europe/Paris' BETWEEN '%s' AND '%s')
+			OR
+			(BS.sub_expires_date AT TIME ZONE 'Europe/Paris' BETWEEN '%s' AND '%s'))
+		) as TT 
+		WHERE TT.amount_paid > 0 ORDER BY TT.billing_user_id ASC, TT.sub_activated_date ASC, TT.sub_expires_date ASC
 EOL;
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
-		$query = sprintf($query);
+		$query = sprintf($query, $date_start_str, $date_end_str, $date_start_str, $date_end_str);
 		
 		$result = pg_query(config::getDbConn(), $query);
 		$out = array();
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out[] = $row;
+			if(isset($row['cancelled_at'])) {
+				//only customer_external_id + cancelled_at
+				$row_internal = array();
+				$row_internal['customer_external_id'] = $row['customer_external_id'];
+				$row_internal['customer_name'] = '';
+				$row_internal['customer_email'] = '';
+				$row_internal['customer_country'] = '';
+				$row_internal['customer_state'] = '';
+				$row_internal['plan_name'] = '';
+				$row_internal['plan_interval'] = '';
+				$row_internal['plan_interval_count'] = '';
+				$row_internal['quantity'] = '';
+				$row_internal['currency'] = '';
+				$row_internal['amount_paid'] = '';
+				$row_internal['started_at'] = '';
+				$row_internal['cancelled_at'] = $row['cancelled_at'];
+				$out[] = $row_internal;
+			} else {
+				//keep all
+				$out[] = $row;
+			}
 		}
 		// free result
 		pg_free_result($result);
@@ -144,8 +190,13 @@ EOL;
 	}
 	
 	public static function getBachatSubscriptionsInfosForChartmogul(
+			DateTime $dateStart, DateTime $dateEnd,
 			$limit = 0, $offset = 0) {
-				$query =<<<EOL
+		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
+		$date_start_str = dbGlobal::toISODate($dateStart);
+		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
+		$date_end_str = dbGlobal::toISODate($dateEnd);
+		$query =<<<EOL
 		SELECT
 			customer_external_id,
 			customer_name,
@@ -163,6 +214,9 @@ EOL;
 		FROM
 		(SELECT
 		BS.creation_date as creation_date,
+		BS.sub_activated_date as sub_activated_date,
+		BS.sub_expires_date as sub_expires_date,
+		BU._id as billing_user_id,
 		BU.user_provider_uuid as customer_external_id,
 		(CASE WHEN length(BUOF.value) = 0 AND length(BUOL.value) = 0 THEN 'unknown' ELSE CONCAT(BUOF.value, ' ', BUOL.value) END) as customer_name,
 		(CASE WHEN length(BUO.value) = 0 THEN 'unknown@domain.com' ELSE BUO.value END) as customer_email,
@@ -185,16 +239,41 @@ EOL;
 		LEFT JOIN billing_users_opts BUO ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)
 		LEFT JOIN billing_users_opts BUOF ON (BU._id = BUOF.userid AND BUOF.key = 'firstName' AND BUOF.deleted = false)
 		LEFT JOIN billing_users_opts BUOL ON (BU._id = BUOL.userid AND BUOL.key = 'lastName' AND BUOL.deleted = false)
-		WHERE BU.deleted = false AND BS.deleted = false AND BP.name = 'bachat') as TT WHERE TT.amount_paid > 0 ORDER BY TT.creation_date ASC
+		WHERE BU.deleted = false AND BS.deleted = false AND BP.name = 'bachat'
+		AND ((BS.sub_activated_date AT TIME ZONE 'Europe/Paris' BETWEEN '%s' AND '%s')
+			OR
+			(BS.sub_expires_date AT TIME ZONE 'Europe/Paris' BETWEEN '%s' AND '%s'))
+		) as TT 
+		WHERE TT.amount_paid > 0 ORDER BY TT.billing_user_id ASC, TT.sub_activated_date ASC, TT.sub_expires_date ASC
 EOL;
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
-		$query = sprintf($query);
+		$query = sprintf($query, $date_start_str, $date_end_str, $date_start_str, $date_end_str);
 		
 		$result = pg_query(config::getDbConn(), $query);
 		$out = array();
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out[] = $row;
+			if(isset($row['cancelled_at'])) {
+				//only customer_external_id + cancelled_at
+				$row_internal = array();
+				$row_internal['customer_external_id'] = $row['customer_external_id'];
+				$row_internal['customer_name'] = '';
+				$row_internal['customer_email'] = '';
+				$row_internal['customer_country'] = '';
+				$row_internal['customer_state'] = '';
+				$row_internal['plan_name'] = '';
+				$row_internal['plan_interval'] = '';
+				$row_internal['plan_interval_count'] = '';
+				$row_internal['quantity'] = '';
+				$row_internal['currency'] = '';
+				$row_internal['amount_paid'] = '';
+				$row_internal['started_at'] = '';
+				$row_internal['cancelled_at'] = $row['cancelled_at'];
+				$out[] = $row_internal;
+			} else {
+				//keep all
+				$out[] = $row;
+			}
 		}
 		// free result
 		pg_free_result($result);

@@ -11,7 +11,7 @@ class BillingsExportGocardlessSubscriptions {
 		$this->providerid = ProviderDAO::getProviderByName('gocardless')->getId();
 	}
 	
-	public function doExportSubscriptionsForChartmogul($export_subs_file_path) {
+	public function doExportSubscriptionsForChartmogul(DateTime $from, DateTime $to, $export_subs_file_path) {
 		try {
 			ScriptsConfig::getLogger()->addInfo("exporting chartmogul gocardless subscriptions...");
 			//
@@ -37,7 +37,7 @@ class BillingsExportGocardlessSubscriptions {
 			fputcsv($export_subs_file_res, $fields, $csvDelimiter);
 			$offset = 0;
 			$limit = 1000;
-			while(count($subscriptions = dbExports::getGocardlessSubscriptionsInfosForChartmogul($limit, $offset)) > 0) {
+			while(count($subscriptions = dbExports::getGocardlessSubscriptionsInfosForChartmogul($from, $to, $limit, $offset)) > 0) {
 				$offset = $offset + $limit;
 				//
 				foreach($subscriptions as $subscription) {

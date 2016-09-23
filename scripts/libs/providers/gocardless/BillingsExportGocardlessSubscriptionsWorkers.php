@@ -37,24 +37,107 @@ class BillingsExportGocardlessSubscriptionsWorkers extends BillingsWorkers {
 			$bucket = getEnv('AWS_BUCKET_BILLINGS_EXPORTS');
 			$now = new DateTime();
 			$now->setTimezone(new DateTimeZone(config::$timezone));
-			$dailyDateFormat = "Ymd";
 			//DAILY CHARTMOGUL
-			$dailyFileName = "subscriptions-exports-chartmogul-gocardless-daily-".$now->format($dailyDateFormat).".csv";
-			$dailyKey = getEnv('AWS_ENV').'/'.getEnv('AWS_FOLDER_SUBSCRIPTIONS').'/daily/'.$dailyFileName;
-			if($s3->doesObjectExist($bucket, $dailyKey) == false) {
-				$export_subscriptions_file_path = NULL;
-				if(($export_subscriptions_file_path = tempnam('', 'tmp')) === false) {
-					throw new Exception('file for exporting daily chartmogul gocardless subscriptions cannot be created');
-				}	
-				$billingsExportGocardlessSubscriptions->doExportSubscriptionsForChartmogul($export_subscriptions_file_path);
-				$s3->putObject(array(
-						'Bucket' => $bucket,
-						'Key' => $dailyKey,
-						'SourceFile' => $export_subscriptions_file_path
-				));
-				//
-				unlink($export_subscriptions_file_path);
-				$export_subscriptions_file_path = NULL;
+			$dailyDateFormat = "Ymd";
+			$minusOneDay = new DateInterval("P1D");
+			$minusOneDay->invert = 1;
+			$lastdaysCount = getEnv('EXPORTS_DAILY_NUMBER_OF_DAYS');
+			$dayToProcess = clone $now;
+			$dailyCounter = 0;
+			while($dailyCounter < $lastdaysCount) {
+				$dayToProcess->add($minusOneDay);
+				$dayToProcessBeginningOfDay = clone $dayToProcess;
+				$dayToProcessBeginningOfDay->setTime(0,0,0);
+				$dayToProcessEndOfDay = clone $dayToProcess;
+				$dayToProcessEndOfDay->setTime(23,59,59);
+				$dailyFileName = "subscriptions-exports-chartmogul-gocardless-daily-".$dayToProcessBeginningOfDay->format($dailyDateFormat).".csv";
+				$dailyKey = getEnv('AWS_ENV').'/'.getEnv('AWS_FOLDER_SUBSCRIPTIONS').'/daily/'.$dailyFileName;
+				if($s3->doesObjectExist($bucket, $dailyKey) == false) {
+					$export_subscriptions_file_path = NULL;
+					if(($export_subscriptions_file_path = tempnam('', 'tmp')) === false) {
+						throw new Exception('file for exporting daily chartmogul gocardless subscriptions cannot be created');
+					}	
+					$billingsExportGocardlessSubscriptions->doExportSubscriptionsForChartmogul($dayToProcessBeginningOfDay, $dayToProcessEndOfDay, $export_subscriptions_file_path);
+					$s3->putObject(array(
+							'Bucket' => $bucket,
+							'Key' => $dailyKey,
+							'SourceFile' => $export_subscriptions_file_path
+					));
+					if($dailyCounter == 0) {
+						//ONLY SEND BY EMAIL THE LAST ONE
+						if(getEnv('EXPORTS_DAILY_EMAIL_ACTIVATED') == 1) {
+							$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
+							$email = new SendGrid\Email();
+							$email->setTos(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_DAILY_EMAIL_TOS')))
+							->setBccs(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_DAILY_EMAIL_BCCS')))
+							->setFrom(getEnv('EXPORTS_EMAIL_FROM'))
+							->setFromName(getEnv('EXPORTS_EMAIL_FROMNAME'))
+							->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Daily Chartmogul Gocardless Subscriptions Export : '.$dayToProcessBeginningOfDay->format($dailyDateFormat))
+							->setText('See File attached')
+							->addAttachment($export_subscriptions_file_path, $dailyFileName);
+							$sendgrid->send($email);
+						}
+					}
+					//
+					unlink($export_subscriptions_file_path);
+					$export_subscriptions_file_path = NULL;
+				}
+				//DONE
+				$dailyCounter++;
+			}
+			//MONTHLY CHARTMOGUL
+			$firstDayToProceedLastMonth = getEnv('EXPORTS_MONTHLY_FIRST_DAY_OF_MONTH');
+			$monthlyDateFormat = "Ym";
+			$minusOneMonth = new DateInterval("P1M");
+			$minusOneMonth->invert = 1;
+			$lastmonthsCount = getEnv('EXPORTS_MONTHLY_NUMBER_OF_MONTHS');
+			$monthToProcess = clone $now;
+			$monthlyCounter = 0;
+			$dayOfMonth = $now->format('j');
+			if($dayOfMonth >= $firstDayToProceedLastMonth) {
+				while($monthlyCounter < $lastmonthsCount) {
+					$monthToProcess->add($minusOneMonth);
+					$monthToProcessBeginning = clone $monthToProcess;
+					$monthToProcessBeginning->modify('first day of this month');
+					$monthToProcessBeginning->setTime(0, 0, 0);
+					$monthToProcessEnd = clone $monthToProcess;
+					$monthToProcessEnd->modify('last day of this month');
+					$monthToProcessEnd->setTime(23,59,59);
+					$monthyFileName = "subscriptions-exports-chartmogul-gocardless-monthy-".$monthToProcessBeginning->format($monthlyDateFormat).".csv";
+					$monthlyKey = getEnv('AWS_ENV').'/'.getEnv('AWS_FOLDER_SUBSCRIPTIONS').'/monthly/'.$monthyFileName;
+					if($s3->doesObjectExist($bucket, $monthlyKey) == false) {
+						$export_subscriptions_file_path = NULL;
+						if(($export_subscriptions_file_path = tempnam('', 'tmp')) === false) {
+							throw new Exception('file for exporting monthly chartmogul gocardless subscriptions cannot be created');
+						}
+						$billingsExportGocardlessSubscriptions->doExportSubscriptionsForChartmogul($monthToProcessBeginning, $monthToProcessEnd, $export_subscriptions_file_path);
+						$s3->putObject(array(
+								'Bucket' => $bucket,
+								'Key' => $monthlyKey,
+								'SourceFile' => $export_subscriptions_file_path
+						));
+						if($monthlyCounter == 0) {
+							//ONLY SEND BY EMAIL THE LAST ONE
+							if(getEnv('EXPORTS_MONTHLY_EMAIL_ACTIVATED') == 1) {
+								$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
+								$email = new SendGrid\Email();
+								$email->setTos(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_MONTHLY_EMAIL_TOS')))
+								->setBccs(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_MONTHLY_EMAIL_BCCS')))
+								->setFrom(getEnv('EXPORTS_EMAIL_FROM'))
+								->setFromName(getEnv('EXPORTS_EMAIL_FROMNAME'))
+								->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Monthly Chartmogul Gocardless Subscriptions Export : '.$monthToProcessBeginning->format($monthlyDateFormat))
+								->setText('See File attached')
+								->addAttachment($export_subscriptions_file_path, $monthyFileName);
+								$sendgrid->send($email);
+							}
+						}
+						//
+						unlink($export_subscriptions_file_path);
+						$export_subscriptions_file_path = NULL;
+					}
+					//DONE
+					$monthlyCounter++;
+				}
 			}
 			//DONE
 			$processingLog->setProcessingStatus('done');

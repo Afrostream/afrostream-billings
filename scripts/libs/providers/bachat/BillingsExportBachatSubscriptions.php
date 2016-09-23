@@ -11,7 +11,7 @@ class BillingsExportBachatSubscriptions {
 		$this->providerid = ProviderDAO::getProviderByName('bachat')->getId();
 	}
 	
-	public function doExportSubscriptionsForChartmogul($export_subs_file_path) {
+	public function doExportSubscriptionsForChartmogul(DateTime $from, DateTime $to, $export_subs_file_path) {
 		try {
 			ScriptsConfig::getLogger()->addInfo("exporting chartmogul bachat subscriptions...");
 			//
@@ -37,7 +37,7 @@ class BillingsExportBachatSubscriptions {
 			fputcsv($export_subs_file_res, $fields, $csvDelimiter);
 			$offset = 0;
 			$limit = 1000;
-			while(count($subscriptions = dbExports::getBachatSubscriptionsInfosForChartmogul($limit, $offset)) > 0) {
+			while(count($subscriptions = dbExports::getBachatSubscriptionsInfosForChartmogul($from, $to, $limit, $offset)) > 0) {
 				$offset = $offset + $limit;
 				//
 				foreach($subscriptions as $subscription) {

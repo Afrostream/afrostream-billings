@@ -38,7 +38,7 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 			$dailyDateFormat = "Ymd";
 			$minusOneDay = new DateInterval("P1D");
 			$minusOneDay->invert = 1;
-			$lastdaysCount = getEnv('TRANSACTIONS_EXPORTS_DAILY_NUMBER_OF_DAYS');
+			$lastdaysCount = getEnv('EXPORTS_DAILY_NUMBER_OF_DAYS');
 			$dayToProcess = clone $now;
 			$dailyCounter = 0;
 			while($dailyCounter < $lastdaysCount) {
@@ -63,13 +63,13 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 					));
 					if($dailyCounter == 0) {
 						//ONLY SEND BY EMAIL THE LAST ONE
-						if(getEnv('TRANSACTIONS_EXPORTS_DAILY_EMAIL_ACTIVATED') == 1) {
+						if(getEnv('EXPORTS_DAILY_EMAIL_ACTIVATED') == 1) {
 							$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
 							$email = new SendGrid\Email();
-							$email->setTos(explode(';', getEnv('TRANSACTIONS_EXPORTS_DAILY_EMAIL_TOS')))
-							->setBccs(explode(';', getEnv('TRANSACTIONS_EXPORTS_DAILY_EMAIL_BCCS')))
-							->setFrom(getEnv('TRANSACTIONS_EXPORTS_EMAIL_FROM'))
-							->setFromName(getEnv('TRANSACTIONS_EXPORTS_EMAIL_FROMNAME'))
+							$email->setTos(explode(';', getEnv('EXPORTS_TRANSACTIONS_DAILY_EMAIL_TOS')))
+							->setBccs(explode(';', getEnv('EXPORTS_TRANSACTIONS_DAILY_EMAIL_BCCS')))
+							->setFrom(getEnv('EXPORTS_EMAIL_FROM'))
+							->setFromName(getEnv('EXPORTS_EMAIL_FROMNAME'))
 							->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Daily Transactions Export : '.$dayToProcessBeginningOfDay->format($dailyDateFormat))
 							->setText('See File attached')
 							->addAttachment($export_transactions_file_path, $dailyFileName);
@@ -84,11 +84,11 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 				$dailyCounter++;
 			}
 			//MONTH
-			$firstDayToProceedLastMonth = getEnv('TRANSACTIONS_EXPORTS_MONTHLY_FIRST_DAY_OF_MONTH');
+			$firstDayToProceedLastMonth = getEnv('EXPORTS_MONTHLY_FIRST_DAY_OF_MONTH');
 			$monthlyDateFormat = "Ym";
 			$minusOneMonth = new DateInterval("P1M");
 			$minusOneMonth->invert = 1;
-			$lastmonthsCount = getEnv('TRANSACTIONS_EXPORTS_MONTHLY_NUMBER_OF_MONTHS');
+			$lastmonthsCount = getEnv('EXPORTS_MONTHLY_NUMBER_OF_MONTHS');
 			$monthToProcess = clone $now;
 			$monthlyCounter = 0;
 			$dayOfMonth = $now->format('j');
@@ -116,13 +116,13 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 						));
 						if($monthlyCounter == 0) {
 							//ONLY SEND BY EMAIL THE LAST ONE
-							if(getEnv('TRANSACTIONS_EXPORTS_MONTHLY_EMAIL_ACTIVATED') == 1) {
+							if(getEnv('EXPORTS_MONTHLY_EMAIL_ACTIVATED') == 1) {
 								$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
 								$email = new SendGrid\Email();
-								$email->setTos(explode(';', getEnv('TRANSACTIONS_EXPORTS_MONTHLY_EMAIL_TOS')))
-								->setBccs(explode(';', getEnv('TRANSACTIONS_EXPORTS_MONTHLY_EMAIL_BCCS')))
-								->setFrom(getEnv('TRANSACTIONS_EXPORTS_EMAIL_FROM'))
-								->setFromName(getEnv('TRANSACTIONS_EXPORTS_EMAIL_FROMNAME'))
+								$email->setTos(explode(';', getEnv('EXPORTS_TRANSACTIONS_MONTHLY_EMAIL_TOS')))
+								->setBccs(explode(';', getEnv('EXPORTS_TRANSACTIONS_MONTHLY_EMAIL_BCCS')))
+								->setFrom(getEnv('EXPORTS_EMAIL_FROM'))
+								->setFromName(getEnv('EXPORTS_EMAIL_FROMNAME'))
 								->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Monthly Transactions Export : '.$monthToProcessBeginning->format($monthlyDateFormat))
 								->setText('See File attached')
 								->addAttachment($export_transactions_file_path, $monthyFileName);
