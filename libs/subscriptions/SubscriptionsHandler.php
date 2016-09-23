@@ -781,7 +781,7 @@ class SubscriptionsHandler {
 			$subscription->setIsCancelable(false);
 		} else {
 			$array_status_cancelable = ['future', 'active'];
-			if(array_key_exists($subscription->getSubStatus() , $array_status_cancelable)) {
+			if(in_array($subscription->getSubStatus() , $array_status_cancelable)) {
 				$subscription->setIsCancelable(true);
 			} else {
 				$subscription->setIsCancelable(false);
