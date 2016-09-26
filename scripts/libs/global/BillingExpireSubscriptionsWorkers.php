@@ -17,7 +17,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, 'subs_expire_canceled', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("expiring canceled subscriptions bypassed - already done today -");
-				exit;
+				return;
 			}
 		
 			ScriptsConfig::getLogger()->addInfo("expiring canceled subscriptions...");
@@ -85,7 +85,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, 'subs_expire_ended', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("expiring ended subscriptions bypassed - already done today -");
-				exit;
+				return;
 			}
 		
 			ScriptsConfig::getLogger()->addInfo("expiring ended subscriptions...");
