@@ -311,7 +311,7 @@ EOL;
 		BU.user_provider_uuid as customer_external_id,
 		(CASE WHEN length(BUOF.value) = 0 AND length(BUOL.value) = 0 THEN 'unknown' ELSE CONCAT(BUOF.value, ' ', BUOL.value) END) as customer_name,
 		(CASE WHEN length(BUO.value) = 0 THEN 'unknown@domain.com' ELSE BUO.value END) as customer_email,
-		'FR' as customer_country,
+		(CASE WHEN currency = 'EUR' THEN 'FR' ELSE (CASE WHEN currency = 'XOF' THEN 'CI' ELSE '' END) END) as customer_country,
 		'' as customer_state,
 		BPL.plan_uuid as plan_name,
 		(CASE WHEN BIPL.period_unit = 'day' AND BIPL.period_length = '30' THEN 'month' ELSE BIPL.period_unit END) as plan_interval,
