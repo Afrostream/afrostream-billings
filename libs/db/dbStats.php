@@ -331,7 +331,9 @@ class dbStats {
 		plans.name AS plan_name,
 		bp.name AS provider_name,
 		buo.value AS user_email,
-		(CASE WHEN bco.value IS NULL THEN buo.value ELSE bco.value END) AS recipient_email
+		(CASE WHEN bco.value IS NULL THEN buo.value ELSE bco.value END) AS recipient_email,
+		bcc.name AS coupons_campaign_name,
+		bcc.prefix AS coupons_campaign_prefix
 		FROM
 		billing_coupons AS bc
 		INNER JOIN billing_providers AS bp ON (bc.providerid = bp._id)
@@ -379,7 +381,9 @@ EOL;
 		plans.name AS plan_name,
 		bp.name AS provider_name,
 		buo.value AS user_email,
-		buo.value AS recipient_email
+		buo.value AS recipient_email,
+		bcc.name AS coupons_campaign_name,
+		bcc.prefix AS coupons_campaign_prefix
 		FROM
 		billing_coupons AS bc
 		INNER JOIN billing_providers AS bp ON (bc.providerid=bp._id)
@@ -418,7 +422,9 @@ EOL;
 		plans.name AS plan_name,
 		bp.name AS provider_name,
 		buo.value AS user_email,
-		(CASE WHEN bco.value IS NULL THEN buo.value ELSE bco.value END) AS recipient_email
+		(CASE WHEN bco.value IS NULL THEN buo.value ELSE bco.value END) AS recipient_email,
+		bcc.name AS coupons_campaign_name,
+		bcc.prefix AS coupons_campaign_prefix
 		FROM 
 		billing_coupons AS bc
 		INNER JOIN billing_providers AS bp ON (bc.providerid=bp._id)
