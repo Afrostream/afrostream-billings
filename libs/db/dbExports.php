@@ -344,7 +344,7 @@ EOL;
 		$result = pg_query(config::getDbConn(), $query);
 		$out = array();
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			/*if(isset($row['cancelled_at'])) {
+			if(isset($row['cancelled_at'])) {
 				//only customer_external_id + cancelled_at
 				$row_internal = array();
 				$row_internal['customer_external_id'] = $row['customer_external_id'];
@@ -361,10 +361,10 @@ EOL;
 				$row_internal['started_at'] = '';
 				$row_internal['cancelled_at'] = $row['cancelled_at'];
 				$out[] = $row_internal;
-			} else {*/
+			} else {
 				//keep all
 				$out[] = $row;
-			/*}*/
+			}
 		}
 		// free result
 		pg_free_result($result);
