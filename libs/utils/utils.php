@@ -330,4 +330,43 @@ function doSortSubscriptions(&$subscriptions) {
 		);
 }
 
+//passage par référence !!!
+function doSortPaymentMethods(&$paymentMethodsArray, $allPaymentMethods) {
+	//
+	$allPaymentMethodsByPaymentMethodType = array();
+	foreach ($allPaymentMethods as $providerName => $paymentMethod) {
+		$allPaymentMethodsByPaymentMethodType[$paymentMethod->getPaymentMethodType()] = $paymentMethod; 
+	}
+	//
+	ksort($paymentMethodsArray,
+			function($A, $B) {
+				Config::getLogger()->addInfo("HELLO A=".var_export($A, true)." B=".$B);
+				$idxA = NULL; $idxB = NULL;
+				if(array_key_exists($A, $allPaymentMethodsByPaymentMethodType)) {
+					Config::getLogger()->addInfo("A EXISTS");
+					$idxA = $allPaymentMethods[$A]->getIndex();
+				}
+				if(array_key_exists($B, $allPaymentMethodsByPaymentMethodType)) {
+					Config::getLogger()->addInfo("B EXISTS");
+					$idxB = $allPaymentMethods[$B]->getIndex();;
+				}
+				if(isset($idxA) && isset($idxB)) {
+					return($idxA - $idxB);
+				} else if(isset($idxA)) {
+					//idxB is NULL
+					Config::getLogger()->addInfo("B IS NULL");
+					return(1);
+				} else if(isset($idxB)) {
+					//idxA is NULL
+					Config::getLogger()->addInfo("A IS NULL");
+					return(-1);
+				} else {
+					Config::getLogger()->addInfo("A AND B ARE NULL");
+					//idxA AND idxB are NULL
+					return(0);
+				}
+			}
+		);
+}
+
 ?>
