@@ -2077,6 +2077,7 @@ class BillingInfo implements JsonSerializable {
 	private $iban;
 	private $countryCode;
 	private $billingInfoOpts;
+	private $paymentMethod;
 	
 	public function __construct() {
 	}
@@ -2102,7 +2103,10 @@ class BillingInfo implements JsonSerializable {
 			$out->setCountryCode($billing_info_array['countryCode']);
 		}
 		if(array_key_exists('billingInfoOpts', $billing_info_array)) {
-			$out->setBillingInfoOpts(BillingInfoOpts::getInstance($billing_info_opts_array['billingInfoOpts']));
+			$out->setBillingInfoOpts(BillingInfoOpts::getInstance($billing_info_array['billingInfoOpts']));
+		}
+		if(array_key_exists('paymentMethod', $billing_info_array)) {
+			$out->setPaymentMethod(BillingPaymentMethod::getInstance($billing_info_array['paymentMethod']));
 		}
 		return($out);
 	}
@@ -2187,6 +2191,14 @@ class BillingInfo implements JsonSerializable {
 		return($this->billingInfoOpts);
 	}
 	
+	public function setPaymentMethod(BillingPaymentMethod $paymentMethod = NULL) {
+		$this->paymentMethod = $paymentMethod;
+	}
+	
+	public function getPaymentMethod() {
+		return($this->paymentMethod);
+	}
+	
 	public function jsonSerialize() {
 		$return = array();
 		$return['billingInfoBillingUuid'] = $this->billinginfo_billing_uuid;
@@ -2198,6 +2210,7 @@ class BillingInfo implements JsonSerializable {
 		$return['iban'] = $this->iban;
 		$return['countryCode'] = $this->countryCode;
 		$return['billingInfoOpts'] = ($this->billingInfoOpts == NULL) ? NULL : $this->billingInfoOpts;
+		$return['paymentMethod'] = ($this->paymentMethod == NULL) ? NULL : $this->paymentMethod;
 		return($return);
 	}
 	
@@ -2205,7 +2218,7 @@ class BillingInfo implements JsonSerializable {
 
 class BillingInfoDAO {
 	
-	private static $sfields = '_id, billinginfo_billing_uuid, creation_date, updated_date, first_name, last_name, email, iban, country_code';
+	private static $sfields = '_id, billinginfo_billing_uuid, creation_date, updated_date, first_name, last_name, email, iban, country_code, payment_method_id';
 	
 	private static function getBillingInfoFromRow($row) {
 		$out = new BillingInfo();
@@ -2218,6 +2231,7 @@ class BillingInfoDAO {
 		$out->setEmail($row['email']);
 		$out->setIban($row['iban']);
 		$out->setCountryCode($row['country_code']);
+		$out->setPaymentMethod(BillingPaymentMethodDAO::getBillingPaymentMethodById($row['payment_method_id']));
 		$out->setBillingInfoOpts(BillingInfoOptsDAO::getBillingInfoOptsByBillingInfoId($row['_id']));
 		return($out);
 	}
@@ -2237,15 +2251,16 @@ class BillingInfoDAO {
 	}
 	
 	public static function addBillingInfo(BillingInfo $billingInfo) {
-		$query = "INSERT INTO billing_billing_infos (billinginfo_billing_uuid, first_name, last_name, email, iban, country_code)"; 
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6) RETURNING _id";
+		$query = "INSERT INTO billing_billing_infos (billinginfo_billing_uuid, first_name, last_name, email, iban, country_code, payment_method_id)"; 
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query, array(
 				$billingInfo->getBillingInfoBillingUuid(),
 				$billingInfo->getFirstName(),
 				$billingInfo->getLastName(),
 				$billingInfo->getEmail(),
 				$billingInfo->getIban(),
-				$billingInfo->getCountryCode()				
+				$billingInfo->getCountryCode(),
+				($billingInfo->getPaymentMethod() == NULL) ? NULL : $billingInfo->getPaymentMethod()->getId()
 		));
 		$row = pg_fetch_row($result);
 		// free result
@@ -4718,6 +4733,18 @@ class BillingPaymentMethod implements JsonSerializable {
 	private $_id;
 	private $paymentMethodType;
 	private $index;
+	
+	public static function getInstance(array $billing_info_opts_array) {
+		if(!array_key_exists('paymentMethodType', $billing_info_opts_array)) {
+			throw new Exception("'paymentMethodType' field is missing");
+		}
+		$paymentMethodType = $billing_info_opts_array['paymentMethodType'];
+		$billingPaymentMethod = BillingPaymentMethodDAO::getBillingPaymentMethodByPaymentMethodType($paymentMethodType);
+		if($billingPaymentMethod == NULL) {
+			throw new Exception("'paymentMethodType' field : value '".$paymentMethodType."' is invalid");
+		}
+		return($billingPaymentMethod);
+	}
 	
 	public function setId($id) {
 		$this->_id = $id;
