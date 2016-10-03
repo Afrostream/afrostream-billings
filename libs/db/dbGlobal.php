@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../utils/utils.php';
 
 use MyCLabs\Enum\Enum;
 
@@ -777,7 +778,25 @@ class InternalPlan implements JsonSerializable {
 				'countries' => InternalPlanCountryDAO::getInternalPlanCountries($this->_id)
 		];
 		if($this->showProviderPlans) {
-			$return['providerPlans'] = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id));
+			// <-- by providerPlans -->
+			$providerPlans = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id));
+			$return['providerPlans'] = $providerPlans;
+			// <-- by paymentMethods -->
+			$paymentMethodsArray = array();
+			foreach ($providerPlans as $key => $value) {
+				$providerName = $key;
+				$providerPlan = $value;
+				$providerPlanPaymentsMethods = BillingProviderPlanPaymentMethodsDAO::getBillingProviderPlanPaymentMethodsByProviderPlanId($providerPlan->getId());
+				foreach ($providerPlanPaymentsMethods as $providerPlanPaymentsMethod) {
+					$paymentMethod = BillingPaymentMethodDAO::getBillingPaymentMethodById($providerPlanPaymentsMethod->getPaymentMethodId());
+					$paymentMethodsArray[$paymentMethod->getPaymentMethodType()][$providerName] = $paymentMethod;
+				}
+			}
+			//sort it
+			$allPaymentMethods = BillingPaymentMethodDAO::getBillingPaymentMethods();
+			doSortPaymentMethods($paymentMethodsArray, $allPaymentMethods);
+			//
+			$return['paymentMethods'] = $paymentMethodsArray;
 		}
 		return($return);
 	}
@@ -1127,7 +1146,8 @@ class Plan implements JsonSerializable {
 				'providerPlanUuid' => $this->plan_uuid,
 				'name' => $this->name,
 				'description' => $this->description,
-				'provider' => ProviderDAO::getProviderById($this->providerid)->jsonSerialize()
+				'provider' => ProviderDAO::getProviderById($this->providerid)->jsonSerialize(),
+				'paymentMethods' => BillingProviderPlanPaymentMethodsDAO::getBillingProviderPlanPaymentMethodsByProviderPlanId($this->_id)
 		];
 	}
 	
@@ -2057,6 +2077,7 @@ class BillingInfo implements JsonSerializable {
 	private $iban;
 	private $countryCode;
 	private $billingInfoOpts;
+	private $paymentMethod;
 	
 	public function __construct() {
 	}
@@ -2082,7 +2103,10 @@ class BillingInfo implements JsonSerializable {
 			$out->setCountryCode($billing_info_array['countryCode']);
 		}
 		if(array_key_exists('billingInfoOpts', $billing_info_array)) {
-			$out->setBillingInfoOpts(BillingInfoOpts::getInstance($billing_info_opts_array['billingInfoOpts']));
+			$out->setBillingInfoOpts(BillingInfoOpts::getInstance($billing_info_array['billingInfoOpts']));
+		}
+		if(array_key_exists('paymentMethod', $billing_info_array)) {
+			$out->setPaymentMethod(BillingPaymentMethod::getInstance($billing_info_array['paymentMethod']));
 		}
 		return($out);
 	}
@@ -2167,6 +2191,14 @@ class BillingInfo implements JsonSerializable {
 		return($this->billingInfoOpts);
 	}
 	
+	public function setPaymentMethod(BillingPaymentMethod $paymentMethod = NULL) {
+		$this->paymentMethod = $paymentMethod;
+	}
+	
+	public function getPaymentMethod() {
+		return($this->paymentMethod);
+	}
+	
 	public function jsonSerialize() {
 		$return = array();
 		$return['billingInfoBillingUuid'] = $this->billinginfo_billing_uuid;
@@ -2178,6 +2210,7 @@ class BillingInfo implements JsonSerializable {
 		$return['iban'] = $this->iban;
 		$return['countryCode'] = $this->countryCode;
 		$return['billingInfoOpts'] = ($this->billingInfoOpts == NULL) ? NULL : $this->billingInfoOpts;
+		$return['paymentMethod'] = ($this->paymentMethod == NULL) ? NULL : $this->paymentMethod;
 		return($return);
 	}
 	
@@ -2185,7 +2218,7 @@ class BillingInfo implements JsonSerializable {
 
 class BillingInfoDAO {
 	
-	private static $sfields = '_id, billinginfo_billing_uuid, creation_date, updated_date, first_name, last_name, email, iban, country_code';
+	private static $sfields = '_id, billinginfo_billing_uuid, creation_date, updated_date, first_name, last_name, email, iban, country_code, payment_method_id';
 	
 	private static function getBillingInfoFromRow($row) {
 		$out = new BillingInfo();
@@ -2198,6 +2231,7 @@ class BillingInfoDAO {
 		$out->setEmail($row['email']);
 		$out->setIban($row['iban']);
 		$out->setCountryCode($row['country_code']);
+		$out->setPaymentMethod(BillingPaymentMethodDAO::getBillingPaymentMethodById($row['payment_method_id']));
 		$out->setBillingInfoOpts(BillingInfoOptsDAO::getBillingInfoOptsByBillingInfoId($row['_id']));
 		return($out);
 	}
@@ -2217,15 +2251,16 @@ class BillingInfoDAO {
 	}
 	
 	public static function addBillingInfo(BillingInfo $billingInfo) {
-		$query = "INSERT INTO billing_billing_infos (billinginfo_billing_uuid, first_name, last_name, email, iban, country_code)"; 
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6) RETURNING _id";
+		$query = "INSERT INTO billing_billing_infos (billinginfo_billing_uuid, first_name, last_name, email, iban, country_code, payment_method_id)"; 
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query, array(
 				$billingInfo->getBillingInfoBillingUuid(),
 				$billingInfo->getFirstName(),
 				$billingInfo->getLastName(),
 				$billingInfo->getEmail(),
 				$billingInfo->getIban(),
-				$billingInfo->getCountryCode()				
+				$billingInfo->getCountryCode(),
+				($billingInfo->getPaymentMethod() == NULL) ? NULL : $billingInfo->getPaymentMethod()->getId()
 		));
 		$row = pg_fetch_row($result);
 		// free result
@@ -3616,7 +3651,7 @@ class ContextDAO {
 	
 		$out = array();
 	
-		while($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			array_push($out, self::getContextFromRow($row));
 		}
 		// free result
@@ -3851,7 +3886,7 @@ class InternalPlanContextDAO {
 	
 		$out = array();
 		
-		while($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			array_push($out, self::getInternalPlanContextFromRow($row));
 		}
 		// free result
@@ -4011,7 +4046,7 @@ class UsersRequestsLogDAO {
 		
 		$out = array();
 		
-		while($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			array_push($out, self::getUsersRequestsLogFromRow($row));
 		}
 		// free result
@@ -4688,6 +4723,180 @@ EOL;
 		// free result
 		pg_free_result($result);
 	
+		return($out);
+	}
+	
+}
+
+class BillingPaymentMethod implements JsonSerializable {
+	
+	private $_id;
+	private $paymentMethodType;
+	private $index;
+	
+	public static function getInstance(array $billing_info_opts_array) {
+		if(!array_key_exists('paymentMethodType', $billing_info_opts_array)) {
+			throw new Exception("'paymentMethodType' field is missing");
+		}
+		$paymentMethodType = $billing_info_opts_array['paymentMethodType'];
+		$billingPaymentMethod = BillingPaymentMethodDAO::getBillingPaymentMethodByPaymentMethodType($paymentMethodType);
+		if($billingPaymentMethod == NULL) {
+			throw new Exception("'paymentMethodType' field : value '".$paymentMethodType."' is invalid");
+		}
+		return($billingPaymentMethod);
+	}
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setPaymentMethodType($str) {
+		$this->paymentMethodType = $str;
+	}
+	
+	public function getPaymentMethodType() {
+		return($this->paymentMethodType);
+	}
+	
+	public function setIndex($idx) {
+		$this->index = $idx;
+	}
+	
+	public function getIndex() {
+		return($this->index);
+	}
+	
+	public function jsonSerialize() {
+		return([
+				'paymentMethodType' => $this->paymentMethodType,
+				'index' => $this->index
+		]);
+	}
+	
+}
+
+class BillingPaymentMethodDAO {
+	
+	private static $sfields = "_id, payment_method_type, index";
+	
+	private static function getBillingPaymentMethodFromRow($row) {
+		$out = new BillingPaymentMethod();
+		$out->setId($row["_id"]);
+		$out->setPaymentMethodType($row["payment_method_type"]);
+		$out->setIndex($row["index"]);
+		return($out);
+	}
+	
+	public static function getBillingPaymentMethodById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_payment_methods WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+
+		$out = null;
+
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingPaymentMethodFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+	
+	public static function getBillingPaymentMethodByPaymentMethodType($paymentMethodType) {
+		$query = "SELECT ".self::$sfields." FROM billing_payment_methods WHERE payment_method_type = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($paymentMethodType));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingPaymentMethodFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getBillingPaymentMethods() {
+		$query = "SELECT ".self::$sfields." FROM billing_payment_methods";
+		$result = pg_query(config::getDbConn(), $query);
+	
+		$out = array();
+	
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getBillingPaymentMethodFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+}
+
+class BillingProviderPlanPaymentMethod implements JsonSerializable {
+	
+	private $_id;
+	private $providerPlanId;
+	private $paymentMethodId;
+
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setProviderPlanId($id) {
+		$this->providerPlanId = $id;
+	}
+	
+	public function getProviderPlanId() {
+		return($this->providerPlanId);
+	}
+	
+	public function setPaymentMethodId($id) {
+		$this->paymentMethodId = $id;
+	}
+	
+	public function getPaymentMethodId() {
+		return($this->paymentMethodId);
+	}
+	
+	public function jsonSerialize() {
+		return(BillingPaymentMethodDAO::getBillingPaymentMethodById($this->paymentMethodId));
+	}
+}
+
+class BillingProviderPlanPaymentMethodsDAO {
+	
+	private static $sfields = "_id, provider_plan_id, payment_method_id";
+	
+	private static function getBillingProviderPlanPaymentMethodFromRow($row) {
+		$out = new BillingProviderPlanPaymentMethod();
+		$out->setId($row["_id"]);
+		$out->setProviderPlanId($row["provider_plan_id"]);
+		$out->setPaymentMethodId($row["payment_method_id"]);
+		return($out);
+	}
+	
+	public static function getBillingProviderPlanPaymentMethodsByProviderPlanId($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_provider_plans_payment_methods WHERE provider_plan_id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			array_push($out, self::getBillingProviderPlanPaymentMethodFromRow($row));
+		}
+		// free result
+		pg_free_result($result);
+		
 		return($out);
 	}
 	

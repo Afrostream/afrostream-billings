@@ -330,4 +330,39 @@ function doSortSubscriptions(&$subscriptions) {
 		);
 }
 
+//passage par référence !!!
+function doSortPaymentMethods(&$paymentMethodsArray, $allPaymentMethods) {
+	//
+	$allPaymentMethodsByPaymentMethodType = array();
+	foreach ($allPaymentMethods as $providerName => $paymentMethod) {
+		$allPaymentMethodsByPaymentMethodType[$paymentMethod->getPaymentMethodType()] = $paymentMethod; 
+	}
+	//
+	uasort($paymentMethodsArray,
+			function($A, $B) use ($allPaymentMethodsByPaymentMethodType) {
+				$idxA = NULL; $idxB = NULL;
+				$resetA = reset($A);
+				$resetB = reset($B);
+				if(array_key_exists($resetA->getPaymentMethodType(), $allPaymentMethodsByPaymentMethodType)) {
+					$idxA = $allPaymentMethodsByPaymentMethodType[$resetA->getPaymentMethodType()]->getIndex();
+				}
+				if(array_key_exists($resetB->getPaymentMethodType(), $allPaymentMethodsByPaymentMethodType)) {
+					$idxB = $allPaymentMethodsByPaymentMethodType[$resetB->getPaymentMethodType()]->getIndex();;
+				}
+				if(isset($idxA) && isset($idxB)) {
+					return($idxA - $idxB);
+				} else if(isset($idxA)) {
+					//idxB is NULL
+					return(-1);
+				} else if(isset($idxB)) {
+					//idxA is NULL
+					return(1);
+				} else {
+					//idxA AND idxB are NULL
+					return(0);
+				}
+			}
+		);
+}
+
 ?>
