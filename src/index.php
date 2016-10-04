@@ -568,24 +568,30 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/updateinternalp
 					}
 				},
 				"providerPaymentMethodsByType": {
-          			"card": {
-            			"recurly": {
-              				"paymentMethodType": "card",
-              				"index": "1"
+          			"card": [
+          				{
+            				"recurly": {
+              					"paymentMethodType": "card",
+              					"index": "1"
+            				}
             			}
-          			},
-          			"sepa": {
-            			"gocardless": {
-              				"paymentMethodType": "sepa",
-              				"index": "2"
-           				}
-          			},
-          			"paypal": {
-            			"recurly": {
-              				"paymentMethodType": "paypal",
-              				"index": "3"
-            			}
-          			}
+            		],
+          			"sepa": [
+          				{
+            				"gocardless": {
+              					"paymentMethodType": "sepa",
+              					"index": "2"
+           					}
+          				}
+          			],
+          			"paypal": [
+          				{
+            				"recurly": {
+              					"paymentMethodType": "paypal",
+              					"index": "3"
+            				}
+          				}
+          			]
         		}
       		}
     	}
