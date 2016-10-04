@@ -297,7 +297,10 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
         		"key1": "value1",
         		"key2": "value2",
         		"key3": "value3"    			
-    		}	
+    		},
+    		"paymentMethod" : {
+    			"paymentMethodType" : "card"
+    		}
     	},
     	"subOpts": {
         	"key1": "value1",
@@ -529,8 +532,62 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/updateinternalp
 				"trialEnabled": true,
 				"trialPeriodUnit": "day",
 				"trialPeriodLength": "7",
-				"isVisible": true
-      		}		
+				"isVisible": true,
+        		"providerPlans": {
+				 	"recurly": {
+				   		"providerPlanUuid": "afrostreammonthly",
+				        "name": "recurly_afrostream_monthly",
+				        "description": null,
+				        "provider": {
+				        	"providerName": "recurly"
+				        },
+				        "paymentMethods": [
+				        	{
+				        		"paymentMethodType": "card",
+				            	"index": "1"
+				        	},
+				        	{
+				        		"paymentMethodType": "paypal",
+				            	"index": "3"
+				        	}
+				        ]
+				    },
+				    "gocardless": {
+				    	"providerPlanUuid": "afrostreammontlhy",
+				        "name": "gocardless_afrostream_monthly",
+				        "description": null,
+				        "provider": {
+				        "providerName": "gocardless"
+				        },
+				        "paymentMethods": [
+				        	{
+				            	"paymentMethodType": "sepa",
+				               	"index": "2"
+				            }
+				   		]
+					}
+				},
+				"providerPaymentMethodsByType": {
+          			"card": {
+            			"recurly": {
+              				"paymentMethodType": "card",
+              				"index": "1"
+            			}
+          			},
+          			"sepa": {
+            			"gocardless": {
+              				"paymentMethodType": "sepa",
+              				"index": "2"
+           				}
+          			},
+          			"paypal": {
+            			"recurly": {
+              				"paymentMethodType": "paypal",
+              				"index": "3"
+            			}
+          			}
+        		}
+      		}
     	}
     }
 	
