@@ -338,16 +338,14 @@ function doSortPaymentMethods(&$paymentMethodsArray, $allPaymentMethods) {
 		$allPaymentMethodsByPaymentMethodType[$paymentMethod->getPaymentMethodType()] = $paymentMethod; 
 	}
 	//
-	uasort($paymentMethodsArray,
+	uksort($paymentMethodsArray,
 			function($A, $B) use ($allPaymentMethodsByPaymentMethodType) {
 				$idxA = NULL; $idxB = NULL;
-				$resetA = reset($A);
-				$resetB = reset($B);
-				if(array_key_exists($resetA->getPaymentMethodType(), $allPaymentMethodsByPaymentMethodType)) {
-					$idxA = $allPaymentMethodsByPaymentMethodType[$resetA->getPaymentMethodType()]->getIndex();
+				if(array_key_exists($A, $allPaymentMethodsByPaymentMethodType)) {
+					$idxA = $allPaymentMethodsByPaymentMethodType[$A]->getIndex();
 				}
-				if(array_key_exists($resetB->getPaymentMethodType(), $allPaymentMethodsByPaymentMethodType)) {
-					$idxB = $allPaymentMethodsByPaymentMethodType[$resetB->getPaymentMethodType()]->getIndex();;
+				if(array_key_exists($B, $allPaymentMethodsByPaymentMethodType)) {
+					$idxB = $allPaymentMethodsByPaymentMethodType[$B]->getIndex();;
 				}
 				if(isset($idxA) && isset($idxB)) {
 					return($idxA - $idxB);

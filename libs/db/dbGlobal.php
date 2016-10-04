@@ -789,14 +789,14 @@ class InternalPlan implements JsonSerializable {
 				$providerPlanPaymentsMethods = BillingProviderPlanPaymentMethodsDAO::getBillingProviderPlanPaymentMethodsByProviderPlanId($providerPlan->getId());
 				foreach ($providerPlanPaymentsMethods as $providerPlanPaymentsMethod) {
 					$paymentMethod = BillingPaymentMethodDAO::getBillingPaymentMethodById($providerPlanPaymentsMethod->getPaymentMethodId());
-					$paymentMethodsArray[$paymentMethod->getPaymentMethodType()][$providerName] = $paymentMethod;
+					$paymentMethodsArray[$paymentMethod->getPaymentMethodType()][][$providerName] = $paymentMethod;
 				}
 			}
 			//sort it
 			$allPaymentMethods = BillingPaymentMethodDAO::getBillingPaymentMethods();
 			doSortPaymentMethods($paymentMethodsArray, $allPaymentMethods);
 			//
-			$return['paymentMethods'] = $paymentMethodsArray;
+			$return['providerPaymentMethodsByType'] = $paymentMethodsArray;
 		}
 		return($return);
 	}
