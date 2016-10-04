@@ -782,21 +782,21 @@ class InternalPlan implements JsonSerializable {
 			$providerPlans = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id));
 			$return['providerPlans'] = $providerPlans;
 			// <-- by paymentMethods -->
-			$paymentMethodsArray = array();
+			$providerPlansByPaymentMethodTypeArray = array();
 			foreach ($providerPlans as $key => $value) {
 				$providerName = $key;
 				$providerPlan = $value;
 				$providerPlanPaymentsMethods = BillingProviderPlanPaymentMethodsDAO::getBillingProviderPlanPaymentMethodsByProviderPlanId($providerPlan->getId());
 				foreach ($providerPlanPaymentsMethods as $providerPlanPaymentsMethod) {
 					$paymentMethod = BillingPaymentMethodDAO::getBillingPaymentMethodById($providerPlanPaymentsMethod->getPaymentMethodId());
-					$paymentMethodsArray[$paymentMethod->getPaymentMethodType()][][$providerName] = $paymentMethod;
+					$providerPlansByPaymentMethodTypeArray[$paymentMethod->getPaymentMethodType()][][$providerName] = $providerPlan;
 				}
 			}
 			//sort it
 			$allPaymentMethods = BillingPaymentMethodDAO::getBillingPaymentMethods();
-			doSortPaymentMethods($paymentMethodsArray, $allPaymentMethods);
+			doSortPaymentMethods($providerPlansByPaymentMethodTypeArray, $allPaymentMethods);
 			//
-			$return['providerPaymentMethodsByType'] = $paymentMethodsArray;
+			$return['providerPlansByPaymentMethodType'] = $providerPlansByPaymentMethodTypeArray;
 		}
 		return($return);
 	}

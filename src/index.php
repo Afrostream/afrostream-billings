@@ -567,29 +567,67 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/updateinternalp
 				   		]
 					}
 				},
-				"providerPaymentMethodsByType": {
+				"providerPlansByPaymentMethodType": {
           			"card": [
           				{
-            				"recurly": {
-              					"paymentMethodType": "card",
-              					"index": "1"
-            				}
+						 	"recurly": {
+						   		"providerPlanUuid": "afrostreammonthly",
+						        "name": "recurly_afrostream_monthly",
+						        "description": null,
+						        "provider": {
+						        	"providerName": "recurly"
+						        },
+						        "paymentMethods": [
+						        	{
+						        		"paymentMethodType": "card",
+						            	"index": "1"
+						        	},
+						        	{
+						        		"paymentMethodType": "paypal",
+						            	"index": "3"
+						        	}
+						        ]
+						    },
             			}
             		],
           			"sepa": [
           				{
-            				"gocardless": {
-              					"paymentMethodType": "sepa",
-              					"index": "2"
-           					}
+						    "gocardless": {
+						    	"providerPlanUuid": "afrostreammontlhy",
+						        "name": "gocardless_afrostream_monthly",
+						        "description": null,
+						        "provider": {
+						        "providerName": "gocardless"
+						        },
+						        "paymentMethods": [
+						        	{
+						            	"paymentMethodType": "sepa",
+						               	"index": "2"
+						            }
+						   		]
+							}
           				}
           			],
           			"paypal": [
           				{
-            				"recurly": {
-              					"paymentMethodType": "paypal",
-              					"index": "3"
-            				}
+						 	"recurly": {
+						   		"providerPlanUuid": "afrostreammonthly",
+						        "name": "recurly_afrostream_monthly",
+						        "description": null,
+						        "provider": {
+						        	"providerName": "recurly"
+						        },
+						        "paymentMethods": [
+						        	{
+						        		"paymentMethodType": "card",
+						            	"index": "1"
+						        	},
+						        	{
+						        		"paymentMethodType": "paypal",
+						            	"index": "3"
+						        	}
+						        ]
+						    },
           				}
           			]
         		}
