@@ -25,7 +25,7 @@ class UserDAO {
 		$out = new User();
 		$out->setId($row["_id"]);
 		$out->setUserBillingUuid($row["user_billing_uuid"]);
-		$out->setCreationDate($row["creation_date"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
 		$out->setProviderId($row["providerid"]);
 		$out->setUserReferenceUuid($row["user_reference_uuid"]);
 		$out->setUserProviderUuid($row["user_provider_uuid"]);
@@ -2381,7 +2381,7 @@ class BillingsWebHookDAO {
 		$out->setProviderId($row["providerid"]);
 		$out->setPostData($row["post_data"]);
 		$out->setProcessingStatus($row["processing_status"]);
-		$out->setCreationDate($row["creation_date"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
 		return($out);
 	}
 	
@@ -3039,7 +3039,7 @@ class CouponsCampaign implements JsonSerializable {
 		$return = [
 			'couponsCampaignBillingUuid' => $this->uuid,
 			'couponsCampaignType' => $this->coupon_type,
-			'creationDate' => $this->creation_date,
+			'creationDate' => dbGlobal::toISODate($this->creation_date),
 			'name' => $this->name,
 			'description' => $this->description,
 			'emailsEnabled' => $this->emails_enabled,
@@ -3062,7 +3062,7 @@ class CouponsCampaignDAO {
 		$out = new CouponsCampaign();
 		$out->setId($row["_id"]);
 		$out->setUuid($row["coupons_campaigns_uuid"]);
-		$out->setCreationDate($row["creation_date"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
 		$out->setName($row["name"]);
 		$out->setDescription($row["description"]);
 		$out->setProviderId($row["providerid"]);
@@ -3301,10 +3301,10 @@ class CouponDAO {
 		$out->setProviderPlanId($row["providerplanid"]);
 		$out->setCode($row["code"]);
 		$out->setStatus($row["coupon_status"]);
-		$out->setCreationDate($row["creation_date"]);
-		$out->setUpdatedDate($row["updated_date"]);
-		$out->setRedeemedDate($row["redeemed_date"]);
-		$out->setExpiresDate($row["expires_date"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		$out->setUpdatedDate($row["updated_date"] == NULL ? NULL : new DateTime($row["updated_date"]));
+		$out->setRedeemedDate($row["redeemed_date"] == NULL ? NULL : new DateTime($row["redeemed_date"]));
+		$out->setExpiresDate($row["expires_date"] == NULL ? NULL : new DateTime($row["expires_date"]));
 		$out->setUserId($row["userid"]);
 		$out->setSubId($row["subid"]);
 		return($out);
@@ -4900,4 +4900,568 @@ class BillingProviderPlanPaymentMethodsDAO {
 		return($out);
 	}
 	
+}
+
+class BillingInternalCouponsCampaign implements JsonSerializable {
+
+	private $_id;
+	private $uuid;
+	private $creation_date;
+	private $name;
+	private $description;
+	private $prefix;
+	private $discount_type;
+	private $amount_in_cents;
+	private $currency;
+	private $percent;
+	private $discount_duration;
+	private $discount_duration_unit;
+	private $discount_duration_length;
+	private $generated_code_length;
+	private	$total_number;
+	private $coupon_type;
+	private $emails_enabled = false;
+	private $expires_date;
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setUuid($uuid) {
+		$this->uuid = $uuid;
+	}
+	
+	public function getUuid() {
+		return($this->uuid);
+	}
+	
+	public function setCreationDate($date) {
+		$this->creation_date = $date;
+	}
+	
+	public function getCreationDate() {
+		return($this->creation_date);
+	}
+	
+	public function setName($str) {
+		$this->name = $str;
+	}
+	
+	public function getName() {
+		return($this->name);
+	}
+	
+	public function setDescription($str) {
+		$this->description = $str;
+	}
+	public function getDescription() {
+		return($this->description);
+	}
+	
+	public function setPrefix($str) {
+		$this->prefix = $str;
+	}
+	
+	public function getPrefix() {
+		return($this->prefix);
+	}
+	
+	public function setDiscountType($str) {
+		$this->discount_type = $str;
+	}
+	public function getDiscountType() {
+		return($this->discount_type);
+	}
+	
+	public function setAmountInCents($nb) {
+		$this->amount_in_cents = $nb;
+	}
+	
+	public function getAmountInCents() {
+		return($this->amount_in_cents);
+	}
+		
+	public function setCurrency($str) {
+		$this->currency = $str;
+	}
+	
+	public function getCurrency() {
+		return($this->currency);
+	}
+	
+	public function setPercent($nb) {
+		$this->percent = $nb;
+	}
+	
+	public function getPercent() {
+		return($this->percent);
+	}
+	
+	public function setDiscountDuration($str) {
+		$this->discount_duration = $str;
+	}
+	
+	public function getDiscountDuration() {
+		return($this->discount_duration);
+	}
+	
+	public function setDiscountDurationUnit($str) {
+		$this->discount_duration_unit = $str;
+	}
+	
+	public function getDiscountDurationUnit() {
+		return($this->discount_duration_unit);
+	}
+
+	public function setDiscountDurationLength($nb) {
+		$this->discount_duration_length = $nb;
+	}
+	
+	public function getDiscountDurationLength() {
+		return($this->discount_duration_length);
+	}
+	
+	public function setGeneratedCodeLength($length) {
+		$this->generated_code_length = $length;
+	}
+	
+	public function getGeneratedCodeLength() {
+		return($this->generated_code_length);
+	}
+	
+	public function setTotalNumber($nb) {
+		$this->total_number = $nb;
+	}
+	
+	public function getTotalNumber() {
+		return($this->total_number);
+	}
+	
+	public function setCouponType(CouponCampaignType $type) {
+		$this->coupon_type = $type;
+	}
+	
+	public function getCouponType() {
+		return($this->coupon_type);
+	}
+	
+	public function setEmailsEnabled($bool) {
+		$this->emails_enabled = $bool;
+	}
+	
+	public function getEmailsEnabled() {
+		return($this->emails_enabled);
+	}
+	
+	public function setExpiresDate($date) {
+		$this->expires_date = $date;
+	}
+	
+	public function getExpiresDate() {
+		return($this->expires_date);
+	}
+	
+	public function jsonSerialize() {
+		$return = [
+				'couponsCampaignBillingUuid' => $this->uuid,
+				'creationDate' => dbGlobal::toISODate($this->creation_date),
+				'name' => $this->name,
+				'description' => $this->description,
+				'prefix' => $this->prefix,
+				'discountType' => $this->discount_type,
+				'amountInCents' => $this->amount_in_cents,
+				'currency' => $this->currency,
+				'percent' => $this->percent,
+				'discountDuration' => $this->discount_duration,
+				'discountDurationUnit' => $this->discount_duration_unit,
+				'discountDurationLength' => $this->discount_duration_length,
+				'generatedCodeLength' => $this->generated_code_length,
+				'totalNumber' => $this->total_number,
+				'couponsCampaignType' => $this->coupon_type,
+				'emailsEnabled' => $this->emails_enabled,
+				'expiresDate' => dbGlobal::toISODate($this->expires_date),
+				'internalPlans' => BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlanByInternalCouponsCampaignsId($this->_id)
+		];
+		return($return);
+	}
+	
+}
+
+class BillingInternalCouponsCampaignDAO {
+	
+	private static $sfields =<<<EOL
+		_id, internal_coupons_campaigns_uuid, creation_date, name, description, prefix,
+		discount_type, amount_in_cents, currency, percent, discount_duration,
+		discount_duration_unit, discount_duration_length, generated_code_length,
+ 		total_number, coupon_type, emails_enabled, expires_date
+EOL;
+	
+	private static function getBillingInternalCouponsCampaignFromRow($row) {
+		$out = new BillingInternalCouponsCampaign();
+		$out->setId($row["_id"]);
+		$out->setUuid($row["internal_coupons_campaigns_uuid"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		$out->setName($row["name"]);
+		$out->setDescription($row["description"]);
+		$out->setPrefix($row["prefix"]);
+		$out->setDiscountType($row["discount_type"]);
+		$out->setAmountInCents($row["amount_in_cents"]);
+		$out->setCurrency($row["currency"]);
+		$out->setPercent($row["percent"]);
+		$out->setDiscountDuration($row["discount_duration"]);
+		$out->setDiscountDurationUnit($row["discount_duration_unit"]);
+		$out->setDiscountDurationLength($row["discount_duration_length"]);
+		$out->setGeneratedCodeLength($row["generated_code_length"]);
+		$out->setTotalNumber($row["total_number"]);
+		$out->setCouponType(new CouponCampaignType($row['coupon_type']));
+		$out->setEmailsEnabled($row["emails_enabled"] == 't' ? true : false);
+		$out->setExpiresDate($row["expires_date"] == NULL ? NULL : new DateTime($row["expires_date"]));
+		return($out);
+	}
+	
+	public static function getBillingInternalCouponsCampaignById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingInternalCouponsCampaignFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function getBillingInternalCouponsCampaignByUuid($uuid) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns WHERE internal_coupons_campaigns_uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($uuid));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingInternalCouponsCampaignFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function getBillingInternalCouponsCampaigns($couponsCampaignType = NULL) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns";
+		$params = array();
+		
+		$out = array();
+		
+		$where = "";
+		
+		if(isset($couponsCampaignType)) {
+			$params[] = $couponsCampaignType;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "coupon_type = $".(count($params));
+		}
+		
+		$query.= $where;
+		
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getBillingInternalCouponsCampaignFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+}
+
+class BillingInternalCouponsCampaignInternalPlan implements JsonSerializable {
+
+	private $_id;
+	private $internalCouponsCampaignsId;
+	private $internalPlanId;
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setInternalCouponsCampaignsId($id) {
+		$this->internalCouponsCampaignsId = $id;
+	}
+	
+	public function getInternalCouponsCampaignsId() {
+		return($this->internalCouponsCampaignsId);
+	}
+	
+	public function setInternalPlanId($id) {
+		$this->internalPlanId = $id;
+	}
+	
+	public function getInternalPlanId() {
+		return($this->internalPlanId);
+	}
+	
+	public function jsonSerialize() {
+		return(InternalPlanDAO::getInternalPlanById($this->internalPlanId));
+	}
+}
+
+class BillingInternalCouponsCampaignInternalPlansDAO {
+
+	private static $sfields = "_id, internalcouponscampaignsid, internalplanid";
+
+	private static function getBillingInternalCouponsCampaignInternalPlanFromRow($row) {
+		$out = new BillingInternalCouponsCampaignInternalPlan();
+		$out->setId($row["_id"]);
+		$out->setInternalCouponsCampaignsId($row["internalcouponscampaignsid"]);
+		$out->setInternalPlanId($row["internalplanid"]);
+		return($out);
+	}
+
+	public static function getBillingInternalCouponsCampaignInternalPlanByInternalCouponsCampaignsId($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns_internal_plans WHERE internalcouponscampaignsid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+
+		$out = array();
+
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getBillingInternalCouponsCampaignInternalPlanFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+
+}
+
+class BillingInternalCoupon implements JsonSerializable {
+	
+	private $_id;
+	private $uuid;
+	private $internalCouponsCampaignsId;
+	private $code;
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setUuid($uuid) {
+		$this->uuid = $uuid;
+	}
+	
+	public function getUuid() {
+		return($this->uuid);
+	}
+	
+	public function setInternalCouponsCampaignsId($id) {
+		$this->internalCouponsCampaignsId = $id;
+	}
+	
+	public function getInternalCouponsCampaignsId() {
+		return($this->internalCouponsCampaignsId);
+	}
+	
+	public function setCode($str) {
+		$this->code = $str;
+	}
+	
+	public function getCode() {
+		return($this->code);
+	}
+	
+	public function jsonSerialize() {
+		$return = [
+			'couponBillingUuid' => $this->uuid,
+			'code' => $this->code,
+			'campaign' => BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($this->internalCouponsCampaignsId)->jsonSerialize(),
+			'couponOpts' => BillingsCouponsOptsDAO::getBillingsCouponsOptsByCouponId($this->_id)->jsonSerialize()
+		];
+		return($return);
+		
+	}
+	
+}
+
+class BillingInternalCouponDAO {
+	
+	private static $sfields = "_id, coupon_billing_uuid, internalcouponscampaignsid, code";
+
+	private static function getBillingInternalCouponFromRow($row) {
+		$out = new BillingInternalCoupon();
+		$out->setId($row["_id"]);
+		$out->setUuid($row["coupon_billing_uuid"]);
+		$out->setInternalCouponsCampaignsId($row["internalcouponscampaignsid"]);
+		$out->setCode($row["code"]);
+		return($out);
+	}
+	
+	public static function getBillingInternalCouponById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingInternalCouponFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+		
+	}
+	
+	public static function getBillingInternalCouponByCode($code) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons WHERE code = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($code));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingInternalCouponFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+}
+
+class BillingInternalCouponOpts implements JsonSerializable {
+	
+	private $internalcouponid;
+	private $opts = array();
+	
+	public function __construct(array $opts = null)
+	{
+		if(!empty($opts)) {
+			$this->setOpts($opts);
+		}
+	}
+	
+	public function setInternalCouponId($id) {
+		$this->internalcouponid = $id;
+	}
+	
+	public function getInternalCouponId() {
+		return($this->internalcouponid);
+	}
+	
+	public function setOpt($key, $value) {
+		$this->opts[$key] = $value;
+	}
+	
+	public function setOpts($opts) {
+		$this->opts = $opts;
+	}
+	
+	public function getOpts() {
+		return($this->opts);
+	}
+	
+	public function getOpt($key)
+	{
+		if (array_key_exists($key, $this->opts)) {
+			return $this->opts[$key];
+		}
+
+		return null;
+	}
+	
+	public function jsonSerialize() {
+		return($this->opts);
+	}
+	
+}
+
+class BillingInternalCouponOptsDAO {
+	
+	public static function getBillingInternalCouponOptsByInternalCouponId($internalcouponid) {
+		$query = "SELECT _id, internalcouponid, key, value FROM billing_coupons_opts WHERE deleted = false AND internalcouponid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalcouponid));
+
+		$out = new BillingInternalCouponOpts();
+		$out->setInternalCouponId($id);
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out->setOpt($row["key"], $row["value"]);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+	
+	public static function addBillingInternalCouponOpts(BillingInternalCouponOpts $billingInternalCouponOpts) {
+		foreach ($billingInternalCouponOpts->getOpts() as $k => $v) {
+			if(isset($v) && is_scalar($v)) {
+				$query = "INSERT INTO billing_internal_coupons_opts (internalcouponid, key, value)";
+				$query.= " VALUES ($1, $2, $3) RETURNING _id";
+				$result = pg_query_params(config::getDbConn(), $query,
+						array($billingInternalCouponOpts->getInternalCouponId(),
+								trim($k),
+								trim($v)));
+				// free result
+				pg_free_result($result);
+			}
+		}
+		return(self::getBillingInternalCouponOptsByInternalCouponId($billingInternalCouponOpts->getInternalCouponId()));
+	}
+
+	public static function updateBillingInternalCouponOptsKey($internalcouponid, $key, $value) {
+		if(is_scalar($value)) {
+			$query = "UPDATE billing_internal_coupons_opts SET value = $3 WHERE internalcouponid = $1 AND key = $2 AND deleted = false";
+			$result = pg_query_params(config::getDbConn(), $query, array($internalcouponid, $key, trim($value)));
+			// free result
+			pg_free_result($result);
+		}
+	}
+
+	public static function deleteBillingInternalCouponOptsKey($internalcouponid, $key) {
+		$query = "UPDATE billing_internal_coupons_opts SET deleted = true WHERE internalcouponid = $1 AND key = $2 AND deleted = false";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalcouponid, $key));
+		// free result
+		pg_free_result($result);
+	}
+
+	public static function addBillingsCouponsOptsKey($internalcouponid, $key, $value) {
+		if(is_scalar($value)) {
+			$query = "INSERT INTO billing_internal_coupons_opts (internalcouponid, key, value)";
+			$query.= " VALUES ($1, $2, $3) RETURNING _id";
+			$result = pg_query_params(config::getDbConn(), $query,
+					array(billing_internal_coupons_opts,
+							trim($key),
+							trim($value)));
+			// free result
+			pg_free_result($result);
+		}
+	}
+
+	public static function deleteBillingInternalCouponOptsByInternalCouponId($internalcouponid) {
+		$query = "UPDATE billing_internal_coupons_opts SET deleted = true WHERE internalcouponid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalcouponid));
+		// free result
+		pg_free_result($result);
+	}
+
 }

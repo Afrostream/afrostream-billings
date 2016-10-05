@@ -125,7 +125,7 @@ class CashwayCouponsHandler {
 		return(CouponDAO::getCouponByCouponBillingUuid($coupon_billing_uuid));
 	}
 	
-	public function doGetCoupon(User $user = NULL, UserOpts $userOpts = NULL, $couponCode) {
+	/*public function doGetCoupon(User $user = NULL, UserOpts $userOpts = NULL, $couponCode) {
 		$db_coupon = NULL;
 		try {
 			if($user == NULL) {
@@ -151,7 +151,7 @@ class CashwayCouponsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
 		return($db_coupon);
-	}	
+	}*/
 	
 }
 

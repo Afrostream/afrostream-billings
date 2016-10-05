@@ -8,21 +8,11 @@ class CouponsCampaignsHandler {
 	public function __construct() {
 	}
 	
-	public function doGetCouponsCampaigns($provider_name = NULL, $couponsCampaignType = NULL) {
+	public function doGetCouponsCampaigns($couponsCampaignType = NULL) {
 		$db_coupons_campaigns = NULL;
 		try {
 			config::getLogger()->addInfo("CouponsCampaigns getting...");
-			$provider_id = NULL;
-			if(isset($provider_name)) {
-				$provider = ProviderDAO::getProviderByName($provider_name);
-				if($provider == NULL) {
-					$msg = "unknown provider named : ".$provider_name;
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				$provider_id = $provider->getId();
-			}
-			$db_coupons_campaigns =  CouponsCampaignDAO::getCouponsCampaigns($provider_id, $couponsCampaignType);
+			$db_coupons_campaigns = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaigns($couponsCampaignType);
 			config::getLogger()->addInfo("CouponsCampaigns getting done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting CouponsCampaigns, error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -41,7 +31,7 @@ class CouponsCampaignsHandler {
 		try {
 			config::getLogger()->addInfo("CouponsCampaign getting, couponsCampaignBillingUuid=".$couponsCampaignBillingUuid."....");
 			//
-			$db_coupons_campaign = CouponsCampaignDAO::getCouponsCampaignByUuid($couponsCampaignBillingUuid);
+			$db_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignBillingUuid);
 			//
 			config::getLogger()->addInfo("CouponsCampaign getting, couponsCampaignBillingUuid=".$couponsCampaignBillingUuid." done successfully");
 		} catch(BillingsException $e) {

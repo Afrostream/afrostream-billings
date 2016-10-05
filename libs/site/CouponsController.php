@@ -12,29 +12,17 @@ class CouponsController extends BillingsController {
 	public function get(Request $request, Response $response, array $args) {
 		try {
 			$data = $request->getQueryParams();
-			$userBillingUuid = NULL;
-			$providerName = NULL;
 			$couponCode = NULL;
-			if(!isset($data['providerName'])) {
-				//exception
-				$msg = "field 'providerName' is missing";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
 			if(!isset($data['couponCode'])) {
 				//exception
 				$msg = "field 'couponCode' is missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(isset($data['userBillingUuid'])) {
-				$userBillingUuid = $data['userBillingUuid'];
-			}
-			$providerName = $data['providerName'];
 			$couponCode = $data['couponCode'];
 			//
 			$couponsHandler = new CouponsHandler();
-			$coupon = $couponsHandler->doGetCoupon($providerName, $couponCode, $userBillingUuid);
+			$coupon = $couponsHandler->doGetCoupon($couponCode);
 			if($coupon == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {

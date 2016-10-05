@@ -10,50 +10,14 @@ class CouponsHandler {
 	public function __construct() {
 	}
 	
-	public function doGetCoupon($providerName, $couponCode, $userBillingUuid = NULL) {
+	public function doGetCoupon($couponCode) {
 		$db_coupon = NULL;
 		try {
 			config::getLogger()->addInfo("coupon getting, couponCode=".$couponCode."....");
 			//
-			$provider = ProviderDAO::getProviderByName($providerName);
-				
-			if($provider == NULL) {
-				$msg = "unknown provider named : ".$providerName;
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			$user = NULL;
-			$userOpts = NULL;
-			if(isset($userBillingUuid)) {
-				$user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
-				if($user == NULL) {
-					$msg = "unknown user_billing_uuid : ".$userBillingUuid;
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				if($user->getProviderId() != $provider->getId()) {
-					$msg = "providers do not match beetween the user with user_billing_uuid=".$userBillingUuid." and the providerName=".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);					
-				}
-				$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-			}
-			switch($provider->getName()) {
-				case 'afr' :
-					$afrCouponsHandler = new AfrCouponsHandler();
-					$db_coupon = $afrCouponsHandler->doGetCoupon($user, $userOpts, $couponCode);
-					break;
-				case 'cashway' :
-					$cashwayCouponsHandler = new CashwayCouponsHandler();
-					$db_coupon = $cashwayCouponsHandler->doGetCoupon($user, $userOpts, $couponCode);
-					break;
-				default :
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-			}
-			config::getLogger()->addInfo("coupon getting, providerName=".$providerName.", couponCode=".$couponCode." done successfully");
+			$db_coupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+			//
+			config::getLogger()->addInfo("coupon getting couponCode=".$couponCode." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting a coupon for couponCode=".$couponCode.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("coupon getting failed : ".$msg);

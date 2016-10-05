@@ -15,7 +15,7 @@ class AfrCouponsHandler {
 		\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
 	}
 		
-	public function doGetCoupon(User $user = NULL, UserOpts $userOpts = NULL, $couponCode) {
+	/*public function doGetCoupon(User $user = NULL, UserOpts $userOpts = NULL, $couponCode) {
 		$db_coupon = NULL;
 		try {
 			if(isset($user)) {
@@ -41,7 +41,7 @@ class AfrCouponsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
 		return($db_coupon);
-	}
+	}*/
 
 	public function doCreateCoupon(User $user, UserOpts $userOpts, CouponsCampaign $couponsCampaign, $couponBillingUuid, BillingsCouponsOpts $billingCouponsOpts)
 	{
