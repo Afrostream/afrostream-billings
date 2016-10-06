@@ -67,14 +67,17 @@ class CouponsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-	
+			
 			$userBillingUuid = $data['userBillingUuid'];
+			
 			$couponsCampaignBillingUuid = empty($data['couponsCampaignBillingUuid']) ? null : $data['couponsCampaignBillingUuid'];
 	
 			$couponsCampaignType = empty($data['couponsCampaignType']) ? null : $data['couponsCampaignType'];
 			
+			$recipientIsFilled = empty($data['recipientIsFilled']) ? true : ($data['recipientIsFilled'] == 'true' ? true : false);
+			
 			$couponsHandler = new CouponsHandler();
-			$listCoupons = $couponsHandler->doGetList($userBillingUuid, $couponsCampaignType, $couponsCampaignBillingUuid);
+			$listCoupons = $couponsHandler->doGetList($userBillingUuid, $couponsCampaignType, $couponsCampaignBillingUuid, $recipientIsFilled);
 	
 			return $this->returnObjectAsJson($response, 'coupons', $listCoupons);
 		} catch(Exception $e) {
