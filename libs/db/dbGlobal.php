@@ -3462,8 +3462,9 @@ class CouponDAO {
 		return(self::getCouponById($coupon->getId()));		
 	}
 
-	public static function getCouponsByUserId($userid, $couponsCampaignType = NULL, $couponscampaignsid = NULL) {
+	public static function getCouponsByUserId($userid, $couponsCampaignType = NULL, $couponscampaignsid = NULL, $recipientIsFilled = NULL) {
 		$query = "SELECT ".self::$sfields." FROM billing_coupons BC";
+		$query.= " LEFT JOIN billing_coupons_opts BCO ON (BCO.couponid = BC._id AND BCO.key = 'recipientEmail' AND BCO.deleted = false)";
 		$query.= " INNER JOIN billing_coupons_campaigns BCC ON (BCC._id = BC.couponscampaignsid)";
 		$query.= " WHERE BC.userid = $1";
 		$params = array();
@@ -3475,6 +3476,9 @@ class CouponDAO {
 		if(isset($couponscampaignsid)) {
 			$params[] = $couponscampaignsid;
 			$query.= " AND BC.couponscampaignsid= $".(count($params));
+		}
+		if(isset($recipientIsFilled) && $recipientIsFilled == true) {
+			$query.= " AND length(BCO.value) > 0";
 		}
 		$query.= " ORDER BY BC._id DESC";
 		$result = pg_query_params(config::getDbConn(), $query, $params);
