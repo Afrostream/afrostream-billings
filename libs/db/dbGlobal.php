@@ -4917,6 +4917,7 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 	private $discount_duration;
 	private $discount_duration_unit;
 	private $discount_duration_length;
+	private $generated_mode;
 	private $generated_code_length;
 	private	$total_number;
 	private $coupon_type;
@@ -5025,6 +5026,14 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 		return($this->discount_duration_length);
 	}
 	
+	public function setGeneratedMode($str) {
+		$this->generated_mode = $str;
+	}
+	
+	public function getGeneratedMode() {
+		return($this->generated_mode);
+	}
+	
 	public function setGeneratedCodeLength($length) {
 		$this->generated_code_length = $length;
 	}
@@ -5079,13 +5088,27 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 				'discountDuration' => $this->discount_duration,
 				'discountDurationUnit' => $this->discount_duration_unit,
 				'discountDurationLength' => $this->discount_duration_length,
+				'generatedMode' => $this->generated_mode,
 				'generatedCodeLength' => $this->generated_code_length,
 				'totalNumber' => $this->total_number,
 				'couponsCampaignType' => $this->coupon_type,
 				'emailsEnabled' => $this->emails_enabled,
-				'expiresDate' => dbGlobal::toISODate($this->expires_date),
-				'internalPlans' => BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlanByInternalCouponsCampaignsId($this->_id)
+				'expiresDate' => dbGlobal::toISODate($this->expires_date)
 		];
+		//internalPlan / internalPlans
+		$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($this->_id);
+		$internalPlans = array();
+		foreach ($billingInternalCouponsCampaignInternalPlans as $billingInternalCouponsCampaignInternalPlan) {
+			$internalPlan = InternalPlanDAO::getInternalPlanById($billingInternalCouponsCampaignInternalPlan->getInternalPlanId());
+			$internalPlan->setShowProviderPlans(false);
+			$internalPlans[] = $internalPlan;
+		}
+		if(count($internalPlans) == 1) {
+			//for retrocompatibility, to be removed in 'future'
+			$return['internalPlan'] = $internalPlans[0]->jsonSerialize();
+		}
+		//anyway (preparing 'future')
+		$return['internalPlans'] = $internalPlans;
 		return($return);
 	}
 	
@@ -5096,7 +5119,7 @@ class BillingInternalCouponsCampaignDAO {
 	private static $sfields =<<<EOL
 		_id, internal_coupons_campaigns_uuid, creation_date, name, description, prefix,
 		discount_type, amount_in_cents, currency, percent, discount_duration,
-		discount_duration_unit, discount_duration_length, generated_code_length,
+		discount_duration_unit, discount_duration_length, generated_mode, generated_code_length,
  		total_number, coupon_type, emails_enabled, expires_date
 EOL;
 	
@@ -5115,6 +5138,7 @@ EOL;
 		$out->setDiscountDuration($row["discount_duration"]);
 		$out->setDiscountDurationUnit($row["discount_duration_unit"]);
 		$out->setDiscountDurationLength($row["discount_duration_length"]);
+		$out->setGeneratedMode($row["generated_mode"]);
 		$out->setGeneratedCodeLength($row["generated_code_length"]);
 		$out->setTotalNumber($row["total_number"]);
 		$out->setCouponType(new CouponCampaignType($row['coupon_type']));
@@ -5233,7 +5257,7 @@ class BillingInternalCouponsCampaignInternalPlansDAO {
 		return($out);
 	}
 
-	public static function getBillingInternalCouponsCampaignInternalPlanByInternalCouponsCampaignsId($id) {
+	public static function getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($id) {
 		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns_internal_plans WHERE internalcouponscampaignsid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
 
@@ -5256,6 +5280,10 @@ class BillingInternalCoupon implements JsonSerializable {
 	private $uuid;
 	private $internalCouponsCampaignsId;
 	private $code;
+	private $status;
+	private $creationDate;
+	private $updatedDate;
+	private $redeemedDate;
 	
 	public function setId($id) {
 		$this->_id = $id;
@@ -5289,29 +5317,84 @@ class BillingInternalCoupon implements JsonSerializable {
 		return($this->code);
 	}
 	
+	public function setStatus($str) {
+		$this->status = $str;
+	}
+	
+	public function getStatus() {
+		return($this->status);
+	}
+	
+	public function setCreationDate($date) {
+		$this->creationDate = $date;
+	}
+	
+	public function getCreationDate() {
+		return($this->creationDate);
+	}
+	
+	public function setUpdatedDate($date) {
+		$this->updatedDate = $date;
+	}
+	
+	public function getUpdatedDate() {
+		return($this->updatedDate);
+	}
+	
+	public function setRedeemedDate($date) {
+		$this->redeemedDate = $date;
+	}
+	
+	public function getRedeemedDate() {
+		return($this->redeemedDate);
+	}
+	
 	public function jsonSerialize() {
+		$campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($this->internalCouponsCampaignsId);
 		$return = [
 			'couponBillingUuid' => $this->uuid,
 			'code' => $this->code,
-			'campaign' => BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($this->internalCouponsCampaignsId)->jsonSerialize(),
+			'status' => $this->status,
+			'creationDate' => dbGlobal::toISODate($this->creationDate),
+			'updatedDate' => dbGlobal::toISODate($this->updatedDate),
+			'redeemedDate' => dbGlobal::toISODate($this->redeemedDate),
+			'expiresDate' => dbGlobal::toISODate($campaign->getExpiresDate()),
+			'campaign' => $campaign->jsonSerialize(),
 			'couponOpts' => BillingsCouponsOptsDAO::getBillingsCouponsOptsByCouponId($this->_id)->jsonSerialize()
 		];
+		//internalPlan / internalPlans
+		$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($this->internalCouponsCampaignsId);
+		$internalPlans = array();
+		foreach ($billingInternalCouponsCampaignInternalPlans as $billingInternalCouponsCampaignInternalPlan) {
+			$internalPlan = InternalPlanDAO::getInternalPlanById($billingInternalCouponsCampaignInternalPlan->getInternalPlanId());
+			$internalPlan->setShowProviderPlans(false);
+			$internalPlans[] = $internalPlan;
+		}
+		if(count($internalPlans) == 1) {
+			//for retrocompatibility
+			$return['internalPlan'] = $internalPlans[0]->jsonSerialize();
+		}
+		//anyway (preparing 'future')
+		$return['internalPlans'] = $internalPlans;
 		return($return);
-		
 	}
 	
 }
 
 class BillingInternalCouponDAO {
 	
-	private static $sfields = "_id, coupon_billing_uuid, internalcouponscampaignsid, code";
+	private static $sfields = "_id, internalcouponscampaignsid, coupon_billing_uuid, code, coupon_status, creation_date, updated_date, redeemed_date";
 
 	private static function getBillingInternalCouponFromRow($row) {
 		$out = new BillingInternalCoupon();
 		$out->setId($row["_id"]);
-		$out->setUuid($row["coupon_billing_uuid"]);
 		$out->setInternalCouponsCampaignsId($row["internalcouponscampaignsid"]);
+		$out->setUuid($row["coupon_billing_uuid"]);
 		$out->setCode($row["code"]);
+		$out->setStatus($row["coupon_status"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		$out->setUpdatedDate($row["updated_date"] == NULL ? NULL : new DateTime($row["updated_date"]));
+		$out->setRedeemedDate($row["redeemed_date"] == NULL ? NULL : new DateTime($row["redeemed_date"]));
 		return($out);
 	}
 	
@@ -5464,4 +5547,107 @@ class BillingInternalCouponOptsDAO {
 		pg_free_result($result);
 	}
 
+}
+
+class BillingUserInternalCoupon {
+	
+	private $_id;
+	private $uuid;
+	private $internalcouponsid;
+	private $status;
+	private $creationDate;
+	private $updatedDate;
+	private $redeemedDate;
+	
+	public function setId($id) {
+		$this->id = $id;
+	}
+	
+	public function getId() {
+		return($this->id);
+	}
+	
+	public function setUuid($uuid) {
+		$this->uuid = $uuid;
+	}
+	
+	public function getUuid() {
+		return($this->uuid);
+	}
+	
+	public function setInternalCouponsId($id) {
+		$this->internalcouponsid;
+	}
+	
+	public function getInternalCouponsId() {
+		return($this->internalcouponsid);
+	}
+	
+	public function setStatus($str) {
+		$this->status = $str;
+	}
+	
+	public function getStatus() {
+		return($this->status);
+	}
+	
+	public function setCreationDate($date) {
+		$this->creationDate = $date;
+	}
+	
+	public function getCreationDate() {
+		return($this->creationDate);
+	}
+	
+	public function setUpdatedDate($date) {
+		$this->updatedDate = $date;
+	}
+	
+	public function getUpdatedDate() {
+		return($this->updatedDate);
+	}
+	
+	public function setRedeemedDate($date) {
+		$this->redeemedDate = $date;
+	}
+	
+	public function getRedeemedDate() {
+		return($this->redeemedDate);
+	}
+	//TODO
+	/*public function jsonSerialize() {
+		$campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($this->internalCouponsCampaignsId);
+		$return = [
+				'couponBillingUuid' => $this->uuid,
+				'code' => $this->code,
+				'status' => $this->status,
+				'creationDate' => dbGlobal::toISODate($this->creationDate),
+				'updatedDate' => dbGlobal::toISODate($this->updatedDate),
+				'redeemedDate' => dbGlobal::toISODate($this->redeemedDate),
+				'expiresDate' => dbGlobal::toISODate($campaign->getExpiresDate()),
+				'campaign' => $campaign->jsonSerialize(),
+				'couponOpts' => BillingsCouponsOptsDAO::getBillingsCouponsOptsByCouponId($this->_id)->jsonSerialize()
+		];
+		//internalPlan / internalPlans
+		$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($this->internalCouponsCampaignsId);
+		$internalPlans = array();
+		foreach ($billingInternalCouponsCampaignInternalPlans as $billingInternalCouponsCampaignInternalPlan) {
+			$internalPlan = InternalPlanDAO::getInternalPlanById($billingInternalCouponsCampaignInternalPlan->getInternalPlanId());
+			$internalPlan->setShowProviderPlans(false);
+			$internalPlans[] = $internalPlan;
+		}
+		if(count($internalPlans) == 1) {
+			//for retrocompatibility
+			$return['internalPlan'] = $internalPlans[0]->jsonSerialize();
+		}
+		//anyway (preparing 'future')
+		$return['internalPlans'] = $internalPlans;
+		return($return);
+	}*/
+	
+}
+
+class BillingUserInternalCouponDAO {
+	
+	
 }
