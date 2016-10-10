@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../libs/site/UsersController.php';
 require_once __DIR__ . '/../libs/site/SubscriptionsController.php';
 require_once __DIR__ . '/../libs/site/InternalPlansFilteredController.php';
-require_once __DIR__ . '/../libs/site/CouponsController.php';
+require_once __DIR__ . '/../libs/site/UsersInternalCouponsController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
 require_once __DIR__ . '/../libs/site/CouponsCampaignsController.php';
 require_once __DIR__ . '/../libs/site/ContextsController.php';
@@ -863,8 +863,8 @@ $app->post("/billings/api/coupons/", function ($request, $response, $args) {
  *  - campaignUuid=111111-1111-1111-11111111
  */
 $app->get("/billings/api/coupons/list/", function ($request, $response, $args) {
-	$couponsController = new CouponsController();
-	return($couponsController->getList($request, $response, $args));
+	$usersInternalCouponsController = new UsersInternalCouponsController();
+	return($usersInternalCouponsController->getList($request, $response, $args));
 });
 
 //get couponscampaigns

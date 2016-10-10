@@ -2,35 +2,13 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
-require_once __DIR__ . '/../providers/afr/coupons/AfrCouponsHandler.php';
-require_once __DIR__ . '/../providers/cashway/coupons/CashwayCouponsHandler.php';
 
-class CouponsHandler {
+class UsersInternalCouponsHandler {
 	
 	public function __construct() {
 	}
 	
-	public function doGetCoupon($couponCode) {
-		$db_coupon = NULL;
-		try {
-			config::getLogger()->addInfo("coupon getting, couponCode=".$couponCode."....");
-			//
-			$db_coupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
-			//
-			config::getLogger()->addInfo("coupon getting couponCode=".$couponCode." done successfully");
-		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while getting a coupon for couponCode=".$couponCode.", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("coupon getting failed : ".$msg);
-			throw $e;
-		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while getting a coupon for couponCode=".$couponCode.", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("coupon getting failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		return($db_coupon);
-	}
-
-	/*public function doGetList($userBillingUuid, $couponsCampaignType = null, $couponsCampaignBillingUuid = null)
+	public function doGetList($userBillingUuid, $internalCouponCampaignType = null, $couponsCampaignInternalBillingUuid = null)
 	{
 		$user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
 		if($user == NULL) {
@@ -38,43 +16,43 @@ class CouponsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-
-		$campaignId = null;
-		if (!is_null($couponsCampaignBillingUuid)) {
-			$campaign = CouponsCampaignDAO::getCouponsCampaignByUuid($couponsCampaignBillingUuid);
-
-			if($campaign == NULL) {
-				$msg = "unknown couponsCampaignBillingUuid : ".$couponsCampaignBillingUuid;
+	
+		$internalCouponsCampaignBillingId = null;
+		if (!is_null($couponsCampaignInternalBillingUuid)) {
+			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid);
+	
+			if($internalCouponsCampaign == NULL) {
+				$msg = "unknown couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-
-			$campaignId = $campaign->getId();
-		}
-
-		$list = CouponDAO::getCouponsByUserId($user->getId(), $couponsCampaignType, $campaignId);
-
-		return $list;
-	}*/
 	
-	/*public function doCreateCoupon($userBillingUuid, $couponsCampaignBillingUuid, array $couponOpts) {
+			$internalCouponsCampaignBillingId = $internalCouponsCampaign->getId();
+		}
+		
+		$list = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCouponCampaignType, $internalCouponsCampaignBillingId);
+	
+		return $list;
+	}
+	
+	public function doCreateCoupon($userBillingUuid, $couponsCampaignBillingUuid, array $couponOpts) {
 		$db_coupon = NULL;
 		try {
-			config::getLogger()->addInfo("coupon creating....");
+			config::getLogger()->addInfo("user coupon creating....");
 			//user
 			$user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
 			if($user == NULL) {
 				$msg = "unknown user_billing_uuid : ".$userBillingUuid;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}	
+			}
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 			//$couponsCampaign
 			$couponsCampaign = CouponsCampaignDAO::getCouponsCampaignByUuid($couponsCampaignBillingUuid);
 			if($couponsCampaign == NULL) {
 				$msg = "unknown couponsCampaignBillingUuid : ".$couponsCampaignBillingUuid;
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//provider_from_user
 			$provider_from_user = ProviderDAO::getProviderById($user->getProviderId());
@@ -93,12 +71,12 @@ class CouponsHandler {
 			if($provider_from_user->getId() != $provider_from_coupons_campaign->getId()) {
 				$msg = "providers do not match beetween the user with user_billing_uuid=".$userBillingUuid." and the coupons_campaign with couponsCampaignBillingUuid=".$couponsCampaignBillingUuid;
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			
+				
 			$billingCouponsOpts = new BillingsCouponsOpts($couponOpts);
-
-			
+	
+				
 			$provider = $provider_from_user;
 			//
 			$coupon_billing_uuid = guid();
@@ -118,7 +96,7 @@ class CouponsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
-
+	
 			switch ($provider->getName()) {
 				case 'cashway' :
 					$cashwayCouponsHandler = new CashwayCouponsHandler();
@@ -134,18 +112,18 @@ class CouponsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
-			config::getLogger()->addInfo("coupon creating done successfully");
+			config::getLogger()->addInfo("user coupon creating done successfully");
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while creating a coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("coupon creating failed : ".$msg);
+			$msg = "a billings exception occurred while creating an user coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("user coupon creating failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while creating a coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("coupon creating failed : ".$msg);
+			$msg = "an unknown exception occurred while creating an user coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("user coupon creating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_coupon);
-	}*/
+	}
 	
 }
 
