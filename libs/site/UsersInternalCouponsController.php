@@ -78,7 +78,7 @@ class UsersInternalCouponsController extends BillingsController {
 			$couponsCampaignBillingUuid = $data['couponsCampaignBillingUuid'];
 			//
 			$usersInternalCouponsHandler = new UsersInternalCouponsHandler();
-			$coupon = $usersInternalCouponsHandler->doCreateCoupon($userBillingUuid, $couponsCampaignBillingUuid, $couponOpts);
+			$coupon = $usersInternalCouponsHandler->doCreateCoupon($userBillingUuid, $couponsCampaignBillingUuid, NULL /* no internalPlanUuid given for the moment */, $couponOpts);
 			return($this->returnObjectAsJson($response, 'coupon', $coupon));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while creating a coupon, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();

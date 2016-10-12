@@ -10,7 +10,7 @@ class CouponsHandler {
 	public function __construct() {
 	}
 	
-	public function doGetCoupon($couponCode) {
+	/*public function doGetCoupon($couponCode) {
 		$db_coupon = NULL;
 		try {
 			config::getLogger()->addInfo("coupon getting, couponCode=".$couponCode."....");
@@ -28,7 +28,7 @@ class CouponsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_coupon);
-	}
+	}*/
 
 	/*public function doGetList($userBillingUuid, $couponsCampaignType = null, $couponsCampaignBillingUuid = null)
 	{

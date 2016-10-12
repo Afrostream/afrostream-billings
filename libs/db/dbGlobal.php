@@ -5095,7 +5095,8 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 				'totalNumber' => $this->total_number,
 				'couponsCampaignType' => $this->coupon_type,
 				'emailsEnabled' => $this->emails_enabled,
-				'expiresDate' => dbGlobal::toISODate($this->expires_date)
+				'expiresDate' => dbGlobal::toISODate($this->expires_date),
+				'providerCouponsCampaigns' => BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($this->_id)
 		];
 		//internalPlan / internalPlans
 		$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($this->_id);
@@ -5286,6 +5287,7 @@ class BillingInternalCoupon implements JsonSerializable {
 	private $creationDate;
 	private $updatedDate;
 	private $redeemedDate;
+	private $expiresDate;
 	
 	public function setId($id) {
 		$this->_id = $id;
@@ -5351,6 +5353,14 @@ class BillingInternalCoupon implements JsonSerializable {
 		return($this->redeemedDate);
 	}
 	
+	public function setExpiresDate($date) {
+		$this->expiresDate = $date;
+	}
+	
+	public function getExpiresDate() {
+		return($this->expiresDate);
+	}
+	
 	public function jsonSerialize() {
 		$campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($this->internalCouponsCampaignsId);
 		$return = [
@@ -5362,7 +5372,7 @@ class BillingInternalCoupon implements JsonSerializable {
 			'creationDate' => dbGlobal::toISODate($this->creationDate),
 			'updatedDate' => dbGlobal::toISODate($this->updatedDate),
 			'redeemedDate' => dbGlobal::toISODate($this->redeemedDate),
-			'expiresDate' => dbGlobal::toISODate($campaign->getExpiresDate()),
+			'expiresDate' => dbGlobal::toISODate($this->expiresDate),
 			'campaign' => $campaign,
 			'couponOpts' => BillingInternalCouponOptsDAO::getBillingInternalCouponOptsByInternalCouponId($this->_id)
 		];
@@ -5387,7 +5397,9 @@ class BillingInternalCoupon implements JsonSerializable {
 
 class BillingInternalCouponDAO {
 	
-	private static $sfields = "_id, internalcouponscampaignsid, coupon_billing_uuid, code, coupon_status, creation_date, updated_date, redeemed_date";
+	private static $sfields =<<<EOL
+	_id, internalcouponscampaignsid, coupon_billing_uuid, code, coupon_status, creation_date, updated_date, redeemed_date, expires_date
+EOL;
 
 	private static function getBillingInternalCouponFromRow($row) {
 		$out = new BillingInternalCoupon();
@@ -5399,6 +5411,7 @@ class BillingInternalCouponDAO {
 		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
 		$out->setUpdatedDate($row["updated_date"] == NULL ? NULL : new DateTime($row["updated_date"]));
 		$out->setRedeemedDate($row["redeemed_date"] == NULL ? NULL : new DateTime($row["redeemed_date"]));
+		$out->setExpiresDate($row["expires_date"] == NULL ? NULL : new DateTime($row["expires_date"]));
 		return($out);
 	}
 	
@@ -5431,6 +5444,51 @@ class BillingInternalCouponDAO {
 		pg_free_result($result);
 	
 		return($out);
+	}
+	
+	public static function addBillingInternalCoupon(BillingInternalCoupon $billingInternalCoupon) {
+		$query = "INSERT INTO billing_internal_coupons (internalcouponscampaignsid, coupon_billing_uuid, code, expires_date)";
+		$query.= " VALUES ($1, $2, $3, $4) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCoupon->getInternalCouponsCampaignsId(),
+						$billingInternalCoupon->getUuid(),
+						$billingInternalCoupon->getCode(),
+						dbGlobal::toISODate($billingInternalCoupon->getExpiresDate())
+				));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponById($row[0]));
+	}
+	
+	public static function updateStatus(BillingInternalCoupon $billingInternalCoupon) {
+		$query = "UPDATE billing_internal_coupons SET updated_date = CURRENT_TIMESTAMP, coupon_status = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCoupon->getStatus(),
+						$billingInternalCoupon->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponById($billingInternalCoupon->getId()));
+	}
+	
+	public static function updateRedeemedDate(BillingInternalCoupon $billingInternalCoupon) {
+		$query = "UPDATE billing_internal_coupons SET updated_date = CURRENT_TIMESTAMP, redeemed_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($billingInternalCoupon->getRedeemedDate()),
+						$billingInternalCoupon->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponById($billingInternalCoupon->getId()));
+	}
+	
+	public static function updateExpiresDate(BillingInternalCoupon $billingInternalCoupon) {
+		$query = "UPDATE billing_internal_coupons SET updated_date = CURRENT_TIMESTAMP, expires_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($billingInternalCoupon->getExpiresDate()),
+						$billingInternalCoupon->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponById($billingUserInternalCoupon->getId()));
 	}
 	
 }
@@ -5484,12 +5542,12 @@ class BillingInternalCouponOpts implements JsonSerializable {
 
 class BillingInternalCouponOptsDAO {
 	
-	public static function getBillingInternalCouponOptsByInternalCouponId($internalcouponid) {
-		$query = "SELECT _id, internalcouponid, key, value FROM billing_coupons_opts WHERE deleted = false AND internalcouponid = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($internalcouponid));
+	public static function getBillingInternalCouponOptsByInternalCouponId($internalcouponsid) {
+		$query = "SELECT _id, internalcouponsid, key, value FROM billing_internal_coupons_opts WHERE deleted = false AND internalcouponsid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalcouponsid));
 
 		$out = new BillingInternalCouponOpts();
-		$out->setInternalCouponId($internalcouponid);
+		$out->setInternalCouponId($internalcouponsid);
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out->setOpt($row["key"], $row["value"]);
 		}
@@ -5502,7 +5560,7 @@ class BillingInternalCouponOptsDAO {
 	public static function addBillingInternalCouponOpts(BillingInternalCouponOpts $billingInternalCouponOpts) {
 		foreach ($billingInternalCouponOpts->getOpts() as $k => $v) {
 			if(isset($v) && is_scalar($v)) {
-				$query = "INSERT INTO billing_internal_coupons_opts (internalcouponid, key, value)";
+				$query = "INSERT INTO billing_internal_coupons_opts (internalcouponsid, key, value)";
 				$query.= " VALUES ($1, $2, $3) RETURNING _id";
 				$result = pg_query_params(config::getDbConn(), $query,
 						array($billingInternalCouponOpts->getInternalCouponId(),
@@ -5515,28 +5573,28 @@ class BillingInternalCouponOptsDAO {
 		return(self::getBillingInternalCouponOptsByInternalCouponId($billingInternalCouponOpts->getInternalCouponId()));
 	}
 
-	public static function updateBillingInternalCouponOptsKey($internalcouponid, $key, $value) {
+	public static function updateBillingInternalCouponOptsKey($internalcouponsid, $key, $value) {
 		if(is_scalar($value)) {
-			$query = "UPDATE billing_internal_coupons_opts SET value = $3 WHERE internalcouponid = $1 AND key = $2 AND deleted = false";
-			$result = pg_query_params(config::getDbConn(), $query, array($internalcouponid, $key, trim($value)));
+			$query = "UPDATE billing_internal_coupons_opts SET value = $3 WHERE internalcouponsid = $1 AND key = $2 AND deleted = false";
+			$result = pg_query_params(config::getDbConn(), $query, array($internalcouponsid, $key, trim($value)));
 			// free result
 			pg_free_result($result);
 		}
 	}
 
-	public static function deleteBillingInternalCouponOptsKey($internalcouponid, $key) {
-		$query = "UPDATE billing_internal_coupons_opts SET deleted = true WHERE internalcouponid = $1 AND key = $2 AND deleted = false";
-		$result = pg_query_params(config::getDbConn(), $query, array($internalcouponid, $key));
+	public static function deleteBillingInternalCouponOptsKey($internalcouponsid, $key) {
+		$query = "UPDATE billing_internal_coupons_opts SET deleted = true WHERE internalcouponsid = $1 AND key = $2 AND deleted = false";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalcouponsid, $key));
 		// free result
 		pg_free_result($result);
 	}
 
-	public static function addBillingInternalCouponsOptsKey($internalcouponid, $key, $value) {
+	public static function addBillingInternalCouponsOptsKey($internalcouponsid, $key, $value) {
 		if(is_scalar($value)) {
-			$query = "INSERT INTO billing_internal_coupons_opts (internalcouponid, key, value)";
+			$query = "INSERT INTO billing_internal_coupons_opts (internalcouponsid, key, value)";
 			$query.= " VALUES ($1, $2, $3) RETURNING _id";
 			$result = pg_query_params(config::getDbConn(), $query,
-					array($internalcouponid,
+					array($internalcouponsid,
 							trim($key),
 							trim($value)));
 			// free result
@@ -5544,9 +5602,9 @@ class BillingInternalCouponOptsDAO {
 		}
 	}
 
-	public static function deleteBillingInternalCouponOptsByInternalCouponId($internalcouponid) {
-		$query = "UPDATE billing_internal_coupons_opts SET deleted = true WHERE internalcouponid = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($internalcouponid));
+	public static function deleteBillingInternalCouponOptsByInternalCouponId($internalcouponsid) {
+		$query = "UPDATE billing_internal_coupons_opts SET deleted = true WHERE internalcouponsid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalcouponsid));
 		// free result
 		pg_free_result($result);
 	}
@@ -5563,8 +5621,10 @@ class BillingUserInternalCoupon implements JsonSerializable {
 	private $creationDate;
 	private $updatedDate;
 	private $redeemedDate;
+	private $expiresDate;
 	private $userId;
 	private $subId;
+	
 	
 	public function setId($id) {
 		$this->_id = $id;
@@ -5630,6 +5690,14 @@ class BillingUserInternalCoupon implements JsonSerializable {
 		return($this->redeemedDate);
 	}
 	
+	public function setExpiresDate($date) {
+		$this->expiresDate = $date;
+	}
+	
+	public function getExpiresDate() {
+		return($this->expiresDate);
+	}
+	
 	public function setUserId($id) {
 		$this->userid = $id;
 	}
@@ -5650,7 +5718,6 @@ class BillingUserInternalCoupon implements JsonSerializable {
 	 * Same json as an internalCoupon
 	 */
 	public function jsonSerialize() {
-		Config::getLogger()->addInfo("ID=".$this->_id);
 		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($this->internalcouponsid);
 		$campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
 		$return = [
@@ -5662,7 +5729,7 @@ class BillingUserInternalCoupon implements JsonSerializable {
 				'creationDate' => dbGlobal::toISODate($this->creationDate),
 				'updatedDate' => dbGlobal::toISODate($this->updatedDate),
 				'redeemedDate' => dbGlobal::toISODate($this->redeemedDate),
-				'expiresDate' => NULL,
+				'expiresDate' => dbGlobal::toISODate($this->expiresDate),
 				'campaign' => $campaign,
 				'couponOpts' => BillingUserInternalCouponOptsDAO::getBillingUserInternalCouponOptsByUserInternalCouponId($this->_id)
 		];
@@ -5685,9 +5752,11 @@ class BillingUserInternalCoupon implements JsonSerializable {
 }
 
 class BillingUserInternalCouponDAO {
-	
-	private static $sfields = 
-		"BUIC._id, BUIC.internalcouponsid, BUIC.coupon_billing_uuid, BUIC.code, BUIC.coupon_status, BUIC.creation_date, BUIC.updated_date, BUIC.redeemed_date, BUIC.userid, BUIC.subid";
+
+	private static $sfields =<<<EOL
+		BUIC._id, BUIC.internalcouponsid, BUIC.coupon_billing_uuid, BUIC.code, BUIC.coupon_status, 
+			BUIC.creation_date, BUIC.updated_date, BUIC.redeemed_date, BUIC.expires_date, BUIC.userid, BUIC.subid
+EOL;
 	
 	private static function getBillingUserInternalCouponFromRow($row) {
 		$out = new BillingUserInternalCoupon();
@@ -5699,6 +5768,7 @@ class BillingUserInternalCouponDAO {
 		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
 		$out->setUpdatedDate($row["updated_date"] == NULL ? NULL : new DateTime($row["updated_date"]));
 		$out->setRedeemedDate($row["redeemed_date"] == NULL ? NULL : new DateTime($row["redeemed_date"]));
+		$out->setExpiresDate($row["expires_date"] == NULL ? NULL : new DateTime($row["expires_date"]));
 		$out->setUserId($row["userid"]);
 		$out->setSubId($row["subid"]);
 		return($out);
@@ -5774,13 +5844,14 @@ class BillingUserInternalCouponDAO {
 	}
 	
 	public static function addBillingUserInternalCoupon(BillingUserInternalCoupon $billingUserInternalCoupon) {
-		$query = "INSERT INTO billing_users_internal_coupons (internalcouponsid, coupon_billing_uuid, code, userid)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING _id";
+		$query = "INSERT INTO billing_users_internal_coupons (internalcouponsid, coupon_billing_uuid, code, userid, expires_date)";
+		$query.= " VALUES ($1, $2, $3, $4, $5) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$billingUserInternalCoupon->getInternalCouponsId(),
 						$billingUserInternalCoupon->getUuid(),
 						$billingUserInternalCoupon->getCode(),
-						$billingUserInternalCoupon->getUserId()
+						$billingUserInternalCoupon->getUserId(),
+						dbGlobal::toISODate($billingUserInternalCoupon->getExpiresDate())
 				));
 		$row = pg_fetch_row($result);
 		// free result
@@ -5855,13 +5926,20 @@ class BillingUserInternalCouponDAO {
 		return(self::getBillingUserInternalCouponById($billingUserInternalCoupon->getId()));		
 	}
 
-	public static function getBillingUserInternalCouponsByUserId($userid, CouponCampaignType $internalCouponCampaignType = NULL, $internalcouponscampaignsid = NULL) {
+	public static function getBillingUserInternalCouponsByUserId($userid,
+			$internalcouponsid = NULL,
+			$internalCouponCampaignType = NULL, 
+			$internalcouponscampaignsid = NULL) {
 		$query = "SELECT ".self::$sfields." FROM billing_users_internal_coupons BUIC";
 		$query.= " INNER JOIN billing_internal_coupons BIC ON (BUIC.internalcouponsid = BIC._id)";
 		$query.= " INNER JOIN billing_internal_coupons_campaigns BICC ON (BIC.internalcouponscampaignsid = BICC._id)";
 		$query.= " WHERE BUIC.userid = $1";
 		$params = array();
 		$params[] = $userid;
+		if(isset($internalcouponsid)) {
+			$params[] = $internalcouponsid;
+			$query.= " AND BIC._id= $".(count($params));
+		}
 		if(isset($internalCouponCampaignType)) {
 			$params[] = $internalCouponCampaignType;
 			$query.= " AND BICC.coupon_type= $".(count($params));			
@@ -5926,7 +6004,6 @@ class BillingUserInternalCouponDAO {
 		
 		return($out);
 	}
-	
 }
 
 class BillingUserInternalCouponOpts implements JsonSerializable {
@@ -5999,7 +6076,7 @@ class BillingUserInternalCouponOptsDAO {
 				$query = "INSERT INTO billing_users_internal_coupons_opts (userinternalcouponid, key, value)";
 				$query.= " VALUES ($1, $2, $3) RETURNING _id";
 				$result = pg_query_params(config::getDbConn(), $query,
-						array($billingUserInternalCouponOpts->getInternalCouponId(),
+						array($billingUserInternalCouponOpts->getUserInternalCouponId(),
 								trim($k),
 								trim($v)));
 				// free result
@@ -6045,4 +6122,134 @@ class BillingUserInternalCouponOptsDAO {
 		pg_free_result($result);
 	}
 
+}
+
+class BillingProviderCouponsCampaign implements JsonSerializable {
+
+	private $_id;
+	private $uuid;
+	private $internalcouponscampaignsid;
+	private $providerid;
+	private $creation_date;
+	private $prefix;
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setUuid($uuid) {
+		$this->uuid = $uuid;
+	}
+	
+	public function getUuid() {
+		return($this->uuid);
+	}
+	
+	public function setInternalCouponsCampaignsId($id) {
+		$this->internalCouponsCampaignsId = $id;
+	}
+	
+	public function getInternalCouponsCampaignsId() {
+		return($this->internalCouponsCampaignsId);
+	}
+	
+	public function getProviderId() {
+		return($this->providerid);
+	}
+	
+	public function setProviderId($id) {
+		$this->providerid = $id;
+	}
+	
+	public function setCreationDate($date) {
+		$this->creation_date = $date;
+	}
+	
+	public function getCreationDate() {
+		return($this->creation_date);
+	}
+	
+	public function setPrefix($str) {
+		$this->prefix = $str;
+	}
+	
+	public function getPrefix() {
+		return($this->prefix);
+	}
+	
+	public function jsonSerialize() {
+		$return = [
+				'couponsCampaignProviderBillingUuid' => $this->uuid,
+				'creationDate' => dbGlobal::toISODate($this->creation_date),
+				'prefix' => $this->prefix,
+				'provider' => ProviderDAO::getProviderById($this->providerid)
+		];
+	}
+
+}
+
+class BillingProviderCouponsCampaignDAO {
+	
+	private static $sfields = "_id, providerid, internalcouponscampaignsid, provider_coupons_campaigns_uuid, creation_date, prefix";
+	
+	private static function getBillingProviderCouponsCampaignFromRow($row) {
+		$out = new BillingProviderCouponsCampaign();
+		$out->setId($row["_id"]);
+		$out->setProviderId($row["providerid"]);
+		$out->setInternalCouponsCampaignsId($row["internalcouponscampaignsid"]);
+		$out->setUuid($row["provider_coupons_campaigns_uuid"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		$out->setPrefix($row["prefix"]);
+		return($out);
+	}
+	
+	public static function getBillingProviderCouponsCampaignById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_provider_coupons_campaigns WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingProviderCouponsCampaignFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function getBillingProviderCouponsCampaignByUuid($uuid) {
+		$query = "SELECT ".self::$sfields." FROM billing_provider_coupons_campaigns WHERE provider_coupons_campaigns_uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($uuid));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingProviderCouponsCampaignFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_provider_coupons_campaigns WHERE internalcouponscampaignsid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+	
+		$out = array();
+	
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getBillingProviderCouponsCampaignFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 }

@@ -402,7 +402,7 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 					$msg = 'a braintree api error occurred : ';
 					$errorString = $result->message;
 					foreach($result->errors->deepAll() as $error) {
-						$errorString.= '; Code=' . $error->code . ", msg=" . $error->message;;
+						$errorString.= '; Code=' . $error->code . ", msg=" . $error->message;
 					}
 					throw new Exception($msg.$errorString);
 				}

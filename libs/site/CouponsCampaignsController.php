@@ -9,7 +9,7 @@ use \Slim\Http\Response;
 
 class CouponsCampaignsController extends BillingsController {
 	
-	public function getMulti(Request $request, Response $response, array $args) {
+	/*public function getMulti(Request $request, Response $response, array $args) {
 		try {
 			$data = $request->getQueryParams();
 			$provider_name = NULL;
@@ -36,9 +36,9 @@ class CouponsCampaignsController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e));
 			//
 		}
-	}
+	}*/
 	
-	public function getOne(Request $request, Response $response, array $args) {
+	/*public function getOne(Request $request, Response $response, array $args) {
 		try {
 			$data = $request->getQueryParams();
 			$couponsCampaignBillingUuid = NULL;
@@ -70,7 +70,7 @@ class CouponsCampaignsController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e));
 			//
 		}
-	}
+	}*/
 	
 }
 

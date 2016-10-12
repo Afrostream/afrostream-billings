@@ -22,7 +22,7 @@ class InternalCouponsController extends BillingsController {
 			$couponCode = $data['couponCode'];
 			//
 			$internalCouponsHandler = new InternalCouponsHandler();
-			$coupon = $internalCouponsHandler->doGetCoupon($couponCode);
+			$coupon = $internalCouponsHandler->doGetInternalCouponByCode($couponCode);
 			if($coupon == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {

@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
+require_once __DIR__ . '/../providers/cashway/coupons/CashwayCouponsHandler.php';
 
 class UsersInternalCouponsHandler {
 	
@@ -30,12 +31,12 @@ class UsersInternalCouponsHandler {
 			$internalCouponsCampaignBillingId = $internalCouponsCampaign->getId();
 		}
 		
-		$list = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCouponCampaignType, $internalCouponsCampaignBillingId);
+		$list = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), NULL, $internalCouponCampaignType, $internalCouponsCampaignBillingId);
 	
 		return $list;
 	}
 	
-	public function doCreateCoupon($userBillingUuid, $couponsCampaignBillingUuid, array $couponOpts) {
+	public function doCreateCoupon($userBillingUuid, $couponsCampaignInternalBillingUuid, $internalPlanUuid = NULL, array $couponOpts) {
 		$db_coupon = NULL;
 		try {
 			config::getLogger()->addInfo("user coupon creating....");
@@ -47,48 +48,89 @@ class UsersInternalCouponsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-			//$couponsCampaign
-			$couponsCampaign = CouponsCampaignDAO::getCouponsCampaignByUuid($couponsCampaignBillingUuid);
-			if($couponsCampaign == NULL) {
-				$msg = "unknown couponsCampaignBillingUuid : ".$couponsCampaignBillingUuid;
+			//
+			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid);
+			if($internalCouponsCampaign == NULL) {
+				$msg = "unknown couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			//provider_from_user
-			$provider_from_user = ProviderDAO::getProviderById($user->getProviderId());
-			if($provider_from_user == NULL) {
+			$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+			$internalPlan = NULL;
+			if(isset($internalPlanUuid)) {
+				$internalPlan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+				if($internalPlan == NULL) {
+					//Exception
+					$msg = "no internalPlan found with uuid=".$internalPlanUuid;
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);					
+				}
+			}
+			if($internalPlan == NULL) {
+				if(count($billingInternalCouponsCampaignInternalPlans) == 0) {
+					//Exception
+					$msg = "no internalPlan associated to internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				} else if(count($billingInternalCouponsCampaignInternalPlans) == 1) {
+					$internalPlan = InternalPlanDAO::getInternalPlanById($billingInternalCouponsCampaignInternalPlans[0]->getInternalPlanId());
+				}
+			}
+			if($internalPlan == NULL) {
+				//Exception
+				$msg = "no default internalPlan associated to internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$found = false;
+			foreach ($billingInternalCouponsCampaignInternalPlans as $billingInternalCouponsCampaignInternalPlan) {
+				if($internalPlan->getId() == $billingInternalCouponsCampaignInternalPlan->getInternalPlanId()) {
+					$found = true; break;
+				}
+			}
+			if($found == false) {
+				//Exception
+				$msg = "internalPlan with uuid=".$internalPlan->getInternalPlanUuid()." is not associated to internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//provider
+			$provider = ProviderDAO::getProviderById($user->getProviderId());
+			if($provider == NULL) {
 				$msg = "unknown provider with id : ".$user->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			//provider_from_coupons_campaign
-			$provider_from_coupons_campaign = ProviderDAO::getProviderById($couponsCampaign->getProviderId());
-			if($provider_from_coupons_campaign == NULL) {
-				$msg = "unknown provider with id : ".$couponsCampaign->getProviderId();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			if($provider_from_user->getId() != $provider_from_coupons_campaign->getId()) {
-				$msg = "providers do not match beetween the user with user_billing_uuid=".$userBillingUuid." and the coupons_campaign with couponsCampaignBillingUuid=".$couponsCampaignBillingUuid;
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-				
 			$billingCouponsOpts = new BillingsCouponsOpts($couponOpts);
-	
-				
-			$provider = $provider_from_user;
+			//
+			//compatiblity
+			$isProviderCompatible = false;
+			$providerCouponsCampaign = NULL;
+			$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+			foreach ($providerCouponsCampaigns as $currentProviderCouponsCampaign) {
+				if($currentProviderCouponsCampaign->getProviderId() == $provider->getId()) {
+					$providerCouponsCampaign = $currentProviderCouponsCampaign;
+					$isProviderCompatible = true;
+					break;
+				}
+			}
+			if($isProviderCompatible == false) {
+				//Exception
+				$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$provider->getName();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			//
 			$coupon_billing_uuid = guid();
 			$coupon_provider_uuid = NULL;
 			switch($provider->getName()) {
 				case 'cashway' :
 					$cashwayCouponsHandler = new CashwayCouponsHandler();
-					$coupon_provider_uuid = $cashwayCouponsHandler->doCreateCoupon($user, $userOpts, $couponsCampaign, $coupon_billing_uuid, $billingCouponsOpts);
+					$coupon_provider_uuid = $cashwayCouponsHandler->doCreateCoupon($user, $userOpts, $internalCouponsCampaign, $providerCouponsCampaign, $internalPlan, $coupon_billing_uuid, $billingCouponsOpts);
 					break;
 				case 'afr' :
 					$afrCouponHandler = new AfrCouponsHandler();
-					$coupon_provider_uuid = $afrCouponHandler->doCreateCoupon($user, $userOpts, $couponsCampaign, $coupon_billing_uuid, $billingCouponsOpts);
+					$coupon_provider_uuid = $afrCouponHandler->doCreateCoupon($user, $userOpts, $internalCouponsCampaign, $providerCouponsCampaign, $internalPlan, $coupon_billing_uuid, $billingCouponsOpts);
 					break;
 				default :
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -96,15 +138,14 @@ class UsersInternalCouponsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
-	
 			switch ($provider->getName()) {
 				case 'cashway' :
 					$cashwayCouponsHandler = new CashwayCouponsHandler();
-					$db_coupon = $cashwayCouponsHandler->createDbCouponFromApiCouponUuid($user, $userOpts, $couponsCampaign, $coupon_billing_uuid, $coupon_provider_uuid);
+					$db_coupon = $cashwayCouponsHandler->createDbCouponFromApiCouponUuid($user, $userOpts, $internalCouponsCampaign, $providerCouponsCampaign, $internalPlan, $coupon_billing_uuid, $coupon_provider_uuid);
 					break;
 				case 'afr' :
 					$afrCouponHandler = new AfrCouponsHandler();
-					$db_coupon = $afrCouponHandler->createDbCouponFromApiCouponUuid($user, $userOpts, $couponsCampaign, $coupon_billing_uuid, $coupon_provider_uuid);
+					$db_coupon = $afrCouponHandler->createDbCouponFromApiCouponUuid($user, $userOpts, $internalCouponsCampaign, $providerCouponsCampaign, $internalPlan, $coupon_billing_uuid, $coupon_provider_uuid);
 					break;
 				default :
 					$msg = "unsupported feature for provider named : ".$provider->getName();

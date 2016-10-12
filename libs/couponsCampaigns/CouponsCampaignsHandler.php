@@ -8,7 +8,7 @@ class CouponsCampaignsHandler {
 	public function __construct() {
 	}
 	
-	public function doGetCouponsCampaigns($couponsCampaignType = NULL) {
+	/*public function doGetCouponsCampaigns($couponsCampaignType = NULL) {
 		$db_coupons_campaigns = NULL;
 		try {
 			config::getLogger()->addInfo("CouponsCampaigns getting...");
@@ -24,9 +24,9 @@ class CouponsCampaignsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_coupons_campaigns);
-	}
+	}*/
 	
-	public function doGetCouponsCampaign($couponsCampaignBillingUuid) {
+	/*public function doGetCouponsCampaign($couponsCampaignBillingUuid) {
 		$db_coupons_campaign = NULL;
 		try {
 			config::getLogger()->addInfo("CouponsCampaign getting, couponsCampaignBillingUuid=".$couponsCampaignBillingUuid."....");
@@ -44,7 +44,7 @@ class CouponsCampaignsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_coupons_campaign);
-	}
+	}*/
 	
 }
 

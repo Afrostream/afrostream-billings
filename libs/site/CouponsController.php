@@ -9,7 +9,7 @@ use \Slim\Http\Response;
 
 class CouponsController extends BillingsController {
 	
-	public function get(Request $request, Response $response, array $args) {
+	/*public function get(Request $request, Response $response, array $args) {
 		try {
 			$data = $request->getQueryParams();
 			$couponCode = NULL;
@@ -41,9 +41,9 @@ class CouponsController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e));
 			//
 		}
-	}
+	}*/
 
-	public function getList(Request $request, Response $response, array $args)
+	/*public function getList(Request $request, Response $response, array $args)
 	{
 		try {
 			$data = $request->getQueryParams();
@@ -72,9 +72,9 @@ class CouponsController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e));
 			//
 		}
-	}
+	}*/
 	
-	public function create(Request $request, Response $response, array $args) {
+	/*public function create(Request $request, Response $response, array $args) {
 		try {
 			$data = json_decode($request->getBody(), true);
 			$userBillingUuid = NULL;
@@ -123,7 +123,7 @@ class CouponsController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e));
 			//
 		}
-	}
+	}*/
 	
 }
 
