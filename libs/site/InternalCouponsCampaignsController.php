@@ -22,7 +22,7 @@ class InternalCouponsCampaignsController extends BillingsController {
 			}
 			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
 			$internalCouponsCampaigns = $internalCouponsCampaignsHandler->doGetInternalCouponsCampaigns($couponsCampaignType);
-			return($this->returnObjectAsJson($response, 'internalCouponsCampaigns', $internalCouponsCampaigns));
+			return($this->returnObjectAsJson($response, 'couponsCampaigns', $internalCouponsCampaigns));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while getting internalCouponsCampaigns, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
@@ -55,7 +55,7 @@ class InternalCouponsCampaignsController extends BillingsController {
 			if($internalCouponsCampaign == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {
-				return($this->returnObjectAsJson($response, 'internalCouponsCampaign', $internalCouponsCampaign));
+				return($this->returnObjectAsJson($response, 'couponsCampaign', $internalCouponsCampaign));
 			}
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while getting an internalCouponsCampaign, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
