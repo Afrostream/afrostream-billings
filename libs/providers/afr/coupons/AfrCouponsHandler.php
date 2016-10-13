@@ -14,35 +14,7 @@ class AfrCouponsHandler {
 	public function __construct() {
 		\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
 	}
-		
-	/*public function doGetCoupon(User $user = NULL, UserOpts $userOpts = NULL, $couponCode) {
-		$db_coupon = NULL;
-		try {
-			if(isset($user)) {
-				$msg = "unsupported feature for provider named : afr, user has NOT to be provided";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
-			}
-			//provider
-			$provider = ProviderDAO::getProviderByName('afr');
-			if($provider == NULL) {
-				$msg = "provider named 'afr' not found";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			$db_coupon = CouponDAO::getCoupon($provider->getId(), $couponCode);
-		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while getting a afr coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("afr coupon getting failed : ".$msg);
-			throw $e;
-		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while getting a afr coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("afr coupon getting failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
-		}
-		return($db_coupon);
-	}*/
-
+	
 	public function doCreateCoupon(User $user,
 			UserOpts $userOpts,
 			BillingInternalCouponsCampaign $internalCouponsCampaign,
@@ -54,8 +26,132 @@ class AfrCouponsHandler {
 		try {
 			config::getLogger()->addInfo("afr coupon creation...");
 			//
-			$coupon_provider_uuid = "";//TODO
+			//TODO : should check internalCouponsCampaign compatibility
 			//
+			//Checking InternalPlan Compatibility
+			$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+			if(count($billingInternalCouponsCampaignInternalPlans) == 0) {
+				//Exception
+				$msg = "no internalPlan associated to internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			} else if(count($billingInternalCouponsCampaignInternalPlans) == 1) {
+				if($internalPlan == NULL) {
+					$internalPlan = InternalPlanDAO::getInternalPlanById($billingInternalCouponsCampaignInternalPlans[0]->getInternalPlanId());
+				}
+			}
+			if($internalPlan == NULL) {
+				//Exception
+				$msg = "no default internalPlan associated to internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$found = false;
+			foreach ($billingInternalCouponsCampaignInternalPlans as $billingInternalCouponsCampaignInternalPlan) {
+				if($internalPlan->getId() == $billingInternalCouponsCampaignInternalPlan->getInternalPlanId()) {
+					$found = true; break;
+				}
+			}
+			if($found == false) {
+				//Exception
+				$msg = "given internalPlan with uuid=".$internalPlan->getInternalPlanUuid()." is not associated to internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//
+			$couponCode = strtoupper($internalCouponsCampaign->getPrefix()."-".$this->getRandomString($internalCouponsCampaign->getGeneratedCodeLength()));
+			
+			switch ($internalCouponsCampaign->getCouponType()) {
+				case CouponCampaignType::standard :
+					if($internalCouponsCampaign->getEmailsEnabled() == true) {
+						if (is_null($billingCouponsOpts->getOpt('recipientEmail'))) {
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), 'You must provide a recipient mail');
+						}
+					}
+					if (is_null($billingCouponsOpts->getOpt('customerBankAccountToken'))) {
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating afr coupon. Missing stripe token');
+					}
+					$chargeData = [
+							'amount' => $internalPlan->getAmountInCents(),
+							'currency' => $internalPlan->getCurrency(),
+							'description' => 'Coupon afrostream : '.$couponCode,
+							'source' => $billingCouponsOpts->getOpt('customerBankAccountToken'),
+							'metadata' => [
+									'AfrSource' => 'afrBillingApi',
+									'AfrOrigin' => 'coupon',
+									'AfrCouponBillingUuid' => $coupon_billing_uuid,
+									'AfrUserBillingUuid' => $user->getUserBillingUuid()
+							]
+					];
+			
+					// charge customer
+					$charge = \Stripe\Charge::create($chargeData);
+			
+					if (!$charge->paid) {
+						config::getLogger()->addError('Payment refused');
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Payment refused');
+					}
+			
+					$billingCouponsOpts->setOpt('chargeId', $charge->id);
+					break;
+				case CouponCampaignType::sponsorship :
+					if($internalCouponsCampaign->getEmailsEnabled() == true) {
+						if (is_null($billingCouponsOpts->getOpt('recipientEmail'))) {
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), 'You must provide a recipient email');
+						}
+						$recipentEmail = $billingCouponsOpts->getOpt('recipientEmail');
+						//Check if ownerEmail <> recipientEmail
+						$ownerEmail = $userOpts->getOpt('email');
+						if($ownerEmail == $recipentEmail) {
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), 'self sponsorship is forbidden', ExceptionError::AFR_COUPON_SPS_SELF_FORBIDDEN);
+						}
+						//Check if user has not been already sponsored
+						$recipientEmailsTotalCounter = BillingUserInternalCouponDAO::getBillingUserInternalCouponsTotalNumberByRecipientEmails($recipentEmail, $internalCouponsCampaign->getCouponType());
+						if($recipientEmailsTotalCounter > 0) {
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), 'recipient has already been sponsored', ExceptionError::AFR_COUPON_SPS_RECIPIENT_ALREADY_SPONSORED);
+						}
+						//Check if user has not already an active subscription
+						$recipientUsers = UserDAO::getUsersByEmail($recipentEmail);
+						$subscriptionsHandler = new SubscriptionsHandler();
+						foreach ($recipientUsers as $recipientUser) {
+							$recipientSubscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($recipientUser);
+							if(count($recipientSubscriptions) > 0) {
+								$lastSubscription = $recipientSubscriptions[0];
+								if($lastSubscription->getIsActive()) {
+									throw new BillingsException(new ExceptionType(ExceptionType::internal), 'recipient that has an active subscription cannot be sponsored', ExceptionError::AFR_COUPON_SPS_RECIPIENT_ACTIVE_FORBIDDEN);
+								}
+							}
+						}
+					}
+					break;
+				default :
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), 'unsupported feature for couponsCampaignType='.$internalCouponsCampaign->getCouponType()->getValue());
+					break;
+			}
+			$coupon_provider_uuid = $couponCode;
+			//<-- DB -->
+			//Create an internalCoupon
+			$internalCoupon = new BillingInternalCoupon();
+			$internalCoupon->setInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+			$internalCoupon->setCode($coupon_provider_uuid);
+			$internalCoupon->setUuid($coupon_billing_uuid);
+			$internalCoupon->setExpiresDate(NULL);
+			$internalCoupon = BillingInternalCouponDAO::addBillingInternalCoupon($internalCoupon);
+			//Create an userCoupon linked to the internalCoupon
+			$userInternalCoupon = new BillingUserInternalCoupon();
+			$userInternalCoupon->setInternalCouponsId($internalCoupon->getId());
+			$userInternalCoupon->setCode($coupon_provider_uuid);
+			$userInternalCoupon->setUuid($coupon_billing_uuid);
+			$userInternalCoupon->setUserId($user->getId());
+			$userInternalCoupon->setExpiresDate(NULL);
+			$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
+			//Cretate an userCouponOpts linked to the userCoupon
+			$billingUserInternalCouponOpts = new BillingUserInternalCouponOpts();
+			$billingUserInternalCouponOpts->setOpts($billingCouponsOpts->getOpts());
+			$billingUserInternalCouponOpts->setUserInternalCouponId($userInternalCoupon->getId());
+			$billingUserInternalCouponOpts = BillingUserInternalCouponOptsDAO::addBillingUserInternalCouponOpts($billingUserInternalCouponOpts);
+			//<-- DB -->
+			$this->sendMails($user, $userOpts, $userInternalCoupon, $billingUserInternalCouponOpts, $internalPlan, $internalCouponsCampaign);
 			config::getLogger()->addInfo("afr coupon creation done successfully, coupon_provider_uuid=".$coupon_provider_uuid);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while creating an afr coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -67,104 +163,8 @@ class AfrCouponsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
 		return($coupon_provider_uuid);
-		//<-- WAS -->		
-		/*
-		$internalPlanId = InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($couponsCampaign->getProviderPlanId());
-		$internalPlan   = InternalPlanDAO::getInternalPlanById($internalPlanId);
-		
-		if (empty($internalPlan)) {
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow internal plan');
-		}
-		
-		$couponCode = strtoupper($couponsCampaign->getPrefix()."-".$this->getRandomString($couponsCampaign->getGeneratedCodeLength()));
-		
-		switch ($couponsCampaign->getCouponType()) {
-			case CouponCampaignType::standard :
-				if($couponsCampaign->getEmailsEnabled() == true) {
-					if (is_null($billingCouponsOpts->getOpt('recipientEmail'))) {
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), 'You must provide a recipient mail');
-					}
-				}
-				if (is_null($billingCouponsOpts->getOpt('customerBankAccountToken'))) {
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating afr coupon. Missing stripe token');
-				}
-				$chargeData = [
-						'amount' => $internalPlan->getAmountInCents(),
-						'currency' => $internalPlan->getCurrency(),
-						'description' => 'Coupon afrostream : '.$couponCode,
-						'source' => $billingCouponsOpts->getOpt('customerBankAccountToken'),
-						'metadata' => [
-								'AfrSource' => 'afrBillingApi',
-								'AfrOrigin' => 'coupon',
-								'AfrCouponBillingUuid' => $couponBillingUuid,
-								'AfrUserBillingUuid' => $user->getUserBillingUuid()
-						]
-				];
-				
-				// charge customer
-				$charge = \Stripe\Charge::create($chargeData);
-				
-				if (!$charge->paid) {
-					config::getLogger()->addError('Payment refused');
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Payment refused');
-				}
-				
-				$billingCouponsOpts->setOpt('chargeId', $charge->id);
-				break;
-			case CouponCampaignType::sponsorship :
-				if($couponsCampaign->getEmailsEnabled() == true) {
-					if (is_null($billingCouponsOpts->getOpt('recipientEmail'))) {
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), 'You must provide a recipient email');
-					}
-					$recipentEmail = $billingCouponsOpts->getOpt('recipientEmail');
-					//Check if ownerEmail <> recipientEmail
-					$ownerEmail = $userOpts->getOpt('email');
-					if($ownerEmail == $recipentEmail) {
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), 'self sponsorship is forbidden', ExceptionError::AFR_COUPON_SPS_SELF_FORBIDDEN);
-					}
-					//Check if user has not been already sponsored
-					$recipientEmailsTotalCounter = CouponDAO::getCouponsTotalNumberByRecipientEmails($recipentEmail, $couponsCampaign->getCouponType());
-					if($recipientEmailsTotalCounter > 0) {
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), 'recipient has already been sponsored', ExceptionError::AFR_COUPON_SPS_RECIPIENT_ALREADY_SPONSORED);
-					}
-					//Check if user has not already an active subscription
-					$recipientUsers = UserDAO::getUsersByEmail($recipentEmail);
-					$subscriptionsHandler = new SubscriptionsHandler();
-					foreach ($recipientUsers as $recipientUser) {
-						$recipientSubscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($recipientUser);
-						if(count($recipientSubscriptions) > 0) {
-							$lastSubscription = $recipientSubscriptions[0];
-							if($lastSubscription->getIsActive()) {
-								throw new BillingsException(new ExceptionType(ExceptionType::internal), 'recipient that has an active subscription cannot be sponsored', ExceptionError::AFR_COUPON_SPS_RECIPIENT_ACTIVE_FORBIDDEN);
-							}
-						}
-					}
-				}
-				break;
-			default :
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), 'unsupported feature for CouponsCampaignType='.$couponsCampaign->getCouponType()->getValue());
-				break;
-		}
-		
-		$coupon = new Coupon();
-		$coupon->setCouponBillingUuid($couponBillingUuid);
-		$coupon->setCouponsCampaignId($couponsCampaign->getId());
-		$coupon->setProviderId($couponsCampaign->getProviderId());
-		$coupon->setProviderPlanId($couponsCampaign->getProviderPlanId());
-		$coupon->setCode($couponCode);
-		$coupon->setUserId($user->getId());
-
-		$coupon = CouponDAO::addCoupon($coupon);
-
-		$billingCouponsOpts->setCouponId($coupon->getId());
-
-		$billingCouponsOpts = BillingsCouponsOptsDAO::addBillingsCouponsOpts($billingCouponsOpts);
-
-		$this->sendMails($user, $userOpts, $coupon, $billingCouponsOpts, $internalPlan, $couponsCampaign);
-		return $coupon->getCode();
-		*/
 	}
-
+	
 	public function createDbCouponFromApiCouponUuid(User $user,
 			UserOpts $userOpts,
 			BillingInternalCouponsCampaign $internalCouponsCampaign,
@@ -174,7 +174,7 @@ class AfrCouponsHandler {
 			$coupon_provider_uuid) {
 		return(BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($coupon_billing_uuid));
 	}
-
+	
 	protected function getRandomString($length) {
 		$strAlphaNumericString = '23456789bcdfghjkmnpqrstvwxz';
 		$strlength             = strlen($strAlphaNumericString) -1 ;
@@ -186,9 +186,13 @@ class AfrCouponsHandler {
 
 		return $strReturnString;
 	}
-
-	protected function sendMails(User $user, UserOpts $userOpts, Coupon $coupon, BillingsCouponsOpts $billingCouponsOpts, InternalPlan $internalPlan, CouponsCampaign $couponsCampaign)
-	{
+	
+	protected function sendMails(User $user, 
+			UserOpts $userOpts, 
+			BillingUserInternalCoupon $billingUserInternalCoupon, 
+			BillingUserInternalCouponOpts $billingUserInternalCouponOpts, 
+			InternalPlan $internalPlan, 
+			InternalCouponsCampaign $internalCouponsCampaign) {
 		if($couponsCampaign->getEmailsEnabled() == false) {
 			return;
 		}
@@ -218,10 +222,10 @@ class AfrCouponsHandler {
 			'%lastname%'                => $lastName,
 			'%username%'                => strstr($userMail, '@', true),
 			'%fullname%'                => trim($firstName.' '.$lastName),
-			'%couponcode%'              => $coupon->getCode(),
-			'%recipientemail%'          => $billingCouponsOpts->getOpt('recipientEmail'),
-			'%recipientfirstname%'      => $billingCouponsOpts->getOpt('recipientFirstName'),
-			'%recipientlastname%'       => $billingCouponsOpts->getOpt('recipientLastName')
+			'%couponcode%'              => $billingUserInternalCoupon->getCode(),
+			'%recipientemail%'          => $billingUserInternalCouponOpts->getOpt('recipientEmail'),
+			'%recipientfirstname%'      => $billingUserInternalCouponOpts->getOpt('recipientFirstName'),
+			'%recipientlastname%'       => $billingUserInternalCouponOpts->getOpt('recipientLastName')
 		];
 
 		$bcc  = getenv('SENDGRID_BCC');
@@ -231,13 +235,13 @@ class AfrCouponsHandler {
 			$value = array_fill(0, $nbRecipient, $value);
 		});
 
-		$this->sendMailToOwner($userMail, $substitutions, $couponsCampaign);
-		$this->sendMailToRecipient($billingCouponsOpts->getOpt('recipientEmail'), $substitutions, $couponsCampaign);
+		$this->sendMailToOwner($userMail, $substitutions, $internalCouponsCampaign);
+		$this->sendMailToRecipient($billingCouponsOpts->getOpt('recipientEmail'), $substitutions, $internalCouponsCampaign);
 	}
-
-	protected function sendMailToOwner($userMail, array $substitutions, CouponsCampaign $couponsCampaign)
+	
+	protected function sendMailToOwner($userMail, array $substitutions, InternalCouponsCampaign $internalCouponsCampaign)
 	{
-		if($couponsCampaign->getEmailsEnabled() == false) {
+		if($internalCouponsCampaign->getEmailsEnabled() == false) {
 			return;
 		}
 		if (empty($userMail)) {
@@ -246,7 +250,7 @@ class AfrCouponsHandler {
 
 		$bcc  = getenv('SENDGRID_BCC');
 		$template = NULL;
-		switch($couponsCampaign->getCouponType()) {
+		switch($internalCouponsCampaign->getCouponType()) {
 			case CouponCampaignType::sponsorship :
 				$template = getEnv('SENDGRID_TEMPLATE_COUPON_OWN_SPONSORSHIP_NEW');
 			 	break;
@@ -271,10 +275,10 @@ class AfrCouponsHandler {
 		}
 		$sendgrid->send($email);
 	}
-
-	protected function sendMailToRecipient($userMail, array $substitutions, CouponsCampaign $couponsCampaign)
+	
+	protected function sendMailToRecipient($userMail, array $substitutions, InternalCouponsCampaign $internalCouponsCampaign)
 	{
-		if($couponsCampaign->getEmailsEnabled() == false) {
+		if($internalCouponsCampaign->getEmailsEnabled() == false) {
 			return;
 		}
 		if (empty($userMail)) {
@@ -283,7 +287,7 @@ class AfrCouponsHandler {
 
 		$bcc  = getenv('SENDGRID_BCC');
 		$template = NULL;
-		switch($couponsCampaign->getCouponType()) {
+		switch($internalCouponsCampaign->getCouponType()) {
 			case CouponCampaignType::sponsorship :
 				$template = getEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_SPONSORSHIP_NEW');
 				break;
@@ -309,7 +313,7 @@ class AfrCouponsHandler {
 
 		$sendgrid->send($email);
 	}
-
+	
 	/**
 	 * Get formatted money
 	 *
@@ -324,6 +328,7 @@ class AfrCouponsHandler {
 
 		return money_format('%!.2n', (float) ($money->getAmount() / 100));
 	}
+	
 }
 
 ?>

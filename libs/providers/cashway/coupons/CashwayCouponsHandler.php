@@ -37,6 +37,7 @@ class CashwayCouponsHandler {
 					}
 				}
 			}
+			//Checking InternalPlan Compatibility
 			$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
 			if(count($billingInternalCouponsCampaignInternalPlans) == 0) {
 				//Exception
@@ -141,7 +142,7 @@ class CashwayCouponsHandler {
 			$internalCoupon->setUuid($coupon_billing_uuid);
 			$internalCoupon->setExpiresDate($expires_date);
 			$internalCoupon = BillingInternalCouponDAO::addBillingInternalCoupon($internalCoupon);
-			//Create a userCoupon linked to the internalCoupon
+			//Create an userCoupon linked to the internalCoupon
 			$userInternalCoupon = new BillingUserInternalCoupon();
 			$userInternalCoupon->setInternalCouponsId($internalCoupon->getId());
 			$userInternalCoupon->setCode($coupon_provider_uuid);
