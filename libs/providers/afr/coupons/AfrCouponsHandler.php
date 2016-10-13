@@ -192,7 +192,7 @@ class AfrCouponsHandler {
 			BillingUserInternalCoupon $billingUserInternalCoupon, 
 			BillingUserInternalCouponOpts $billingUserInternalCouponOpts, 
 			InternalPlan $internalPlan, 
-			InternalCouponsCampaign $internalCouponsCampaign) {
+			BillingInternalCouponsCampaign $internalCouponsCampaign) {
 		if($couponsCampaign->getEmailsEnabled() == false) {
 			return;
 		}
@@ -239,7 +239,7 @@ class AfrCouponsHandler {
 		$this->sendMailToRecipient($billingCouponsOpts->getOpt('recipientEmail'), $substitutions, $internalCouponsCampaign);
 	}
 	
-	protected function sendMailToOwner($userMail, array $substitutions, InternalCouponsCampaign $internalCouponsCampaign)
+	protected function sendMailToOwner($userMail, array $substitutions, BillingInternalCouponsCampaign $internalCouponsCampaign)
 	{
 		if($internalCouponsCampaign->getEmailsEnabled() == false) {
 			return;
@@ -276,7 +276,7 @@ class AfrCouponsHandler {
 		$sendgrid->send($email);
 	}
 	
-	protected function sendMailToRecipient($userMail, array $substitutions, InternalCouponsCampaign $internalCouponsCampaign)
+	protected function sendMailToRecipient($userMail, array $substitutions, BillingInternalCouponsCampaign $internalCouponsCampaign)
 	{
 		if($internalCouponsCampaign->getEmailsEnabled() == false) {
 			return;
