@@ -5106,7 +5106,7 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 		//provider / providers
 		if(count($providers) == 1) {
 			//for backward compatibility - to be removed later -
-			$return['provider'] = $provider[0];
+			$return['provider'] = $providers[0];
 		}
 		//anyway
 		$return['providers'] = $providers;
