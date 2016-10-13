@@ -6188,6 +6188,7 @@ class BillingProviderCouponsCampaign implements JsonSerializable {
 				'prefix' => $this->prefix,
 				'provider' => ProviderDAO::getProviderById($this->providerid)
 		];
+		return($return);
 	}
 
 }

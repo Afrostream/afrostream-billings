@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/cashway/coupons/CashwayCouponsHandler.php';
+require_once __DIR__ . '/../providers/afr/coupons/AfrCouponsHandler.php';
 
 class UsersInternalCouponsHandler {
 	
