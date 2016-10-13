@@ -5075,6 +5075,11 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 	}
 	
 	public function jsonSerialize() {
+		$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($this->_id);
+		$providers = array();
+		foreach ($providerCouponsCampaigns as $providerCouponsCampaign) {
+			$providers[] = ProviderDAO::getProviderById($providerCouponsCampaign->getProviderId());
+		}
 		$return = [
 				//for backward compatibility - to be removed later -
 				'couponsCampaignBillingUuid' => $this->uuid,
@@ -5096,8 +5101,15 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 				'couponsCampaignType' => $this->coupon_type,
 				'emailsEnabled' => $this->emails_enabled,
 				'expiresDate' => dbGlobal::toISODate($this->expires_date),
-				'providerCouponsCampaigns' => BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($this->_id)
+				'providerCouponsCampaigns' => $providerCouponsCampaigns
 		];
+		//provider / providers
+		if(count($providers) == 1) {
+			//for backward compatibility - to be removed later -
+			$return['provider'] = $provider[0];
+		}
+		//anyway
+		$return['providers'] = $providers;
 		//internalPlan / internalPlans
 		$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($this->_id);
 		$internalPlans = array();
