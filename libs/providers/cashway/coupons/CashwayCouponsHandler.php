@@ -20,6 +20,7 @@ class CashwayCouponsHandler {
 			InternalPlan $internalPlan = NULL, 
 			$coupon_billing_uuid, 
 			BillingsCouponsOpts $billingCouponsOpts) {
+		$coupon_provider_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("cashway coupon creation...");
 			//

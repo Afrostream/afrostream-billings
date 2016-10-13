@@ -5488,7 +5488,7 @@ EOL;
 						$billingInternalCoupon->getId()));
 		// free result
 		pg_free_result($result);
-		return(self::getBillingInternalCouponById($billingUserInternalCoupon->getId()));
+		return(self::getBillingInternalCouponById($billingInternalCoupon->getId()));
 	}
 	
 }
