@@ -193,7 +193,7 @@ class AfrCouponsHandler {
 			BillingUserInternalCouponOpts $billingUserInternalCouponOpts, 
 			InternalPlan $internalPlan, 
 			BillingInternalCouponsCampaign $internalCouponsCampaign) {
-		if($couponsCampaign->getEmailsEnabled() == false) {
+		if($internalCouponsCampaign->getEmailsEnabled() == false) {
 			return;
 		}
 		$amountInCentsTax = ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax());
