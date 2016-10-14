@@ -72,6 +72,47 @@ class InternalCouponsCampaignsController extends BillingsController {
 		}
 	}
 	
+	public function addToProvider(Request $request, Response $response, array $args) {
+		try {
+			if(!isset($args['couponsCampaignInternalBillingUuid'])) {
+				//exception
+				$msg = "field 'couponsCampaignInternalBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$couponsCampaignInternalBillingUuid = $args['couponsCampaignInternalBillingUuid'];
+			if(!isset($args['providerName'])) {
+				//exception
+				$msg = "field 'providerName' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$providerName = $args['providerName'];
+			//
+			$provider = ProviderDAO::getProviderByName($providerName);
+			if($provider == NULL) {
+				$msg = "unknown provider named : ".$providerName;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
+			$couponsCampaign = $internalCouponsCampaignsHandler->doAddToProvider($couponsCampaignInternalBillingUuid, $provider);
+			return($this->returnObjectAsJson($response, 'couponsCampaign', $couponsCampaign));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while linking an internal plan to a provider, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while linking an internal plan to a provider, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
 }
 
 ?>

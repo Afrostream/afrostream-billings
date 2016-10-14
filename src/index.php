@@ -938,6 +938,13 @@ $app->get("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillin
 	return($internalCouponsCampaignsController->getOne($request, $response, $args));
 });
 
+//actions to internalPlan : addtoprovider
+
+$app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}/addtoprovider/{providerName}", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->addToProvider($request, $response, $args));
+});
+
 //contexts
 
 //get one context
