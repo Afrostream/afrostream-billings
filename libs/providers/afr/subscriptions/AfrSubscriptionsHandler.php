@@ -22,6 +22,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$couponCode = $subOpts->getOpts()['couponCode'];
 			$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
 			if($internalCoupon == NULL) {
 				$msg = "coupon : code=".$couponCode." NOT FOUND";
