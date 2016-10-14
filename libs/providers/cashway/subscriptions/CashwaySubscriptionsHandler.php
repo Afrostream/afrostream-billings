@@ -52,18 +52,6 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$userInternalCoupon = NULL;
-			$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCoupon->getId());
-			if(count($userInternalCoupons) == 0) {
-				//exception
-				$msg = "coupon : code=".$couponCode." NOT FOUND FOR YOU";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			} else {
-				//TAKING FIRST (EQUALS LAST GENERATED)
-				$userInternalCoupon = $userInternalCoupons[0];
-			}
-			//
 			$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
 			if(count($billingInternalCouponsCampaignInternalPlans) == 0) {
 				//Exception
@@ -84,6 +72,18 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$userInternalCoupon = NULL;
+			$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCoupon->getId());
+			if(count($userInternalCoupons) == 0) {
+				//exception
+				$msg = "coupon : code=".$couponCode." NOT FOUND FOR YOU";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			} else {
+				//TAKING FIRST (EQUALS LAST GENERATED)
+				$userInternalCoupon = $userInternalCoupons[0];
+			}
+			//
 			if($userInternalCoupon->getStatus() == 'redeemed') {
 				$msg = "coupon : code=".$couponCode." already redeemed";
 				config::getLogger()->addError($msg);
@@ -203,17 +203,16 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 		$subOpts->setOpt('couponCodeUrl', getEnv('CASHWAY_COUPON_URL').$couponCode.".h");
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
+		//BILLING_INFO (NOT MANDATORY)
 		if(isset($billingInfo)) {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
-		//SUB_OPTS
-		if(isset($subOpts)) {
-			$subOpts->setSubId($db_subscription->getId());
-			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
-		}
-		//COUPON
+		//SUB_OPTS (MANDATORY)
+		$subOpts->setSubId($db_subscription->getId());
+		$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+		//COUPON (MANDATORY)
 		//UserInternalCoupon
 		$userInternalCoupon->setStatus("pending");
 		$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);

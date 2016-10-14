@@ -5295,7 +5295,7 @@ class BillingInternalCoupon implements JsonSerializable {
 	private $uuid;
 	private $internalCouponsCampaignsId;
 	private $code;
-	private $status;
+	private $status = 'waiting';
 	private $creationDate;
 	private $updatedDate;
 	private $redeemedDate;
@@ -5629,7 +5629,7 @@ class BillingUserInternalCoupon implements JsonSerializable {
 	private $uuid;
 	private $internalcouponsid;
 	private $code;
-	private $status;
+	private $status = 'waiting';
 	private $creationDate;
 	private $updatedDate;
 	private $redeemedDate;
@@ -5961,6 +5961,26 @@ EOL;
 			$query.= " AND BICC._id= $".(count($params));
 		}
 		$query.= " ORDER BY BUIC._id DESC";
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getBillingUserInternalCouponFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function getBillingUserInternalCouponsByInternalcouponsid($internalcouponsid) {
+		$query = "SELECT ".self::$sfields." FROM billing_users_internal_coupons BUIC";
+		$query.= " WHERE BUIC.internalcouponsid = $1";
+		$query.= " ORDER BY BUIC._id DESC";
+		$params = array();
+		$params[] = $internalcouponsid;
+		
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
 		$out = array();

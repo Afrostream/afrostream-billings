@@ -164,7 +164,7 @@ class StripeTransactionsHandler {
 				case 'coupon' :
 					if(array_key_exists('AfrCouponBillingUuid', $metadata)) {
 						$coupon_billing_uuid = $metadata['AfrCouponBillingUuid'];
-						$coupon = CouponDAO::getCouponByCouponBillingUuid($coupon_billing_uuid);
+						$coupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($coupon_billing_uuid);
 						if($coupon == NULL) {
 							$msg = "AfrCouponBillingUuid=".$coupon_billing_uuid." in metadata cannot be found";
 							config::getLogger()->addError($msg);
