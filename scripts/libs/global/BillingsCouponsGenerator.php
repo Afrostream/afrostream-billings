@@ -9,32 +9,31 @@ class BillingsCouponsGenerator {
 
 	}
 	
-	public function doGenerateCoupons($couponscampaignuuid) {
+	public function doGenerateCoupons($couponsCampaignInternalBillingUuid) {
 		try {
-			ScriptsConfig::getLogger()->addInfo("generating coupons for couponscampaignuuid=".$couponscampaignuuid."...");
-			$coupons_campaign = CouponsCampaignDAO::getCouponsCampaignByUuid($couponscampaignuuid);
-			if($coupons_campaign == NULL) {
-				throw new Exception("CouponsCampaign with couponscampaignuuid=".$couponscampaignuuid." not found");
+			ScriptsConfig::getLogger()->addInfo("generating coupons for couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid."...");
+			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid);
+			if($internalCouponsCampaign == NULL) {
+				throw new Exception("internalCouponsCampaign with couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid." not found");
 			}
 			//
-			$coupon_counter = CouponDAO::getCouponsTotalNumberByCouponsCampaignId($coupons_campaign->getId());
-			$coupon_total_number = $coupons_campaign->getTotalNumber();
+			$coupon_counter = BillingInternalCouponDAO::getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+			$coupon_total_number = $internalCouponsCampaign->getTotalNumber();
 			$coupon_counter_missing = $coupon_total_number - $coupon_counter;
-			ScriptsConfig::getLogger()->addInfo("generating ".$coupon_counter_missing." missing coupons out of ".$coupon_total_number." for couponscampaignuuid=".$couponscampaignuuid."...");
+			ScriptsConfig::getLogger()->addInfo("generating ".$coupon_counter_missing." missing coupons out of ".$coupon_total_number." for couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid."...");
 			while($coupon_counter < $coupon_total_number) {
-				$coupon = new Coupon();
-				$coupon->setCouponBillingUuid(guid());
-				$coupon->setCouponsCampaignId($coupons_campaign->getId());
-				$coupon->setProviderId($coupons_campaign->getProviderId());
-				$coupon->setProviderPlanId($coupons_campaign->getProviderPlanId());
-				$coupon->setCode(strtoupper($coupons_campaign->getPrefix()."-".$this->getRandomString($coupons_campaign->getGeneratedCodeLength())));
-				CouponDAO::addCoupon($coupon);
+				$internalCoupon = new BillingInternalCoupon();
+				$internalCoupon->setInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+				$internalCoupon->setCode(strtoupper($internalCouponsCampaign->getPrefix()."-".$this->getRandomString($internalCouponsCampaign->getGeneratedCodeLength())));
+				$internalCoupon->setUuid(guid());
+				$internalCoupon->setExpiresDate($internalCouponsCampaign->getExpiresDate());
+				$internalCoupon = BillingInternalCouponDAO::addBillingInternalCoupon($internalCoupon);
 				$coupon_counter++;
-				ScriptsConfig::getLogger()->addInfo("(".$coupon_counter."/".$coupon_total_number.") coupon with code ".$coupon->getCode()." for couponscampaignuuid=".$couponscampaignuuid." generated successfully");
+				ScriptsConfig::getLogger()->addInfo("(".$coupon_counter."/".$coupon_total_number.") coupon with code ".$internalCoupon->getCode()." for couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid." generated successfully");
 			}
-			ScriptsConfig::getLogger()->addInfo("generating coupons for couponscampaignuuid=".$couponscampaignuuid." done successfully");
+			ScriptsConfig::getLogger()->addInfo("generating coupons for couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid." done successfully");
 		} catch(Exception $e) {
-			ScriptsConfig::getLogger()->addError("generating coupons for couponscampaignuuid=".$couponscampaignuuid." failed, error_code=".$e->getCode().", error_message=".$e->getMessage());
+			ScriptsConfig::getLogger()->addError("generating coupons for couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid." failed, error_code=".$e->getCode().", error_message=".$e->getMessage());
 			throw $e;
 		}
 	}
