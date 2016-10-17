@@ -9,8 +9,11 @@ use \Stripe\Subscription;
 
 class StripeSubscriptionsHandler extends SubscriptionsHandler
 {
+	protected $provider = NULL;
+	
     public function __construct()
     {
+    	$this->provider = ProviderDAO::getProviderByName('stripe');
         \Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
     }
 
@@ -488,7 +491,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         if(array_key_exists('couponCode', $subOpts->getOpts())) {
         	$couponCode = $subOpts->getOpts()['couponCode'];
         	if(strlen($couponCode) > 0) {
-        		$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+        		$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
         		$subscriptionData['coupon'] = $couponsInfos['providerCouponsCampaign']->getPrefix();
         		$logMessage = 'Create subscription : customer : %s, plan : %s, source : %s, coupon : %s';
         	}
