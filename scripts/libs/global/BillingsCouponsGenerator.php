@@ -18,13 +18,19 @@ class BillingsCouponsGenerator {
 			}
 			//
 			$coupon_counter = BillingInternalCouponDAO::getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
-			$coupon_total_number = $internalCouponsCampaign->getTotalNumber();
+			$coupon_total_number = $internalCouponsCampaign->getGeneratedMode() == 'single' ? 1 : $internalCouponsCampaign->getTotalNumber();
 			$coupon_counter_missing = $coupon_total_number - $coupon_counter;
 			ScriptsConfig::getLogger()->addInfo("generating ".$coupon_counter_missing." missing coupons out of ".$coupon_total_number." for couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid."...");
 			while($coupon_counter < $coupon_total_number) {
+				$code = NULL;
+				if($internalCouponsCampaign->getGeneratedMode() == 'single') {
+					$code = strtoupper($internalCouponsCampaign->getPrefix());
+				} else {
+					$code = strtoupper($internalCouponsCampaign->getPrefix()."-".$this->getRandomString($internalCouponsCampaign->getGeneratedCodeLength()));
+				}
 				$internalCoupon = new BillingInternalCoupon();
 				$internalCoupon->setInternalCouponsCampaignsId($internalCouponsCampaign->getId());
-				$internalCoupon->setCode(strtoupper($internalCouponsCampaign->getPrefix()."-".$this->getRandomString($internalCouponsCampaign->getGeneratedCodeLength())));
+				$internalCoupon->setCode($code);
 				$internalCoupon->setUuid(guid());
 				$internalCoupon->setExpiresDate($internalCouponsCampaign->getExpiresDate());
 				$internalCoupon = BillingInternalCouponDAO::addBillingInternalCoupon($internalCoupon);
