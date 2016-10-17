@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/recurly/couponsCampaigns/RecurlyCouponsCampaignsHandler.php';
+require_once __DIR__ . '/../providers/stripe/couponsCampaigns/StripeCouponsCampaignsHandler.php';
 
 class InternalCouponsCampaignsHandler {
 	
@@ -80,9 +81,8 @@ class InternalCouponsCampaignsHandler {
 					$couponsCampaignProviderBillingUuid = $recurlyCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
 					break;
 				case 'stripe':
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					$stripeCouponsCampaignsHandler = new StripeCouponsCampaignsHandler();
+					$couponsCampaignProviderBillingUuid = $stripeCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
