@@ -94,14 +94,12 @@ class InternalCouponsCampaignsHandler {
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
-				/*$provider_plan = new Plan();
-				$provider_plan->setProviderId($provider->getId());
-				$provider_plan->setPlanUid($provider_plan_uuid);
-				$provider_plan->setName($db_internal_plan->getName());
-				$provider_plan->setDescription($db_internal_plan->getDescription());
-				$provider_plan = PlanDAO::addPlan($provider_plan);
-				//link it
-				InternalPlanLinksDAO::addProviderPlanIdToInternalPlanId($db_internal_plan->getId(), $provider_plan->getId());*/
+				$billingProviderCouponsCampaign = new BillingProviderCouponsCampaign();
+				$billingProviderCouponsCampaign->setProviderId($provider->getId());
+				$billingProviderCouponsCampaign->setInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
+				$billingProviderCouponsCampaign->setUuid($couponsCampaignProviderBillingUuid);
+				$billingProviderCouponsCampaign->setPrefix($db_internal_coupons_campaign->getPrefix());
+				$billingProviderCouponsCampaign = BillingProviderCouponsCampaignDAO::addBillingProviderCouponsCampaign($billingProviderCouponsCampaign);
 				//done
 				//COMMIT
 				pg_query("COMMIT");

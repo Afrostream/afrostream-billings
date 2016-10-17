@@ -569,6 +569,7 @@ class CouponCampaignType extends Enum implements JsonSerializable {
 	const standard    	= 'standard';
 	const sponsorship 	= 'sponsorship';
 	const prepaid 		= 'prepaid';
+	const promo			= 'promo';
 
 	public function jsonSerialize() {
 		return $this->getValue();
@@ -5637,6 +5638,21 @@ class BillingProviderCouponsCampaign implements JsonSerializable {
 class BillingProviderCouponsCampaignDAO {
 	
 	private static $sfields = "_id, providerid, internalcouponscampaignsid, provider_coupons_campaigns_uuid, creation_date, prefix";
+	
+	public static function addBillingProviderCouponsCampaign(BillingProviderCouponsCampaign $billingProviderCouponsCampaign) {
+		$query = "INSERT INTO billing_provider_coupons_campaigns (providerid, internalcouponscampaignsid, provider_coupons_campaigns_uuid, prefix)";
+		$query.= " VALUES ($1, $2, $3, $4) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingProviderCouponsCampaign->getProviderId(),
+						$billingProviderCouponsCampaign->getInternalCouponsCampaignsId(),
+						$billingProviderCouponsCampaign->getUuid(),
+						$billingProviderCouponsCampaign->getPrefix()
+		));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		return(self::getBillingProviderCouponsCampaignById($row[0]));
+	}
 	
 	private static function getBillingProviderCouponsCampaignFromRow($row) {
 		$out = new BillingProviderCouponsCampaign();

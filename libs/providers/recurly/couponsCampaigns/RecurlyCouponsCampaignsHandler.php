@@ -20,6 +20,7 @@ class RecurlyCouponsCampaignsHandler {
 			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 			//
 			$recurly_coupon = new Recurly_Coupon();
+			$recurly_coupon->redemption_resource = 'subscription';
 			//
 			$recurly_coupon->coupon_code = $billingInternalCouponsCampaign->getPrefix();
 			$recurly_coupon->name = $billingInternalCouponsCampaign->getName();
@@ -34,18 +35,27 @@ class RecurlyCouponsCampaignsHandler {
 					$recurly_coupon->discount_percent = $billingInternalCouponsCampaign->getPercent();
 					break;
 				default :
-					//exception
+					$msg = "unsupported discount_type=".$billingInternalCouponsCampaign->getDiscountType();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
 			switch($billingInternalCouponsCampaign->getDiscountDuration()) {
 				case 'once' :
+					$recurly_coupon->duration = 'single_use';
 					break;
 				case 'forever' :
+					$recurly_coupon->duration = 'forever';
 					break;
 				case 'repeating' :
+					$recurly_coupon->duration = 'temporal';
+					$recurly_coupon->temporal_unit = $billingInternalCouponsCampaign->getDiscountDurationUnit();
+					$recurly_coupon->temporal_amount = $billingInternalCouponsCampaign->getDiscountDurationLength();
 					break;
 				default :
-					//exception
+					$msg = "unsupported discount_duration=".$billingInternalCouponsCampaign->getDiscountDuration();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
 			//

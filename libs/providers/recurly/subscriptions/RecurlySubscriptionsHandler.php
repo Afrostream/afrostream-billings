@@ -61,7 +61,8 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
 					if(strlen($couponCode) > 0) {
-						$subscription->coupon_code = $couponCode;
+						$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+						$subscription->coupon_code = $couponsInfos['providerCouponsCampaign']->getPrefix();
 					}
 				}
 				//startsAt
@@ -245,18 +246,58 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
+		//?COUPON?
+		$couponsInfos = NULL;
+		$couponCode = NULL;
+		if(isset($subOpts)) {
+			if(array_key_exists('couponCode', $subOpts->getOpts())) {
+				$str = $subOpts->getOpts()['couponCode'];
+				if(strlen($str) > 0) {
+					$couponCode = $str;
+				}
+			}
+		}
+		if(isset($couponCode)) {
+			$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+		}
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
-		//BILLING_INFO
+		//BILLING_INFO (NOT MANDATORY)
 		if(isset($billingInfo)) {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
-		//SUB_OPTS
+		//SUB_OPTS (NOT MANDATORY)
 		if(isset($subOpts)) {
 			$subOpts->setSubId($db_subscription->getId());
 			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+		}
+		//COUPON (NOT MANDATORY)
+		if(isset($couponsInfos)) {
+			$userInternalCoupon = $couponsInfos['userInternalCoupon'];
+			$internalCoupon = $couponsInfos['internalCoupon'];
+			$internalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+			//
+			$now = new DateTime();
+			//userInternalCoupon
+			if($userInternalCoupon->getId() == NULL) {
+				$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
+			}
+			$userInternalCoupon->setStatus("redeemed");
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
+			$userInternalCoupon->setRedeemedDate($now);
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
+			$userInternalCoupon->setSubId($db_subscription->getId());
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+			//internalCoupon
+			if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
+				$internalCoupon->setStatus("redeemed");
+				$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
+				$internalCoupon->setRedeemedDate($now);
+				$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+			}
+			//
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("recurly dbsubscription creation for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid." done successfully, id=".$db_subscription->getId());
@@ -513,6 +554,123 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($subscription);
+	}
+	
+	protected function getCouponInfos($couponCode, Provider $provider, User $user, InternalPlan $internalPlan) {
+		//
+		$out = array();
+		$internalCoupon = NULL;
+		$internalCouponsCampaign = NULL;
+		$providerCouponsCampaign = NULL;
+		$userInternalCoupon = NULL;
+		//
+		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+		if($internalCoupon == NULL) {
+			$msg = "coupon : code=".$couponCode." NOT FOUND";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//Check internalCoupon
+		if($internalCoupon->getStatus() == 'redeemed') {
+			$msg = "coupon : code=".$couponCode." already redeemed";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($internalCoupon->getStatus() == 'expired') {
+			$msg = "coupon : code=".$couponCode." expired";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($internalCoupon->getStatus() == 'pending') {
+			$msg = "coupon : code=".$couponCode." pending";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($internalCoupon->getStatus() != 'waiting') {
+			$msg = "coupon : code=".$couponCode." cannot be used";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//
+		$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+		if($internalCouponsCampaign == NULL) {
+			$msg = "unknown internalCouponsCampaign with id : ".$internalCoupon->getInternalCouponsCampaignsId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//Check compatibility
+		$isProviderCompatible = false;
+		$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+		foreach ($providerCouponsCampaigns as $currentProviderCouponsCampaign) {
+			if($currentProviderCouponsCampaign->getProviderId() == $provider->getId()) {
+				$providerCouponsCampaign = $currentProviderCouponsCampaign;
+				$isProviderCompatible = true;
+				break;
+			}
+		}
+		if($isProviderCompatible == false) {
+			//Exception
+			$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$provider->getName();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+		$isInternalPlanCompatible = false;
+		foreach($billingInternalCouponsCampaignInternalPlans as $billingInternalCouponsCampaignInternalPlan) {
+			if($billingInternalCouponsCampaignInternalPlan->getInternalPlanId() == $internalPlan->getId()) {
+				$isInternalPlanCompatible = true; break;
+			}
+		}
+		if($isInternalPlanCompatible == false) {
+			//Exception
+			$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with internalPlan : ".$internalPlan->getInternalPlanUuid();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//
+		$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCoupon->getId());
+		if(count($userInternalCoupons) > 0) {
+			//TAKING FIRST (EQUALS LAST GENERATED)
+			$userInternalCoupon = $userInternalCoupons[0];
+		} else {
+			$userInternalCoupon = new BillingUserInternalCoupon();
+			$userInternalCoupon->setInternalCouponsId($internalCoupon->getId());
+			$userInternalCoupon->setCode($internalCoupon->getCode());
+			$userInternalCoupon->setUuid(guid());
+			$userInternalCoupon->setUserId($user->getId());
+			$userInternalCoupon->setExpiresDate($internalCoupon->getExpiresDate());
+		}
+		//Check userInternalCoupon
+		if($userInternalCoupon->getStatus() == 'redeemed') {
+			$msg = "coupon : code=".$couponCode." already redeemed";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($userInternalCoupon->getStatus() == 'expired') {
+			$msg = "coupon : code=".$couponCode." expired";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($userInternalCoupon->getStatus() == 'pending') {
+			$msg = "coupon : code=".$couponCode." pending";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($userInternalCoupon->getStatus() != 'waiting') {
+			$msg = "coupon : code=".$couponCode." cannot be used";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($userInternalCoupon->getSubId() != NULL) {
+			$msg = "coupon : code=".$couponCode." is already linked to another subscription";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$out['internalCoupon'] = $internalCoupon;
+		$out['internalCouponsCampaign'] = $internalCouponsCampaign;
+		$out['providerCouponsCampaign'] = $providerCouponsCampaign;
+		$out['userInternalCoupon'] = $userInternalCoupon;
+		return($out);
 	}
 	
 }

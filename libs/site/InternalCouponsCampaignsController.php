@@ -99,13 +99,13 @@ class InternalCouponsCampaignsController extends BillingsController {
 			$couponsCampaign = $internalCouponsCampaignsHandler->doAddToProvider($couponsCampaignInternalBillingUuid, $provider);
 			return($this->returnObjectAsJson($response, 'couponsCampaign', $couponsCampaign));
 		} catch(BillingsException $e) {
-			$msg = "an exception occurred while linking an internal plan to a provider, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an exception occurred while linking an internalCouponsCampaign to a provider, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnBillingsExceptionAsJson($response, $e));
 			//
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while linking an internal plan to a provider, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while linking an internalCouponsCampaign to a provider, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));

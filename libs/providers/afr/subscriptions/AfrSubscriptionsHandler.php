@@ -279,7 +279,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 			$userInternalCoupon = new BillingUserInternalCoupon();
 			$userInternalCoupon->setInternalCouponsId($internalCoupon->getId());
 			$userInternalCoupon->setCode($internalCoupon->getCode());
-			$userInternalCoupon->setUuid($internalCoupon->getUuid());
+			$userInternalCoupon->setUuid(guid());
 			$userInternalCoupon->setUserId($user->getId());
 			$userInternalCoupon->setExpiresDate($internalCoupon->getExpiresDate());
 		}
@@ -302,6 +302,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
 		//COUPON (MANDATORY)
 		$now = new DateTime();
+		//userInternalCouponOpts
 		$userInternalCouponOpts = NULL;
 		if($userInternalCoupon->getId() == NULL) {
 			$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
@@ -311,6 +312,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		} else {
 			$userInternalCouponOpts = BillingUserInternalCouponOptsDAO::getBillingUserInternalCouponOptsByUserInternalCouponId($userInternalCoupon->getId());
 		}
+		//userInternalCoupon
 		$userInternalCoupon->setStatus("redeemed");
 		$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
 		$userInternalCoupon->setRedeemedDate($now);

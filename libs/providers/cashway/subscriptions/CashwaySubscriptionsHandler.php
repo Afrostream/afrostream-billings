@@ -213,12 +213,12 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 		$subOpts->setSubId($db_subscription->getId());
 		$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
 		//COUPON (MANDATORY)
-		//UserInternalCoupon
+		//userInternalCoupon
 		$userInternalCoupon->setStatus("pending");
 		$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
 		$userInternalCoupon->setSubId($db_subscription->getId());
 		$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
-		//InternalCoupon
+		//internalCoupon
 		$internalCoupon->setStatus("pending");
 		$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
 		//<-- DATABASE -->
