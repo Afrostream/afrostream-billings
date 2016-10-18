@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/recurly/couponsCampaigns/RecurlyCouponsCampaignsHandler.php';
 require_once __DIR__ . '/../providers/stripe/couponsCampaigns/StripeCouponsCampaignsHandler.php';
+require_once __DIR__ . '/../providers/braintree/couponsCampaigns/BraintreeCouponsCampaignsHandler.php';
 
 class InternalCouponsCampaignsHandler {
 	
@@ -84,6 +85,10 @@ class InternalCouponsCampaignsHandler {
 					$stripeCouponsCampaignsHandler = new StripeCouponsCampaignsHandler();
 					$couponsCampaignProviderBillingUuid = $stripeCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
 					break;
+				case 'braintree':
+					$braintreeCouponsCampaignsHandler = new BraintreeCouponsCampaignsHandler();
+					$couponsCampaignProviderBillingUuid = $braintreeCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
@@ -97,8 +102,7 @@ class InternalCouponsCampaignsHandler {
 				$billingProviderCouponsCampaign = new BillingProviderCouponsCampaign();
 				$billingProviderCouponsCampaign->setProviderId($provider->getId());
 				$billingProviderCouponsCampaign->setInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
-				$billingProviderCouponsCampaign->setUuid($couponsCampaignProviderBillingUuid);
-				$billingProviderCouponsCampaign->setPrefix($db_internal_coupons_campaign->getPrefix());
+				$billingProviderCouponsCampaign->setExternalUuid($couponsCampaignProviderBillingUuid);
 				$billingProviderCouponsCampaign = BillingProviderCouponsCampaignDAO::addBillingProviderCouponsCampaign($billingProviderCouponsCampaign);
 				//done
 				//COMMIT
