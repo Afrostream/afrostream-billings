@@ -4838,7 +4838,7 @@ EOL;
 	}
 	
 	public static function getBillingInternalCouponByCode($code) {
-		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons WHERE code = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons WHERE lower(code) = lower($1)";
 		$result = pg_query_params(config::getDbConn(), $query, array($code));
 	
 		$out = null;
@@ -5223,29 +5223,6 @@ EOL;
 		// free result
 		pg_free_result($result);
 	
-		return($out);
-	}
-	
-	public static function getBillingUserInternalCoupon($couponCode, $userId = NULL) {
-		$query = "SELECT ".self::$sfields." FROM billing_users_internal_coupons BUIC WHERE lower(BUIC.code) = lower($1)";						
-		if(isset($userId)) {
-			$query.= " AND BUIC.userid = $2";
-		}
-		$query_params = array($couponCode);
-		if(isset($userId)) {
-			array_push($query_params, $userId);
-		}
-		
-		$result = pg_query_params(config::getDbConn(), $query, $query_params);
-		
-		$out = null;
-		
-		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getBillingUserInternalCouponFromRow($row);
-		}
-		// free result
-		pg_free_result($result);
-		
 		return($out);
 	}
 	
