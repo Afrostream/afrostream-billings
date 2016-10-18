@@ -642,15 +642,6 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 		return(NULL);
 	}
 	
-	private function getDiscountByCouponCode(array $discounts, $couponCode) {
-		foreach ($discounts as $discount) {
-			if($discount->id == $couponCode) {
-				return($discount);
-			}
-		}
-		return(NULL);
-	}
-	
 	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
 		try {
 			config::getLogger()->addInfo("braintree subscription expiring...");

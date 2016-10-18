@@ -1143,13 +1143,17 @@ class Plan implements JsonSerializable {
 	}
 	
 	public function jsonSerialize() {
-		return[
+		$provider = ProviderDAO::getProviderById($this->providerid);
+		$return = [
 				'providerPlanUuid' => $this->plan_uuid,
 				'name' => $this->name,
 				'description' => $this->description,
-				'provider' => ProviderDAO::getProviderById($this->providerid)->jsonSerialize(),
+				'provider' => $provider,
 				'paymentMethods' => BillingProviderPlanPaymentMethodsDAO::getBillingProviderPlanPaymentMethodsByProviderPlanId($this->_id)
 		];
+		$providersCouponCodeCompatible = ['afr', 'cashway', 'recurly', 'stripe', 'braintree'];
+		$return['isCouponCodeCompatible'] = in_array($provider->getName(), $providersCouponCodeCompatible);
+		return($return);
 	}
 	
 }
