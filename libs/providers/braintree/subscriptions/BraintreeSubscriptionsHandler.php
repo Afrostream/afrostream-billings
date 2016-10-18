@@ -103,13 +103,27 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 								break;
 							case 'repeating' :
 								//all braintree plans are montlhy based
-								$numberOfBillingCycles = NULL;
-								switch($billingInternalCouponsCampaign->getDiscountDurationUnit()) {
+								$numberOfMonthsInACycle = NULL;
+								switch ($internalPlan->getPeriodUnit()) {
 									case 'month' :
-										$numberOfBillingCycles = 1 * $billingInternalCouponsCampaign->getDiscountDurationLength();
+										$numberOfMonthsInACycle = 1 * $internalPlan->getPeriodLength();
 										break;
 									case 'year' :
-										$numberOfBillingCycles = 12 * $billingInternalCouponsCampaign->getDiscountDurationLength();
+										$numberOfMonthsInACycle = 12 * $internalPlan->getPeriodLength();
+										break;
+									default :
+										$msg = "unsupported period_unit=".$internalPlan->getPeriodUnit();
+										config::getLogger()->addError($msg);
+										throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+										break;
+								}
+								$numberOfMonthsOfDiscount = NULL;
+								switch($billingInternalCouponsCampaign->getDiscountDurationUnit()) {
+									case 'month' :
+										$numberOfMonthsOfDiscount = 1 * $billingInternalCouponsCampaign->getDiscountDurationLength();
+										break;
+									case 'year' :
+										$numberOfMonthsOfDiscount = 12 * $billingInternalCouponsCampaign->getDiscountDurationLength();
 										break;
 									default :
 										$msg = "unsupported discount_duration_unit=".$billingInternalCouponsCampaign->getDiscountDurationUnit();
@@ -117,7 +131,12 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 										throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 										break;
 								}
-								$discountArray['numberOfBillingCycles'] = $numberOfBillingCycles;
+								if(($numberOfMonthsOfDiscount%$numberOfMonthsInACycle) > 0) {
+									$msg = "discount is not compatible with this plan";
+									config::getLogger()->addError($msg);
+									throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);									
+								}
+								$discountArray['numberOfBillingCycles'] = $numberOfMonthsOfDiscount / $numberOfMonthsInACycle;
 								break;
 							default :
 								$msg = "unsupported discount_duration=".$billingInternalCouponsCampaign->getDiscountDuration();
