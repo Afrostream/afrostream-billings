@@ -492,7 +492,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         	$couponCode = $subOpts->getOpts()['couponCode'];
         	if(strlen($couponCode) > 0) {
         		$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
-        		$subscriptionData['coupon'] = $couponsInfos['providerCouponsCampaign']->getPrefix();
+        		$subscriptionData['coupon'] = $couponsInfos['providerCouponsCampaign']->getUuid();
         		$logMessage = 'Create subscription : customer : %s, plan : %s, source : %s, coupon : %s';
         	}
         }

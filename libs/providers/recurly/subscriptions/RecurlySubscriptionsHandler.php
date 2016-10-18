@@ -62,7 +62,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 					$couponCode = $subOpts->getOpts()['couponCode'];
 					if(strlen($couponCode) > 0) {
 						$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
-						$subscription->coupon_code = $couponsInfos['providerCouponsCampaign']->getPrefix();
+						$subscription->coupon_code = $couponsInfos['providerCouponsCampaign']->getUuid();
 					}
 				}
 				//startsAt
