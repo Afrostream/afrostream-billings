@@ -152,7 +152,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         	$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
         	$userInternalCoupon->setRedeemedDate($now);
         	$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
-        	$userInternalCoupon->setSubId($db_subscription->getId());
+        	$userInternalCoupon->setSubId($billingSubscription->getId());
         	$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
         	//internalCoupon
         	if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
