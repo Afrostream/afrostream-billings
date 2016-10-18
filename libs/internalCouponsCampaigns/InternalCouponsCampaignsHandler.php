@@ -5,6 +5,7 @@ require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/recurly/couponsCampaigns/RecurlyCouponsCampaignsHandler.php';
 require_once __DIR__ . '/../providers/stripe/couponsCampaigns/StripeCouponsCampaignsHandler.php';
 require_once __DIR__ . '/../providers/braintree/couponsCampaigns/BraintreeCouponsCampaignsHandler.php';
+require_once __DIR__ . '/../providers/afr/couponsCampaigns/AfrCouponsCampaignsHandler.php';
 
 class InternalCouponsCampaignsHandler {
 	
@@ -73,9 +74,8 @@ class InternalCouponsCampaignsHandler {
 			$couponsCampaignProviderBillingUuid = NULL;
 			switch($provider->getName()) {
 				case 'afr' :
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					$afrCouponsCampaignsHandler = new AfrCouponsCampaignsHandler();
+					$couponsCampaignProviderBillingUuid = $afrCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
 					break;
 				case 'recurly' :
 					$recurlyCouponsCampaignsHandler = new RecurlyCouponsCampaignsHandler();
