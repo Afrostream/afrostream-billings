@@ -83,10 +83,10 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 						$discountArray['inheritedFromId'] = $billingProviderCouponsCampaign->getExternalUuid();
 						switch($billingInternalCouponsCampaign->getDiscountType()) {
 							case 'amount' :
-								$discountArray['amount'] = (float) ($billingInternalCouponsCampaign->getAmountInCents() / 100);
+								$discountArray['amount'] = number_format((float) ($billingInternalCouponsCampaign->getAmountInCents() / 100), 2, '.', '');
 								break;
 							case 'percent':
-								$discountArray['amount'] = (float) (($internalPlan->getAmountInCents() * $billingInternalCouponsCampaign->getPercent()) / 10000);
+								$discountArray['amount'] = number_format((float) (($internalPlan->getAmountInCents() * $billingInternalCouponsCampaign->getPercent()) / 10000), 2, '.', '');
 								break;
 							default :
 								$msg = "unsupported discount_type=".$billingInternalCouponsCampaign->getDiscountType();
