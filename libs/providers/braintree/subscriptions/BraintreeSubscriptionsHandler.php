@@ -153,9 +153,6 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 						];
 					}
 				}
-				//TODO : REMOVE ME
-				$msg = "braintree subscription attribs : ".var_export($attribs, true);
-				config::getLogger()->addError($msg);
 				$result = Braintree\Subscription::create($attribs);
 				if ($result->success) {
 					$subscription = $result->subscription;
