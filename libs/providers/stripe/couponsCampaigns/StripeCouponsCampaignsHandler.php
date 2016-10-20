@@ -20,6 +20,8 @@ class StripeCouponsCampaignsHandler {
 			//
 			$couponData = array();
 			//
+			$couponData['id'] = guid()+"-"+$billingInternalCouponsCampaign->getPrefix();
+			//
 			switch($billingInternalCouponsCampaign->getDiscountType()) {
 				case 'amount' :
 					$couponData['amount_off'] = $billingInternalCouponsCampaign->getAmountInCents();
