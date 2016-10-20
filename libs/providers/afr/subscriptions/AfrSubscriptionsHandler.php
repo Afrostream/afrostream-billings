@@ -27,28 +27,28 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 			if($internalCoupon == NULL) {
 				$msg = "coupon : code=".$couponCode." NOT FOUND";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_CODE_NOT_FOUND);
 			}
 			//Check internalCoupon
 			if($internalCoupon->getStatus() == 'redeemed') {
 				$msg = "coupon : code=".$couponCode." already redeemed";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_REDEEMED);
 			}
 			if($internalCoupon->getStatus() == 'expired') {
 				$msg = "coupon : code=".$couponCode." expired";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_EXPIRED);
 			}
 			if($internalCoupon->getStatus() == 'pending') {
 				$msg = "coupon : code=".$couponCode." pending";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PENDING);
 			}
 			if($internalCoupon->getStatus() != 'waiting') {
-				$msg = "coupon : code=".$couponCode." cannot be used";
+				$msg = "coupon : code=".$couponCode." cannot be used (0)";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_NOT_READY);
 			}
 			//
 			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
@@ -72,7 +72,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				//Exception
 				$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$provider->getName();
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PROVIDER_INCOMPATIBLE);
 			}
 			$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
 			if(count($billingInternalCouponsCampaignInternalPlans) == 0) {
@@ -86,7 +86,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 					//Exception
 					$msg = "coupon : code=".$couponCode." cannot be used with internalPlan with uuid=".$internalPlan->getInternalPlanUuid();
 					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_INTERNALPLAN_INCOMPATIBLE);
 				}
 			} else {
 				//Exception
@@ -116,27 +116,27 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				if($userInternalCoupon->getStatus() == 'redeemed') {
 					$msg = "coupon : code=".$couponCode." already redeemed";
 					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_REDEEMED);
 				}
 				if($userInternalCoupon->getStatus() == 'expired') {
 					$msg = "coupon : code=".$couponCode." expired";
 					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_EXPIRED);
 				}
 				if($userInternalCoupon->getStatus() == 'pending') {
 					$msg = "coupon : code=".$couponCode." pending";
 					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PENDING);
 				}
 				if($userInternalCoupon->getStatus() != 'waiting') {
-					$msg = "coupon : code=".$couponCode." cannot be used";
+					$msg = "coupon : code=".$couponCode." cannot be used (1)";
 					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_NOT_READY);
 				}
 				if($userInternalCoupon->getSubId() != NULL) {
 					$msg = "coupon : code=".$couponCode." is already linked to another subscription";
 					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_ALREADY_LINKED);
 				}
 				//
 				if($userInternalCoupon->getUserId() == $user->getId()) {
@@ -267,7 +267,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//simple check
 		if($internalCoupon->getStatus() != 'waiting') {
-			$msg = "coupon : code=".$couponCode." cannot be used";
+			$msg = "coupon : code=".$couponCode." cannot be used (3)";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -292,7 +292,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//simple check
 		if($userInternalCoupon->getStatus() != 'waiting') {
-			$msg = "coupon : code=".$couponCode." cannot be used";
+			$msg = "coupon : code=".$couponCode." cannot be used (4)";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}

@@ -27,7 +27,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 			if($internalCoupon == NULL) {
 				$msg = "coupon : code=".$couponCode." NOT FOUND";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_CODE_NOT_FOUND);				
 			}
 			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
 			if($internalCouponsCampaign == NULL) {
@@ -50,7 +50,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 				//Exception
 				$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$provider->getName();
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PROVIDER_INCOMPATIBLE);
 			}
 			$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
 			if(count($billingInternalCouponsCampaignInternalPlans) == 0) {
@@ -64,7 +64,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 					//Exception
 					$msg = "coupon : code=".$couponCode." cannot be used with internalPlan with uuid=".$internalPlan->getInternalPlanUuid();
 					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_INTERNALPLAN_INCOMPATIBLE);
 				}
 			} else {
 				//Exception
@@ -78,7 +78,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 				//exception
 				$msg = "coupon : code=".$couponCode." NOT FOUND FOR YOU";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_CODE_NOT_FOUND);
 			} else {
 				//TAKING FIRST (EQUALS LAST GENERATED)
 				$userInternalCoupon = $userInternalCoupons[0];
@@ -87,27 +87,27 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 			if($userInternalCoupon->getStatus() == 'redeemed') {
 				$msg = "coupon : code=".$couponCode." already redeemed";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_REDEEMED);				
 			}
 			if($userInternalCoupon->getStatus() == 'expired') {
 				$msg = "coupon : code=".$couponCode." expired";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_EXPIRED);
 			}
 			if($userInternalCoupon->getStatus() == 'pending') {
 				$msg = "coupon : code=".$couponCode." pending";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PENDING);
 			}
 			if($userInternalCoupon->getStatus() != 'waiting') {
 				$msg = "coupon : code=".$couponCode." cannot be used";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_NOT_READY);
 			}
 			if($userInternalCoupon->getSubId() != NULL) {
 				$msg = "coupon : code=".$couponCode." is already linked to another subscription";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_ALREADY_LINKED);
 			}
 			//OK
 			$sub_uuid = guid();

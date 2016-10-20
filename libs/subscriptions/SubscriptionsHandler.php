@@ -1258,7 +1258,7 @@ class SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PENDING);
 		}
 		if($internalCoupon->getStatus() != 'waiting') {
-			$msg = "coupon : code=".$couponCode." cannot be used";
+			$msg = "coupon : code=".$couponCode." cannot be used (5)";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_NOT_READY);
 		}
@@ -1328,7 +1328,7 @@ class SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PENDING);
 		}
 		if($userInternalCoupon->getStatus() != 'waiting') {
-			$msg = "coupon : code=".$couponCode." cannot be used";
+			$msg = "coupon : code=".$couponCode." cannot be used (6)";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_NOT_READY);
 		}
