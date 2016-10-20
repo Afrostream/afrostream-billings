@@ -320,10 +320,12 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		$userInternalCoupon->setSubId($db_subscription->getId());
 		$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
 		//internalCoupon
-		$internalCoupon->setStatus("redeemed");
-		$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
-		$internalCoupon->setRedeemedDate($now);
-		$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+		if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
+			$internalCoupon->setStatus("redeemed");
+			$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
+			$internalCoupon->setRedeemedDate($now);
+			$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+		}
 		//
 		$recipientEmail = NULL;
 		if(array_key_exists('email', $userOpts->getOpts())) {
