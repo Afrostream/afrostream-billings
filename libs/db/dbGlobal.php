@@ -4844,7 +4844,7 @@ EOL;
 	}
 	
 	public static function getBillingInternalCouponByCode($code) {
-		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons WHERE lower(code) = lower($1)";
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons WHERE upper(code) = upper($1)";
 		$result = pg_query_params(config::getDbConn(), $query, array($code));
 	
 		$out = null;
@@ -4860,7 +4860,7 @@ EOL;
 	
 	public static function addBillingInternalCoupon(BillingInternalCoupon $billingInternalCoupon) {
 		$query = "INSERT INTO billing_internal_coupons (internalcouponscampaignsid, coupon_billing_uuid, code, expires_date)";
-		$query.= " VALUES ($1, $2, $3, $4) RETURNING _id";
+		$query.= " VALUES ($1, $2, upper($3), $4) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$billingInternalCoupon->getInternalCouponsCampaignsId(),
 						$billingInternalCoupon->getUuid(),
@@ -5252,7 +5252,7 @@ EOL;
 	
 	public static function addBillingUserInternalCoupon(BillingUserInternalCoupon $billingUserInternalCoupon) {
 		$query = "INSERT INTO billing_users_internal_coupons (internalcouponsid, coupon_billing_uuid, code, userid, expires_date)";
-		$query.= " VALUES ($1, $2, $3, $4, $5) RETURNING _id";
+		$query.= " VALUES ($1, $2, upper($3), $4, $5) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$billingUserInternalCoupon->getInternalCouponsId(),
 						$billingUserInternalCoupon->getUuid(),
