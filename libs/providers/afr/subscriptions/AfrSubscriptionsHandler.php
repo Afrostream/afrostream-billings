@@ -94,18 +94,18 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$userInternalCoupon = NULL;
-			$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByInternalcouponsid($internalCoupon->getId());
-			if(count($userInternalCoupons) > 0) {
-				if(count($userInternalCoupons) > 1) {
-					//exception
-					$msg = "coupon : code=".$couponCode." used multiple times";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				$userInternalCoupon = $userInternalCoupons[0];
-			}
 			if($internalCouponsCampaign->getCouponType() == CouponCampaignType::sponsorship) {
+				$userInternalCoupon = NULL;
+				$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByInternalcouponsid($internalCoupon->getId());
+				if(count($userInternalCoupons) > 0) {
+					if(count($userInternalCoupons) > 1) {
+						//exception
+						$msg = "coupon : code=".$couponCode." used multiple times";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					$userInternalCoupon = $userInternalCoupons[0];
+				}
 				if($userInternalCoupon == NULL) {
 					//exception
 					$msg = $msg = "coupon : code=".$couponCode." was not correctly sponsored";
@@ -272,15 +272,17 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByInternalcouponsid($internalCoupon->getId());
-		if(count($userInternalCoupons) > 0) {
-			if(count($userInternalCoupons) > 1) {
-				//exception
-				$msg = "coupon : code=".$couponCode." used multiple times";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		if($internalCouponsCampaign->getCouponType() == CouponCampaignType::sponsorship) {
+			if(count($userInternalCoupons) > 0) {
+				if(count($userInternalCoupons) > 1) {
+					//exception
+					$msg = "coupon : code=".$couponCode." used multiple times";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				//only one : take it
+				$userInternalCoupon = $userInternalCoupons[0];
 			}
-			//only one : take it
-			$userInternalCoupon = $userInternalCoupons[0];
 		}
 		if($userInternalCoupon == NULL) {
 			$userInternalCoupon = new BillingUserInternalCoupon();
