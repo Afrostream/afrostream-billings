@@ -10,7 +10,7 @@ class UsersInternalCouponsHandler {
 	public function __construct() {
 	}
 	
-	public function doGetList($userBillingUuid, $internalCouponCampaignType = null, $couponsCampaignInternalBillingUuid = null)
+	public function doGetList($userBillingUuid, $internalCouponCampaignType = null, $couponsCampaignInternalBillingUuid = null, $recipientIsFilled = null)
 	{
 		$user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
 		if($user == NULL) {
@@ -32,7 +32,7 @@ class UsersInternalCouponsHandler {
 			$internalCouponsCampaignBillingId = $internalCouponsCampaign->getId();
 		}
 		
-		$list = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), NULL, $internalCouponCampaignType, $internalCouponsCampaignBillingId);
+		$list = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), NULL, $internalCouponCampaignType, $internalCouponsCampaignBillingId, $recipientIsFilled);
 	
 		return $list;
 	}

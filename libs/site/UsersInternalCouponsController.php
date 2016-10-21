@@ -24,15 +24,17 @@ class UsersInternalCouponsController extends BillingsController {
 	
 			$userBillingUuid = $data['userBillingUuid'];
 			//for backward compatibility - to be removed later -
-			$couponsCampaignInternalBillingUuid = empty($data['couponsCampaignBillingUuid']) ? null : $data['couponsCampaignBillingUuid'];
-			if(is_null($couponsCampaignInternalBillingUuid)) {
-				$couponsCampaignInternalBillingUuid = empty($data['couponsCampaignInternalBillingUuid']) ? null : $data['couponsCampaignInternalBillingUuid'];
+			$internalCouponsCampaignBillingUuid = empty($data['couponsCampaignBillingUuid']) ? null : $data['couponsCampaignBillingUuid'];
+			if(is_null($internalCouponsCampaignBillingUuid)) {
+				$internalCouponsCampaignBillingUuid = empty($data['internalCouponsCampaignBillingUuid']) ? null : $data['internalCouponsCampaignBillingUuid'];
 			}
 			
 			$couponsCampaignType = empty($data['couponsCampaignType']) ? null : $data['couponsCampaignType'];
 			
+			$recipientIsFilled = empty($data['recipientIsFilled']) ? true : ($data['recipientIsFilled'] == 'true' ? true : false);
+			
 			$usersInternalCouponsHandler = new UsersInternalCouponsHandler();
-			$listCoupons = $usersInternalCouponsHandler->doGetList($userBillingUuid, $couponsCampaignType, $couponsCampaignInternalBillingUuid);
+			$listCoupons = $usersInternalCouponsHandler->doGetList($userBillingUuid, $couponsCampaignType, $internalCouponsCampaignBillingUuid, $recipientIsFilled);
 	
 			return $this->returnObjectAsJson($response, 'coupons', $listCoupons);
 		} catch(Exception $e) {
@@ -48,16 +50,20 @@ class UsersInternalCouponsController extends BillingsController {
 		try {
 			$data = json_decode($request->getBody(), true);
 			$userBillingUuid = NULL;
-			$couponsCampaignBillingUuid = NULL;
+			$internalCouponsCampaignBillingUuid = NULL;
 			if(!isset($data['userBillingUuid'])) {
 				//exception
 				$msg = "field 'userBillingUuid' is missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(!isset($data['couponsCampaignBillingUuid'])) {
+			$internalCouponsCampaignBillingUuid = empty($data['couponsCampaignBillingUuid']) ? null : $data['couponsCampaignBillingUuid'];
+			if(is_null($internalCouponsCampaignBillingUuid)) {
+				$internalCouponsCampaignBillingUuid = empty($data['internalCouponsCampaignBillingUuid']) ? null : $data['internalCouponsCampaignBillingUuid'];
+			}
+			if(is_null($internalCouponsCampaignBillingUuid)) {
 				//exception
-				$msg = "field 'couponsCampaignBillingUuid' is missing";
+				$msg = "field 'internalCouponsCampaignBillingUuid' is missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -75,10 +81,9 @@ class UsersInternalCouponsController extends BillingsController {
 			}
 
 			$userBillingUuid = $data['userBillingUuid'];
-			$couponsCampaignBillingUuid = $data['couponsCampaignBillingUuid'];
 			//
 			$usersInternalCouponsHandler = new UsersInternalCouponsHandler();
-			$coupon = $usersInternalCouponsHandler->doCreateCoupon($userBillingUuid, $couponsCampaignBillingUuid, NULL /* no internalPlanUuid given for the moment */, $couponOpts);
+			$coupon = $usersInternalCouponsHandler->doCreateCoupon($userBillingUuid, $internalCouponsCampaignBillingUuid, NULL /* no internalPlanUuid given for the moment */, $couponOpts);
 			return($this->returnObjectAsJson($response, 'coupon', $coupon));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while creating a coupon, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
