@@ -13,7 +13,9 @@ class NetsizeUsersHandler {
 		try {
 			config::getLogger()->addInfo("netsize user creation...");
 			if(isset($user_provider_uuid)) {
-				$netsizeClient = new NetsizeClient();
+				//TODO : transactionId may be in $user_opts_array, maybe should we check it later
+				//REMOVE CHECK
+				/*$netsizeClient = new NetsizeClient();
 				$getStatusRequest = new GetStatusRequest();
 				$getStatusRequest->setTransactionId($user_provider_uuid);
 				$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
@@ -25,7 +27,7 @@ class NetsizeUsersHandler {
 					$msg = "user-id-type ".$getStatusResponse->getUserIdType()." is not correct";
 					config::getLogger()->addError("netsize user creation failed : ".$msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
-				}
+				}*/
 			} else {
 				$msg = "unsupported feature for provider named netsize, userProviderUuid has to be provided";
 				config::getLogger()->addError($msg);
