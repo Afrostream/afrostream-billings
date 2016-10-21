@@ -255,6 +255,14 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 				}
 			}
 			break;
+		case 'cashway' :
+			if(!array_key_exists('couponCode', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'couponCode' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			break;
 		default :
 			//nothing
 			break;
@@ -264,6 +272,17 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 function checkSubOptsValues(array $sub_opts_as_array, $providerName, $case = 'all') {
 	switch($providerName) {
 		case 'bachat' :
+			break;
+		case 'cashway' :
+			if(array_key_exists('couponCode', $sub_opts_as_array)) {
+				$str = $sub_opts_as_array['couponCode'];
+				if(strlen(trim($str)) == 0) {
+					//exception
+					$msg = "'couponCode' value is empty";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
 			break;
 		default :
 			//nothing
@@ -345,7 +364,7 @@ function doSortPaymentMethods(&$paymentMethodsArray, $allPaymentMethods) {
 					$idxA = $allPaymentMethodsByPaymentMethodType[$A]->getIndex();
 				}
 				if(array_key_exists($B, $allPaymentMethodsByPaymentMethodType)) {
-					$idxB = $allPaymentMethodsByPaymentMethodType[$B]->getIndex();;
+					$idxB = $allPaymentMethodsByPaymentMethodType[$B]->getIndex();
 				}
 				if(isset($idxA) && isset($idxB)) {
 					return($idxA - $idxB);

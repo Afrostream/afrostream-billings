@@ -13,12 +13,21 @@ class CashwayCouponsHandler {
 	public function __construct() {
 	}
 		
-	public function doCreateCoupon(User $user, UserOpts $userOpts, CouponsCampaign $couponsCampaign, $coupon_billing_uuid, BillingsCouponsOpts $billingCouponsOpts) {
+	public function doCreateCoupon(User $user, 
+			UserOpts $userOpts, 
+			BillingInternalCouponsCampaign $internalCouponsCampaign, 
+			BillingProviderCouponsCampaign $providerCouponsCampaign,
+			InternalPlan $internalPlan = NULL, 
+			$coupon_billing_uuid, 
+			BillingsCouponsOpts $billingCouponsOpts) {
+		$coupon_provider_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("cashway coupon creation...");
 			//
+			//TODO : should check internalCouponsCampaign compatibility
+			//
 			if(getEnv('CASHWAY_COUPON_ONE_BY_USER_FOR_EACH_CAMPAIGN_ACTIVATED') == 1) {
-				$couponsByUserForOneCampaign = CouponDAO::getCouponsByUserId($user->getId(), $couponsCampaign->getId());
+				$couponsByUserForOneCampaign = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), NULL, NULL, $internalCouponsCampaign->getId());
 				foreach ($couponsByUserForOneCampaign as $coupon) {
 					if($coupon->getStatus() == 'pending') {
 						//exception
@@ -28,7 +37,36 @@ class CashwayCouponsHandler {
 					}
 				}
 			}
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($couponsCampaign->getProviderPlanId()));
+			//Checking InternalPlan Compatibility
+			$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+			if(count($billingInternalCouponsCampaignInternalPlans) == 0) {
+				//Exception
+				$msg = "no internalPlan associated to internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			} else if(count($billingInternalCouponsCampaignInternalPlans) == 1) {
+				if($internalPlan == NULL) {
+					$internalPlan = InternalPlanDAO::getInternalPlanById($billingInternalCouponsCampaignInternalPlans[0]->getInternalPlanId());
+				}
+			}
+			if($internalPlan == NULL) {
+				//Exception
+				$msg = "no default internalPlan associated to internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$found = false;
+			foreach ($billingInternalCouponsCampaignInternalPlans as $billingInternalCouponsCampaignInternalPlan) {
+				if($internalPlan->getId() == $billingInternalCouponsCampaignInternalPlan->getInternalPlanId()) {
+					$found = true; break;
+				}
+			}
+			if($found == false) {
+				//Exception
+				$msg = "given internalPlan with uuid=".$internalPlan->getInternalPlanUuid()." is not associated to internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			//
 			$conf = array (
 					'API_KEY'		=> getEnv('CASHWAY_API_HTTP_AUTH_USER'),
@@ -96,17 +134,23 @@ class CashwayCouponsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$coupon_provider_uuid = $result['barcode'];
-			//
-			$coupon = new Coupon();
-			$coupon->setCouponBillingUuid($coupon_billing_uuid);
-			$coupon->setCouponsCampaignId($couponsCampaign->getId());
-			$coupon->setProviderId($couponsCampaign->getProviderId());
-			$coupon->setProviderPlanId($couponsCampaign->getProviderPlanId());
-			$coupon->setCode($coupon_provider_uuid);
-			$coupon->setExpiresDate($expires_date);
-			$coupon->setUserId($user->getId());
-			CouponDAO::addCoupon($coupon);
-			//
+			//<-- DB -->
+			//Create an internalCoupon
+			$internalCoupon = new BillingInternalCoupon();
+			$internalCoupon->setInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+			$internalCoupon->setCode($coupon_provider_uuid);
+			$internalCoupon->setUuid($coupon_billing_uuid);
+			$internalCoupon->setExpiresDate($expires_date);
+			$internalCoupon = BillingInternalCouponDAO::addBillingInternalCoupon($internalCoupon);
+			//Create an userCoupon linked to the internalCoupon
+			$userInternalCoupon = new BillingUserInternalCoupon();
+			$userInternalCoupon->setInternalCouponsId($internalCoupon->getId());
+			$userInternalCoupon->setCode($coupon_provider_uuid);
+			$userInternalCoupon->setUuid($coupon_billing_uuid);
+			$userInternalCoupon->setUserId($user->getId());
+			$userInternalCoupon->setExpiresDate($expires_date);
+			$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
+			//<-- DB -->
 			config::getLogger()->addInfo("cashway coupon creation done successfully, coupon_provider_uuid=".$coupon_provider_uuid);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while creating a cashway coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -120,38 +164,16 @@ class CashwayCouponsHandler {
 		return($coupon_provider_uuid);
 	}
 	
-	public function createDbCouponFromApiCouponUuid(User $user,  UserOpts $userOpts, CouponsCampaign $couponsCampaign, $coupon_billing_uuid, $coupon_provider_uuid) {
+	public function createDbCouponFromApiCouponUuid(User $user, 
+			UserOpts $userOpts, 
+			BillingInternalCouponsCampaign $internalCouponsCampaign, 
+			BillingProviderCouponsCampaign $providerCouponsCampaign, 
+			InternalPlan $internalPlan = NULL, 
+			$coupon_billing_uuid, 
+			$coupon_provider_uuid) {
 		//LATER : cashway do not allow yet to have a status from an unique transaction
-		return(CouponDAO::getCouponByCouponBillingUuid($coupon_billing_uuid));
+		return(BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($coupon_billing_uuid));
 	}
-	
-	public function doGetCoupon(User $user = NULL, UserOpts $userOpts = NULL, $couponCode) {
-		$db_coupon = NULL;
-		try {
-			if($user == NULL) {
-				$msg = "unsupported feature for provider named : cashway, user has to be provided";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			//provider
-			$provider = ProviderDAO::getProviderByName('cashway');
-			if($provider == NULL) {
-				$msg = "provider named 'cashway' not found";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			$db_coupon = CouponDAO::getCoupon($provider->getId(), $couponCode, $user->getId());
-		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while getting a cashway coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("cashway coupon getting failed : ".$msg);
-			throw $e;
-		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while getting a cashway coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("cashway coupon getting failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
-		}
-		return($db_coupon);
-	}	
 	
 }
 

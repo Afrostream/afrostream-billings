@@ -63,11 +63,11 @@ class RecurlyPlansHandler {
 			throw $e;
 		} catch (Recurly_ValidationError $e) {
 			$msg = "a validation error exception occurred while creating a recurly plan, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("recurly subscription creation failed : ".$msg);
+			config::getLogger()->addError("recurly plan creation failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while creating a recurly plan, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("recurly subscription creation failed : ".$msg);
+			config::getLogger()->addError("recurly plan creation failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($provider_plan_uuid);
