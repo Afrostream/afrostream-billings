@@ -22,7 +22,7 @@ class RecurlyCouponsCampaignsHandler {
 			$recurly_coupon = new Recurly_Coupon();
 			$recurly_coupon->redemption_resource = 'subscription';
 			//
-			$recurly_coupon->coupon_code = guid()."-".$billingInternalCouponsCampaign->getPrefix();
+			$recurly_coupon->coupon_code = guid();
 			$recurly_coupon->name = $billingInternalCouponsCampaign->getName();
 			$recurly_coupon->description = $billingInternalCouponsCampaign->getDescription();
 			switch($billingInternalCouponsCampaign->getDiscountType()) {
