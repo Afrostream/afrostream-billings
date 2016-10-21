@@ -5341,7 +5341,7 @@ EOL;
 		$query = "SELECT ".self::$sfields." FROM billing_users_internal_coupons BUIC";
 		$query.= " INNER JOIN billing_internal_coupons BIC ON (BUIC.internalcouponsid = BIC._id)";
 		$query.= " INNER JOIN billing_internal_coupons_campaigns BICC ON (BIC.internalcouponscampaignsid = BICC._id)";
-		$query.= " LEFT JOIN billing_users_internal_coupons_opts BUICO ON (BUICO.internalcouponsid = BUIC._id AND BUIC.key = 'recipientEmail' AND BUIC.deleted = false)";
+		$query.= " LEFT JOIN billing_users_internal_coupons_opts BUICO ON (BUICO.userinternalcouponsid = BUIC._id AND BUIC.key = 'recipientEmail' AND BUIC.deleted = false)";
 		$query.= " WHERE BUIC.userid = $1";
 		$params = array();
 		$params[] = $userid;
