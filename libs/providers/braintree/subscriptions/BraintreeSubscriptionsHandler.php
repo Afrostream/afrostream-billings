@@ -144,13 +144,7 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 								break;
 						}
-						$attribs[] = [
-								'discounts' =>	[
-										'add' =>	[
-												$discountArray
-										]
-								]
-						];
+						$attribs['discounts'] = ['add' =>	[$discountArray]];
 					}
 				}
 				$result = Braintree\Subscription::create($attribs);
