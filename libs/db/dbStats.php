@@ -340,8 +340,7 @@ class dbStats {
 		INNER JOIN billing_internal_coupons_campaigns BICC ON (BIC.internalcouponscampaignsid = BICC._id)
 		LEFT JOIN billing_users_internal_coupons_opts BUICO ON (BUIC._id = BUICO.userinternalcouponsid AND BUICO.key = 'recipientEmail' AND BUICO.deleted = false)
 		WHERE
-		BUIC.coupon_status = 'redeemed'
-		AND (BUIC.redeemed_date  AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		(BUIC.redeemed_date  AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
 		AND BUO.key = 'email'
 		AND BUO.deleted = false
 EOL;
@@ -664,8 +663,7 @@ EOL;
 		INNER JOIN billing_internal_coupons BIC ON (BUIC.internalcouponsid = BIC._id)
 		INNER JOIN billing_internal_coupons_campaigns BICC ON (BIC.internalcouponscampaignsid = BICC._id)
 		WHERE
-		BUIC.coupon_status='redeemed'
-		AND (BUIC.redeemed_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		(BUIC.redeemed_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
 		GROUP BY BICC._id ORDER BY BICC._id
 EOL;
 		$query = sprintf($query, $date_start_str, $date_end_str);
