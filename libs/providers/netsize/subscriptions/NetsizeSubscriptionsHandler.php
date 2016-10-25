@@ -27,7 +27,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				$finalizeResponse = $netsizeClient->finalize($finalizeRequest);
 				//421 - Activated (Auto Billed)
 				$array_TransactionStatusCode_ok = [421];
-				if(!array_key_exists($finalizeResponse->getTransactionStatusCode(), $array_TransactionStatusCode_ok)) {
+				if(!in_array($finalizeResponse->getTransactionStatusCode(), $array_TransactionStatusCode_ok)) {
 					$msg = "transaction-status/@code ".$finalizeResponse->getTransactionStatusCode()." is not correct";
 					config::getLogger()->addError("netsize subscription creation failed : ".$msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
