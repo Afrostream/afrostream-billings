@@ -14,22 +14,22 @@ foreach ($argv as $arg) {
 			$_GET[$e[0]]=0;
 }
 
-$couponscampaignuuid = false;
+$couponsCampaignInternalBillingUuid = false;
 
-if(isset($_GET["-couponscampaignuuid"])) {
-	$couponscampaignuuid = $_GET["-couponscampaignuuid"];
+if(isset($_GET["-couponsCampaignInternalBillingUuid"])) {
+	$couponsCampaignInternalBillingUuid = $_GET["-couponsCampaignInternalBillingUuid"];
 } else {
-	print_r("-couponscampaignuuid is missing\n");
+	print_r("-couponsCampaignInternalBillingUuid is missing\n");
 	exit;
 }
 
-print_r("using couponscampaignuuid=".var_export($couponscampaignuuid, true)."\n");
+print_r("using couponsCampaignInternalBillingUuid=".var_export($couponsCampaignInternalBillingUuid, true)."\n");
 
 print_r("processing...\n");
 
 $billingsCouponsGenerator = new BillingsCouponsGenerator();
 
-$billingsCouponsGenerator->doGenerateCoupons($couponscampaignuuid);
+$billingsCouponsGenerator->doGenerateCoupons($couponsCampaignInternalBillingUuid);
 
 print_r("processing done\n");
 

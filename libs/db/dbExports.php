@@ -57,7 +57,7 @@ class dbExports {
 		END) as subscription_provider_uuid,
 		(CASE WHEN BS.couponid IS NULL THEN NULL 
 			ELSE
-		(SELECT coupon_billing_uuid FROM billing_coupons WHERE _id = BS.couponid)
+		(SELECT coupon_billing_uuid FROM billing_users_internal_coupons WHERE _id = BS.couponid)
 		END) as coupon_billing_uuid
 		FROM
 		billing_transactions BS

@@ -5,9 +5,10 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../libs/site/UsersController.php';
 require_once __DIR__ . '/../libs/site/SubscriptionsController.php';
 require_once __DIR__ . '/../libs/site/InternalPlansFilteredController.php';
-require_once __DIR__ . '/../libs/site/CouponsController.php';
+require_once __DIR__ . '/../libs/site/InternalCouponsController.php';
+require_once __DIR__ . '/../libs/site/UsersInternalCouponsController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
-require_once __DIR__ . '/../libs/site/CouponsCampaignsController.php';
+require_once __DIR__ . '/../libs/site/InternalCouponsCampaignsController.php';
 require_once __DIR__ . '/../libs/site/ContextsController.php';
 
 use \Slim\Http\Request;
@@ -297,7 +298,10 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
         		"key1": "value1",
         		"key2": "value2",
         		"key3": "value3"    			
-    		}	
+    		},
+    		"paymentMethod" : {
+    			"paymentMethodType" : "card"
+    		}
     	},
     	"subOpts": {
         	"key1": "value1",
@@ -529,8 +533,106 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/updateinternalp
 				"trialEnabled": true,
 				"trialPeriodUnit": "day",
 				"trialPeriodLength": "7",
-				"isVisible": true
-      		}		
+				"isVisible": true,
+        		"providerPlans": {
+				 	"recurly": {
+				   		"providerPlanUuid": "afrostreammonthly",
+				        "name": "recurly_afrostream_monthly",
+				        "description": null,
+				        "provider": {
+				        	"providerName": "recurly"
+				        },
+				        "paymentMethods": [
+				        	{
+				        		"paymentMethodType": "card",
+				            	"index": "1"
+				        	},
+				        	{
+				        		"paymentMethodType": "paypal",
+				            	"index": "3"
+				        	}
+				        ]
+				    },
+				    "gocardless": {
+				    	"providerPlanUuid": "afrostreammontlhy",
+				        "name": "gocardless_afrostream_monthly",
+				        "description": null,
+				        "provider": {
+				        "providerName": "gocardless"
+				        },
+				        "paymentMethods": [
+				        	{
+				            	"paymentMethodType": "sepa",
+				               	"index": "2"
+				            }
+				   		]
+					}
+				},
+				"providerPlansByPaymentMethodType": {
+          			"card": [
+          				{
+						 	"recurly": {
+						   		"providerPlanUuid": "afrostreammonthly",
+						        "name": "recurly_afrostream_monthly",
+						        "description": null,
+						        "provider": {
+						        	"providerName": "recurly"
+						        },
+						        "paymentMethods": [
+						        	{
+						        		"paymentMethodType": "card",
+						            	"index": "1"
+						        	},
+						        	{
+						        		"paymentMethodType": "paypal",
+						            	"index": "3"
+						        	}
+						        ]
+						    },
+            			}
+            		],
+          			"sepa": [
+          				{
+						    "gocardless": {
+						    	"providerPlanUuid": "afrostreammontlhy",
+						        "name": "gocardless_afrostream_monthly",
+						        "description": null,
+						        "provider": {
+						        "providerName": "gocardless"
+						        },
+						        "paymentMethods": [
+						        	{
+						            	"paymentMethodType": "sepa",
+						               	"index": "2"
+						            }
+						   		]
+							}
+          				}
+          			],
+          			"paypal": [
+          				{
+						 	"recurly": {
+						   		"providerPlanUuid": "afrostreammonthly",
+						        "name": "recurly_afrostream_monthly",
+						        "description": null,
+						        "provider": {
+						        	"providerName": "recurly"
+						        },
+						        "paymentMethods": [
+						        	{
+						        		"paymentMethodType": "card",
+						            	"index": "1"
+						        	},
+						        	{
+						        		"paymentMethodType": "paypal",
+						            	"index": "3"
+						        	}
+						        ]
+						    },
+          				}
+          			]
+        		}
+      		}
     	}
     }
 	
@@ -726,9 +828,16 @@ $app->put("/billings/api/internalplans/{internalPlanUuid}/removefromcontext/{con
 	
 */
 
+//for backward compatibility - to be removed later -
+
 $app->get("/billings/api/coupons/", function ($request, $response, $args) {
-	$couponsController = new CouponsController();
-	return($couponsController->get($request, $response, $args));
+	$internalCouponsController = new InternalCouponsController();
+	return($internalCouponsController->get($request, $response, $args));
+});
+
+$app->get("/billings/api/internalcoupons/", function ($request, $response, $args) {
+	$internalCouponsController = new InternalCouponsController();
+	return($internalCouponsController->get($request, $response, $args));
 });
 
 //create coupon
@@ -747,9 +856,16 @@ $app->get("/billings/api/coupons/", function ($request, $response, $args) {
 	
 */
 
+//for backward compatibility - to be removed later -
+
 $app->post("/billings/api/coupons/", function ($request, $response, $args) {
-	$couponsController = new CouponsController();
-	return($couponsController->create($request, $response, $args));
+	$usersInternalCouponsController = new UsersInternalCouponsController();
+	return($usersInternalCouponsController->create($request, $response, $args));
+});
+
+$app->post("/billings/api/users/coupons/", function ($request, $response, $args) {
+	$usersInternalCouponsController = new UsersInternalCouponsController();
+	return($usersInternalCouponsController->create($request, $response, $args));
 });
 
 /**
@@ -761,9 +877,17 @@ $app->post("/billings/api/coupons/", function ($request, $response, $args) {
  * Filters :
  *  - campaignUuid=111111-1111-1111-11111111
  */
+
+//for backward compatibility - to be removed later -
+
 $app->get("/billings/api/coupons/list/", function ($request, $response, $args) {
-	$couponsController = new CouponsController();
-	return($couponsController->getList($request, $response, $args));
+	$usersInternalCouponsController = new UsersInternalCouponsController();
+	return($usersInternalCouponsController->getList($request, $response, $args));
+});
+
+$app->get("/billings/api/users/coupons/list/", function ($request, $response, $args) {
+	$usersInternalCouponsController = new UsersInternalCouponsController();
+	return($usersInternalCouponsController->getList($request, $response, $args));
 });
 
 //get couponscampaigns
@@ -790,14 +914,35 @@ $app->get("/billings/api/coupons/list/", function ($request, $response, $args) {
 	
 */
 
+//for backward compatibility - to be removed later -
+
 $app->get("/billings/api/couponscampaigns/", function ($request, $response, $args) {
-	$couponsCampaignsController = new CouponsCampaignsController();
-	return($couponsCampaignsController->getMulti($request, $response, $args));
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->getMulti($request, $response, $args));
 });
 
-$app->get("/billings/api/couponscampaigns/{couponsCampaignBillingUuid}", function ($request, $response, $args) {
-	$couponsCampaignsController = new CouponsCampaignsController();
-	return($couponsCampaignsController->getOne($request, $response, $args));
+$app->get("/billings/api/internalcouponscampaigns/", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->getMulti($request, $response, $args));
+});
+
+//for backward compatibility - to be removed later -
+
+$app->get("/billings/api/couponscampaigns/{couponsCampaignInternalBillingUuid}", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->getOne($request, $response, $args));
+});
+
+$app->get("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->getOne($request, $response, $args));
+});
+
+//actions to internalPlan : addtoprovider
+
+$app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}/addtoprovider/{providerName}", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->addToProvider($request, $response, $args));
 });
 
 //contexts

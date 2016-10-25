@@ -61,7 +61,8 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
 					if(strlen($couponCode) > 0) {
-						$subscription->coupon_code = $couponCode;
+						$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+						$subscription->coupon_code = $couponsInfos['providerCouponsCampaign']->getExternalUuid();
 					}
 				}
 				//startsAt
@@ -245,18 +246,57 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
+		//?COUPON?
+		$couponsInfos = NULL;
+		$couponCode = NULL;
+		if(isset($subOpts)) {
+			if(array_key_exists('couponCode', $subOpts->getOpts())) {
+				$str = $subOpts->getOpts()['couponCode'];
+				if(strlen($str) > 0) {
+					$couponCode = $str;
+				}
+			}
+		}
+		if(isset($couponCode)) {
+			$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+		}
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
-		//BILLING_INFO
+		//BILLING_INFO (NOT MANDATORY)
 		if(isset($billingInfo)) {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
-		//SUB_OPTS
+		//SUB_OPTS (NOT MANDATORY)
 		if(isset($subOpts)) {
 			$subOpts->setSubId($db_subscription->getId());
 			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+		}
+		//COUPON (NOT MANDATORY)
+		if(isset($couponsInfos)) {
+			$userInternalCoupon = $couponsInfos['userInternalCoupon'];
+			$internalCoupon = $couponsInfos['internalCoupon'];
+			$internalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+			//
+			$now = new DateTime();
+			//userInternalCoupon
+			if($userInternalCoupon->getId() == NULL) {
+				$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
+			}
+			$userInternalCoupon->setStatus("redeemed");
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
+			$userInternalCoupon->setRedeemedDate($now);
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
+			$userInternalCoupon->setSubId($db_subscription->getId());
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+			//internalCoupon
+			if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
+				$internalCoupon->setStatus("redeemed");
+				$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
+				$internalCoupon->setRedeemedDate($now);
+				$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+			}
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("recurly dbsubscription creation for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid." done successfully, id=".$db_subscription->getId());

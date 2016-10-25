@@ -68,14 +68,12 @@ $couponsActivated = dbStats::getCouponsActivation($start_date, $end_date);
 sendMessage(count($couponsActivated)." activated coupons between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
-	$msg = sprintf('couponType=%s creator=%s recipient=%s planName=%s campaignName=%s prefix=%s (%s)',
+	$msg = sprintf('couponType=%s creator=%s recipient=%s campaignName=%s prefix=%s',
 			$coupon['coupon_type'],
 			$coupon['user_email'],
 			$coupon['recipient_email'],
-			$coupon['plan_name'],
 			$coupon['coupons_campaign_name'],
-			$coupon['coupons_campaign_prefix'],
-			$coupon['provider_name']);
+			$coupon['coupons_campaign_prefix']);
 	sendMessage($msg, $channelCoupons);
 	sendMessage('---------------------------------------------------', $channelCoupons);
 }
@@ -86,14 +84,12 @@ $couponsActivated = dbStats::getCouponsCashwayGenerated($start_date, $end_date);
 sendMessage(count($couponsActivated)." generated cashway coupons between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
-	$msg = sprintf('couponType=%s creator=%s recipient=%s planName=%s campaignName=%s prefix=%s (%s)',
+	$msg = sprintf('couponType=%s creator=%s recipient=%s campaignName=%s prefix=%s',
 			$coupon['coupon_type'],
 			$coupon['user_email'],
 			$coupon['recipient_email'],
-			$coupon['plan_name'],
 			$coupon['coupons_campaign_name'],
-			$coupon['coupons_campaign_prefix'],
-			$coupon['provider_name']);
+			$coupon['coupons_campaign_prefix']);
 	sendMessage($msg, $channelCoupons);
 	sendMessage('---------------------------------------------------', $channelCoupons);
 }
@@ -104,14 +100,12 @@ $couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new 
 sendMessage(count($couponsActivated)." generated sponsorship coupons between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
-	$msg = sprintf('couponType=%s creator=%s recipient=%s planName=%s campaignName=%s prefix=%s (%s)', 
+	$msg = sprintf('couponType=%s creator=%s recipient=%s campaignName=%s prefix=%s', 
 			$coupon['coupon_type'],
 			$coupon['user_email'],
 			$coupon['recipient_email'],
-			$coupon['plan_name'],
 			$coupon['coupons_campaign_name'],
-			$coupon['coupons_campaign_prefix'],
-			$coupon['provider_name']);
+			$coupon['coupons_campaign_prefix']);
 	sendMessage($msg, $channelCoupons);
 	sendMessage('---------------------------------------------------', $channelCoupons);
 }
@@ -122,14 +116,12 @@ $couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new 
 sendMessage(count($couponsActivated)." generated standard coupons between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
-	$msg = sprintf('couponType=%s creator=%s recipient=%s planName=%s campaignName=%s prefix=%s (%s)',
+	$msg = sprintf('couponType=%s creator=%s recipient=%s campaignName=%s prefix=%s',
 			$coupon['coupon_type'],
 			$coupon['user_email'],
 			$coupon['recipient_email'],
-			$coupon['plan_name'],
 			$coupon['coupons_campaign_name'],
-			$coupon['coupons_campaign_prefix'],
-			$coupon['provider_name']);
+			$coupon['coupons_campaign_prefix']);
 	sendMessage($msg, $channelCoupons);
 	sendMessage('---------------------------------------------------', $channelCoupons);
 }
