@@ -161,7 +161,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		try {
 			config::getLogger()->addInfo("netsize subscription canceling...");
 			$doIt = false;
-			if($is_a_request == true) {
+			/*if($is_a_request == true) {
 				if(
 						$subscription->getSubStatus() == "requesting_canceled"
 						||
@@ -188,7 +188,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
 					}
 				}
-			} else {
+			} else {*/
 				if(
 						$subscription->getSubStatus() == "canceled"
 						||
@@ -210,14 +210,14 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
 					}
 				}
-			}
+			/*}*/
 			if($doIt == true) {
 				$subscription->setSubCanceledDate($cancel_date);
-				if($is_a_request == true) {
+				/*if($is_a_request == true) {
 					$subscription->setSubStatus('requesting_canceled');
-				} else {
+				} else {*/
 					$subscription->setSubStatus('canceled');
-				}
+				/*}*/
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
