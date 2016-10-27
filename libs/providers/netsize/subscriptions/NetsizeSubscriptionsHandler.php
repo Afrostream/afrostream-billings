@@ -204,7 +204,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 						
 					$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 						
-					if($getStatusResponse->getTransactionStatusCode() != 432) {
+					if($getStatusResponse->getTransactionStatusCode() != 422) {
 						$msg = "netsize subscription cannot be canceled, code=".$getStatusResponse->getTransactionStatusCode();
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
