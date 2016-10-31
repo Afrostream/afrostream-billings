@@ -88,15 +88,13 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 			//MONTHLY CHARTMOGUL
 			$firstDayToProceedLastMonth = getEnv('EXPORTS_MONTHLY_FIRST_DAY_OF_MONTH');
 			$monthlyDateFormat = "Ym";
-			$minusOneMonth = new DateInterval("P1M");
-			$minusOneMonth->invert = 1;
 			$lastmonthsCount = getEnv('EXPORTS_MONTHLY_NUMBER_OF_MONTHS');
 			$monthToProcess = clone $now;
 			$monthlyCounter = 0;
 			$dayOfMonth = $now->format('j');
 			if($dayOfMonth >= $firstDayToProceedLastMonth) {
 				while($monthlyCounter < $lastmonthsCount) {
-					$monthToProcess->add($minusOneMonth);
+					$monthToProcess->modify("first day of last month");
 					$monthToProcessBeginning = clone $monthToProcess;
 					$monthToProcessBeginning->modify('first day of this month');
 					$monthToProcessBeginning->setTime(0, 0, 0);
