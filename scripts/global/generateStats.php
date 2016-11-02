@@ -207,7 +207,8 @@ if($numberOfCouponsGenerated['total'] > 0) {
 		$msg = "coupon_type=".$couponType." : total=".$details['total'];
 		sendMessage($msg);
 	}
-	sendMessage("*** BY PROVIDER ***");
+	//TODO : To be added later (removed)
+	/*sendMessage("*** BY PROVIDER ***");
 	$numberOfCouponsGeneratedByProvider = $numberOfCouponsGenerated['providers'];
 	foreach ($numberOfCouponsGeneratedByProvider as $provider_name => $details) {
 		$msg = "provider=".$provider_name." : \n";
@@ -217,7 +218,7 @@ if($numberOfCouponsGenerated['total'] > 0) {
 			$msg.= "\n";
 		}
 		sendMessage($msg);
-	}
+	}*/
 }
 
 sendMessage("*** ACTIVATED ***");
@@ -233,7 +234,8 @@ if($numberOfCouponsActivated['total'] > 0) {
 		$msg = "coupon_type=".$couponType." : total=".$details['total'];
 		sendMessage($msg);
 	}
-	sendMessage("*** BY PROVIDER ***");
+	//TODO : To be added later (removed)
+	/*sendMessage("*** BY PROVIDER ***");
 	$numberOfCouponsActivatedByProvider = $numberOfCouponsActivated['providers'];
 	foreach ($numberOfCouponsActivatedByProvider as $provider_name => $details) {
 		$msg = "provider=".$provider_name." : \n";
@@ -243,7 +245,7 @@ if($numberOfCouponsActivated['total'] > 0) {
 			$msg.= "\n";
 		}
 		sendMessage($msg);
-	}	
+	}*/	
 }
 
 print_r("processing done\n");

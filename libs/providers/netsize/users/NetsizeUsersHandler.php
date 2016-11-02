@@ -23,7 +23,7 @@ class NetsizeUsersHandler {
 				//2 - An encrypted MSISDN
 				//4 - IMSI
 				$array_userIdType_ok = [1, 2, 4];
-				if(!array_key_exists($getStatusResponse->getUserIdType(), $array_userIdType_ok)) {
+				if(!in_array($getStatusResponse->getUserIdType(), $array_userIdType_ok)) {
 					$msg = "user-id-type ".$getStatusResponse->getUserIdType()." is not correct";
 					config::getLogger()->addError("netsize user creation failed : ".$msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);

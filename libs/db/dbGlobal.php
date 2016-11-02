@@ -3707,78 +3707,6 @@ class BillingsCouponsOpts implements JsonSerializable {
 
 }
 
-class BillingsCouponsOptsDAO {
-
-	public static function getBillingsCouponsOptsByCouponId($couponId) {
-		$query = "SELECT _id, couponid, key, value FROM billing_coupons_opts WHERE deleted = false AND couponid = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($couponId));
-
-		$out = new BillingsCouponsOpts();
-		$out->setCouponId($couponId);
-		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out->setOpt($row["key"], $row["value"]);
-		}
-		// free result
-		pg_free_result($result);
-
-		return($out);
-	}
-
-	public static function addBillingsCouponsOpts(BillingsCouponsOpts $billingsCouponsOpts) {
-		foreach ($billingsCouponsOpts->getOpts() as $k => $v) {
-			if(isset($v) && is_scalar($v)) {
-				$query = "INSERT INTO billing_coupons_opts (couponid, key, value)";
-				$query.= " VALUES ($1, $2, $3) RETURNING _id";
-				$result = pg_query_params(config::getDbConn(), $query,
-					array($billingsCouponsOpts->getCouponId(),
-						trim($k),
-						trim($v)));
-				// free result
-				pg_free_result($result);
-			}
-		}
-		return(self::getBillingsCouponsOptsByCouponId($billingsCouponsOpts->getCouponId()));
-	}
-
-	public static function updateBillingsCouponsOptsKey($couponId, $key, $value) {
-		if(is_scalar($value)) {
-			$query = "UPDATE billing_coupons_opts SET value = $3 WHERE couponid = $1 AND key = $2 AND deleted = false";
-			$result = pg_query_params(config::getDbConn(), $query, array($couponId, $key, trim($value)));
-			// free result
-			pg_free_result($result);
-		}
-	}
-
-	public static function deleteBillingsCouponsOptsKey($couponId, $key) {
-		$query = "UPDATE billing_coupons_opts SET deleted = true WHERE couponid = $1 AND key = $2 AND deleted = false";
-		$result = pg_query_params(config::getDbConn(), $query, array($couponId, $key));
-		// free result
-		pg_free_result($result);
-	}
-
-	public static function addBillingsCouponsOptsKey($couponId, $key, $value) {
-		if(is_scalar($value)) {
-			$query = "INSERT INTO billing_coupons_opts (couponid, key, value)";
-			$query.= " VALUES ($1, $2, $3) RETURNING _id";
-			$result = pg_query_params(config::getDbConn(), $query,
-				array($couponId,
-					trim($key),
-					trim($value)));
-			// free result
-			pg_free_result($result);
-		}
-	}
-
-	public static function deleteBillingsCouponsOptsByCouponId($couponId) {
-		$query = "UPDATE billing_coupons_opts SET deleted = true WHERE couponid = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($couponId));
-		// free result
-		pg_free_result($result);
-	}
-	
-}
-
-
 class BillingsTransactionStatus extends Enum implements JsonSerializable {
 
 	const waiting = 'waiting';
@@ -5341,7 +5269,7 @@ EOL;
 		$query = "SELECT ".self::$sfields." FROM billing_users_internal_coupons BUIC";
 		$query.= " INNER JOIN billing_internal_coupons BIC ON (BUIC.internalcouponsid = BIC._id)";
 		$query.= " INNER JOIN billing_internal_coupons_campaigns BICC ON (BIC.internalcouponscampaignsid = BICC._id)";
-		$query.= " LEFT JOIN billing_users_internal_coupons_opts BUICO ON (BUICO.userinternalcouponsid = BUIC._id AND BUIC.key = 'recipientEmail' AND BUIC.deleted = false)";
+		$query.= " LEFT JOIN billing_users_internal_coupons_opts BUICO ON (BUICO.userinternalcouponsid = BUIC._id AND BUICO.key = 'recipientEmail' AND BUICO.deleted = false)";
 		$query.= " WHERE BUIC.userid = $1";
 		$params = array();
 		$params[] = $userid;

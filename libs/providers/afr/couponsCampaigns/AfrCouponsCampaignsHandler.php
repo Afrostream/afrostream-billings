@@ -12,7 +12,7 @@ class AfrCouponsCampaignsHandler {
 	}
 	
 	public function createProviderCouponsCampaign(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
-		return(guid()+"-"+$billingInternalCouponsCampaign->getPrefix());
+		return(guid());
 	}
 	
 }

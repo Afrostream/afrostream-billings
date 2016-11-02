@@ -27,7 +27,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				$finalizeResponse = $netsizeClient->finalize($finalizeRequest);
 				//421 - Activated (Auto Billed)
 				$array_TransactionStatusCode_ok = [421];
-				if(!array_key_exists($finalizeResponse->getTransactionStatusCode(), $array_TransactionStatusCode_ok)) {
+				if(!in_array($finalizeResponse->getTransactionStatusCode(), $array_TransactionStatusCode_ok)) {
 					$msg = "transaction-status/@code ".$finalizeResponse->getTransactionStatusCode()." is not correct";
 					config::getLogger()->addError("netsize subscription creation failed : ".$msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
@@ -161,7 +161,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		try {
 			config::getLogger()->addInfo("netsize subscription canceling...");
 			$doIt = false;
-			if($is_a_request == true) {
+			/*if($is_a_request == true) {
 				if(
 						$subscription->getSubStatus() == "requesting_canceled"
 						||
@@ -188,7 +188,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
 					}
 				}
-			} else {
+			} else {*/
 				if(
 						$subscription->getSubStatus() == "canceled"
 						||
@@ -204,20 +204,20 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 						
 					$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 						
-					if($getStatusResponse->getTransactionStatusCode() != 432) {
+					if($getStatusResponse->getTransactionStatusCode() != 422) {
 						$msg = "netsize subscription cannot be canceled, code=".$getStatusResponse->getTransactionStatusCode();
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
 					}
 				}
-			}
+			/*}*/
 			if($doIt == true) {
 				$subscription->setSubCanceledDate($cancel_date);
-				if($is_a_request == true) {
+				/*if($is_a_request == true) {
 					$subscription->setSubStatus('requesting_canceled');
-				} else {
+				} else {*/
 					$subscription->setSubStatus('canceled');
-				}
+				/*}*/
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
