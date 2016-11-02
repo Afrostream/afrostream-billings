@@ -1578,7 +1578,7 @@ class BillingsSubscriptionDAO {
 	public static function getEndingBillingsSubscriptions($limit = 0,
 			$offset = 0,
 			$providerId = NULL,
-			DateTime $sub_period_ends_date,
+			DateTime $sub_period_ends_date = NULL,
 			$status_array = array('active'),
 			$cycle_array = NULL,
 			$providerIdsToIgnore_array = NULL,
@@ -1636,8 +1636,10 @@ class BillingsSubscriptionDAO {
 			}
 			$query.= ")";	
 		}
-		$sub_period_ends_date_str = dbGlobal::toISODate($sub_period_ends_date);
-		$query.= " AND BS.sub_period_ends_date < '".$sub_period_ends_date_str."'";//STRICT
+		if(isset($sub_period_ends_date)) {
+			$sub_period_ends_date_str = dbGlobal::toISODate($sub_period_ends_date);
+			$query.= " AND BS.sub_period_ends_date < '".$sub_period_ends_date_str."'";//STRICT
+		}
 		if(isset($afterId)) {
 			$query.= " AND BS._id > ".$afterId;
 		}
