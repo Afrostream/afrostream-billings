@@ -79,6 +79,24 @@ if(getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE') === false) {
 	putEnv('BOUYGUES_STORE_LAST_TIME_MINUTE=25');
 }
 
+#BOUYGUES (SFTP STATS)
+
+if(getEnv('BOUYGUES_SFTP_STATS_USER') === false) {
+	putEnv('BOUYGUES_SFTP_STATS_USER=svodafrostream');
+}
+
+if(getEnv('BOUYGUES_SFTP_STATS_HOST') === false) {
+	putEnv('BOUYGUES_SFTP_STATS_HOST=gas.bouyguesbox.fr');
+}
+
+if(getEnv('BOUYGUES_SFTP_STATS_PORT') === false) {
+	putEnv('BOUYGUES_SFTP_STATS_PORT=2222');
+}
+
+if(getEnv('BOUYGUES_SFTP_STATS_PRIVATE_KEY_FILE') === false) {
+	putEnv('BOUYGUES_SFTP_STATS_PRIVATE_KEY_FILE=');
+}
+
 #PAYPAL
 
 if(getEnv('PAYPAL_API_CLIENT_ID') === false) {

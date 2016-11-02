@@ -11,7 +11,7 @@ class BillingStatsWorkers extends BillingsWorkers {
 		parent::__construct();
 	}
 	
-	public function doGenerateStats() {
+	public function doGenerateStats(DateTime $from, DateTime $to) {
 		$processingLog  = NULL;
 		try {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, 'stats_generator', $this->today);
@@ -22,22 +22,10 @@ class BillingStatsWorkers extends BillingsWorkers {
 			ScriptsConfig::getLogger()->addInfo("generating stats...");
 			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, 'stats_generator');
 			//
-			$today = new DateTime();
-			$today->setTimezone(new DateTimeZone(config::$timezone));
-			$today->setTime(0, 0 ,0);
-			
-			$minusOneDay = new DateInterval("P10D");
-			$minusOneDay->invert = 1;
-			
-			$yesterday = clone $today;
-			$yesterday->setTimezone(new DateTimeZone(config::$timezone));
-			$yesterday->add($minusOneDay);
-			$yesterday->setTime(0, 0, 0);
-			//
 			$providers = ProviderDAO::getProviders();
 			foreach ($providers as $provider) {
 				$providerBillingStats = BillingStatsFactory::getBillingStats($provider);
-				$providerBillingStats->doUpdateStats($yesterday, $today);
+				$providerBillingStats->doUpdateStats($from, $to);
 			}
 			//DONE
 			$processingLog->setProcessingStatus('done');
