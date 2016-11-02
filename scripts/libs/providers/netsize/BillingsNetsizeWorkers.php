@@ -35,16 +35,16 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 			//
 			$limit = 100;
 			//will select all day strictly before today
-			$sub_period_ends_date = clone $this->today;
-			$sub_period_ends_date->setTime(0, 0, 0);
+			//$sub_period_ends_date = clone $this->today;
+			//$sub_period_ends_date->setTime(0, 0, 0);
 			//
-			$status_array = array('active');
+			$status_array = array('active', 'future', 'canceled');
 			//
 			$idx = 0;
 			$lastId = NULL;
 			$totalCounter = NULL;
 			do {
-				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $provider->getId(), $sub_period_ends_date, $status_array, $lastId);
+				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $provider->getId(), NULL, $status_array, $lastId);
 				if(is_null($totalCounter)) {$totalCounter = $endingBillingsSubscriptions['total_counter'];}
 				$idx+= count($endingBillingsSubscriptions['subscriptions']);
 				$lastId = $endingBillingsSubscriptions['lastId'];
@@ -92,15 +92,15 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 				$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 				//420 - Activated
 				//421 - Activated (Auto Billed)
+				$array_sub_is_open = [420, 421];
 				//422 - Activated (Termination in Progress)
 				//432 - Cancelled
-				$array_sub_is_open = [420, 421, 422, 432];
+				$array_sub_is_canceled = [422, 432];
 				//430 - Expired
 				//431 - Suspended
 				//433 - Failed
 				$array_sub_is_expired = [430, 431, 433];
-				if(array_key_exists($getStatusResponse->getTransactionStatusCode(), $array_sub_is_open))
-				{
+				if(in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_open)) {
 					pg_query("BEGIN");
 					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
 					$subscriptionsHandler = new SubscriptionsHandler();
@@ -109,7 +109,16 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 					BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 					//COMMIT
 					pg_query("COMMIT");
-				} else if(array_key_exists($getStatusResponse->getTransactionStatusCode(), $array_sub_is_expired)) {
+				} else if(in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_canceled)) {
+					pg_query("BEGIN");
+					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_cancel");
+					$subscriptionsHandler = new SubscriptionsHandler();
+					$subscriptionsHandler->doCancelSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), new DateTime(), false);
+					$billingsSubscriptionActionLog->setProcessingStatus('done');
+					BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+					//COMMIT
+					pg_query("COMMIT");
+				} else if(in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_expired)) {
 					pg_query("BEGIN");
 					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_expire");
 					$subscriptionsHandler = new SubscriptionsHandler();
