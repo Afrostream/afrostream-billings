@@ -111,7 +111,6 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 			case 421 ://Activated (Auto Billed)
 				$db_subscription->setSubStatus('active');
 				$db_subscription->setSubActivatedDate($now);
-				$db_subscription->setSubPeriodStartedDate($now);
 				$start_date = $now;
 				$end_date = NULL;
 				switch($internalPlan->getPeriodUnit()) {
