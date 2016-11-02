@@ -1245,6 +1245,21 @@ class ProviderDAO {
 		return($out);
 	}
 	
+	public static function getProviders() {
+		$query = "SELECT ".self::$sfields." FROM billing_providers";
+		$result = pg_query(config::getDbConn(), $query);
+	
+		$out = array();
+	
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getProviderFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 }
 
 class Provider implements JsonSerializable {
