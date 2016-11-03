@@ -94,7 +94,7 @@ if(getEnv('BOUYGUES_SFTP_STATS_PORT') === false) {
 }
 
 if(getEnv('BOUYGUES_SFTP_STATS_PRIVATE_KEY_FILE') === false) {
-	putEnv('BOUYGUES_SFTP_STATS_PRIVATE_KEY_FILE=');
+	putEnv('BOUYGUES_SFTP_STATS_PRIVATE_KEY_FILE='.dirname(__FILE__).'/../libs/providers/bouygues/client-sftp-stats/bouygues-sftp-stats-rsa-private.pub');
 }
 
 #PAYPAL
