@@ -145,6 +145,12 @@ if(getEnv('AWS_FOLDER_SUBSCRIPTIONS') === false) {
 	putEnv('AWS_FOLDER_SUBSCRIPTIONS=subscriptions');
 }
 
+#AWS_FOLDER_CSVS
+
+if(getEnv('AWS_FOLDER_CSVS') === false) {
+	putEnv('AWS_FOLDER_CSVS=csvs');
+}
+
 #AWS_REGION
 
 if(getEnv('AWS_REGION') === false) {

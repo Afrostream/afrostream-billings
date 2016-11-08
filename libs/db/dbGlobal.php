@@ -15,6 +15,25 @@ class dbGlobal {
 		return($str->format(DateTime::ISO8601));
 	}
 	
+	public static function loadSqlResult($query, $limit = 0, $offset = 0) {
+		$params = array();
+		if($limit > 0) { $query.= " LIMIT ".$limit; }
+		if($offset > 0) { $query.= " OFFSET ".$offset; }
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		$out = array();
+		$out['total_counter'] = 0;
+		$out['rows'] = array();
+		$out['lastId'] = NULL;
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out['total_counter'] = $row['total_counter'];
+			$out['rows'][] = $row;
+			$out['lastId'] = $row['_id'];
+		}
+		// free result
+		pg_free_result($result);
+		return($out);
+	}
+	
 }
 
 class UserDAO {
