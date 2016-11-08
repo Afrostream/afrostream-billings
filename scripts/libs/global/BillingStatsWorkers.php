@@ -16,7 +16,7 @@ class BillingStatsWorkers extends BillingsWorkers {
 		try {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, 'stats_generator', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
-				ScriptsConfig::getLogger()->addInfo("generating stats  bypassed - already done today -");
+				ScriptsConfig::getLogger()->addInfo("generating stats bypassed - already done today -");
 				return;
 			}
 			ScriptsConfig::getLogger()->addInfo("generating stats...");
