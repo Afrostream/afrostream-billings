@@ -19,7 +19,7 @@ class dbGlobal {
 		$params = array();
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
-		$result = pg_query_params(config::getDbConn(), $query, $params);
+		$result = pg_query_params(config::getReadOnlyDbConn(), $query, $params);
 		$out = array();
 		$out['total_counter'] = 0;
 		$out['rows'] = array();

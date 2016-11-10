@@ -369,20 +369,43 @@ class config {
 		return(self::$logger);
 	}
 	
-	private static $db_conn;
+	private static $db_conns = array();
 	
-	public static function getDbConn() {
-		if(self::$db_conn == null) {
-			$connection_string = NULL;
-			if(getEnv('DATABASE_URL') === false) {
-				$connection_string = 'host='.getEnv('DB_HOST').' port='.getEnv('DB_PORT').' dbname='.getEnv('DB_NAME').' user='.getEnv('DB_USER').' password='.getEnv('DB_PASSWORD');
-			} else {
-				$connection_string = getEnv('DATABASE_URL');
-			}
-			self::$db_conn = pg_connect($connection_string)
-				or die('connection to database impossible : '.pg_last_error());
+	public static function getDbConn($connection_string_options = NULL, $read_only = false) {
+		$connection_string = NULL;
+		if(getEnv('DATABASE_URL') === false) {
+			$connection_string = 'host='.getEnv('DB_HOST').' port='.getEnv('DB_PORT').' dbname='.getEnv('DB_NAME').' user='.getEnv('DB_USER').' password='.getEnv('DB_PASSWORD');
+		} else {
+			$connection_string = getEnv('DATABASE_URL');
 		}
-		return(self::$db_conn);
+		if(isset($connection_string_options)) {
+			$connection_string.= ' '.$connection_string_options;
+		}
+		$db_conn = NULL;
+		$key = $connection_string.'-'.$read_only;
+		if(key_exists($key, self::$db_conns)) {
+			$db_conn = self::$db_conns[$key];
+		} else {
+			/* NC - keep in mind - 
+			 * an old connection can be kept by pg_connect.
+			 * By forcing PGSQL_CONNECT_FORCE_NEW will create one connection with read-only mode that will not be returned for connections with read-write mode 
+			 */
+			if($read_only == true) {
+				$db_conn = pg_connect($connection_string, PGSQL_CONNECT_FORCE_NEW)
+				or die('connection to database impossible : '.pg_last_error());
+				pg_query($db_conn, "SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY");
+			} else {
+				$db_conn = pg_connect($connection_string)
+				or die('connection to database impossible : '.pg_last_error());			
+			}
+			self::$db_conns[$key] = $db_conn;
+		}
+		return($db_conn);
+	}
+	
+	public static function getReadOnlyDbConn() {
+		$db_conn = self::getDbConn(NULL, true);
+		return($db_conn);
 	}
 }
 
