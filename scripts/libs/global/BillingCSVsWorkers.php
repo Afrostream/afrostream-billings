@@ -70,7 +70,7 @@ class BillingCSVsWorkers extends BillingsWorkers {
 				throw new Exception("cannot read file containing tasks named '".$filename."' as csv");
 			}
 			while(($fields = fgetcsv($billing_csvs_tasks_file_res, NULL, $csvDelimiter)) !== false) {
-				$dailyFileName = "csv-daily-".$fields[1]."-".$yesterdayEndOfDay->format($dailyDateFormat).".csv";
+				$dailyFileName = "csv-".$fields[1]."-daily-".$yesterdayEndOfDay->format($dailyDateFormat).".csv";
 				$dailyKey = getEnv('AWS_ENV').'/'.getEnv('AWS_FOLDER_CSVS').'/daily/'.$yesterdayEndOfDay->format($dailyDateFormat).'/'.$dailyFileName;
 				try {
 					if($s3->doesObjectExist($bucket, $dailyKey) == false) {
