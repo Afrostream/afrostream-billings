@@ -51,7 +51,7 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 				$dayToProcessEndOfDay = clone $dayToProcess;
 				$dayToProcessEndOfDay->setTime(23,59,59);
 				$dailyFileName = "subscriptions-exports-chartmogul-afr-daily-".$dayToProcessBeginningOfDay->format($dailyDateFormat).".csv";
-				$dailyKey = getEnv('AWS_ENV').'/'.getEnv('AWS_FOLDER_SUBSCRIPTIONS').'/daily/'.$dailyFileName;
+				$dailyKey = getEnv('AWS_ENV').'/'.getEnv('AWS_FOLDER_SUBSCRIPTIONS').'/daily/'.$dayToProcessBeginningOfDay->format($dailyDateFormat).'/'.$dailyFileName;
 				if($s3->doesObjectExist($bucket, $dailyKey) == false) {
 					$export_subscriptions_file_path = NULL;
 					if(($export_subscriptions_file_path = tempnam('', 'tmp')) === false) {
@@ -73,7 +73,7 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 							->setFrom(getEnv('EXPORTS_EMAIL_FROM'))
 							->setFromName(getEnv('EXPORTS_EMAIL_FROMNAME'))
 							->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Daily Chartmogul Afr Subscriptions Export : '.$dayToProcessBeginningOfDay->format($dailyDateFormat))
-							->setText('See File attached')
+							->setText('See File(s) attached')
 							->addAttachment($export_subscriptions_file_path, $dailyFileName);
 							$sendgrid->send($email);
 						}
@@ -102,7 +102,7 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 					$monthToProcessEnd->modify('last day of this month');
 					$monthToProcessEnd->setTime(23,59,59);
 					$monthyFileName = "subscriptions-exports-chartmogul-afr-monthy-".$monthToProcessBeginning->format($monthlyDateFormat).".csv";
-					$monthlyKey = getEnv('AWS_ENV').'/'.getEnv('AWS_FOLDER_SUBSCRIPTIONS').'/monthly/'.$monthyFileName;
+					$monthlyKey = getEnv('AWS_ENV').'/'.getEnv('AWS_FOLDER_SUBSCRIPTIONS').'/monthly/'.$monthToProcessBeginning->format($monthlyDateFormat).'/'.$monthyFileName;
 					if($s3->doesObjectExist($bucket, $monthlyKey) == false) {
 						$export_subscriptions_file_path = NULL;
 						if(($export_subscriptions_file_path = tempnam('', 'tmp')) === false) {
@@ -124,7 +124,7 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 								->setFrom(getEnv('EXPORTS_EMAIL_FROM'))
 								->setFromName(getEnv('EXPORTS_EMAIL_FROMNAME'))
 								->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Monthly Chartmogul Afr Subscriptions Export : '.$monthToProcessBeginning->format($monthlyDateFormat))
-								->setText('See File attached')
+								->setText('See File(s) attached')
 								->addAttachment($export_subscriptions_file_path, $monthyFileName);
 								$sendgrid->send($email);
 							}
