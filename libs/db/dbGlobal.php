@@ -511,7 +511,7 @@ class InternalPlanDAO {
 		if(isset($contextId)) {
 			$query.= " ORDER BY BIPBC.index ASC";
 		}
-		//echo $query;
+		Config::getLogger()->addInfo("query = ".$query);
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
