@@ -86,14 +86,14 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 								config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because user with userReferenceUuid=".$userReferenceUuid." is an active subscriber");
 							} else {
 								if($lastSubscription->getSubStatus() == 'expired') {
-									$expiredDateBoundaryToCommonContextStr = getEnv('CONTEXTS_SWITCH_EXPIRED_DATE_BOUNDARY_TO_COMMON_CONTEXT');
+									/*$expiredDateBoundaryToCommonContextStr = getEnv('CONTEXTS_SWITCH_EXPIRED_DATE_BOUNDARY_TO_COMMON_CONTEXT');
 									$expiredDateBoundaryToCommonContext = DateTime::createFromFormat("Y-m-d H:i:s", $expiredDateBoundaryToCommonContextStr, new DateTimeZone(config::$timezone));
 									if(($lastSubscription->getSubExpiresDate() != NULL)
 										&&
 									($lastSubscription->getSubExpiresDate() < $expiredDateBoundaryToCommonContext)) {
 										$contextBillingUuid = 'common';
 										config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because last subscription expired before the expired date boundary to common for userReferenceUuid=".$userReferenceUuid);												
-									} else {
+									} else {*/
 										//AS USUAL
 										if($lastSubscription->getSubExpiresDate() == $lastSubscription->getSubCanceledDate()) {
 											$contextBillingUuid = 'reactivation';
@@ -102,7 +102,7 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 											$contextBillingUuid = 'returning';
 											config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because there is old subscriptions for userReferenceUuid=".$userReferenceUuid);
 										}
-									}
+									/*}*/
 								}
 							}
 						/*}*/
