@@ -9,6 +9,10 @@ use Monolog\Handler\StreamHandler;
 
 #General
 
+if(getEnv('BILLINGS_ENV') === false) {
+	putEnv('BILLINGS_ENV=staging');
+}
+
 if(getEnv('LOG_REQUESTS_ACTIVATED') === false) {
 	putEnv('LOG_REQUESTS_ACTIVATED=1');
 }
