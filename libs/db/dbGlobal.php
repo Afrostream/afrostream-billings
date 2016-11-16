@@ -15,6 +15,25 @@ class dbGlobal {
 		return($str->format(DateTime::ISO8601));
 	}
 	
+	public static function loadSqlResult($query, $limit = 0, $offset = 0) {
+		$params = array();
+		if($limit > 0) { $query.= " LIMIT ".$limit; }
+		if($offset > 0) { $query.= " OFFSET ".$offset; }
+		$result = pg_query_params(config::getReadOnlyDbConn(), $query, $params);
+		$out = array();
+		$out['total_counter'] = 0;
+		$out['rows'] = array();
+		$out['lastId'] = NULL;
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out['total_counter'] = $row['total_counter'];
+			$out['rows'][] = $row;
+			$out['lastId'] = $row['_id'];
+		}
+		// free result
+		pg_free_result($result);
+		return($out);
+	}
+	
 }
 
 class UserDAO {
@@ -444,7 +463,7 @@ class InternalPlanDAO {
 		}
 		
 		if(isset($country)) {
-			$query.= "INNER JOIN billing_internal_plans_by_country BIPBCY ON (BIPBCY.internal_plan_id = BIP._id)";	
+			$query.= " INNER JOIN billing_internal_plans_by_country BIPBCY ON (BIPBCY.internal_plan_id = BIP._id)";	
 		}
 		
 		$where = ""; 
@@ -492,7 +511,7 @@ class InternalPlanDAO {
 		if(isset($contextId)) {
 			$query.= " ORDER BY BIPBC.index ASC";
 		}
-		//echo $query;
+		
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
@@ -1238,6 +1257,21 @@ class ProviderDAO {
 	
 		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out = self::getProviderFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getProviders() {
+		$query = "SELECT ".self::$sfields." FROM billing_providers";
+		$result = pg_query(config::getDbConn(), $query);
+	
+		$out = array();
+	
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getProviderFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
