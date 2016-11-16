@@ -343,10 +343,16 @@ if(getEnv('STRIPE_API_KEY') === false) {
 if(getEnv('STRIPE_WH_HTTP_AUTH_USER') === false) {
 	putEnv('STRIPE_WH_HTTP_AUTH_USER=admin');
 }
+
 if(getEnv('STRIPE_WH_HTTP_AUTH_PWD') === false) {
 	putEnv('STRIPE_WH_HTTP_AUTH_PWD=pwd');
 }
 
+#
+
+if(getEnv('CONTEXTS_SWITCH_EXPIRED_DATE_BOUNDARY_TO_COMMON_CONTEXT') === false) {
+	putEnv('CONTEXTS_SWITCH_EXPIRED_DATE_BOUNDARY_TO_COMMON_CONTEXT=2016-11-21 23:59:59');
+}
 
 #logger, #db_conn, ...
 

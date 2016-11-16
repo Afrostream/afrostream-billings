@@ -463,7 +463,7 @@ class InternalPlanDAO {
 		}
 		
 		if(isset($country)) {
-			$query.= "INNER JOIN billing_internal_plans_by_country BIPBCY ON (BIPBCY.internal_plan_id = BIP._id)";	
+			$query.= " INNER JOIN billing_internal_plans_by_country BIPBCY ON (BIPBCY.internal_plan_id = BIP._id)";	
 		}
 		
 		$where = ""; 
@@ -511,7 +511,7 @@ class InternalPlanDAO {
 		if(isset($contextId)) {
 			$query.= " ORDER BY BIPBC.index ASC";
 		}
-		//echo $query;
+		
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
