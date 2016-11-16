@@ -13,6 +13,9 @@ class NetsizeUsersHandler {
 		try {
 			config::getLogger()->addInfo("netsize user creation...");
 			if(isset($user_provider_uuid)) {
+				if(getEnv('BILLINGS_ENV') == 'staging') {
+					$user_provider_uuid.= '_'.guid();
+				}
 				//TODO : transactionId may be in $user_opts_array, maybe should we check it later
 				//REMOVE CHECK
 				/*$netsizeClient = new NetsizeClient();
