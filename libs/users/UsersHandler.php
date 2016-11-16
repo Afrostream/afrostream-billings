@@ -122,6 +122,12 @@ class UsersHandler {
 			if($user_provider_uuid == NULL) {
 				$db_user = $db_tmp_user;
 			} else {
+				//HACK STAGING NETSIZE
+				if(getEnv('BILLINGS_ENV') == 'staging') {
+					if($provider_name == 'netsize') {
+						$user_provider_uuid.= '_'.guid();
+					}
+				}
 				//check
 				if($db_tmp_user == NULL) {
 					//nothing to do
