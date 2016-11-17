@@ -7,6 +7,10 @@ use MyCLabs\Enum\Enum;
 
 class dbGlobal {
 	
+	private static $curenciesForDisplay = array(
+			'XOF' => 'FCFA'
+	);
+	
 	public static function toISODate(DateTime $str = NULL)
 	{
 		if($str == NULL) {
@@ -32,6 +36,13 @@ class dbGlobal {
 		// free result
 		pg_free_result($result);
 		return($out);
+	}
+	
+	public static function getCurrencyForDisplay($currency) {
+		if(array_key_exists($currency, self::$curenciesForDisplay)) {
+			return(self::$curenciesForDisplay[$currency]);
+		}
+		return($currency);
 	}
 	
 }
@@ -597,11 +608,7 @@ class CouponCampaignType extends Enum implements JsonSerializable {
 }
 
 class InternalPlan implements JsonSerializable {
-	
-	private static $curenciesForDisplay = array(
-		'XOF' => 'FCFA'
-	);
-	
+		
 	private $_id;
 	private $internal_plan_uuid;
 	private $name;
@@ -668,10 +675,7 @@ class InternalPlan implements JsonSerializable {
 	}
 	
 	public function getCurrencyForDisplay() {
-		if(array_key_exists($this->currency, self::$curenciesForDisplay)) {
-			return(self::$curenciesForDisplay[$this->currency]);
-		}
-		return($this->currency);
+		return(dbGlobal::getCurrencyForDisplay($this->currency));
 	}
 	
 	public function setCycle(PlanCycle $cycle) {

@@ -151,7 +151,6 @@ if(getEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_SPONSORSHIP_NEW') === false) {
 	putEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_SPONSORSHIP_NEW=22a2e61c-565f-4270-a9bd-6ec7f592b3ed');
 }
 
-
 if(getEnv('SENDGRID_FROM') === false) {
 	putEnv('SENDGRID_FROM=abonnement@afrostream.tv');
 }
@@ -166,6 +165,10 @@ if(getEnv('SENDGRID_BCC') === false) {
 
 if(getEnv('SENDGRID_TO_IFNULL') === false) {
 	putEnv('SENDGRID_TO_IFNULL=null@afrostream.tv');
+}
+
+if(getEnv('SENDGRID_VAR_couponAppliedSentence') === false) {
+	putEnv('SENDGRID_VAR_couponAppliedSentence=La réduction de %couponAmountForDisplay% liée au code promo %couponCode% sera appliquée lors du prélèvement.');
 }
 
 #Event (MAIL)
