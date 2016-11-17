@@ -1174,7 +1174,7 @@ class SubscriptionsHandler {
 			$substitions['%couponAmountForDisplay%'] = '';
 			$substitions['%couponDetails%'] = '';
 			$substitions['%couponAppliedSentence%'] = '';
-			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() = 'promo') {
+			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() == 'promo') {
 				$couponAmountForDisplay = '';
 				switch($internalCouponsCampaign->getDiscountType()) {
 					case 'percent' :
@@ -1189,8 +1189,7 @@ class SubscriptionsHandler {
 				$substitions['%couponCode%'] = $userInternalCoupon->getCode();
 				$substitions['%couponAmountForDisplay%'] = $couponAmountForDisplay;
 				$substitions['%couponDetails%'] = $internalCouponsCampaign->getDescription();
-				$couponAppliedSentence = getEnv('SENDGRID_VAR_couponAppliedSentence');
-				$substitions['%couponAppliedSentence%'] = $couponAppliedSentence;
+				$substitions['%couponAppliedSentence%'] = getEnv('SENDGRID_VAR_couponAppliedSentence');;
 			}
 			//DATA SUBSTITUTION <--
 			$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
