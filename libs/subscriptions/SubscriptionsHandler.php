@@ -1189,7 +1189,9 @@ class SubscriptionsHandler {
 				$substitions['%couponCode%'] = $userInternalCoupon->getCode();
 				$substitions['%couponAmountForDisplay%'] = $couponAmountForDisplay;
 				$substitions['%couponDetails%'] = $internalCouponsCampaign->getDescription();
-				$substitions['%couponAppliedSentence%'] = getEnv('SENDGRID_VAR_couponAppliedSentence');;
+				$couponAppliedSentence = getEnv('SENDGRID_VAR_couponAppliedSentence');
+				$couponAppliedSentence = str_replace(array_keys($substitions), array_values($substitions), $couponAppliedSentence);
+				$substitions['%couponAppliedSentence%'] = $couponAppliedSentence;
 			}
 			//DATA SUBSTITUTION <--
 			$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
