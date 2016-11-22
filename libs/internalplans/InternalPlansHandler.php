@@ -5,7 +5,6 @@ require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/recurly/plans/RecurlyPlansHandler.php';
 require_once __DIR__ . '/../providers/gocardless/plans/GocardlessPlansHandler.php';
 require_once __DIR__ . '/../providers/bachat/plans/BachatPlansHandler.php';
-require_once __DIR__ . '/../providers/idipper/plans/IdipperPlansHandler.php';
 require_once __DIR__ . '/../providers/afr/plans/AfrPlansHandler.php';
 require_once __DIR__ . '/../providers/stripe/plans/StripePlanHandler.php';
 
@@ -59,13 +58,23 @@ class InternalPlansHandler {
 				}
 				$context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
 				if($context == NULL) {
-					$msg = "unknown context with contextBillingUuid : ".$contextBillingUuid." AND contextCountry : ".$contextCountry;
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::CONTEXT_NOT_FOUND);					
+					$oldContextCountry = $contextCountry;
+					$contextCountry = "FR";//back to France
+					config::getLogger()->addInfo("unknown context with contextBillingUuid : ".$contextBillingUuid." AND contextCountry : ".$oldContextCountry.", rollback to contextCountry=".$contextCountry);
+					$context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
 				}
-				$context_id = $context->getId();
+				if($context == NULL) {
+					$msg = "unknown context with contextBillingUuid : ".$contextBillingUuid." AND contextCountry : ".$contextCountry.", no internalPlan given";
+					config::getLogger()->addInfo($msg);		
+					$db_internal_plans = array();//no internalPlan
+				} else {
+					$context_id = $context->getId();
+					$country = $contextCountry;//Force country to the contextCountry
+					$db_internal_plans = InternalPlanDAO::getInternalPlans($provider_id, $context_id, $isVisible, $country);
+				}
+			} else {
+				$db_internal_plans = InternalPlanDAO::getInternalPlans($provider_id, $context_id, $isVisible, $country);
 			}
-			$db_internal_plans = InternalPlanDAO::getInternalPlans($provider_id, $context_id, $isVisible, $country);
 			config::getLogger()->addInfo("internal plans getting done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting internal plans, error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -203,10 +212,6 @@ class InternalPlansHandler {
 				case 'bachat' :
 					$bachatPlansHandler = new BachatPlansHandler();
 					$provider_plan_uuid = $bachatPlansHandler->createProviderPlan($db_internal_plan);
-					break;
-				case 'idipper' :
-					$idipperPlansHandler = new IdipperPlansHandler();
-					$provider_plan_uuid = $idipperPlansHandler->createProviderPlan($db_internal_plan);
 					break;
 				case 'afr' :
 					$afrPlansHandler = new AfrPlansHandler();

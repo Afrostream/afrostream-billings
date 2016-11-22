@@ -1,12 +1,8 @@
 <?php
 
 function guid( $opt = false ) {       //  Set to true/false as your default way to do this.
-	if(function_exists('com_create_guid')) {
-    	if( $opt ) { return com_create_guid(); }
-        	else { return trim( com_create_guid(), '{}' ); }
-    } else {
       mt_srand( (double)microtime() * 10000 );    // optional for php 4.2.0 and up.
-      $charid = strtoupper( md5(uniqid(rand(), true)) );
+      $charid = strtolower( md5(uniqid(rand(), true)) );//postgresql compatibility : lowered as it does
       $hyphen = chr( 45 );    // "-"
       $left_curly = $opt ? chr(123) : "";     //  "{"
       $right_curly = $opt ? chr(125) : "";    //  "}"
@@ -18,7 +14,6 @@ function guid( $opt = false ) {       //  Set to true/false as your default way 
       . substr( $charid, 20, 12 )
       . $right_curly;
       return $uuid;
-	}
 }
 
 function checkUserOptsArray(array $user_opts_as_array, $providerName) {
@@ -28,6 +23,9 @@ function checkUserOptsArray(array $user_opts_as_array, $providerName) {
 
 function checkUserOptsKeys(array $user_opts_as_array, $providerName) {
 	switch ($providerName) {
+		case 'netsize' :
+			//email, firstName, lastName are optional
+			break;
 		case 'bouygues' :
 			//email, firstName, lastName are optional
 			break;
@@ -77,6 +75,9 @@ function checkUserOptsKeys(array $user_opts_as_array, $providerName) {
 
 function checkUserOptsValues(array $user_opts_as_array, $providerName) {
 	switch ($providerName) {
+		case 'netsize' :
+			//email, firstName, lastName are optional
+			break;
 		case 'bouygues' :
 			//email, firstName, lastName are optional
 			break;
@@ -254,6 +255,14 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 				}
 			}
 			break;
+		case 'cashway' :
+			if(!array_key_exists('couponCode', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'couponCode' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			break;
 		default :
 			//nothing
 			break;
@@ -264,10 +273,113 @@ function checkSubOptsValues(array $sub_opts_as_array, $providerName, $case = 'al
 	switch($providerName) {
 		case 'bachat' :
 			break;
+		case 'cashway' :
+			if(array_key_exists('couponCode', $sub_opts_as_array)) {
+				$str = $sub_opts_as_array['couponCode'];
+				if(strlen(trim($str)) == 0) {
+					//exception
+					$msg = "'couponCode' value is empty";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
+			break;
 		default :
 			//nothing
 			break;
 	}
+}
+
+//passage par référence !!!
+function doSortSubscriptions(&$subscriptions) {
+	//more recent firt
+	usort($subscriptions,
+			function(BillingsSubscription $a, BillingsSubscription $b) {
+				if($a->getIsActive() == 'yes' && $b->getIsActive() == 'yes')
+				{
+					if((null !== $a->getSubActivatedDate()) && (null !== $b->getSubActivatedDate())) {
+						return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), dbGlobal::toISODate($a->getSubActivatedDate())));
+					} else if(null !== $a->getSubActivatedDate()) {
+						return(strcmp("", dbGlobal::toISODate($a->getSubActivatedDate())));
+					} else if(null !== $b->getSubActivatedDate()) {
+						return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), ""));
+					} else {
+						return(strcmp(dbGlobal::toISODate($b->getCreationDate()), dbGlobal::toISODate($a->getCreationDate())));
+					}
+				} else if($a->getIsActive() == 'yes') {
+					/* A IS ACTIVE */
+					return(-1);
+				} else if ($b->getIsActive() == 'yes') {
+					/* B IS ACTIVE */
+					return(1);
+				} else {
+					/* A AND B ARE INACTIVE */
+					if($a->getSubStatus() == 'future' && $b->getSubStatus() == 'future') {
+						/* SAME AS ACTIVE BUT ORDERING IS INVERTED */
+						if((null !== $a->getSubActivatedDate()) && (null !== $b->getSubActivatedDate())) {
+							return(strcmp(dbGlobal::toISODate($a->getSubActivatedDate()), dbGlobal::toISODate($b->getSubActivatedDate())));
+						} else if(null !== $a->getSubActivatedDate()) {
+							return(strcmp(dbGlobal::toISODate($a->getSubActivatedDate()), ""));
+						} else if(null !== $b->getSubActivatedDate()) {
+							return(strcmp("", dbGlobal::toISODate($b->getSubActivatedDate())));
+						} else {
+							return(strcmp(dbGlobal::toISODate($a->getCreationDate()), dbGlobal::toISODate($b->getCreationDate())));
+						}	
+					} else if($a->getSubStatus() == 'future') {
+						/* A IS FUTURE */
+						return(-1);
+					} else if($b->getSubStatus() == 'future') {
+						/* B IS FUTURE */
+						return(1);
+					} else {
+						/* A AND B ARE PAST */
+						/* SAME AS ACTIVE */
+						if((null !== $a->getSubActivatedDate()) && (null !== $b->getSubActivatedDate())) {
+							return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), dbGlobal::toISODate($a->getSubActivatedDate())));
+						} else if(null !== $a->getSubActivatedDate()) {
+							return(strcmp("", dbGlobal::toISODate($a->getSubActivatedDate())));
+						} else if(null !== $b->getSubActivatedDate()) {
+							return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), ""));
+						} else {
+							return(strcmp(dbGlobal::toISODate($b->getCreationDate()), dbGlobal::toISODate($a->getCreationDate())));
+						}
+					}
+				}
+			}
+		);
+}
+
+//passage par référence !!!
+function doSortPaymentMethods(&$paymentMethodsArray, $allPaymentMethods) {
+	//
+	$allPaymentMethodsByPaymentMethodType = array();
+	foreach ($allPaymentMethods as $providerName => $paymentMethod) {
+		$allPaymentMethodsByPaymentMethodType[$paymentMethod->getPaymentMethodType()] = $paymentMethod; 
+	}
+	//
+	uksort($paymentMethodsArray,
+			function($A, $B) use ($allPaymentMethodsByPaymentMethodType) {
+				$idxA = NULL; $idxB = NULL;
+				if(array_key_exists($A, $allPaymentMethodsByPaymentMethodType)) {
+					$idxA = $allPaymentMethodsByPaymentMethodType[$A]->getIndex();
+				}
+				if(array_key_exists($B, $allPaymentMethodsByPaymentMethodType)) {
+					$idxB = $allPaymentMethodsByPaymentMethodType[$B]->getIndex();
+				}
+				if(isset($idxA) && isset($idxB)) {
+					return($idxA - $idxB);
+				} else if(isset($idxA)) {
+					//idxB is NULL
+					return(-1);
+				} else if(isset($idxB)) {
+					//idxA is NULL
+					return(1);
+				} else {
+					//idxA AND idxB are NULL
+					return(0);
+				}
+			}
+		);
 }
 
 ?>

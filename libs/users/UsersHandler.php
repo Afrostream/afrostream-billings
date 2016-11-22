@@ -5,7 +5,6 @@ require_once __DIR__ . '/../providers/celery/users/CeleryUsersHandler.php';
 require_once __DIR__ . '/../providers/recurly/users/RecurlyUsersHandler.php';
 require_once __DIR__ . '/../providers/gocardless/users/GocardlessUsersHandler.php';
 require_once __DIR__ . '/../providers/bachat/users/BachatUsersHandler.php';
-require_once __DIR__ . '/../providers/idipper/users/IdipperUsersHandler.php';
 require_once __DIR__ . '/../providers/afr/users/AfrUsersHandler.php';
 require_once __DIR__ . '/../providers/cashway/users/CashwayUsersHandler.php';
 require_once __DIR__ . '/../providers/orange/users/OrangeUsersHandler.php';
@@ -123,6 +122,12 @@ class UsersHandler {
 			if($user_provider_uuid == NULL) {
 				$db_user = $db_tmp_user;
 			} else {
+				//HACK STAGING NETSIZE
+				if(getEnv('BILLINGS_ENV') == 'staging') {
+					if($provider_name == 'netsize') {
+						$user_provider_uuid.= '_'.guid();
+					}
+				}
 				//check
 				if($db_tmp_user == NULL) {
 					//nothing to do
@@ -202,54 +207,51 @@ class UsersHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//user creation provider side
+			$user_billing_uuid = guid();
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlyUsersHandler = new RecurlyUsersHandler();
-					$user_provider_uuid = $recurlyUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $recurlyUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'gocardless' :
 					$gocardlessUsersHandler = new GocardlessUsersHandler();
-					$user_provider_uuid = $gocardlessUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $gocardlessUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'celery' :
 					$celeryUsersHandler = new CeleryUsersHandler();
-					$user_provider_uuid = $celeryUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $celeryUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'bachat' :
 					$bachatUsersHandler = new BachatUsersHandler();
-					$user_provider_uuid = $bachatUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				case 'idipper' :
-					$idipperUsersHandler = new IdipperUsersHandler();
-					$user_provider_uuid = $idipperUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $bachatUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'afr' :
 					$afrUsersHandler = new AfrUsersHandler();
-					$user_provider_uuid = $afrUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $afrUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'cashway' :
 					$cashwayUsersHandler = new CashwayUsersHandler();
-					$user_provider_uuid = $cashwayUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $cashwayUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'orange' :
 					$orangeUsersHandler = new OrangeUsersHandler();
-					$user_provider_uuid = $orangeUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $orangeUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'bouygues' :
 					$bouyguesUsersHandler = new BouyguesUsersHandler();
-					$user_provider_uuid = $bouyguesUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $bouyguesUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'stripe':
 					$stripeUserHandler = new StripeUsersHandler();
-					$user_provider_uuid = $stripeUserHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $stripeUserHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'braintree' :
 					$braintreeUsersHandler = new BraintreeUsersHandler();
-					$user_provider_uuid = $braintreeUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $braintreeUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				case 'netsize' :
 					$netsizeUsersHandler = new NetsizeUsersHandler();
-					$user_provider_uuid = $netsizeUsersHandler->doCreateUser($user_reference_uuid, $user_provider_uuid, $user_opts_array);
+					$user_provider_uuid = $netsizeUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider_name;
@@ -263,7 +265,7 @@ class UsersHandler {
 				pg_query("BEGIN");
 				//USER
 				$db_user = new User();
-				$db_user->setUserBillingUuid(guid());
+				$db_user->setUserBillingUuid($user_billing_uuid);
 				$db_user->setProviderId($provider->getId());
 				$db_user->setUserReferenceUuid($user_reference_uuid);
 				$db_user->setUserProviderUuid($user_provider_uuid);
@@ -296,7 +298,6 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user opts updating...");
-			checkUserOptsValues($user_opts_array);
 			$db_user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
 			if($db_user == NULL) {
 				$msg = "unknown userBillingUuid : ".$userBillingUuid;
@@ -309,6 +310,7 @@ class UsersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			checkUserOptsValues($user_opts_array, $provider->getName());
 			$db_user_opts = UserOptsDAO::getUserOptsByUserId($db_user->getId());
 			$current_user_opts_array = $db_user_opts->getOpts();
 			try {

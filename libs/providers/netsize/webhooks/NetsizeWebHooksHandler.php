@@ -110,7 +110,6 @@ class NetsizeWebHooksHandler {
 			}
 			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 			$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
-			$db_subscription_before_update = clone $db_subscription;
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
@@ -121,7 +120,6 @@ class NetsizeWebHooksHandler {
 				pg_query("ROLLBACK");
 				throw $e;
 			}
-			$netsizeSubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		}
 		config::getLogger()->addInfo('Processing netsize hook subscription, notification_name='.$notificationNode->getName().' done successfully');
 	}

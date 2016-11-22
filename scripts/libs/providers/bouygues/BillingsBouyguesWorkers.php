@@ -27,14 +27,13 @@ class BillingsBouyguesWorkers extends BillingsWorkers {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_refresh', $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("refreshing bouygues subscriptions bypassed - already done today -");
-				exit;
+				return;
 			}
 				
 			ScriptsConfig::getLogger()->addInfo("refreshing bouygues subscriptions...");
 				
 			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_refresh');
 			//
-			$offset = 0;
 			$limit = 100;
 			//will select all day strictly before today
 			$sub_period_ends_date = clone $this->today;
@@ -42,11 +41,17 @@ class BillingsBouyguesWorkers extends BillingsWorkers {
 			//
 			$status_array = array('active');
 			//
-			while(count($endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, $offset, $provider->getId(), $sub_period_ends_date, $status_array)) > 0) {
-				ScriptsConfig::getLogger()->addInfo("processing...current offset=".$offset);
-				$offset = $offset + $limit;
+			$idx = 0;
+			$lastId = NULL;
+			$totalCounter = NULL;
+			do {
+				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $provider->getId(), $sub_period_ends_date, $status_array, $lastId);
+				if(is_null($totalCounter)) {$totalCounter = $endingBillingsSubscriptions['total_counter'];}
+				$idx+= count($endingBillingsSubscriptions['subscriptions']);
+				$lastId = $endingBillingsSubscriptions['lastId'];
 				//
-				foreach($endingBillingsSubscriptions as $endingBillingsSubscription) {
+				ScriptsConfig::getLogger()->addInfo("processing...total_counter=".$totalCounter.", idx=".$idx);
+				foreach($endingBillingsSubscriptions['subscriptions'] as $endingBillingsSubscription) {
 					try {
 						$this->doRefreshSubscription($endingBillingsSubscription);
 					} catch(Exception $e) {
@@ -54,7 +59,7 @@ class BillingsBouyguesWorkers extends BillingsWorkers {
 						ScriptsConfig::getLogger()->addError($msg);
 					}
 				}
-			}
+			} while ($idx < $totalCounter && count($endingBillingsSubscriptions['subscriptions']) > 0);
 			//DONE
 			$processingLog->setProcessingStatus('done');
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);

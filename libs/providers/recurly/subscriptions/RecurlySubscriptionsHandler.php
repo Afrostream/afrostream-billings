@@ -11,7 +11,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 	public function __construct() {
 	}
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts, BillingsSubscriptionOpts $subOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("recurly subscription creation...");
@@ -48,27 +48,28 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				$account = Recurly_Account::get($user->getUserProviderUuid());
 			
 				$billing_info = new Recurly_BillingInfo();
-				if(array_key_exists('customerBankAccountToken', $subOpts->getOpts())) {
-					$billing_info->token_id = $subOpts->getOpts()['customerBankAccountToken'];
-				} else {
-					$billing_info->number = $billingInfoOpts->getOpts()['number'];
-					$billing_info->month = $billingInfoOpts->getOpts()['month'];
-					$billing_info->year = $billingInfoOpts->getOpts()['year'];
-					$billing_info->verification_value = $billingInfoOpts->getOpts()['verification_value'];
-					$billing_info->address1 = $billingInfoOpts->getOpts()['address1'];
-					$billing_info->city = $billingInfoOpts->getOpts()['city'];
-					$billing_info->state = $billingInfoOpts->getOpts()['state'];
-					$billing_info->country = $billingInfoOpts->getOpts()['country'];
-					$billing_info->zip = $billingInfoOpts->getOpts()['zip'];
+				if(!array_key_exists('customerBankAccountToken', $subOpts->getOpts())) {
+					$msg = "subOpts field 'customerBankAccountToken' field is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
+				$billing_info->token_id = $subOpts->getOpts()['customerBankAccountToken'];
 				
 				$account->billing_info = $billing_info;
 				$subscription->account = $account;
-				
+				//couponCode
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
 					if(strlen($couponCode) > 0) {
-						$subscription->coupon_code = $couponCode;
+						$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+						$subscription->coupon_code = $couponsInfos['providerCouponsCampaign']->getExternalUuid();
+					}
+				}
+				//startsAt
+				if(array_key_exists('startsAt', $subOpts->getOpts())) {
+					$startsAt = $subOpts->getOpts()['startsAt'];
+					if(strlen($startsAt) > 0) {
+						$subscription->starts_at = $startsAt;
 					}
 				}
 				
@@ -182,7 +183,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->uuid);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
 				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
@@ -198,21 +199,21 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		config::getLogger()->addInfo("recurly dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
 		//
 		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 		//
 		$api_subscription = Recurly_Subscription::get($sub_uuid);
 		//
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, Recurly_Subscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, Recurly_Subscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("recurly dbsubscription creation for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid."...");
 		//CREATE
 		$db_subscription = new BillingsSubscription();
-		$db_subscription->setSubscriptionBillingUuid(guid());
+		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
 		$db_subscription->setProviderId($provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
@@ -245,13 +246,57 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
+		//?COUPON?
+		$couponsInfos = NULL;
+		$couponCode = NULL;
+		if(isset($subOpts)) {
+			if(array_key_exists('couponCode', $subOpts->getOpts())) {
+				$str = $subOpts->getOpts()['couponCode'];
+				if(strlen($str) > 0) {
+					$couponCode = $str;
+				}
+			}
+		}
+		if(isset($couponCode)) {
+			$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+		}
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
+		//BILLING_INFO (NOT MANDATORY)
+		if(isset($billingInfo)) {
+			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
+			$db_subscription->setBillingInfoId($billingInfo->getId());
+		}
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
-		//SUB_OPTS
+		//SUB_OPTS (NOT MANDATORY)
 		if(isset($subOpts)) {
 			$subOpts->setSubId($db_subscription->getId());
 			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+		}
+		//COUPON (NOT MANDATORY)
+		if(isset($couponsInfos)) {
+			$userInternalCoupon = $couponsInfos['userInternalCoupon'];
+			$internalCoupon = $couponsInfos['internalCoupon'];
+			$internalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+			//
+			$now = new DateTime();
+			//userInternalCoupon
+			if($userInternalCoupon->getId() == NULL) {
+				$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
+			}
+			$userInternalCoupon->setStatus("redeemed");
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
+			$userInternalCoupon->setRedeemedDate($now);
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
+			$userInternalCoupon->setSubId($db_subscription->getId());
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+			//internalCoupon
+			if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
+				$internalCoupon->setStatus("redeemed");
+				$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
+				$internalCoupon->setRedeemedDate($now);
+				$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+			}
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("recurly dbsubscription creation for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid." done successfully, id=".$db_subscription->getId());
@@ -261,6 +306,8 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("recurly dbsubscription update for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()."...");
 		//UPDATE
+		$db_subscription_before_update = clone $db_subscription;
+		//
 		//$db_subscription->setProviderId($provider->getId());//STATIC
 		//$db_subscription->setUserId($user->getId());//STATIC
 		$db_subscription->setPlanId($plan->getId());
@@ -308,7 +355,9 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateId($db_subscription);
 		//$db_subscription->setDeleted('false');//STATIC
-		// 
+		//
+		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+		//
 		config::getLogger()->addInfo("recurly dbsubscription update for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()." done successfully");
 		return($db_subscription);
 	}

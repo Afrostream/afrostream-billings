@@ -9,3 +9,4 @@ vendor/
 .settings/org.eclipse.wst.common.project.facet.core.xml
 .settings/org.eclipse.php.core.prefs
 *.log
+*.DS_Store

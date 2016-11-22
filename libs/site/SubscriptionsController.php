@@ -2,9 +2,10 @@
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../users/UsersHandler.php';
-require_once __DIR__ . '/../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../subscriptions/SubscriptionsFilteredHandler.php';
 require_once __DIR__ . '/BillingsController.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
+require_once __DIR__ . '/../utils/utils.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -23,7 +24,7 @@ class SubscriptionsController extends BillingsController {
 			}
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
 			//
-			$subscriptionsHandler = new SubscriptionsHandler();
+			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$subscription = $subscriptionsHandler->doGetSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));
@@ -67,7 +68,7 @@ class SubscriptionsController extends BillingsController {
 			}
 			$subscriptions = array();
 			$usersHandler = new UsersHandler();
-			$subscriptionsHandler = new SubscriptionsHandler();
+			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			if(isset($userReferenceUuid)) {
 				$users = $usersHandler->doGetUsers($userReferenceUuid);
 				if(count($users) == 0) {
@@ -89,7 +90,7 @@ class SubscriptionsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$this->doSortSubscriptions($subscriptions);
+			doSortSubscriptions($subscriptions);
 			return($this->returnObjectAsJson($response, 'subscriptions', $subscriptions));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while getting subscriptions, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -121,18 +122,15 @@ class SubscriptionsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(!isset($data['billingInfoOpts'])) {
-				//exception
-				$msg = "field 'billingInfoOpts' is missing";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			} else {
-				if(!is_array($data['billingInfoOpts'])) {
+			$billing_info_array = array();
+			if(isset($data['billingInfo'])) {
+				if(!is_array($data['billingInfo'])) {
 					//exception
-					$msg = "field 'billingInfoOpts' must be an array";
+					$msg = "field 'billingInfo' must be an array";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
+				$billing_info_array = $data['billingInfo'];
 			}
 			$sub_opts = array();
 			if(isset($data['subOpts'])) {
@@ -146,13 +144,12 @@ class SubscriptionsController extends BillingsController {
 			}
 			$user_billing_uuid = $data['userBillingUuid'];
 			$internal_plan_uuid = $data['internalPlanUuid'];
-			$billing_info_opts = $data['billingInfoOpts'];
 			$subscription_provider_uuid = NULL;
 			if(isset($data['subscriptionProviderUuid'])) {
 				$subscription_provider_uuid = $data['subscriptionProviderUuid'];
 			}
-			$subscriptionsHandler = new SubscriptionsHandler();
-			$subscription = $subscriptionsHandler->doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, $billing_info_opts, $sub_opts);
+			$subscriptionsHandler = new SubscriptionsFilteredHandler();
+			$subscription = $subscriptionsHandler->doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, $billing_info_array, $sub_opts);
 			return($this->returnObjectAsJson($response, 'subscription', $subscription));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while creating a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -191,7 +188,7 @@ class SubscriptionsController extends BillingsController {
 			}
 			$subscriptions = array();
 			$usersHandler = new UsersHandler();
-			$subscriptionsHandler = new SubscriptionsHandler();
+			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			if(isset($userReferenceUuid)) {
 				$users = $usersHandler->doGetUsers($userReferenceUuid);
 				if(count($users) == 0) {
@@ -217,7 +214,7 @@ class SubscriptionsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$this->doSortSubscriptions($subscriptions);
+			doSortSubscriptions($subscriptions);
 			return($this->returnObjectAsJson($response, 'subscriptions', $subscriptions));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while updating subscriptions, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -243,7 +240,7 @@ class SubscriptionsController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
-			$subscriptionsHandler = new SubscriptionsHandler();
+			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$subscription = $subscriptionsHandler->doUpdateUserSubscriptionByUuid($subscriptionBillingUuid);
 			return($this->returnObjectAsJson($response, 'subscription', $subscription));
 		} catch(BillingsException $e) {
@@ -273,7 +270,7 @@ class SubscriptionsController extends BillingsController {
 			}
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
 			//
-			$subscriptionsHandler = new SubscriptionsHandler();
+			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$subscription = $subscriptionsHandler->doCancelSubscriptionByUuid($subscriptionBillingUuid, new DateTime(), true);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));
@@ -307,7 +304,7 @@ class SubscriptionsController extends BillingsController {
 			}
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
 			//
-			$subscriptionsHandler = new SubscriptionsHandler();
+			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$subscription = $subscriptionsHandler->doRenewSubscriptionByUuid($subscriptionBillingUuid);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));
@@ -341,7 +338,7 @@ class SubscriptionsController extends BillingsController {
 			}
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
 			//
-			$subscriptionsHandler = new SubscriptionsHandler();
+			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$subscription = $subscriptionsHandler->doReactivateSubscriptionByUuid($subscriptionBillingUuid);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));
@@ -383,7 +380,7 @@ class SubscriptionsController extends BillingsController {
 			}
 			$internalPlanUuid = $args['internalPlanUuid'];
 			//
-			$subscriptionsHandler = new SubscriptionsHandler();
+			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$subscription = $subscriptionsHandler->doUpdateInternalPlanByUuid($subscriptionBillingUuid, $internalPlanUuid);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));
@@ -403,16 +400,6 @@ class SubscriptionsController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e));
 			//
 		}
-	}
-	
-	//passage par référence !!!
-	private function doSortSubscriptions(&$subscriptions) {
-		//more recent firt
-		usort($subscriptions, 
-				function(BillingsSubscription $a, BillingsSubscription $b) {
-					return(strcmp(dbGlobal::toISODate($b->getSubActivatedDate()), dbGlobal::toISODate($a->getSubActivatedDate())));
-				}
-		);
 	}
 	
 }

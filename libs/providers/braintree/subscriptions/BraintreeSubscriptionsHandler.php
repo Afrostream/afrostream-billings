@@ -11,7 +11,7 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 	public function __construct() {
 	}
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_provider_uuid, BillingInfoOpts $billingInfoOpts, BillingsSubscriptionOpts $subOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("braintree subscription creation...");
@@ -48,6 +48,11 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				//
 				$paymentMethod_attribs = array();
 				$paymentMethod_attribs['customerId'] = $user->getUserProviderUuid();
+				if(!array_key_exists('customerBankAccountToken', $subOpts->getOpts())) {
+					$msg = "subOpts field 'customerBankAccountToken' field is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
 				$paymentMethod_attribs['paymentMethodNonce'] = $subOpts->getOpts()['customerBankAccountToken'];
 				$paymentMethod_attribs['options'] = [
 						'makeDefault' => true
@@ -68,25 +73,78 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				$attribs = array();
 				$attribs['planId'] = $plan->getPlanUuid();
 				$attribs['paymentMethodToken'] = $paymentMethod->token;
-				
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
 					if(strlen($couponCode) > 0) {
-						$discount = $this->getDiscountByCouponCode(Braintree\Discount::all(), $couponCode);
-						if($discount == NULL) {
-							$msg = "coupon : code=".$couponCode." NOT FOUND";
-							config::getLogger()->addError($msg);
-							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_CODE_NOT_FOUND);
+						$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+						$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+						$billingProviderCouponsCampaign = $couponsInfos['providerCouponsCampaign'];
+						$discountArray = array();
+						$discountArray['inheritedFromId'] = $billingProviderCouponsCampaign->getExternalUuid();
+						switch($billingInternalCouponsCampaign->getDiscountType()) {
+							case 'amount' :
+								$discountArray['amount'] = number_format((float) ($billingInternalCouponsCampaign->getAmountInCents() / 100), 2, '.', '');
+								break;
+							case 'percent':
+								$discountArray['amount'] = number_format((float) (($internalPlan->getAmountInCents() * $billingInternalCouponsCampaign->getPercent()) / 10000), 2, '.', '');
+								break;
+							default :
+								$msg = "unsupported discount_type=".$billingInternalCouponsCampaign->getDiscountType();
+								config::getLogger()->addError($msg);
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+								break;
 						}
-						$attribs[] = [
-							'discounts' =>	[
-								'add' =>		[
-													[
-														'inheritedFromId' => $discount->id,
-													]
-												]
-							 				]
-						 ];					
+						switch($billingInternalCouponsCampaign->getDiscountDuration()) {
+							case 'once' :
+								$discountArray['numberOfBillingCycles'] = 1;
+								break;
+							case 'forever' :
+								$discountArray['neverExpires'] = true;
+								break;
+							case 'repeating' :
+								//all braintree plans are montlhy based
+								$numberOfMonthsInACycle = NULL;
+								switch ($internalPlan->getPeriodUnit()) {
+									case 'month' :
+										$numberOfMonthsInACycle = 1 * $internalPlan->getPeriodLength();
+										break;
+									case 'year' :
+										$numberOfMonthsInACycle = 12 * $internalPlan->getPeriodLength();
+										break;
+									default :
+										$msg = "unsupported period_unit=".$internalPlan->getPeriodUnit();
+										config::getLogger()->addError($msg);
+										throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+										break;
+								}
+								$numberOfMonthsOfDiscount = NULL;
+								switch($billingInternalCouponsCampaign->getDiscountDurationUnit()) {
+									case 'month' :
+										$numberOfMonthsOfDiscount = 1 * $billingInternalCouponsCampaign->getDiscountDurationLength();
+										break;
+									case 'year' :
+										$numberOfMonthsOfDiscount = 12 * $billingInternalCouponsCampaign->getDiscountDurationLength();
+										break;
+									default :
+										$msg = "unsupported discount_duration_unit=".$billingInternalCouponsCampaign->getDiscountDurationUnit();
+										config::getLogger()->addError($msg);
+										throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+										break;
+								}
+								if(($numberOfMonthsOfDiscount%$numberOfMonthsInACycle) > 0) {
+									$msg = "discount is not compatible with this plan";
+									config::getLogger()->addError($msg);
+									throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);									
+								}
+								$discountArray['numberOfBillingCycles'] = $numberOfMonthsOfDiscount / $numberOfMonthsInACycle;
+								break;
+							default :
+								$msg = "unsupported discount_duration=".$billingInternalCouponsCampaign->getDiscountDuration();
+								config::getLogger()->addError($msg);
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+								break;
+						}
+						$attribs['discounts'] = ['add' =>	[$discountArray]];
 					}
 				}
 				$result = Braintree\Subscription::create($attribs);
@@ -169,7 +227,7 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->id);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
 				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
@@ -185,7 +243,7 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 		config::getLogger()->addInfo("braintree dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
 		//
 		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
 		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
@@ -194,14 +252,14 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$api_subscription = Braintree\Subscription::find($sub_uuid);
 		//
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, Braintree\Subscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, Braintree\Subscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("braintree dbsubscription creation for userid=".$user->getId().", braintree_subscription_uuid=".$api_subscription->id."...");
 		//CREATE
 		$db_subscription = new BillingsSubscription();
-		$db_subscription->setSubscriptionBillingUuid(guid());
+		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
 		$db_subscription->setProviderId($provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
@@ -212,8 +270,22 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				$db_subscription->setSubActivatedDate($api_subscription->createdAt);
 				break;
 			case Braintree\Subscription::CANCELED :
-				$db_subscription->setSubStatus('canceled');
-				$db_subscription->setSubCanceledDate($api_subscription->updatedAt);
+				$status_history_array = $api_subscription->statusHistory;
+				$subscriptionStatus = 'canceled';//by default
+				$subCanceledDate = $api_subscription->updatedAt;
+				$subExpiresDate = NULL;
+				if(count($status_history_array) > 0) {
+					$last_status = $status_history_array[0];
+					if($last_status->status == Braintree\Subscription::CANCELED) {
+						if($last_status->subscriptionSource == Braintree\Subscription::RECURRING) {
+							$subscriptionStatus = 'expired';
+							$subExpiresDate = $subCanceledDate;
+						}
+					}
+				}
+				$db_subscription->setSubStatus($subscriptionStatus);
+				$db_subscription->setSubCanceledDate($subCanceledDate);
+				$db_subscription->setSubExpiresDate($subExpiresDate);
 				break;
 			case Braintree\Subscription::EXPIRED :
 				$db_subscription->setSubStatus('expired');
@@ -250,13 +322,57 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
+		//?COUPON?
+		$couponsInfos = NULL;
+		$couponCode = NULL;
+		if(isset($subOpts)) {
+			if(array_key_exists('couponCode', $subOpts->getOpts())) {
+				$str = $subOpts->getOpts()['couponCode'];
+				if(strlen($str) > 0) {
+					$couponCode = $str;
+				}
+			}
+		}
+		if(isset($couponCode)) {
+			$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+		}
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
+		//BILLING_INFO
+		if(isset($billingInfo)) {
+			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
+			$db_subscription->setBillingInfoId($billingInfo->getId());
+		}
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS
 		if(isset($subOpts)) {
 			$subOpts->setSubId($db_subscription->getId());
 			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+		}
+		//COUPON (NOT MANDATORY)
+		if(isset($couponsInfos)) {
+			$userInternalCoupon = $couponsInfos['userInternalCoupon'];
+			$internalCoupon = $couponsInfos['internalCoupon'];
+			$internalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+			//
+			$now = new DateTime();
+			//userInternalCoupon
+			if($userInternalCoupon->getId() == NULL) {
+				$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
+			}
+			$userInternalCoupon->setStatus("redeemed");
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
+			$userInternalCoupon->setRedeemedDate($now);
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
+			$userInternalCoupon->setSubId($db_subscription->getId());
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+			//internalCoupon
+			if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
+				$internalCoupon->setStatus("redeemed");
+				$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
+				$internalCoupon->setRedeemedDate($now);
+				$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+			}
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("braintree dbsubscription creation for userid=".$user->getId().", braintree_subscription_uuid=".$api_subscription->id." done successfully, id=".$db_subscription->getId());
@@ -266,6 +382,8 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, Braintree\Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {		
 		config::getLogger()->addInfo("braintree dbsubscription update for userid=".$user->getId().", braintree_subscription_uuid=".$api_subscription->id.", id=".$db_subscription->getId()."...");
 		//UPDATE
+		$db_subscription_before_update = clone $db_subscription;
+		//
 		$now = new DateTime();
 		//$db_subscription->setProviderId($provider->getId());//STATIC
 		//$db_subscription->setUserId($user->getId());//STATIC
@@ -282,10 +400,25 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 				}
 				break;
 			case Braintree\Subscription::CANCELED :
-				$db_subscription->setSubStatus('canceled');
+				$status_history_array = $api_subscription->statusHistory;
+				$subscriptionStatus = 'canceled';//by default
+				$subCanceledDate = $api_subscription->updatedAt;
+				$subExpiresDate = NULL;
+				if(count($status_history_array) > 0) {
+					$last_status = $status_history_array[0];
+					if($last_status->status == Braintree\Subscription::CANCELED) {
+						if($last_status->subscriptionSource == Braintree\Subscription::RECURRING) {
+							$subscriptionStatus = 'expired';
+							$subExpiresDate = $subCanceledDate;
+						}
+					}
+				}
+				$db_subscription->setSubStatus($subscriptionStatus);
 				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-				$db_subscription->setSubCanceledDate($api_subscription->updatedAt);
+				$db_subscription->setSubCanceledDate($subCanceledDate);
 				$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
+				$db_subscription->setSubExpiresDate($subExpiresDate);
+				$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
 				break;
 			case Braintree\Subscription::EXPIRED :
 				$db_subscription->setSubStatus('expired');
@@ -332,7 +465,9 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateId($db_subscription);
 		//$db_subscription->setDeleted('false');//STATIC
-		// 
+		//
+		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+		//
 		config::getLogger()->addInfo("braintree dbsubscription update for userid=".$user->getId().", braintree_subscription_uuid=".$api_subscription->id.", id=".$db_subscription->getId()." done successfully");
 		return($db_subscription);
 	}
@@ -359,7 +494,7 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 					$msg = 'a braintree api error occurred : ';
 					$errorString = $result->message;
 					foreach($result->errors->deepAll() as $error) {
-						$errorString.= '; Code=' . $error->code . ", msg=" . $error->message;;
+						$errorString.= '; Code=' . $error->code . ", msg=" . $error->message;
 					}
 					throw new Exception($msg.$errorString);
 				}
@@ -501,15 +636,6 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 		return(NULL);
 	}
 	
-	private function getDiscountByCouponCode(array $discounts, $couponCode) {
-		foreach ($discounts as $discount) {
-			if($discount->id == $couponCode) {
-				return($discount);
-			}
-		}
-		return(NULL);
-	}
-	
 	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
 		try {
 			config::getLogger()->addInfo("braintree subscription expiring...");
@@ -526,7 +652,7 @@ class BraintreeSubscriptionsHandler extends SubscriptionsHandler {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				if($subscription->getSubPeriodEndsDate() >= $expires_date) {
+				if($subscription->getSubPeriodEndsDate() > $expires_date) {
 					//exception
 					$msg = "cannot expire a subscription that has not ended yet";
 					config::getLogger()->addError($msg);

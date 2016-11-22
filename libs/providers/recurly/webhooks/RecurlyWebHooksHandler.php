@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/RecurlySubscriptionsHandler.php';
+require_once __DIR__ . '/../transactions/RecurlyTransactionsHandler.php';
 
 class RecurlyWebHooksHandler {
 	
@@ -27,24 +28,34 @@ class RecurlyWebHooksHandler {
 		switch ($notification->type) {
 			case "new_subscription_notification" :
 				//NOW IGNORED : since subscription is created through API, just log for information
-				config::getLogger()->addInfo('notification type : '. $notification->type. ' is ignored');
-				//WAS :
-				//$this->doProcessSubscription($notification, $update_type, $updateId);
+				//config::getLogger()->addInfo('notification type : '. $notification->type. ' is ignored');
+				//HACK !? Let's proceed for now, unknown subscription are ignored anyway
+				$this->doProcessSubscription($notification, $update_type, $updateId);
 				break;
 			case "updated_subscription_notification" :
 				$this->doProcessSubscription($notification, $update_type, $updateId);
 				break;
-			case "canceled_subscription_notification":
+			case "canceled_subscription_notification" :
 				$this->doProcessSubscription($notification, $update_type, $updateId);
 				break;
-			case "expired_subscription_notification":
+			case "expired_subscription_notification" :
 				$this->doProcessSubscription($notification, $update_type, $updateId);
 				break;
-			case "renewed_subscription_notification":
+			case "renewed_subscription_notification" :
 				$this->doProcessSubscription($notification, $update_type, $updateId);
 				break;
-			case "reactivated_account_notification":
+			case "reactivated_account_notification" :
 				$this->doProcessSubscription($notification, $update_type, $updateId);
+				break;
+			case "scheduled_payment_notification" :
+			case "processing_payment_notification" :
+			case "successful_payment_notification" :
+			case "failed_payment_notification" :
+			case "void_payment_notification" :
+				$this->doProcessPayment($notification, $update_type, $updateId);
+				break;
+			case "successful_refund_notification" :
+				$this->doProcessRefund($notification, $update_type, $updateId);
 				break;
 			default :
 				config::getLogger()->addWarning('notification type : '. $notification->type. ' is not yet implemented');
@@ -119,7 +130,6 @@ class RecurlyWebHooksHandler {
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-		$db_subscription_before_update = NULL;
 		try {
 			//START TRANSACTION
 			pg_query("BEGIN");
@@ -134,7 +144,6 @@ class RecurlyWebHooksHandler {
 				//$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 			} else {
 				//UPDATE
-				$db_subscription_before_update = clone $db_subscription;
 				$db_subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
 			}
 			//COMMIT
@@ -143,7 +152,6 @@ class RecurlyWebHooksHandler {
 			pg_query("ROLLBACK");
 			throw $e;
 		}
-		$recurlySubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
 		config::getLogger()->addInfo('Processing recurly hook subscription, notification_type='.$notification->type.' done successfully');
 	}
@@ -166,6 +174,96 @@ class RecurlyWebHooksHandler {
 			}
 		}
 		return($out);
+	}
+	
+	private function doProcessPayment(Recurly_PushNotification $notification, $update_type, $updateId) {
+		config::getLogger()->addInfo('Processing recurly hook payment, notification_type='.$notification->type.'...');
+		//
+		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
+		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+		//
+		$customer_provider_uuid = self::getNodeByName($notification->account, 'account_code');
+		$payment_provider_uuid = self::getNodeByName($notification->transaction, 'id');
+		config::getLogger()->addInfo('Processing recurly hook payment, payment_provider_uuid='.$payment_provider_uuid);
+		$api_customer = NULL;
+		$api_payment = NULL;
+		try {
+			//
+			$api_customer = Recurly_Account::get($customer_provider_uuid);
+			$api_payment = Recurly_Transaction::get($payment_provider_uuid);
+			//
+		} catch (Recurly_NotFoundError $e) {
+			config::getLogger()->addError("a not found exception occurred while getting recurly informations from api, message=".$e->getMessage());
+			throw $e;
+		} catch (Exception $e) {
+			config::getLogger()->addError("an unknown exception occurred while getting recurly informations from api, message=".$e->getMessage());
+			throw $e;
+		}
+		//provider
+		$provider = ProviderDAO::getProviderByName('recurly');
+		if($provider == NULL) {
+			$msg = "provider named 'recurly' not found";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$user = UserDAO::getUserByUserProviderUuid($provider->getId(), $customer_provider_uuid);
+		if($user == NULL) {
+			$msg = 'searching user with customer_provider_uuid='.$customer_provider_uuid.' failed, no user found';
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
+		}
+		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+		$recurlyTransactionsHandler = new RecurlyTransactionsHandler();
+		$recurlyTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment, 'hook');
+		config::getLogger()->addInfo('Processing recurly hook payment, notification_type='.$notification->type.' done successfully');
+	}
+	
+	private function doProcessRefund(Recurly_PushNotification $notification, $update_type, $updateId) {
+		config::getLogger()->addInfo('Processing recurly hook refund, notification_type='.$notification->type.'...');
+		//
+		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
+		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+		//
+		$customer_provider_uuid = self::getNodeByName($notification->account, 'account_code');
+		$refund_provider_uuid = self::getNodeByName($notification->transaction, 'id');
+		config::getLogger()->addInfo('Processing recurly hook refund, refund_provider_uuid='.$refund_provider_uuid);
+		$api_customer = NULL;
+		$api_refund = NULL;
+		try {
+			//
+			$api_customer = Recurly_Account::get($customer_provider_uuid);
+			$api_refund = Recurly_Transaction::get($refund_provider_uuid);
+			//
+		} catch (Recurly_NotFoundError $e) {
+			config::getLogger()->addError("a not found exception occurred while getting recurly informations from api, message=".$e->getMessage());
+			throw $e;
+		} catch (Exception $e) {
+			config::getLogger()->addError("an unknown exception occurred while getting recurly informations from api, message=".$e->getMessage());
+			throw $e;
+		}
+		//provider
+		$provider = ProviderDAO::getProviderByName('recurly');
+		if($provider == NULL) {
+			$msg = "provider named 'recurly' not found";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$user = UserDAO::getUserByUserProviderUuid($provider->getId(), $customer_provider_uuid);
+		if($user == NULL) {
+			$msg = 'searching user with customer_provider_uuid='.$customer_provider_uuid.' failed, no user found';
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+		$recurlyTransactionsHandler = new RecurlyTransactionsHandler();
+		if(isset($api_refund->original_transaction)) {
+			$recurlyTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_refund->original_transaction->get(), 'hook');
+		} else {
+			$recurlyTransactionsHandler->createOrUpdateRefundFromProvider($user, $userOpts, $api_customer, $api_refund, NULL, 'hook');
+		}
+		
+		
+		config::getLogger()->addInfo('Processing recurly hook refund, notification_type='.$notification->type.' done successfully');
 	}
 }
 

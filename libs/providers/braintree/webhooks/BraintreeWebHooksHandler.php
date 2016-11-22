@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/BraintreeSubscriptionsHandler.php';
+require_once __DIR__ . '/../../../slack/SlackHandler.php';
 
 class BraintreeWebHooksHandler {
 	
@@ -42,6 +43,15 @@ class BraintreeWebHooksHandler {
 				config::getLogger()->addWarning('notification kind : '. $notification->kind. ' is not yet implemented');
 				break;
 		}
+
+		//NC : NO MORE IN REALTIME
+		/*if (in_array($notification->kind, [
+			Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_SUCCESSFULLY,
+			Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_UNSUCCESSFULLY
+		])) {
+			$this->notifyCharge($notification);
+		}*/
+
 		config::getLogger()->addInfo('Processing braintree hook notification done successfully');
 	}
 	
@@ -110,7 +120,6 @@ class BraintreeWebHooksHandler {
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
-		$db_subscription_before_update = NULL;
 		try {
 			//START TRANSACTION
 			pg_query("BEGIN");
@@ -125,7 +134,6 @@ class BraintreeWebHooksHandler {
 				//$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 			} else {
 				//UPDATE
-				$db_subscription_before_update = clone $db_subscription;
 				$db_subscription = $braintreeSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
 			}
 			//COMMIT
@@ -134,7 +142,6 @@ class BraintreeWebHooksHandler {
 			pg_query("ROLLBACK");
 			throw $e;
 		}
-		$braintreeSubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
 		config::getLogger()->addInfo('Processing braintree hook subscription, notification_kind='.$notification->kind.' done successfully');
 	}
@@ -146,6 +153,36 @@ class BraintreeWebHooksHandler {
 			}
 		}
 		return(NULL);
+	}
+
+	private function notifyCharge(Braintree\WebhookNotification $notification)
+	{
+		config::getLogger()->addInfo('Notify charge on slack '.$notification->kind.'...');
+		//
+		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
+		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
+		Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
+		Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+
+		if ($notification->kind == Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_SUCCESSFULLY) {
+			$title = 'braintree charge succeeded';
+			$detail = '%s %s charged for %s';
+		} else {
+			$title = 'braintree charge failed';
+			$detail = '%s %s failed charge for %s';
+		}
+
+		$url = sprintf(getenv('BRAINTREE_TRANSACTION_URL_DETAIL_FORMAT'), getenv('BRAINTREE_MERCHANT_ID'), $notification->subject['subscription']['transactions'][0]['id']);
+		$plan = $notification->subject['subscription']['planId'];
+		$price = $notification->subject['subscription']['price'];
+		$currency = $notification->subject['subscription']['transactions'][0]['currencyIsoCode'];
+
+		$slack = new SlackHandler();
+		$message = sprintf("*%s*\n", $title);
+		$message .= sprintf($detail, $price, $currency, $plan);
+		$message .= "\n<".$url."|View details>";
+
+		$slack->sendMessage(getenv('SLACK_STATS_TRANSACTIONS_CHANNEL'), $message);
 	}
 	
 }

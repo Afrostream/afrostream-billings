@@ -7,7 +7,6 @@ require_once __DIR__ . '/../providers/celery/subscriptions/CelerySubscriptionsHa
 require_once __DIR__ . '/../providers/recurly/subscriptions/RecurlySubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/gocardless/subscriptions/GocardlessSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/bachat/subscriptions/BachatSubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/idipper/subscriptions/IdipperSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/afr/subscriptions/AfrSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/cashway/subscriptions/CashwaySubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/orange/subscriptions/OrangeSubscriptionsHandler.php';
@@ -16,7 +15,8 @@ require_once __DIR__ . '/../providers/stripe/subscriptions/StripeSubscriptionsHa
 require_once __DIR__ . '/../providers/braintree/subscriptions/BraintreeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/netsize/subscriptions/NetsizeSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
-require_once __DIR__.'/../utils/BillingsException.php';
+require_once __DIR__ . '/../utils/BillingsException.php';
+require_once __DIR__ . '/../utils/utils.php';
 
 class SubscriptionsHandler {
 	
@@ -50,13 +50,12 @@ class SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	public function doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, array $billing_info_opts_array, array $sub_opts_array) {
+	public function doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, array $billing_info_array, array $sub_opts_array) {
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("subscription creating...");
-			$this->checkBillingInfoOptsArray($billing_info_opts_array);
-			$billingInfoOpts = new BillingInfoOpts();
-			$billingInfoOpts->setOpts($billing_info_opts_array);
+			$billingInfo = BillingInfo::getInstance($billing_info_array);
+			$billingInfo->setBillingInfoBillingUuid(guid());
 			$subOpts = new BillingsSubscriptionOpts();
 			$subOpts->setOpts($sub_opts_array);
 			$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
@@ -126,19 +125,21 @@ class SubscriptionsHandler {
 			{
 				//subscription creating provider side
 				config::getLogger()->addInfo("subscription creating...provider creating...");
+				$subscription_billing_uuid = guid();
 				$sub_uuid = NULL;
 				switch($provider->getName()) {
 					case 'recurly' :
 						$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-						$sub_uuid = $recurlySubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						$sub_uuid = $recurlySubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
 						break;
 					case 'gocardless' :
 						$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
-						$sub_uuid = $gocardlessSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						$sub_uuid = $gocardlessSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
 						break;
 					case 'stripe':
 						$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
-						$billingSubscription = $stripeSubscriptionHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						$billingSubscription = $stripeSubscriptionHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
+						$sub_uuid = $billingSubscription->getSubUid();
 						break;
 					case 'celery' :
 						$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -147,19 +148,15 @@ class SubscriptionsHandler {
 						break;
 					case 'bachat' :
 						$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
-						$sub_uuid = $bachatSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
-						break;
-					case 'idipper' :
-						$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
-						$sub_uuid = $idipperSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						$sub_uuid = $bachatSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
 						break;
 					case 'afr' :
 						$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
-						$sub_uuid = $afrSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);						
+						$sub_uuid = $afrSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);						
 						break;
 					case 'cashway' :
 						$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
-						$sub_uuid = $cashwaySubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						$sub_uuid = $cashwaySubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
 						break;
 					case 'orange' :
 						$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -173,11 +170,11 @@ class SubscriptionsHandler {
 						break;
 					case 'braintree' :
 						$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
-						$sub_uuid = $braintreeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						$sub_uuid = $braintreeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
 						break;
 					case 'netsize' : 
 						$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
-						$sub_uuid = $netsizeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_provider_uuid, $billingInfoOpts, $subOpts);
+						$sub_uuid = $netsizeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
 						break;						
 					default:
 						$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -195,11 +192,11 @@ class SubscriptionsHandler {
 					switch($provider->getName()) {
 						case 'recurly' :
 							$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
-							$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'gocardless' :
 							$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
-							$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'celery' :
 							$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -208,39 +205,35 @@ class SubscriptionsHandler {
 							break;
 						case 'bachat' :
 							$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
-							$db_subscription = $bachatSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
-							break;
-						case 'idipper' :
-							$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
-							$db_subscription = $idipperSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);							
+							$db_subscription = $bachatSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'afr' :
 							$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
-							$db_subscription = $afrSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							$db_subscription = $afrSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'cashway' :
 							$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
-							$db_subscription = $cashwaySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							$db_subscription = $cashwaySubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'orange' :
 							$orangeSubscriptionsHandler = new OrangeSubscriptionsHandler();
-							$db_subscription = $orangeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							$db_subscription = $orangeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'bouygues' :
 							$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler();
-							$db_subscription = $bouyguesSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							$db_subscription = $bouyguesSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'stripe':
 							$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
-							$db_subscription = $stripeSubscriptionHandler->createDbSubscriptionFromApiSubscription($billingSubscription, $subOpts);
+							$db_subscription = $stripeSubscriptionHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts,  $billingInfo, $subscription_billing_uuid, $billingSubscription, 'api', 0);
 							break;
 						case 'braintree' :
 							$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
-							$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						case 'netsize' :
 							$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
-							$db_subscription = $netsizeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $sub_uuid, 'api', 0);
+							$db_subscription = $netsizeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						default:
 							$msg = "record new: unsupported feature for provider named : ".$provider->getName();
@@ -301,10 +294,6 @@ class SubscriptionsHandler {
 					$subscriptionsHandler = new BachatSubscriptionsHandler();
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
-				case 'idipper' :
-					$subscriptionsHandler = new IdipperSubscriptionsHandler();
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
 				case 'afr' :
 					$subscriptionsHandler = new AfrSubscriptionsHandler();
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
@@ -326,8 +315,8 @@ class SubscriptionsHandler {
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				case 'braintree' :
-					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
-					$subscriptions = $braintreeSubscriptionsHandler->doGetUserSubscriptions($user);
+					$subscriptionsHandler = new BraintreeSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				case 'netsize' :
 					$subscriptionsHandler = new NetsizeSubscriptionsHandler();
@@ -353,6 +342,7 @@ class SubscriptionsHandler {
 			config::getLogger()->addError("subscriptions getting failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		doSortSubscriptions($subscriptions);
 		return($subscriptions);
 	}
 	
@@ -361,6 +351,7 @@ class SubscriptionsHandler {
 	}
 	
 	public function doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid) {
+		$subscriptions = NULL;
 		try {
 			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid."...");
 			$subscriptions = BillingsSubscriptionDAO::getBillingsSubscripionByUserReferenceUuid($userReferenceUuid);
@@ -375,7 +366,8 @@ class SubscriptionsHandler {
 			config::getLogger()->addError("subscriptions getting failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		return($subscriptions);		
+		doSortSubscriptions($subscriptions);
+		return($subscriptions);
 	}
 	
 	public function doUpdateUserSubscriptionsByUser(User $user) {
@@ -404,9 +396,6 @@ class SubscriptionsHandler {
 					break;
 				case 'bachat' :
 					//nothing to do (owned)
-					break;
-				case 'idipper' :
-					//TODO
 					break;
 				case 'afr' :
 					//nothing to do (owned)
@@ -466,6 +455,7 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$db_subscription_before_update = clone $db_subscription;
 			switch($provider->getName()) {
 				case 'netsize' :
 					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
@@ -475,6 +465,8 @@ class SubscriptionsHandler {
 					//nothing to do (unknown)
 					break;
 			}
+			//
+			$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 			//
 			$this->doFillSubscription($db_subscription);
 			//
@@ -525,10 +517,6 @@ class SubscriptionsHandler {
 				case 'bachat' :
 					$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 					$db_subscription = $bachatSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
-					break;
-				case 'idipper' :
-					$idipperSubscriptionHandler = new IdipperSubscriptionsHandler();
-					$db_subscription = $idipperSubscriptionHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
 					break;
 				case 'orange' :
 					$orangeSubscriptionHandler = new OrangeSubscriptionsHandler();
@@ -581,7 +569,6 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$db_subscription_before_update = clone $db_subscription;
-
 			switch($provider->getName()) {
 				case 'recurly' :
 					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
@@ -599,10 +586,6 @@ class SubscriptionsHandler {
 				case 'bachat' :
 					$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 					$db_subscription = $bachatSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
-					break;
-				case 'idipper' :
-					$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
-					$db_subscription = $idipperSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
 				case 'stripe':
 					$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
@@ -676,10 +659,6 @@ class SubscriptionsHandler {
 				case 'bachat' :
 					$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 					$db_subscription = $bachatSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
-					break;
-				case 'idipper' :
-					$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
-					$db_subscription = $idipperSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
 				case 'afr' :
 					$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
@@ -802,7 +781,7 @@ class SubscriptionsHandler {
 			$subscription->setIsCancelable(false);
 		} else {
 			$array_status_cancelable = ['future', 'active'];
-			if(array_key_exists($subscription->getSubStatus() , $array_status_cancelable)) {
+			if(in_array($subscription->getSubStatus() , $array_status_cancelable)) {
 				$subscription->setIsCancelable(true);
 			} else {
 				$subscription->setIsCancelable(false);
@@ -832,10 +811,6 @@ class SubscriptionsHandler {
 			case 'bachat' :
 				$bachatSubscriptionsHandler = new BachatSubscriptionsHandler();
 				$bachatSubscriptionsHandler->doFillSubscription($subscription);
-				break;
-			case 'idipper' :
-				$idipperSubscriptionsHandler = new IdipperSubscriptionsHandler();
-				$idipperSubscriptionsHandler->doFillSubscription($subscription);
 				break;
 			case 'afr' :
 				$afrSubscriptionsHandler = new AfrSubscriptionsHandler();
@@ -874,10 +849,6 @@ class SubscriptionsHandler {
 		//<-- SPECIFIC
 	}
 	
-	private function checkBillingInfoOptsArray($billing_info_opts_as_array) {
-		//TODO
-	}
-	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
 		try {
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid()."...");
@@ -893,10 +864,10 @@ class SubscriptionsHandler {
 				}
 			} else {
 				if(
-						($subscription_before_update->getSubStatus() != 'active')
-						&&
-						($subscription_after_update->getSubStatus() == 'active')
-				) {
+					($subscription_before_update->getSubStatus() != 'active')
+					&&
+					($subscription_after_update->getSubStatus() == 'active')
+				)	{
 					$subscription_is_new_event = true;
 				}
 			}
@@ -914,9 +885,9 @@ class SubscriptionsHandler {
 					($subscription_before_update->getSubStatus() != 'canceled')
 					&&
 					($subscription_after_update->getSubStatus() == 'canceled')
-					) {
+				)	{
 						$subscription_is_canceled_event = true;
-					}
+				}
 			}
 			if($subscription_is_canceled_event == true) {
 				$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
@@ -929,12 +900,12 @@ class SubscriptionsHandler {
 				}
 			} else {
 				if(
-						($subscription_before_update->getSubStatus() != 'expired')
-						&&
-						($subscription_after_update->getSubStatus() == 'expired')
-						) {
-							$subscription_is_expired_event = true;
-						}
+					($subscription_before_update->getSubStatus() != 'expired')
+					&&
+					($subscription_after_update->getSubStatus() == 'expired')
+				)	{
+						$subscription_is_expired_event = true;
+				}
 			}
 			if($subscription_is_expired_event == true) {
 				if($subscription_after_update->getSubExpiresDate() == $subscription_after_update->getSubCanceledDate()) {
@@ -944,144 +915,11 @@ class SubscriptionsHandler {
 				}
 				$event = "subscription_is_expired";
 			}
-			if($subscription_is_new_event == true || $subscription_is_canceled_event == true || $subscription_is_expired_event == true) {
-				config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", ...");
-				if(getEnv('EVENT_EMAIL_ACTIVATED') == 1 && !empty($sendgrid_template_id)) {
-					$eventEmailProvidersExceptionArray = explode(";", getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION'));
-					$provider = ProviderDAO::getProviderById($subscription_after_update->getProviderId());
-					if($provider == NULL) {
-						$msg = "unknown provider with id : ".$subscription_after_update->getProviderId();
-						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					}
-					if(!in_array($provider->getName(), $eventEmailProvidersExceptionArray)) {
-						$user = UserDAO::getUserById($subscription_after_update->getUserId());
-						if($user == NULL) {
-							$msg = "unknown user with id : ".$subscription_after_update->getUserId();
-							config::getLogger()->addError($msg);
-							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-						}
-						$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-							$emailTo = NULL;
-							if(array_key_exists('email', $userOpts->getOpts())) {
-								$emailTo = $userOpts->getOpts()['email'];
-							}
-							config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail...");
-						    //DATA -->
-						    $providerPlan = PlanDAO::getPlanById($subscription_after_update->getPlanId());
-						    if($providerPlan == NULL) {
-						    	$msg = "unknown plan with id : ".$subscription_after_update->getPlanId();
-						    	config::getLogger()->addError($msg);
-						    	throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-						    }
-						    $internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
-						    if($internalPlan == NULL) {
-						    	$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
-						    	config::getLogger()->addError($msg);
-						    	throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-						    }
-						    $internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
-						    //DATA <--
-						    //DATA SUBSTITUTION -->
-						    setlocale(LC_MONETARY, 'fr_FR.utf8');//TODO : Forced to French Locale for "," in floats...
-						   	$substitions = array();
-						   	//user
-						   	$substitions['%userreferenceuuid%'] = $user->getUserReferenceUuid();
-						   	$substitions['%userbillinguuid%'] = $user->getUserBillingUuid();
-						   	//provider : nothing
-						   	//providerPlan : nothing
-						   	//internalPlan :
-						   	$substitions['%internalplanname%'] = $internalPlan->getName();
-						   	$substitions['%internalplandesc%'] = $internalPlan->getDescription(); 
-						   	$substitions['%amountincents%'] = $internalPlan->getAmountInCents();
-						   	$amountInMoney = new Money((integer) $internalPlan->getAmountInCents(), new Currency($internalPlan->getCurrency()));
-						   	$substitions['%amount%'] = money_format('%!.2n', (float) ($amountInMoney->getAmount() / 100));
-						   	$substitions['%amountincentsexcltax%'] = $internalPlan->getAmountInCentsExclTax();
-						   	$amountExclTaxInMoney = new Money((integer) $internalPlan->getAmountInCentsExclTax(), new Currency($internalPlan->getCurrency()));
-						   	$substitions['%amountexcltax%'] = money_format('%!.2n', (float) ($amountExclTaxInMoney->getAmount() / 100));
-						   	if($internalPlan->getVatRate() == NULL) {
-						   		$substitions['%vat%'] = 'N/A'; 
-						   	} else {
-						   		$substitions['%vat%'] = number_format($internalPlan->getVatRate(), 2, ',', '').'%';
-						   	}
-						   	$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
-						   	$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
-						   	$substitions['%amounttax%'] = money_format('%!.2n', (float) ($amountTaxInMoney->getAmount() / 100));
-						   	$substitions['%currency%'] = $internalPlan->getCurrencyForDisplay();
-						   	$substitions['%cycle%'] = $internalPlan->getCycle();
-						   	$substitions['%periodunit%'] = $internalPlan->getPeriodUnit();
-						   	$substitions['%periodlength%'] = $internalPlan->getPeriodLength();
-						   	//user : nothing
-						   	//userOpts
-						   	$substitions['%email%'] = ($emailTo == NULL ? '' : $emailTo);
-						   	$firstname = '';
-						   	if(array_key_exists('firstName', $userOpts->getOpts())) {
-						   		$firstname = $userOpts->getOpts()['firstName'];
-						   	}
-						   	if($firstname == 'firstNameValue') {
-						   		$firstname = '';
-						   	}
-						   	$substitions['%firstname%'] = $firstname;
-						   	$lastname = '';
-						   	if(array_key_exists('lastName', $userOpts->getOpts())) {
-						   		$lastname = $userOpts->getOpts()['lastName'];
-						   	}
-						   	if($lastname == 'lastNameValue') {
-						   		$lastname = '';
-						   	}
-						   	$substitions['%lastname%'] = $lastname;
-						   	$username = $firstname;
-						   	if($username == '') {
-						   		if(!empty($emailTo)) {
-						   			$username = explode('@', $emailTo)[0];
-						   		}
-						   	}
-						   	$substitions['%username%'] = $username;
-						   	$fullname = trim($firstname." ".$lastname);
-						   	$substitions['%fullname%'] = $fullname;
-						   	//subscription
-						   	$substitions['%subscriptionbillinguuid%'] = $subscription_after_update->getSubscriptionBillingUuid();
-						   	//DATA SUBSTITUTION <--
-							$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
-							$email = new SendGrid\Email();
-							$email->addTo(!empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL'));
-							$email
-							->setFrom(getEnv('SENDGRID_FROM'))
-							->setFromName(getEnv('SENDGRID_FROM_NAME'))
-							->setSubject(' ')
-							->setText(' ')
-							->setHtml(' ')
-							->setTemplateId($sendgrid_template_id);
-							if((null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
-								$email->setBcc(getEnv('SENDGRID_BCC'));
-								foreach($substitions as $var => $val) {
-									$vals = array($val, $val);//Bcc (same value twice (To + Bcc))
-									$email->addSubstitution($var, $vals);
-								}
-							} else {
-								foreach($substitions as $var => $val) {
-									$email->addSubstitution($var, array($val));//once (To)
-								}	
-							}
-							$sendgrid->send($email);
-							config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");					
-					}
-				}
-				config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", done successfully");
+			$hasEvent = ($event != NULL);
+			if($hasEvent) {
+				$this->doSendEmail($subscription_after_update, $event, $sendgrid_template_id);
 			}
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid()." done successfully");
-		} catch(\SendGrid\Exception $e) {
-			$msg = 'an error occurred while sending email for a new subscription event for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", error_code='.$e->getCode().", error_message=";
-			$firstLoop = true;
-			foreach($e->getErrors() as $er) {
-				if($firstLoop == true) {
-					$firstLoop = false;
-					$msg.= $er;
-				} else {
-					$msg.= ", ".$er;
-				}
-			}
-			config::getLogger()->addError($msg);
 		} catch(Exception $e) {
 			config::getLogger()->addError("an error occurred while processing subscription event for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", message=".$e->getMessage());
 		}
@@ -1211,4 +1049,332 @@ class SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
+	private function doSendEmail($subscription_after_update, $event, $sendgrid_template_id) {
+		try {
+			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail...");
+			if(getEnv('EVENT_EMAIL_ACTIVATED') != 1) {
+				config::getLogger()->addInfo("event by email : email is inactive");
+				return;
+			}
+			if(empty($sendgrid_template_id)) {
+				config::getLogger()->addInfo("event by email : no template found for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event);
+				return;
+			}
+			$eventEmailProvidersExceptionArray = explode(";", getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION'));
+			$provider = ProviderDAO::getProviderById($subscription_after_update->getProviderId());
+			if($provider == NULL) {
+				$msg = "unknown provider with id : ".$subscription_after_update->getProviderId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(in_array($provider->getName(), $eventEmailProvidersExceptionArray)) {
+				config::getLogger()->addInfo("event by email : ignored for providerName=".$provider->getName()." for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event);
+				return;
+			}
+			$user = UserDAO::getUserById($subscription_after_update->getUserId());
+			if($user == NULL) {
+				$msg = "unknown user with id : ".$subscription_after_update->getUserId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($event == "subscription_is_expired") {
+				if($this->hasFutureSubscription($user, $subscription_after_update)) {
+					config::getLogger()->addInfo("event by email : ignored - has a future subscription - for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event);
+					return;
+				}
+			}
+			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+			$emailTo = NULL;
+			if(array_key_exists('email', $userOpts->getOpts())) {
+				$emailTo = $userOpts->getOpts()['email'];
+			}
+			//DATA -->
+			$providerPlan = PlanDAO::getPlanById($subscription_after_update->getPlanId());
+			if($providerPlan == NULL) {
+				$msg = "unknown plan with id : ".$subscription_after_update->getPlanId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
+			if($internalPlan == NULL) {
+				$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
+			$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription_after_update->getId());
+			$internalCoupon = NULL;
+			$internalCouponsCampaign = NULL;
+			if(isset($userInternalCoupon)) {
+				$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($userInternalCoupon->getInternalCouponsId());
+				$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+			}
+			//DATA <--
+			//DATA SUBSTITUTION -->
+			setlocale(LC_MONETARY, 'fr_FR.utf8');//TODO : Forced to French Locale for "," in floats...
+			$substitions = array();
+			//user
+			$substitions['%userreferenceuuid%'] = $user->getUserReferenceUuid();
+			$substitions['%userbillinguuid%'] = $user->getUserBillingUuid();
+			//provider : nothing
+			//providerPlan : nothing
+			//internalPlan :
+			$substitions['%internalplanname%'] = $internalPlan->getName();
+			$substitions['%internalplandesc%'] = $internalPlan->getDescription();
+			$substitions['%amountincents%'] = $internalPlan->getAmountInCents();
+			$amountInMoney = new Money((integer) $internalPlan->getAmountInCents(), new Currency($internalPlan->getCurrency()));
+			$substitions['%amount%'] = money_format('%!.2n', (float) ($amountInMoney->getAmount() / 100));
+			$substitions['%amountincentsexcltax%'] = $internalPlan->getAmountInCentsExclTax();
+			$amountExclTaxInMoney = new Money((integer) $internalPlan->getAmountInCentsExclTax(), new Currency($internalPlan->getCurrency()));
+			$substitions['%amountexcltax%'] = money_format('%!.2n', (float) ($amountExclTaxInMoney->getAmount() / 100));
+			if($internalPlan->getVatRate() == NULL) {
+				$substitions['%vat%'] = 'N/A';
+			} else {
+				$substitions['%vat%'] = number_format($internalPlan->getVatRate(), 2, ',', '').'%';
+			}
+			$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
+			$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
+			$substitions['%amounttax%'] = money_format('%!.2n', (float) ($amountTaxInMoney->getAmount() / 100));
+			$substitions['%currency%'] = $internalPlan->getCurrencyForDisplay();
+			$substitions['%cycle%'] = $internalPlan->getCycle();
+			$substitions['%periodunit%'] = $internalPlan->getPeriodUnit();
+			$substitions['%periodlength%'] = $internalPlan->getPeriodLength();
+			//user : nothing
+			//userOpts
+			$substitions['%email%'] = ($emailTo == NULL ? '' : $emailTo);
+			$firstname = '';
+			if(array_key_exists('firstName', $userOpts->getOpts())) {
+				$firstname = $userOpts->getOpts()['firstName'];
+			}
+			if($firstname == 'firstNameValue') {
+				$firstname = '';
+			}
+			$substitions['%firstname%'] = $firstname;
+			$lastname = '';
+			if(array_key_exists('lastName', $userOpts->getOpts())) {
+				$lastname = $userOpts->getOpts()['lastName'];
+			}
+			if($lastname == 'lastNameValue') {
+				$lastname = '';
+			}
+			$substitions['%lastname%'] = $lastname;
+			$username = $firstname;
+			if($username == '') {
+				if(!empty($emailTo)) {
+					$username = explode('@', $emailTo)[0];
+				}
+			}
+			$substitions['%username%'] = $username;
+			$fullname = trim($firstname." ".$lastname);
+			$substitions['%fullname%'] = $fullname;
+			//subscription
+			$substitions['%subscriptionbillinguuid%'] = $subscription_after_update->getSubscriptionBillingUuid();
+			//Coupon
+			$substitions['%couponCode%'] = '';
+			$substitions['%couponAmountForDisplay%'] = '';
+			$substitions['%couponDetails%'] = '';
+			$substitions['%couponAppliedSentence%'] = '';
+			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() == 'promo') {
+				$couponAmountForDisplay = '';
+				switch($internalCouponsCampaign->getDiscountType()) {
+					case 'percent' :
+						$couponAmountForDisplay = $internalCouponsCampaign->getPercent().'%';
+						break;
+					case 'amount' :
+						$couponAmountForDisplay = new Money((integer) $internalCouponsCampaign->getAmountInCents(), new Currency($internalCouponsCampaign->getCurrency()));
+						$couponAmountForDisplay = money_format('%!.2n', (float) ($couponAmountForDisplay->getAmount() / 100));
+						$couponAmountForDisplay = $couponAmountForDisplay.' '.dbGlobal::getCurrencyForDisplay($internalCouponsCampaign->getCurrency());  
+						break;
+				}
+				$substitions['%couponCode%'] = $userInternalCoupon->getCode();
+				$substitions['%couponAmountForDisplay%'] = $couponAmountForDisplay;
+				$substitions['%couponDetails%'] = $internalCouponsCampaign->getDescription();
+				$couponAppliedSentence = getEnv('SENDGRID_VAR_couponAppliedSentence');
+				$couponAppliedSentence = str_replace(array_keys($substitions), array_values($substitions), $couponAppliedSentence);
+				$substitions['%couponAppliedSentence%'] = $couponAppliedSentence;
+			}
+			//DATA SUBSTITUTION <--
+			$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
+			$email = new SendGrid\Email();
+			$email->addTo(!empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL'));
+			$email
+			->setFrom(getEnv('SENDGRID_FROM'))
+			->setFromName(getEnv('SENDGRID_FROM_NAME'))
+			->setSubject(' ')
+			->setText(' ')
+			->setHtml(' ')
+			->setTemplateId($sendgrid_template_id);
+			if((null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
+				$email->setBcc(getEnv('SENDGRID_BCC'));
+				foreach($substitions as $var => $val) {
+					$vals = array($val, $val);//Bcc (same value twice (To + Bcc))
+					$email->addSubstitution($var, $vals);
+				}
+			} else {
+				foreach($substitions as $var => $val) {
+					$email->addSubstitution($var, array($val));//once (To)
+				}
+			}
+			$sendgrid->send($email);
+			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");
+		} catch(\SendGrid\Exception $e) {
+			$msg = 'an error occurred while sending email for a new subscription event for subscriptionBillingUuid='.$subscription_after_update->getSubscriptionBillingUuid().', event='.$event.', error_code='.$e->getCode().', error_message=';
+			$firstLoop = true;
+			foreach($e->getErrors() as $er) {
+				if($firstLoop == true) {
+					$firstLoop = false;
+					$msg.= $er;
+				} else {
+					$msg.= ", ".$er;
+				}
+			}
+			config::getLogger()->addError($msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = 'an error occurred while sending email for a new subscription event for subscriptionBillingUuid='.$subscription_after_update->getSubscriptionBillingUuid().', event='.$event.', error_code='.$e->getCode().', error_message=';
+			config::getLogger()->addError($msg);
+			throw $e;			
+		}
+	}
+	
+	private function hasFutureSubscription(User $user, BillingsSubscription $currentBillingsSubscription) {
+		$subscriptions = $this->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid());
+		if(count($subscriptions) > 0) {
+			foreach ($subscriptions as $subscription) {
+				if($subscription->getId() != $currentBillingsSubscription->getId()) {
+					if($subscription->getSubStatus() == 'future') {
+						//NC : Quite risky : For now, we do not filter with dates. We wait for first expirations to decide if we filter or not
+						/*$futureSubActivatedDate = $subscription->getSubActivatedDate();
+						$currentSubExpiresDate = $currentBillingsSubscription->getSubExpiresDate();
+						$diffInSeconds = $futureSubActivatedDate->format('U') - $currentSubExpiresDate->format('U');
+						if($diffInSeconds == 0) {
+							return(true);
+						}*/
+						return(true);
+					}
+				}
+			}
+		}
+		return(false);
+	}
+	
+	protected function getCouponInfos($couponCode, Provider $provider, User $user, InternalPlan $internalPlan) {
+		//
+		$out = array();
+		$internalCoupon = NULL;
+		$internalCouponsCampaign = NULL;
+		$providerCouponsCampaign = NULL;
+		$userInternalCoupon = NULL;
+		//
+		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+		if($internalCoupon == NULL) {
+			$msg = "coupon : code=".$couponCode." NOT FOUND";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_CODE_NOT_FOUND);
+		}
+		//Check internalCoupon
+		if($internalCoupon->getStatus() == 'redeemed') {
+			$msg = "coupon : code=".$couponCode." already redeemed";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_REDEEMED);
+		}
+		if($internalCoupon->getStatus() == 'expired') {
+			$msg = "coupon : code=".$couponCode." expired";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_EXPIRED);
+		}
+		if($internalCoupon->getStatus() == 'pending') {
+			$msg = "coupon : code=".$couponCode." pending";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PENDING);
+		}
+		if($internalCoupon->getStatus() != 'waiting') {
+			$msg = "coupon : code=".$couponCode." cannot be used";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_NOT_READY);
+		}
+		//
+		$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+		if($internalCouponsCampaign == NULL) {
+			$msg = "unknown internalCouponsCampaign with id : ".$internalCoupon->getInternalCouponsCampaignsId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//Check compatibility
+		$isProviderCompatible = false;
+		$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+		foreach ($providerCouponsCampaigns as $currentProviderCouponsCampaign) {
+			if($currentProviderCouponsCampaign->getProviderId() == $provider->getId()) {
+				$providerCouponsCampaign = $currentProviderCouponsCampaign;
+				$isProviderCompatible = true;
+				break;
+			}
+		}
+		if($isProviderCompatible == false) {
+			//Exception
+			$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$provider->getName();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PROVIDER_INCOMPATIBLE);
+		}
+		$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+		$isInternalPlanCompatible = false;
+		foreach($billingInternalCouponsCampaignInternalPlans as $billingInternalCouponsCampaignInternalPlan) {
+			if($billingInternalCouponsCampaignInternalPlan->getInternalPlanId() == $internalPlan->getId()) {
+				$isInternalPlanCompatible = true; break;
+			}
+		}
+		if($isInternalPlanCompatible == false) {
+			//Exception
+			$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with internalPlan : ".$internalPlan->getInternalPlanUuid();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_INTERNALPLAN_INCOMPATIBLE);
+		}
+		//
+		$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCoupon->getId());
+		if(count($userInternalCoupons) > 0) {
+			//TAKING FIRST (EQUALS LAST GENERATED)
+			$userInternalCoupon = $userInternalCoupons[0];
+		} else {
+			$userInternalCoupon = new BillingUserInternalCoupon();
+			$userInternalCoupon->setInternalCouponsId($internalCoupon->getId());
+			$userInternalCoupon->setCode($internalCoupon->getCode());
+			$userInternalCoupon->setUuid(guid());
+			$userInternalCoupon->setUserId($user->getId());
+			$userInternalCoupon->setExpiresDate($internalCoupon->getExpiresDate());
+		}
+		//Check userInternalCoupon
+		if($userInternalCoupon->getStatus() == 'redeemed') {
+			$msg = "coupon : code=".$couponCode." already redeemed";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_REDEEMED);
+		}
+		if($userInternalCoupon->getStatus() == 'expired') {
+			$msg = "coupon : code=".$couponCode." expired";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_EXPIRED);
+		}
+		if($userInternalCoupon->getStatus() == 'pending') {
+			$msg = "coupon : code=".$couponCode." pending";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PENDING);
+		}
+		if($userInternalCoupon->getStatus() != 'waiting') {
+			$msg = "coupon : code=".$couponCode." cannot be used";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_NOT_READY);
+		}
+		if($userInternalCoupon->getSubId() != NULL) {
+			$msg = "coupon : code=".$couponCode." is already linked to another subscription";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_ALREADY_LINKED);
+		}
+		$out['internalCoupon'] = $internalCoupon;
+		$out['internalCouponsCampaign'] = $internalCouponsCampaign;
+		$out['providerCouponsCampaign'] = $providerCouponsCampaign;
+		$out['userInternalCoupon'] = $userInternalCoupon;
+		return($out);
+	}
+	
 }
+
+?>
