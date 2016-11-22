@@ -798,12 +798,12 @@ class InternalPlan implements JsonSerializable {
 				'trialEnabled' => $this->trialEnabled,
 				'trialPeriodUnit' => $this->trialPeriodUnit,
 				'trialPeriodLength' => $this->trialPeriodLength,
-				'isVisible' => $this->isVisible == 't' ? true : false,
+				'isVisible' => $this->isVisible,
 				'countries' => InternalPlanCountryDAO::getInternalPlanCountries($this->_id)
 		];
 		if($this->showProviderPlans) {
 			// <-- by providerPlans -->
-			$providerPlans = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id));
+			$providerPlans = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id), true);
 			$return['providerPlans'] = $providerPlans;
 			// <-- by paymentMethods -->
 			$providerPlansByPaymentMethodTypeArray = array();
@@ -967,10 +967,16 @@ class InternalPlanLinksDAO {
 		return($row[0]);
 	}
 	
-	public static function getProviderPlanIdsFromInternalPlanId($internalplanid) {
+	public static function getProviderPlanIdsFromInternalPlanId($internalplanid, $isVisible = NULL) {
 		$query = "SELECT BP._id as billing_plan_id FROM billing_plans BP INNER JOIN billing_internal_plans_links BIPL ON (BP._id = BIPL.provider_plan_id)";
 		$query.= " WHERE BIPL.internal_plan_id = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($internalplanid));
+		$params = array();
+		$params[] = $internalplanid;
+		if(isset($isVisible)) {
+			$params[] = $isVisible;
+			$query.= " AND BP.is_visible = $2";
+		}
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		
 		$out = array();
 		
@@ -987,7 +993,7 @@ class InternalPlanLinksDAO {
 
 class PlanDAO {
 	
-	private static $sfields = "BP._id, BP.providerid, BP.plan_uuid, BP.name, BP.description";
+	private static $sfields = "BP._id, BP.providerid, BP.plan_uuid, BP.name, BP.description, BP.is_visible";
 	
 	private static function getPlanFromRow($row) {
 		$out = new Plan();
@@ -996,6 +1002,7 @@ class PlanDAO {
 		$out->setPlanUid($row["plan_uuid"]);
 		$out->setName($row["name"]);
 		$out->setDescription($row["description"]);
+		$out->setIsVisible($row["is_visible"] == 't' ? true : false);
 		return($out);
 	}
 	
@@ -1124,6 +1131,7 @@ class Plan implements JsonSerializable {
 	private $name;
 	private $description;
 	private $providerid;
+	private $isVisible;
 	
 	public function getId() {
 		return($this->_id);
@@ -1165,6 +1173,14 @@ class Plan implements JsonSerializable {
 		$this->providerid = $providerid;
 	}
 	
+	public function setIsVisible($isVisible) {
+		$this->isVisible = $isVisible;
+	}
+	
+	public function getIsVisible() {
+		return($this->isVisible);
+	}
+	
 	public function jsonSerialize() {
 		$provider = ProviderDAO::getProviderById($this->providerid);
 		$return = [
@@ -1172,7 +1188,8 @@ class Plan implements JsonSerializable {
 				'name' => $this->name,
 				'description' => $this->description,
 				'provider' => $provider,
-				'paymentMethods' => BillingProviderPlanPaymentMethodsDAO::getBillingProviderPlanPaymentMethodsByProviderPlanId($this->_id)
+				'paymentMethods' => BillingProviderPlanPaymentMethodsDAO::getBillingProviderPlanPaymentMethodsByProviderPlanId($this->_id),
+				'isVisible' => $this->isVisible
 		];
 		$providersCouponCodeCompatible = ['afr', 'cashway', 'recurly', 'stripe', 'braintree'];
 		$return['isCouponCodeCompatible'] = in_array($provider->getName(), $providersCouponCodeCompatible);
