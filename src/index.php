@@ -50,229 +50,325 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
 		]
 ]));
 
-//Users
-
-//get a user
-
-/*
-	sample call :
-	
-	GET /billings/api/users/userBillingUuid
-	
-	or
-	
-	GET /billings/api/users/?providerName=recurly&userReferenceUuid=afrostreamUUID
-    	
-    "providerName" : "recurly"
-    "userReferenceUuid" : "afrostreamUUID"	//our own UUID (database ID)
-
-    sample answer :
-    
-    {
-  		"status": "done",
-  		"statusMessage": "success",
-  		"statusCode": 0,
-  		"response": {
-    		"user": {
-      			"userBillingUuid": "UserBillingUUID",	//User Billings UUID (to be used in other calls)
-      			"userReferenceUuid": "afrostreamUUID",
-      			"userProviderUuid": "UserProviderUUID",
-      			"provider": {
-        			"providerName": "recurly"
-      			},
-      			"userOpts": {
-        			"email": "email@domain.com",
-        			"firstName": "myFirstName",
-        			"lastName": "myLastName"
-      			}
-    		}
-  		}
-  	}
-	
-*/
+/**
+ * @api {get} /billings/api/users/:userBillingUuid Request User Information
+ *
+ * @apiParam {String} :userBillingUuid Api uuid of the user.
+ * @apiDescription It returns the user with the userBillingUuid given.
+ *
+ * @apiExample {curl} Example usage:
+ *     curl -i http://localhost/billings/api/users/11111111-1111-1111-1111-111111111111
+ * @apiSuccess {json} User Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *   			"user": {
+ *     				"userBillingUuid": "11111111-1111-1111-1111-111111111111",
+ *     				"userReferenceUuid": "1111",
+ *     				"userProviderUuid": "8888",
+ *     				"provider": {
+ *       				"providerName": "recurly"
+ *     				},
+ *     			"userOpts": {
+ *       			"email": "email@domain.com",
+ *       			"lastName": "lastNameValue",
+ *       			"firstName": "firstNameValue"
+ *					}
+ *				}
+ *			}
+ *		}
+ *
+ * @apiError UserNotFound	When the user cannot be found
+ *
+ * @apiErrorExample Error-Response:
+ *		HTTP/1.1 404 Not Found
+ *		{
+ * 			"status": "error",
+ * 			"statusMessage": "NOT FOUND",
+ * 			"statusCode": 0,
+ * 			"statusType": "internal",
+ * 			"errors": [
+ *   			{
+ *     			"error": {
+ *       			"errorMessage": "NOT FOUND",
+ *       			"errorType": "internal",
+ *       			"errorCode": 0
+ *     				}
+ *   			}
+ * 			]
+ *		}
+ */
 
 $app->get("/billings/api/users/{userBillingUuid}", function ($request, $response, $args) {
 	$usersController = new UsersController();
 	return($usersController->get($request, $response, $args));
 });
 
+/**
+ * @api {get} /billings/api/users/ Request User Information
+ *
+ * @apiParam {String} providerName Provider name to which the user belongs.
+ * @apiParam {String} userReferenceUuid Reference uuid of the user.
+ * @apiDescription It returns user which belongs to the provider named by providerName and which reference uuid equals the userReferenceUuid given.
+ *
+ * @apiExample {curl} Example usage:
+ *     curl -i http://localhost/billings/api/users/?providerName=recurly&userReferenceUuid=8888
+ *
+ * @apiSuccess {json} User Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *   			"user": {
+ *     				"userBillingUuid": "11111111-1111-1111-1111-111111111111",
+ *     				"userReferenceUuid": "1111",
+ *     				"userProviderUuid": "8888",
+ *     				"provider": {
+ *       				"providerName": "recurly"
+ *     				},
+ *     			"userOpts": {
+ *       			"email": "email@domain.com",
+ *       			"lastName": "lastNameValue",
+ *       			"firstName": "firstNameValue"
+ *					}
+ *				}
+ *			}
+ *		}
+ */
+
 $app->get("/billings/api/users/", function ($request, $response, $args) {
 	$usersController = new UsersController();
 	return($usersController->get($request, $response, $args));
 });
 
-//create a user
-
-/*
-	sample call :
-	
-	POST /billings/api/users/
-	
-	BODY :
-	
-	{
-    	"providerName" : "recurly",
-    	"userReferenceUuid" : "afrostreamUUID",		//our own UUID (database ID)
-    	"userProviderUuid" : "UserProviderUUID",	//given by the provider when user is created from provider side
-    	"userOpts" : {
-        	"email" : "email@domain.com",
-        	"firstName" : "myFirstName",
-        	"lastName" : "myLastName"
-    	}
-   }
-    
-    sample answer :
-    
-    {
-  		"status": "done",
-  		"statusMessage": "success",
-  		"statusCode": 0,
-  		"response": {
-    		"user": {
-      			"userBillingUuid": "UserBillingUUID",	//User Billings UUID (to be used in other calls)
-      			"userReferenceUuid": "afrostreamUUID",
-      			"userProviderUuid": "UserProviderUUID",
-      			"provider": {
-        			"providerName": "recurly"
-      			},
-      			"userOpts": {
-        			"email": "email@domain.com",
-        			"firstName": "myFirstName",
-        			"lastName": "myLastName"
-      			}
-    		}
-  		}
-  	}
-	
-*/
+/**
+ * @api {post} /billings/api/users/ Request User Creation
+ *
+ * @apiParam (postData) userProviderUuid userProviderUuid is not mandatory. 
+ * It has to be used when you provider is compatible with 
+ * and when you want to get back a user from the provider instead of creating it from scratch.
+ *
+ * @apiParamExample {json} Request-Example:
+ * 
+ *		{
+ *   		"providerName" : "recurly",
+ *   		"userReferenceUuid" : "1111",	
+ *   		"userProviderUuid" : "8888",
+ *   		"userOpts" : {
+ *       		"email" : "email@domain.com",
+ *       		"firstName" : "firstNameValue",
+ *       		"lastName" : "lastNameValue"
+ *   		}
+ *  	}
+ *
+ * @apiSuccess {json} User Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *   			"user": {
+ *     				"userBillingUuid": "11111111-1111-1111-1111-111111111111",
+ *     				"userReferenceUuid": "1111",
+ *     				"userProviderUuid": "8888",
+ *     				"provider": {
+ *       				"providerName": "recurly"
+ *     				},
+ *     			"userOpts": {
+ *       			"email": "email@domain.com",
+ *       			"firstName": "firstNameValue",
+ *       			"lastName": "lastNameValue"
+ *					}
+ *				}
+ *			}
+ *		}
+ */
 
 $app->post("/billings/api/users/", function ($request, $response, $args) {
 	$usersController = new UsersController();
 	return($usersController->create($request, $response, $args));
 });
 
-//update : one specific userBillingUuid (not recommended)
-	
+/**
+ * @api {put} /billings/api/users/ Request User(s) Update
+ * @apiDescription Will update User Informations given in the userOpts section (email, firstName, lastName, etc.)
+ * @apiParam {String} [userBillingUuid] (NOT RECOMMENDED) Api uuid of the user. 
+ * Will update User Informations for only one provider.
+ * @apiParam {String} [userReferenceUuid] (RECOMMENDED) Provider uuid of the user.
+ * Will update User Informations for all providers linked to the userReferenceUuid given.
+ * 
+ * @apiParamExample {json} Request-Example:
+ * 
+ *		{
+ *   		"userOpts" : {
+ *       		"email" : "email@domain.com",
+ *       		"firstName" : "firstNameValue",
+ *       		"lastName" : "lastNameValue"
+ *   		}
+ *  	}
+ *  
+ * @apiSuccess {json} User Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *   			"user": {
+ *     				"userBillingUuid": "11111111-1111-1111-1111-111111111111",
+ *     				"userReferenceUuid": "1111",
+ *     				"userProviderUuid": "8888",
+ *     				"provider": {
+ *       				"providerName": "recurly"
+ *     				},
+ *     			"userOpts": {
+ *       			"email": "email@domain.com",
+ *       			"firstName": "firstNameValue",
+ *       			"lastName": "lastNameValue"
+ *					}
+ *				}
+ *			}
+ *		}
+ */
+
 $app->put("/billings/api/users/{userBillingUuid}", function ($request, $response, $args) {
 	$usersController = new UsersController();
 	return($usersController->update($request, $response, $args));
 });
-
-//update : email, firstName, lastName linked to the same userReferenceUuid. Changes are propagated to providers.
-
-/*
-	sample call :
-	
-	PUT /billings/api/users/?userReferenceUuid=afrostreamUUID
-	
-	BODY :
-	
-	{
-    	"userOpts" : {
-        	"email" : "email@domain.com",
-        	"firstName" : "myFirstName",
-        	"lastName" : "myLastName"
-    	}
-   	}
-    
-    sample answer :
-    
-    {
-  		"status": "done",
-  		"statusMessage": "success",
-  		"statusCode": 0,
-  		"response": {
-    		"users": [
-    			{...},
-    			{...}
-    		]
-  		}
-  	}
-	
-*/
 
 $app->put("/billings/api/users/", function ($request, $response, $args) {
 	$usersController = new UsersController();
 	return($usersController->updateUsers($request, $response, $args));
 });
 
-//Subscriptions
-
-//get one subscription
-
-/*
-	sample call :
-	
-	GET /billings/api/subscriptions/subscriptionBillingUuid
-
- 	sample answer :
- 	
-	{
-  		"status": "done",
-  		"statusMessage": "success",
-  		"statusCode": 0,
-  		"response": {
-    		"subscription": {
-      			"subscriptionBillingUuid": "SubscriptionBillingUUID",
-      			"subscriptionProviderUuid": "SubscriptionProviderUUID",
-      			"isActive": "yes",
-      			"user": {
-        			"userBillingUuid": "UserBillingUUID",
-        			"userReferenceUuid": "afrostreamUUID",
-        			"userProviderUuid": "UserProviderUUID",
-        			"provider": {
-          				"providerName": "recurly"
-        			},
-        			"userOpts": {
-          				"email": "email@domain.com",
-          				"firstName": "myFirstName",
-          				"lastName": "myLastName"
-        			}
-      			},
-      			"provider": {
-        			"providerName": "recurly"
-      			},
-      			"internalPlan": {
-	      			"internalPlanUuid": "InternalPlanUuid",
-	      			"name": "name",
-	      			"description": "description",
-	      			"amountInCents": "1000",
-	      			"currency": "EUR",
-	      			"cycle": "once",
-	      			"periodUnit": "month",
-	      			"periodLength" : "1",
-					"internalPlanOpts": {
-	        			"internalMaxScreens" : "2",
-	        			"key1" : "value1",
-	        			"key2" : "value2"
-	        		},
-					"thumb": {
-						"path": "/path/jpeg.jpg",
-						"imgix": "https://mydomain.com/path/jpeg.jpg"
-					},
-					"trialEnabled": true,
-					"trialPeriodUnit": "day",
-					"trialPeriodLength": "7",
-					"isVisible": true
-      			},
-      			"creationDate": "2015-12-25 12:00:00+00",
-      			"updatedDate": "2015-12-25 12:00:00+00",
-      			"subStatus": "active",
-      			"subActivatedDate": "2015-12-25 12:00:00+00",
-      			"subCanceledDate": null,
-      			"subExpiresDate": null,
-      			"subPeriodStartedDate": "2015-12-25 12:00:00+00",
-      			"subPeriodEndsDate": "2016-01-25 12:00:00+00",
-      			"subOpts": {
-        			"key1": "value1",
-        			"key2": "value2",
-        			"key3": "value3"
-      			}
-    		}
-  		}
-	}
-	
-*/
+/**
+ * @api {get} /billings/api/subscriptions/:subscriptionBillingUuid Request Subscription Information
+ *
+ * @apiParam {String} :subscriptionBillingUuid Api uuid of the subscription. It returns the subscription with the subscriptionBillingUuid given.
+ * @apiExample {curl} Example usage:
+ *     curl -i http://localhost/billings/api/subscriptions/33333333-3333-3333-3333-333333333333
+ *
+ * @apiSuccess {json} Subscriptions Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *   			"subscription": {
+ *     				"subscriptionBillingUuid": "33333333-3333-3333-3333-333333333333",
+ *     				"subscriptionProviderUuid": "9999",
+ *     				"isActive": "no",
+ *     				"inTrial": "no",
+ *     				"isCancelable": "no",
+ *     				"isReactivable": "no",
+ *     				"user": {
+ *       				"userBillingUuid": "11111111-1111-1111-1111-111111111111",
+ *       				"userReferenceUuid": "1111",
+ *       				"userProviderUuid": "8888",
+ *       				"provider": {
+ *         				"providerName": "recurly"
+ *       				},
+ *       				"userOpts": {
+ *         					"lastName": "lastNameValue",
+ *         					"firstName": "firstNameValue",
+ *         					"email": "email@domain.com"
+ *       				}
+ *     				},
+ *     				"provider": {
+ *       				"providerName": "recurly"
+ *     				},
+ *     				"creationDate": "2016-09-18T02:00:22+0000",
+ *     				"updatedDate": "2016-09-28T07:39:14+0000",
+ *     				"subStatus": "expired",
+ *     				"subActivatedDate": "2016-09-18T02:00:22+0000",
+ *     				"subCanceledDate": "2016-09-28T07:39:07+0000",
+ *     				"subExpiresDate": "2016-09-28T07:39:07+0000",
+ *     				"subPeriodStartedDate": "2016-09-18T02:00:22+0000",
+ *     				"subPeriodEndsDate": "2017-09-18T21:59:59+0000",
+ *     				"subOpts": {
+ *       				"customerBankAccountToken": "ABCD"
+ *     				},
+ *     				"billingInfo": {
+ *       				"billingInfoBillingUuid": "77777777-7777-7777-7777-777777777777",
+ *       				"creationDate": "2016-09-18T02:00:22+0000",
+ *       				"updatedDate": "2016-09-18T02:00:22+0000",
+ *       				"firstName": null,
+ *       				"lastName": null,
+ *       				"email": null,
+ *       				"iban": null,
+ *       				"countryCode": null,
+ *       				"billingInfoOpts": [],
+ *       				"paymentMethod": null
+ *     				},
+ *     				"internalPlan": {
+ *       				"internalPlanUuid": "afrostreamambassadeursrts",
+ *       				"name": "Sérénité",
+ *       				"description": "59,99€ pour 1 an de films et séries afro",
+ *       				"amountInCents": "5999",
+ *       				"amount": "59,99",
+ *       				"amountInCentsExclTax": "4999",
+ *       				"amountExclTax": "49,99167",
+ *       				"vatRate": "20,00",
+ *       				"currency": "EUR",
+ *       				"cycle": "auto",
+ *       				"periodUnit": "year",
+ *       				"periodLength": "1",
+ *       				"internalPlanOpts": {
+ *         					"internalMaxScreens": "2",
+ *         					"internalVip": "true"
+ *       				},
+ *       				"thumb": null,
+ *       				"trialEnabled": false,
+ *       				"trialPeriodUnit": null,
+ *       				"trialPeriodLength": null,
+ *       				"isVisible": true,
+ *       				"countries": [
+ *         					{
+ *           				"country": "FR"
+ *         					}
+ *       				]
+ *     				}
+ *   			}
+ * 			}
+ *		}
+ *
+ * @apiError SubscriptionNotFound When the subscription cannot be found
+ *
+ * @apiErrorExample Error-Response:
+ *		HTTP/1.1 404 Not Found
+ *		{
+ * 			"status": "error",
+ * 			"statusMessage": "NOT FOUND",
+ * 			"statusCode": 0,
+ * 			"statusType": "internal",
+ * 			"errors": [
+ *   			{
+ *     			"error": {
+ *       			"errorMessage": "NOT FOUND",
+ *       			"errorType": "internal",
+ *       			"errorCode": 0
+ *     				}
+ *   			}
+ * 			]
+ *		}
+ */
 
 $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
@@ -430,36 +526,105 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
 	return($subscriptionsController->updateOne($request, $response, $args));
 });
 
-//get subscriptions
-
-/*
-	sample call :
-	 
- 	{
-	 	"userReferenceUuid": "afrostreamUUID"	//our own UUID (database ID)
-	}
-	
-	or :
-	
-	{
-		"userBillingUuid" : "UserBillingUUID"	//given when creating a user
-	}
-	
-	sample answer :
-	
-	{
-  		"status": "done",
-  		"statusMessage": "success",
-  		"statusCode": 0,
-  		"response": {
-    		"subscriptions": [
-      			{...},
-      			{...}
-    		]
-    	}
-    }
-    
-*/
+/**
+ * @api {get} /billings/api/subscriptions/ Request Subscriptions Information
+ *
+ * @apiParam {String} [userReferenceUuid] reference uuid of the user. It returns subscriptions which belong to users with the userReferenceUuid given.
+ * @apiParam {String} [userBillingUuid] Api uuid of the user. It returns subscriptions which belong to users with the userBillingUuid given.
+ *
+ * @apiExample {curl} Example usage:
+ *     curl -i http://localhost/billings/api/users/?userReferenceUuid=1111
+ * @apiExample {curl} Example usage:
+ *     curl -i http://localhost/billings/api/users/?userBillingUuid=11111111-1111-1111-1111-111111111111
+ *
+ * @apiSuccess {json} Subscriptions Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *   			"subscriptions": [
+ *   			{
+ *     				"subscriptionBillingUuid": "33333333-3333-3333-3333-333333333333",
+ *     				"subscriptionProviderUuid": "9999",
+ *     				"isActive": "no",
+ *     				"inTrial": "no",
+ *     				"isCancelable": "no",
+ *     				"isReactivable": "no",
+ *     				"user": {
+ *       				"userBillingUuid": "11111111-1111-1111-1111-111111111111",
+ *       				"userReferenceUuid": "1111",
+ *       				"userProviderUuid": "8888",
+ *       				"provider": {
+ *         				"providerName": "recurly"
+ *       				},
+ *       				"userOpts": {
+ *         					"lastName": "lastNameValue",
+ *         					"firstName": "firstNameValue",
+ *         					"email": "email@domain.com"
+ *       				}
+ *     				},
+ *     				"provider": {
+ *       				"providerName": "recurly"
+ *     				},
+ *     				"creationDate": "2016-09-18T02:00:22+0000",
+ *     				"updatedDate": "2016-09-28T07:39:14+0000",
+ *     				"subStatus": "expired",
+ *     				"subActivatedDate": "2016-09-18T02:00:22+0000",
+ *     				"subCanceledDate": "2016-09-28T07:39:07+0000",
+ *     				"subExpiresDate": "2016-09-28T07:39:07+0000",
+ *     				"subPeriodStartedDate": "2016-09-18T02:00:22+0000",
+ *     				"subPeriodEndsDate": "2017-09-18T21:59:59+0000",
+ *     				"subOpts": {
+ *       				"customerBankAccountToken": "ABCD"
+ *     				},
+ *     				"billingInfo": {
+ *       				"billingInfoBillingUuid": "77777777-7777-7777-7777-777777777777",
+ *       				"creationDate": "2016-09-18T02:00:22+0000",
+ *       				"updatedDate": "2016-09-18T02:00:22+0000",
+ *       				"firstName": null,
+ *       				"lastName": null,
+ *       				"email": null,
+ *       				"iban": null,
+ *       				"countryCode": null,
+ *       				"billingInfoOpts": [],
+ *       				"paymentMethod": null
+ *     				},
+ *     				"internalPlan": {
+ *       				"internalPlanUuid": "afrostreamambassadeursrts",
+ *       				"name": "Sérénité",
+ *       				"description": "59,99€ pour 1 an de films et séries afro",
+ *       				"amountInCents": "5999",
+ *       				"amount": "59,99",
+ *       				"amountInCentsExclTax": "4999",
+ *       				"amountExclTax": "49,99167",
+ *       				"vatRate": "20,00",
+ *       				"currency": "EUR",
+ *       				"cycle": "auto",
+ *       				"periodUnit": "year",
+ *       				"periodLength": "1",
+ *       				"internalPlanOpts": {
+ *         					"internalMaxScreens": "2",
+ *         					"internalVip": "true"
+ *       				},
+ *       				"thumb": null,
+ *       				"trialEnabled": false,
+ *       				"trialPeriodUnit": null,
+ *       				"trialPeriodLength": null,
+ *       				"isVisible": true,
+ *       				"countries": [
+ *         					{
+ *           				"country": "FR"
+ *         					}
+ *       				]
+ *     				}
+ *   			}]
+ * 			}
+ *		}
+ */
 
 $app->get("/billings/api/subscriptions/", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
