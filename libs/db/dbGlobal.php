@@ -803,7 +803,7 @@ class InternalPlan implements JsonSerializable {
 		];
 		if($this->showProviderPlans) {
 			// <-- by providerPlans -->
-			$providerPlans = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id), true);
+			$providerPlans = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id, true));
 			$return['providerPlans'] = $providerPlans;
 			// <-- by paymentMethods -->
 			$providerPlansByPaymentMethodTypeArray = array();
