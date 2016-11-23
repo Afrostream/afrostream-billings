@@ -468,7 +468,7 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/self-update", f
 
 /**
  * @api {get} /billings/api/subscriptions/ Request Subscriptions Information
- * @apiDescription It updates Subscriptions Information.
+ * @apiDescription It returns Subscriptions Information.
  * @apiParam {String} [userReferenceUuid] reference uuid of the user. It returns subscriptions which belong to users with the userReferenceUuid given.
  * @apiParam {String} [userBillingUuid] Api uuid of the user. It returns subscriptions which belong to users with the userBillingUuid given.
  *
