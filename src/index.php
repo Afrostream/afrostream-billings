@@ -52,9 +52,8 @@ $app->add(new \Slim\Middleware\HttpBasicAuthentication([
 
 /**
  * @api {get} /billings/api/users/:userBillingUuid Request User Information
- *
- * @apiParam {String} :userBillingUuid Api uuid of the user.
  * @apiDescription It returns the user with the userBillingUuid given.
+ * @apiParam {String} :userBillingUuid Api uuid of the user.
  *
  * @apiExample {curl} Example usage:
  *     curl -i http://localhost/billings/api/users/11111111-1111-1111-1111-111111111111
@@ -111,10 +110,9 @@ $app->get("/billings/api/users/{userBillingUuid}", function ($request, $response
 
 /**
  * @api {get} /billings/api/users/ Request User Information
- *
+ * @apiDescription It returns user which belongs to the provider named by providerName and which reference uuid equals the userReferenceUuid given.
  * @apiParam {String} providerName Provider name to which the user belongs.
  * @apiParam {String} userReferenceUuid Reference uuid of the user.
- * @apiDescription It returns user which belongs to the provider named by providerName and which reference uuid equals the userReferenceUuid given.
  *
  * @apiExample {curl} Example usage:
  *     curl -i http://localhost/billings/api/users/?providerName=recurly&userReferenceUuid=8888
@@ -152,7 +150,7 @@ $app->get("/billings/api/users/", function ($request, $response, $args) {
 
 /**
  * @api {post} /billings/api/users/ Request User Creation
- *
+ * @apiDescription It creates (or get) an user linked to a provider.
  * @apiParam (postData) userProviderUuid userProviderUuid is not mandatory. 
  * It has to be used when you provider is compatible with 
  * and when you want to get back a user from the provider instead of creating it from scratch.
@@ -203,7 +201,7 @@ $app->post("/billings/api/users/", function ($request, $response, $args) {
 
 /**
  * @api {put} /billings/api/users/ Request User(s) Update
- * @apiDescription Will update User Informations given in the userOpts section (email, firstName, lastName, etc.)
+ * @apiDescription It updates User Informations given in the userOpts section (email, firstName, lastName, etc.).
  * @apiParam {String} [userBillingUuid] (NOT RECOMMENDED) Api uuid of the user. 
  * Will update User Informations for only one provider.
  * @apiParam {String} [userReferenceUuid] (RECOMMENDED) Provider uuid of the user.
@@ -257,12 +255,12 @@ $app->put("/billings/api/users/", function ($request, $response, $args) {
 
 /**
  * @api {get} /billings/api/subscriptions/:subscriptionBillingUuid Request Subscription Information
- *
+ * @apiDescription It returns Subscription Information.
  * @apiParam {String} :subscriptionBillingUuid Api uuid of the subscription. It returns the subscription with the subscriptionBillingUuid given.
  * @apiExample {curl} Example usage:
  *     curl -i http://localhost/billings/api/subscriptions/33333333-3333-3333-3333-333333333333
  *
- * @apiSuccess {json} Subscriptions Information
+ * @apiSuccess {json} Subscription Information
  *
  * @apiSuccessExample Success-Response:
  * 		HTTP/1.1 200 OK
@@ -407,128 +405,70 @@ $app->get("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($re
 	}
  */
 
-/*
- 	sample answer :
- 	
-	{
-  		"status": "done",
-  		"statusMessage": "success",
-  		"statusCode": 0,
-  		"response": {
-    		"subscription": {
-      			"subscriptionBillingUuid": "SubscriptionBillingUUID",
-      			"subscriptionProviderUuid": "SubscriptionProviderUUID",
-      			"isActive": "yes",
-      			"inTrial" : "no",
-      			"isCancelable" : "yes",
-      			"isReactivable" : "no",
-      			"user": {
-        			"userBillingUuid": "UserBillingUUID",
-        			"userReferenceUuid": "afrostreamUUID",
-        			"userProviderUuid": "UserProviderUUID",
-        			"provider": {
-          				"providerName": "recurly"
-        			},
-        			"userOpts": {
-          				"email": "email@domain.com",
-          				"firstName": "myFirstName",
-          				"lastName": "myLastName"
-        			}
-      			},
-      			"provider": {
-        			"providerName": "recurly"
-      			},
-      			"internalPlan": {
-	      			"internalPlanUuid": "InternalPlanUuid",
-	      			"name": "name",
-	      			"description": "description",
-	      			"amountInCents": "1000",
-	      			"currency": "EUR",
-	      			"cycle": "once",
-	      			"periodUnit": "month",
-	      			"periodLength" : "1",
-					"internalPlanOpts": {
-	        			"internalMaxScreens" : "2",
-	        			"key1" : "value1",
-	        			"key2" : "value2"
-	        		},
-					"thumb": {
-						"path": "/path/jpeg.jpg",
-						"imgix": "https://mydomain.com/path/jpeg.jpg"
-					},
-					"trialEnabled": true,
-					"trialPeriodUnit": "day",
-					"trialPeriodLength": "7",
-					"isVisible": true
-      			},
-      			"creationDate": "2015-12-25 12:00:00+00",
-      			"updatedDate": "2015-12-25 12:00:00+00",
-      			"subStatus": "active",
-      			"subActivatedDate": "2015-12-25 12:00:00+00",
-      			"subCanceledDate": null,
-      			"subExpiresDate": null,
-      			"subPeriodStartedDate": "2015-12-25 12:00:00+00",
-      			"subPeriodEndsDate": "2016-01-25 12:00:00+00",
-      			"subOpts": {
-        			"key1": "value1",
-        			"key2": "value2",
-        			"key3": "value3"
-      			}
-    		}
-  		}
-	}
-	 
-*/
-
 $app->post("/billings/api/subscriptions/", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->create($request, $response, $args));
 });
 
-//update subscriptions
+/**
+ * @api {put} /billings/api/subscriptions/self-update Request Subscriptions Update From Provider
+ * @apiDescription It updates Subscriptions Informations from provider side.
+ * @apiParam {String} [userBillingUuid] Api uuid of the user. 
+ * Will update Subscriptions Informations linked to the userBillingUuid given.
+ * @apiParam {String} [userReferenceUuid] Provider uuid of the user.
+ * Will update Subscriptions Informations linked to the userReferenceUuid given.
+ *
+ * @apiSuccess {json} Subscriptions Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *   			"subscriptions": [
+ *   				{...},{...}
+ *   			]
+ *			}
+ *		}
+ */
 
-/*
-	sample call :
-	 
- 	{
-	 	"userReferenceUuid": "afrostreamUUID"	//our own UUID (database ID)
-	}
-	
-	or :
-	
-	{
-		"userBillingUuid" : "UserBillingUUID"	//given when creating a user
-	}
-	
-	sample answer :
-	
-	{
-  		"status": "done",
-  		"statusMessage": "success",
-  		"statusCode": 0,
-  		"response": {
-    		"subscriptions": [
-      			{...},
-      			{...}
-    		]
-    	}
-    }
-    
-*/
-
-$app->put("/billings/api/subscriptions/", function ($request, $response, $args) {
+$app->put("/billings/api/subscriptions/self-update", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->updateMulti($request, $response, $args));
 });
 
-$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}", function ($request, $response, $args) {
+/**
+ * @api {put} /billings/api/subscriptions/:subscriptionBillingUuid/self-update Request Subscription Update From Provider
+ * @apiDescription It updates Subscription Information from provider side.
+ * @apiParam {String} :subscriptionBillingUuid Api uuid of the subscription.
+ * Will update Subscription Informations which Api uuid is the subscriptionBillingUuid given.
+ *
+ * @apiSuccess {json} Subscription Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *				"subscription" {
+ *					"..."
+ *				}
+ *			}
+ *		}
+ */
+
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/self-update", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->updateOne($request, $response, $args));
 });
 
 /**
  * @api {get} /billings/api/subscriptions/ Request Subscriptions Information
- *
+ * @apiDescription It updates Subscriptions Information.
  * @apiParam {String} [userReferenceUuid] reference uuid of the user. It returns subscriptions which belong to users with the userReferenceUuid given.
  * @apiParam {String} [userBillingUuid] Api uuid of the user. It returns subscriptions which belong to users with the userBillingUuid given.
  *
@@ -631,206 +571,314 @@ $app->get("/billings/api/subscriptions/", function ($request, $response, $args) 
 	return($subscriptionsController->getMulti($request, $response, $args));
 });
 
-//cancel a subscription
+/**
+ * @api {put} /billings/api/subscriptions/:subscriptionBillingUuid/cancel Request Subscription Cancellation
+ * @apiDescription It cancels a subscription.
+ * @apiParam {String} :subscriptionBillingUuid Api uuid of the subscription.
+ * Will cancel Subscription which Api uuid is the subscriptionBillingUuid given.
+ *
+ * @apiSuccess {json} Subscription Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *				"subscription" {
+ *					"..."
+ *				}
+ *			}
+ *		}
+ */
 
 $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/cancel", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->cancel($request, $response, $args));
 });
 
-//renew a subscription
+//renew a subscription (???needed in API ???)
 
 $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/renew", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->renew($request, $response, $args));
 });
 
-//reactivate a subscription
-	
+/**
+ * @api {put} /billings/api/subscriptions/:subscriptionBillingUuid/reactivate Request Subscription Reactivation
+ * @apiDescription It reactivates a subscription.
+ * @apiParam {String} :subscriptionBillingUuid Api uuid of the subscription.
+ * Will reactivate Subscription which Api uuid is the subscriptionBillingUuid given.
+ *
+ * @apiSuccess {json} Subscription Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *				"subscription" {
+ *					"..."
+ *				}
+ *			}
+ *		}
+ */
+
 $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/reactivate", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->reactivate($request, $response, $args));
 });
 
-//change plan from a subscription
+//change plan from a subscription (???needed in API ???)
 
 $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/updateinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->updateInternalPlan($request, $response, $args));
 });
 
-
-//InternalPlans
-
-//get one InternalPlan
-
-/*
-	 
-	 sample call :
-	
-	 GET /billings/api/internalplans/internalPlanUuid
-	 
-	 sample answer :
-	 
-	{
-  		"status": "done",
-  		"statusMessage": "success",
-  		"statusCode": 0,
-  		"response": {
-      		"internalPlan": {
-      			"internalPlanUuid": "InternalPlanUuid",
-      			"name": "name",
-      			"description": "description",
-      			"amountInCents": "1000",
-      			"currency": "EUR",
-      			"cycle": "once",
-      			"periodUnit": "month",
-      			"periodLength" : "1",
-				"internalPlanOpts": {
-        			"internalMaxScreens" : "2",
-        			"key1" : "value1",
-        			"key2" : "value2"
-        		},
-				"thumb": {
-					"path": "/path/jpeg.jpg",
-					"imgix": "https://mydomain.com/path/jpeg.jpg"
-				},
-				"trialEnabled": true,
-				"trialPeriodUnit": "day",
-				"trialPeriodLength": "7",
-				"isVisible": true,
-        		"providerPlans": {
-				 	"recurly": {
-				   		"providerPlanUuid": "afrostreammonthly",
-				        "name": "recurly_afrostream_monthly",
-				        "description": null,
-				        "provider": {
-				        	"providerName": "recurly"
-				        },
-				        "paymentMethods": [
-				        	{
-				        		"paymentMethodType": "card",
-				            	"index": "1"
-				        	},
-				        	{
-				        		"paymentMethodType": "paypal",
-				            	"index": "3"
-				        	}
-				        ]
-				    },
-				    "gocardless": {
-				    	"providerPlanUuid": "afrostreammontlhy",
-				        "name": "gocardless_afrostream_monthly",
-				        "description": null,
-				        "provider": {
-				        "providerName": "gocardless"
-				        },
-				        "paymentMethods": [
-				        	{
-				            	"paymentMethodType": "sepa",
-				               	"index": "2"
-				            }
-				   		]
-					}
-				},
-				"providerPlansByPaymentMethodType": {
-          			"card": [
-          				{
-						 	"recurly": {
-						   		"providerPlanUuid": "afrostreammonthly",
-						        "name": "recurly_afrostream_monthly",
-						        "description": null,
-						        "provider": {
-						        	"providerName": "recurly"
-						        },
-						        "paymentMethods": [
-						        	{
-						        		"paymentMethodType": "card",
-						            	"index": "1"
-						        	},
-						        	{
-						        		"paymentMethodType": "paypal",
-						            	"index": "3"
-						        	}
-						        ]
-						    },
-            			}
-            		],
-          			"sepa": [
-          				{
-						    "gocardless": {
-						    	"providerPlanUuid": "afrostreammontlhy",
-						        "name": "gocardless_afrostream_monthly",
-						        "description": null,
-						        "provider": {
-						        "providerName": "gocardless"
-						        },
-						        "paymentMethods": [
-						        	{
-						            	"paymentMethodType": "sepa",
-						               	"index": "2"
-						            }
-						   		]
-							}
-          				}
-          			],
-          			"paypal": [
-          				{
-						 	"recurly": {
-						   		"providerPlanUuid": "afrostreammonthly",
-						        "name": "recurly_afrostream_monthly",
-						        "description": null,
-						        "provider": {
-						        	"providerName": "recurly"
-						        },
-						        "paymentMethods": [
-						        	{
-						        		"paymentMethodType": "card",
-						            	"index": "1"
-						        	},
-						        	{
-						        		"paymentMethodType": "paypal",
-						            	"index": "3"
-						        	}
-						        ]
-						    },
-          				}
-          			]
-        		}
-      		}
-    	}
-    }
-	
-*/
+/**
+ * @api {get} /billings/api/internalplans/:internalPlanUuid Request InternalPlan Information
+ * @apiDescription It returns an InternalPlan Information.
+ * @apiParam {String} :internalPlanUuid Api uuid of the internalPlan. It returns the internalPlan with the internalPlanUuid given.
+ * @apiExample {curl} Example usage:
+ *     curl -i http://localhost/billings/api/internalplans/afrostreammonthly
+ *
+ * @apiSuccess {json} InternalPlan Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *		    "internalPlan": {
+ *			      "internalPlanUuid": "afrostreammonthly",
+ *			      "name": "Mensuel",
+ *			      "description": "7 jours d'essai puis 6,99€ par mois sans engagement",
+ *			      "amountInCents": "699",
+ *			      "amount": "6,99",
+ *			      "amountInCentsExclTax": "583",
+ *			      "amountExclTax": "5,82500",
+ *			      "vatRate": "20,00",
+ *			      "currency": "EUR",
+ *			      "cycle": "auto",
+ *			      "periodUnit": "month",
+ *			      "periodLength": "1",
+ *			      "internalPlanOpts": {
+ *			        "internalMaxScreens": "1",
+ *			        "internalVip": "false"
+ *			      },
+ *			      "thumb": null,
+ *			      "trialEnabled": true,
+ *			      "trialPeriodUnit": "day",
+ *			      "trialPeriodLength": "7",
+ *			      "isVisible": true,
+ *			      "countries": [
+ *			        {
+ *			          "country": "FR"
+ *			        },
+ *			        {
+ *			          "country": "BE"
+ *			        },
+ *			        {
+ *			          "country": "CH"
+ *			        },
+ *			        {
+ *			          "country": "GF"
+ *			        },
+ *			        {
+ *			          "country": "GP"
+ *			        },
+ *			        {
+ *			          "country": "LU"
+ *			        },
+ *			        {
+ *			          "country": "MF"
+ *			        },
+ *			        {
+ *			          "country": "MQ"
+ *			        },
+ *			        {
+ *			          "country": "PF"
+ *			        },
+ *			        {
+ *			          "country": "RE"
+ *			        }
+ *			      ],
+ *			      "providerPlans": {
+ *			        "gocardless": {
+ *			          "providerPlanUuid": "gcafrostreammonthly",
+ *			          "name": "Formule mensuelle Afrostream",
+ *			          "description": "Formule mensuelle Afrostream",
+ *			          "provider": {
+ *			            "providerName": "gocardless"
+ *			          },
+ *			          "paymentMethods": [
+ *			            {
+ *			              "paymentMethodType": "sepa",
+ *			              "index": "2"
+ *			            }
+ *			          ],
+ *			          "isVisible": true,
+ *			          "isCouponCodeCompatible": false
+ *			        },
+ *			        "stripe": {
+ *			          "providerPlanUuid": "afrostreammonthly",
+ *			          "name": "afrostreammonthly-3",
+ *			          "description": "afrostreammonthly-3",
+ *			          "provider": {
+ *			            "providerName": "stripe"
+ *			          },
+ *			          "paymentMethods": [
+ *			            {
+ *			              "paymentMethodType": "card",
+ *			              "index": "1"
+ *			            }
+ *			          ],
+ *			          "isVisible": true,
+ *			          "isCouponCodeCompatible": true
+ *			        },
+ *			        "braintree": {
+ *			          "providerPlanUuid": "afrostreammonthly",
+ *			          "name": "afrostreammonthly-2",
+ *			          "description": "afrostreammonthly-2",
+ *			          "provider": {
+ *			            "providerName": "braintree"
+ *			          },
+ *			          "paymentMethods": [
+ *			            {
+ *			              "paymentMethodType": "paypal",
+ *			              "index": "3"
+ *			            }
+ *			          ],
+ *			          "isVisible": true,
+ *			          "isCouponCodeCompatible": true
+ *			        }
+ *			      },
+ *			      "providerPlansByPaymentMethodType": {
+ *			        "card": [
+ *			          {
+ *			            "stripe": {
+ *			              "providerPlanUuid": "afrostreammonthly",
+ *			              "name": "afrostreammonthly-3",
+ *			              "description": "afrostreammonthly-3",
+ *			              "provider": {
+ *			                "providerName": "stripe"
+ *			              },
+ *			              "paymentMethods": [
+ *			                {
+ *			                  "paymentMethodType": "card",
+ *			                  "index": "1"
+ *			                }
+ *			              ],
+ *			              "isVisible": true,
+ *			              "isCouponCodeCompatible": true
+ *			            }
+ *			          }
+ *			        ],
+ *			        "sepa": [
+ *			          {
+ *			            "gocardless": {
+ *			              "providerPlanUuid": "gcafrostreammonthly",
+ *			              "name": "Formule mensuelle Afrostream",
+ *			              "description": "Formule mensuelle Afrostream",
+ *			              "provider": {
+ *			                "providerName": "gocardless"
+ *			              },
+ *			              "paymentMethods": [
+ *			                {
+ *			                  "paymentMethodType": "sepa",
+ *			                  "index": "2"
+ *			                }
+ *			              ],
+ *			              "isVisible": true,
+ *			              "isCouponCodeCompatible": false
+ *			            }
+ *			          }
+ *			        ],
+ *			        "paypal": [
+ *			          {
+ *			            "braintree": {
+ *			              "providerPlanUuid": "afrostreammonthly",
+ *			              "name": "afrostreammonthly-2",
+ *			              "description": "afrostreammonthly-2",
+ *			              "provider": {
+ *			                "providerName": "braintree"
+ *			              },
+ *			              "paymentMethods": [
+ *			                {
+ *			                  "paymentMethodType": "paypal",
+ *			                  "index": "3"
+ *			                }
+ *			              ],
+ *			              "isVisible": true,
+ *			              "isCouponCodeCompatible": true
+ *			            }
+ *			          }
+ *			        ]
+ *			      }
+ *			    }
+ * 			}
+ *		}
+ *
+ * @apiError InternalPlanNotFound When the internalPlan cannot be found
+ *
+ * @apiErrorExample Error-Response:
+ *		HTTP/1.1 404 Not Found
+ *		{
+ * 			"status": "error",
+ * 			"statusMessage": "NOT FOUND",
+ * 			"statusCode": 0,
+ * 			"statusType": "internal",
+ * 			"errors": [
+ *   			{
+ *     			"error": {
+ *       			"errorMessage": "NOT FOUND",
+ *       			"errorType": "internal",
+ *       			"errorCode": 0
+ *     				}
+ *   			}
+ * 			]
+ *		}
+ */
 
 $app->get("/billings/api/internalplans/{internalPlanUuid}", function ($request, $response, $args) {
 	$internalPlansController = new InternalPlansFilteredController();
 	return($internalPlansController->getOne($request, $response, $args));
 });
 
-//get InternalPlans
-
-/*
-	sample call :
-	
-	GET /billings/api/internalplans/?providerName=recurly
-	
-	"providerName" : "recurly" (optional) Retrieve internalplans available only to that provider
-	
-	sample answer :
-	
-	{
-  		"status": "done",
-  		"statusMessage": "success",
-  		"statusCode": 0,
-  		"response": {
-    		"internalPlans": [
-      			{...},
-      			{...}
-    		]
-    	}
-    }
-
+/**
+ * @api {get} /billings/api/internalplans/ Request InternalPlans Information
+ * @apiDescription It returns InternalPlans Information.
+ * @apiParam {String} [providerName] Name of the provider.
+ * It returns internalplans which belongs to the named provider.
+ * @apiParam {String} [isVisible=true]
+ * @apiParam {String} [country]
+ * @apiParam {String} [contextBillingUuid]
+ * @apiParam {String} [contextCountry]
+ * @apiParam {String} [filterEnabled=false]
+ * @apiParam {String} [filterUserReferenceUuid]
+ * @apiParam {String} [filterCountry]
+ * @apiExample {curl} Example usage:
+ *     curl -i http://localhost/billings/api/internalplans/?providerName=recurly
+ *
+ * @apiSuccess {json} InternalPlans Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *		     	"internalPlans": [
+ * 					{...},{...}
+ * 				]}
+ *		}
  */
 
 $app->get("/billings/api/internalplans/", function ($request, $response, $args) {
@@ -912,8 +960,8 @@ $app->post("/billings/api/internalplans/", function ($request, $response, $args)
 	$internalPlansController = new InternalPlansFilteredController();
 	return($internalPlansController->create($request, $response, $args));
 });
-//update
 
+//update
 
 $app->put("/billings/api/internalplans/{internalPlanUuid}", function ($request, $response, $args) {
 	$internalPlansController = new InternalPlansFilteredController();
