@@ -14,6 +14,8 @@ require_once __DIR__ . '/../libs/site/ContextsController.php';
 use \Slim\Http\Request;
 use \Slim\Http\Response;
 
+$starttime = microtime(true);
+
 $c = new \Slim\Container();
 $c['errorHandler'] = function ($c) {
     return function (Request $request, Response $response, Exception $exception) use ($c) {
@@ -29,7 +31,7 @@ $c['errorHandler'] = function ($c) {
 
 $app = new \Slim\App($c);
 
-$app->add(function (Request $req, Response $res, callable $next) {
+$app->add(function (Request $req, Response $res, callable $next) use ($starttime) {
 	if(getEnv('LOG_REQUESTS_ACTIVATED') == 1) {
 		$msg = "REQUEST method=".$req->getMethod();
 		$msg.= " path='".$req->getUri()->getPath()."'";
@@ -37,7 +39,39 @@ $app->add(function (Request $req, Response $res, callable $next) {
 		$msg.= " body='".$req->getBody()."'";
 		config::getLogger()->addInfo($msg);
 	}
-	return $next($req, $res);
+	$response = $next($req, $res);
+	/* STATSD */
+	$array_status_code_ok = [200, 201, 202, 203, 204, 205, 206, 404];
+	$array_status_code_ko = [500];
+	/* route.all.hit */
+	BillingStatsd::inc('route.all.hit');
+	/* success */
+	if(in_array($response->getStatusCode(), $array_status_code_ok)) {
+		BillingStatsd::inc('route.all.success');
+		if(strpos($req->getUri()->getPath(), '/billings/api/') == 0) {
+			BillingStatsd::inc('route.api.success');
+		} else if(fnmatch('/billings/providers/*/webhooks/', $req->getUri()->getPath())) {
+			BillingStatsd::inc('route.providers.all.webhooks.success');
+		}
+	}
+	/* error */
+	if(in_array($response->getStatusCode(), $array_status_code_ko)) {
+		BillingStatsd::inc('route.all.error');
+		if(strpos($req->getUri()->getPath(), '/billings/api/') == 0) {
+			BillingStatsd::inc('route.api.error');
+		} else if(fnmatch('/billings/providers/*/webhooks/', $req->getUri()->getPath())) {
+			BillingStatsd::inc('route.providers.all.webhooks.error');
+		}
+	}
+	/* anyway */
+	$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
+	BillingStatsd::timing('route.all.responsetime', $responseTimeInMillis);
+	if(strpos($req->getUri()->getPath(), '/billings/api/') == 0) {
+		BillingStatsd::timing('route.api.responsetime', $responseTimeInMillis);
+	} else if(fnmatch('/billings/providers/*/webhooks/', $req->getUri()->getPath())) {
+		BillingStatsd::timing('route.providers.all.webhooks.responsetime', $responseTimeInMillis);
+	}
+	return $response;
 });
 
 //API BASIC AUTH ACTIVATION
