@@ -79,6 +79,24 @@ if(getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE') === false) {
 	putEnv('BOUYGUES_STORE_LAST_TIME_MINUTE=25');
 }
 
+#BOUYGUES (SFTP STATS)
+
+if(getEnv('BOUYGUES_SFTP_STATS_USER') === false) {
+	putEnv('BOUYGUES_SFTP_STATS_USER=svodafrostream');
+}
+
+if(getEnv('BOUYGUES_SFTP_STATS_HOST') === false) {
+	putEnv('BOUYGUES_SFTP_STATS_HOST=gas.bouyguesbox.fr');
+}
+
+if(getEnv('BOUYGUES_SFTP_STATS_PORT') === false) {
+	putEnv('BOUYGUES_SFTP_STATS_PORT=2222');
+}
+
+if(getEnv('BOUYGUES_SFTP_STATS_PRIVATE_KEY_FILE') === false) {
+	putEnv('BOUYGUES_SFTP_STATS_PRIVATE_KEY_FILE='.dirname(__FILE__).'/../libs/providers/bouygues/client-sftp-stats/bouygues-sftp-stats-rsa-private.pub');
+}
+
 #PAYPAL
 
 if(getEnv('PAYPAL_API_CLIENT_ID') === false) {
@@ -125,6 +143,12 @@ if(getEnv('AWS_FOLDER_TRANSACTIONS') === false) {
 
 if(getEnv('AWS_FOLDER_SUBSCRIPTIONS') === false) {
 	putEnv('AWS_FOLDER_SUBSCRIPTIONS=subscriptions');
+}
+
+#AWS_FOLDER_CSVS
+
+if(getEnv('AWS_FOLDER_CSVS') === false) {
+	putEnv('AWS_FOLDER_CSVS=csvs');
 }
 
 #AWS_REGION

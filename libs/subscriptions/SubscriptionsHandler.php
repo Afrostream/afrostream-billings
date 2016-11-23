@@ -1102,6 +1102,13 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
+			$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription_after_update->getId());
+			$internalCoupon = NULL;
+			$internalCouponsCampaign = NULL;
+			if(isset($userInternalCoupon)) {
+				$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($userInternalCoupon->getInternalCouponsId());
+				$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+			}
 			//DATA <--
 			//DATA SUBSTITUTION -->
 			setlocale(LC_MONETARY, 'fr_FR.utf8');//TODO : Forced to French Locale for "," in floats...
@@ -1162,6 +1169,30 @@ class SubscriptionsHandler {
 			$substitions['%fullname%'] = $fullname;
 			//subscription
 			$substitions['%subscriptionbillinguuid%'] = $subscription_after_update->getSubscriptionBillingUuid();
+			//Coupon
+			$substitions['%couponCode%'] = '';
+			$substitions['%couponAmountForDisplay%'] = '';
+			$substitions['%couponDetails%'] = '';
+			$substitions['%couponAppliedSentence%'] = '';
+			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() == 'promo') {
+				$couponAmountForDisplay = '';
+				switch($internalCouponsCampaign->getDiscountType()) {
+					case 'percent' :
+						$couponAmountForDisplay = $internalCouponsCampaign->getPercent().'%';
+						break;
+					case 'amount' :
+						$couponAmountForDisplay = new Money((integer) $internalCouponsCampaign->getAmountInCents(), new Currency($internalCouponsCampaign->getCurrency()));
+						$couponAmountForDisplay = money_format('%!.2n', (float) ($couponAmountForDisplay->getAmount() / 100));
+						$couponAmountForDisplay = $couponAmountForDisplay.' '.dbGlobal::getCurrencyForDisplay($internalCouponsCampaign->getCurrency());  
+						break;
+				}
+				$substitions['%couponCode%'] = $userInternalCoupon->getCode();
+				$substitions['%couponAmountForDisplay%'] = $couponAmountForDisplay;
+				$substitions['%couponDetails%'] = $internalCouponsCampaign->getDescription();
+				$couponAppliedSentence = getEnv('SENDGRID_VAR_couponAppliedSentence');
+				$couponAppliedSentence = str_replace(array_keys($substitions), array_values($substitions), $couponAppliedSentence);
+				$substitions['%couponAppliedSentence%'] = $couponAppliedSentence;
+			}
 			//DATA SUBSTITUTION <--
 			$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
 			$email = new SendGrid\Email();

@@ -1,0 +1,13 @@
+{
+  "name": "AfrostreamBillingsApi",
+  "version": "0.1.0",
+  "description": "AfrostreamBillingsApi",
+  "title": "AfrostreamBillingsApi Documentation",
+  "url": "",
+  "header": {
+    "title": "AfrostreamBillingsApi Header"
+  },
+  "footer": {
+    "title": "AfrostreamBillingsApi Footer"
+  }
+}

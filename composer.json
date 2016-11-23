@@ -16,7 +16,8 @@
 		"stripe/stripe-php": "^3.13",
 		"braintree/braintree_php": "^3.13",
 		"paypal/rest-api-sdk-php": "^1.7",
-		"aws/aws-sdk-php": "^3.19"
+		"aws/aws-sdk-php": "^3.19",
+		"domnikl/statsd": "^2.4"
 	},
 	"authors": [
 		{
