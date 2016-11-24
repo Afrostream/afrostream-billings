@@ -77,12 +77,15 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 	$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
 	BillingStatsd::timing('route.all.responsetime', $responseTimeInMillis);
 	if(strpos($current_path, $path_api) === 0) {
+		BillingStatsd::inc('route.api.hit');
 		BillingStatsd::timing('route.api.responsetime', $responseTimeInMillis);
 	} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix, $current_path)) {
 		BillingStatsd::timing('route.providers.all.webhooks.responsetime', $responseTimeInMillis);
+		BillingStatsd::inc('route.providers.all.webhooks.hit');
 		$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
 		$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
 		BillingStatsd::timing('route.providers.'.$wilcard.'.webhooks.responsetime', $responseTimeInMillis);
+		BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.hit');
 	}
 	return $response;
 });
