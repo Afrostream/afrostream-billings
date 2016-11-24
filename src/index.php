@@ -40,6 +40,10 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 		config::getLogger()->addInfo($msg);
 	}
 	$response = $next($req, $res);
+	$current_path = $req->getUri()->getPath();
+	$path_api = '/billings/api/';
+	$path_webhooks_prefix = '/billings/providers/';
+	$path_webhooks_suffix = '/webhooks/';
 	/* STATSD */
 	$array_status_code_ok = [200, 201, 202, 203, 204, 205, 206, 404];
 	$array_status_code_ko = [500];
@@ -48,28 +52,37 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 	/* success */
 	if(in_array($response->getStatusCode(), $array_status_code_ok)) {
 		BillingStatsd::inc('route.all.success');
-		if(strpos($req->getUri()->getPath(), '/billings/api/') == 0) {
+		if(strpos($current_path, $path_api) === 0) {
 			BillingStatsd::inc('route.api.success');
-		} else if(fnmatch('/billings/providers/*/webhooks/', $req->getUri()->getPath())) {
+		} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix, $current_path)) {
 			BillingStatsd::inc('route.providers.all.webhooks.success');
+			$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
+			$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
+			BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.success');
 		}
 	}
 	/* error */
 	if(in_array($response->getStatusCode(), $array_status_code_ko)) {
 		BillingStatsd::inc('route.all.error');
-		if(strpos($req->getUri()->getPath(), '/billings/api/') == 0) {
+		if(strpos($current_path, $path_api) === 0) {
 			BillingStatsd::inc('route.api.error');
-		} else if(fnmatch('/billings/providers/*/webhooks/', $req->getUri()->getPath())) {
+		} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix, $current_path)) {
 			BillingStatsd::inc('route.providers.all.webhooks.error');
+			$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
+			$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
+			BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.error');
 		}
 	}
 	/* anyway */
 	$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
 	BillingStatsd::timing('route.all.responsetime', $responseTimeInMillis);
-	if(strpos($req->getUri()->getPath(), '/billings/api/') == 0) {
+	if(strpos($current_path, $path_api) === 0) {
 		BillingStatsd::timing('route.api.responsetime', $responseTimeInMillis);
-	} else if(fnmatch('/billings/providers/*/webhooks/', $req->getUri()->getPath())) {
+	} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix, $current_path)) {
 		BillingStatsd::timing('route.providers.all.webhooks.responsetime', $responseTimeInMillis);
+		$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
+		$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
+		BillingStatsd::timing('route.providers.'.$wilcard.'.webhooks.responsetime', $responseTimeInMillis);
 	}
 	return $response;
 });

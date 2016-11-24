@@ -149,6 +149,13 @@ class NetsizeWebHooksHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		//provider
+		$provider = ProviderDAO::getProviderByName('netsize');
+		if($provider == NULL) {
+			$msg = "provider named 'netsize' not found";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
 		$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $subscription_provider_uuid);
 		if($db_subscription == NULL) {
 			$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found";

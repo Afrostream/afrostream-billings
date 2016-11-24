@@ -20,21 +20,21 @@ class NetsizeClient {
 				CURLOPT_RETURNTRANSFER => true,
 				CURLOPT_HEADER  => false
 		);
-		config::getLogger()->addError("NETSIZE-INIT-SUB-REQUEST=".$data_string);
+		config::getLogger()->addInfo("NETSIZE-INIT-SUB-REQUEST=".$data_string);
 		$curl_options[CURLOPT_VERBOSE] = true;
 		$CURL = curl_init();
 		curl_setopt_array($CURL, $curl_options);
 		$content = curl_exec($CURL);
 		$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
 		curl_close($CURL);
-		config::getLogger()->addError("NETSIZE-INIT-SUB-RESPONSE=".$content);
+		config::getLogger()->addInfo("NETSIZE-INIT-SUB-RESPONSE=".$content);
 		if($httpCode == 200) {
 			$initializeSubscriptionResponse = new InitializeSubscriptionResponse($content);
 		} else {
-			config::getLogger()->addError("API CALL : initialize-subscription, code=".$httpCode);
+			config::getLogger()->addInfo("NETSIZE API CALL : initialize-subscription, code=".$httpCode);
 			$initializeSubscriptionResponse = new InitializeSubscriptionResponse($content);
 			//InitializeSubscriptionResponse should throw here an Exception anyway
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), "API CALL : initialize-subscription, code=".$httpCode." is unexpected...");				
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), "NETSIZE API CALL : initialize-subscription, code=".$httpCode." is unexpected...");				
 		}
 		return($initializeSubscriptionResponse);
 	}
@@ -54,22 +54,22 @@ class NetsizeClient {
 				CURLOPT_RETURNTRANSFER => true,
 				CURLOPT_HEADER  => false
 		);
-		config::getLogger()->addError("NETSIZE-GET-STATUS-REQUEST=".$data_string);
+		config::getLogger()->addInfo("NETSIZE-GET-STATUS-REQUEST=".$data_string);
 		$curl_options[CURLOPT_VERBOSE] = true;
 		$CURL = curl_init();
 		curl_setopt_array($CURL, $curl_options);
 		$content = curl_exec($CURL);
 		$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
 		curl_close($CURL);
-		config::getLogger()->addError("NETSIZE-GET-STATUS-RESPONSE=".$content);
+		config::getLogger()->addInfo("NETSIZE-GET-STATUS-RESPONSE=".$content);
 		if($httpCode == 200) {
 			$getStatusResponse = new GetStatusResponse($content);
 			$getStatusResponse->setTransactionId($getStatusRequest->getTransactionId());
 		} else {
-			config::getLogger()->addError("API CALL : get-status, code=".$httpCode);
+			config::getLogger()->addInfo("NETSIZE API CALL : get-status, code=".$httpCode);
 			$getStatusResponse = new GetStatusResponse($content);
 			//GetStatusResponse should throw here an Exception anyway
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), "API CALL : get-status, code=".$httpCode." is unexpected...");
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), "NETSIZE API CALL : get-status, code=".$httpCode." is unexpected...");
 		}
 		return($getStatusResponse);
 	}
@@ -89,21 +89,21 @@ class NetsizeClient {
 				CURLOPT_RETURNTRANSFER => true,
 				CURLOPT_HEADER  => false
 		);
-		config::getLogger()->addError("NETSIZE-CLOSE-SUB-REQUEST=".$data_string);
+		config::getLogger()->addInfo("NETSIZE-CLOSE-SUB-REQUEST=".$data_string);
 		$curl_options[CURLOPT_VERBOSE] = true;
 		$CURL = curl_init();
 		curl_setopt_array($CURL, $curl_options);
 		$content = curl_exec($CURL);
 		$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
 		curl_close($CURL);
-		config::getLogger()->addError("NETSIZE-CLOSE-SUB-RESPONSE=".$content);
+		config::getLogger()->addInfo("NETSIZE-CLOSE-SUB-RESPONSE=".$content);
 		if($httpCode == 200) {
 			$closeSubscriptionResponse = new CloseSubscriptionResponse($content);
 		} else {
-			config::getLogger()->addError("API CALL : close-subscription, code=".$httpCode);
+			config::getLogger()->addInfo("NETSIZE API CALL : close-subscription, code=".$httpCode);
 			$closeSubscriptionResponse = new CloseSubscriptionResponse($content);
 			//CloseSubscriptionResponse should throw here an Exception anyway
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), "API CALL : close-subscription, code=".$httpCode." is unexpected...");
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), "NETSIZE API CALL : close-subscription, code=".$httpCode." is unexpected...");
 		}
 		return($closeSubscriptionResponse);
 	}
@@ -123,22 +123,22 @@ class NetsizeClient {
 				CURLOPT_RETURNTRANSFER => true,
 				CURLOPT_HEADER  => false
 		);
-		config::getLogger()->addError("NETSIZE-FINALIZE-REQUEST=".$data_string);
+		config::getLogger()->addInfo("NETSIZE-FINALIZE-REQUEST=".$data_string);
 		$curl_options[CURLOPT_VERBOSE] = true;
 		$CURL = curl_init();
 		curl_setopt_array($CURL, $curl_options);
 		$content = curl_exec($CURL);
 		$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
 		curl_close($CURL);
-		config::getLogger()->addError("NETSIZE-FINALIZE-RESPONSE=".$content);
+		config::getLogger()->addInfo("NETSIZE-FINALIZE-RESPONSE=".$content);
 		if($httpCode == 200) {
 			$finalizeResponse = new FinalizeResponse($content);
 			$finalizeResponse->setTransactionId($finalizeRequest->getTransactionId());
 		} else {
-			config::getLogger()->addError("API CALL : finalize, code=".$httpCode);
+			config::getLogger()->addInfo("NETSIZE API CALL : finalize, code=".$httpCode);
 			$finalizeResponse = new FinalizeResponse($content);
 			//FinalizeResponse should throw here an Exception anyway
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), "API CALL : finalize, code=".$httpCode." is unexpected...");
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), "NETSIZE API CALL : finalize, code=".$httpCode." is unexpected...");
 		}
 		return($finalizeResponse);
 	}
@@ -289,34 +289,34 @@ class InitializeSubscriptionResponse {
 	public function __construct($response) {
 		$this->response = simplexml_load_string($response);
 		if($this->response === false) {
-			config::getLogger()->addError("API CALL : netsize initialize-subscription, XML cannot be loaded, response=".(string) $response);
-			throw new Exception("API CALL : getting netsize initialize-subscription, XML cannot be loaded, response=".(string) $response);
+			config::getLogger()->addError("NETSIZE API CALL : netsize initialize-subscription, XML cannot be loaded, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize initialize-subscription, XML cannot be loaded, response=".(string) $response);
 		}
 		$responseNode = $this->response;
 		$responseTypeNode = $responseNode['type'];
 		if($responseTypeNode == NULL) {
-			throw new Exception("API CALL : getting netsize initialize-subscription, response type attribute not found, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize initialize-subscription, response type attribute not found, response=".(string) $response);
 		}
 		if($responseTypeNode == 'error') {
 			$responseErrorNode = self::getNodeByName($responseNode, 'error');
 			if($responseErrorNode == NULL) {
-				throw new Exception("API CALL : getting netsize initialize-subscription, an unknown error occurred, response=".(string) $response);
+				throw new Exception("NETSIZE API CALL : getting netsize initialize-subscription, an unknown error occurred, response=".(string) $response);
 			}
-			throw new Exception("API CALL : getting netsize initialize-subscription, an error occurred, code=".$responseErrorNode['code'].", reason=".$responseErrorNode['reason'].", response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize initialize-subscription, an error occurred, code=".$responseErrorNode['code'].", reason=".$responseErrorNode['reason'].", response=".(string) $response);
 		}
 		$initializeSubscriptionNode = self::getNodeByName($responseNode, 'initialize-subscription');
 		if($initializeSubscriptionNode == NULL) {
-			throw new Exception("API CALL : getting netsize initialize-subscription, initialize-subscription node not found, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize initialize-subscription, initialize-subscription node not found, response=".(string) $response);
 		}
 		$this->transactionId = $initializeSubscriptionNode['transaction-id'];
 		$transactionStatusNode = self::getNodeByName($initializeSubscriptionNode, 'transaction-status');
 		if($transactionStatusNode == NULL) {
-			throw new Exception("API CALL : getting netsize initialize-subscription, transaction-status node not found, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize initialize-subscription, transaction-status node not found, response=".(string) $response);
 		}
 		$this->transactionStatusCode = $transactionStatusNode['code'];
 		$authUrlNode = self::getNodeByName($initializeSubscriptionNode, 'auth-url');
 		if($authUrlNode == NULL) {
-			throw new Exception("API CALL : getting netsize initialize-subscription, auth-url node not found, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize initialize-subscription, auth-url node not found, response=".(string) $response);
 		}
 		$this->authUrlUrl = $authUrlNode['url'];
 	}
@@ -406,28 +406,28 @@ class GetStatusResponse {
 	public function __construct($response) {
 		$this->response = simplexml_load_string($response);
 		if($this->response === false) {
-			config::getLogger()->addError("API CALL : netsize get-status, XML cannot be loaded, response=".(string) $response);
-			throw new Exception("API CALL : getting netsize get-status, XML cannot be loaded, response=".(string) $response);
+			config::getLogger()->addError("NETSIZE API CALL : netsize get-status, XML cannot be loaded, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize get-status, XML cannot be loaded, response=".(string) $response);
 		}
 		$responseNode = $this->response;
 		$responseTypeNode = $responseNode['type'];
 		if($responseTypeNode == NULL) {
-			throw new Exception("API CALL : getting netsize get-status, response type attribute not found, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize get-status, response type attribute not found, response=".(string) $response);
 		}
 		if($responseTypeNode == 'error') {
 			$responseErrorNode = self::getNodeByName($responseNode, 'error');
 			if($responseErrorNode == NULL) {
-				throw new Exception("API CALL : getting netsize get-status, an unknown error occurred, response=".(string) $response);
+				throw new Exception("NETSIZE API CALL : getting netsize get-status, an unknown error occurred, response=".(string) $response);
 			}
-			throw new Exception("API CALL : getting netsize get-status, an error occurred, code=".$responseErrorNode['code'].", reason=".$responseErrorNode['reason'].", response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize get-status, an error occurred, code=".$responseErrorNode['code'].", reason=".$responseErrorNode['reason'].", response=".(string) $response);
 		}
 		$getStatusNode = self::getNodeByName($responseNode, 'get-status');
 		if($getStatusNode == NULL) {
-			throw new Exception("API CALL : getting netsize get-status, get-status node not found, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize get-status, get-status node not found, response=".(string) $response);
 		}
 		$transactionStatusNode = self::getNodeByName($getStatusNode, 'transaction-status');
 		if($transactionStatusNode == NULL) {
-			throw new Exception("API CALL : getting netsize get-status, transaction-status node not found, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize get-status, transaction-status node not found, response=".(string) $response);
 		}
 		$this->transactionStatusCode = $transactionStatusNode['code'];
 		$lastTransactionErrorNode = self::getNodeByName($getStatusNode, 'last-transaction-error');
@@ -573,28 +573,28 @@ class CloseSubscriptionResponse {
 	public function __construct($response) {
 		$this->response = simplexml_load_string($response);
 		if($this->response === false) {
-			config::getLogger()->addError("API CALL : netsize close-subscription, XML cannot be loaded, response=".(string) $response);
-			throw new Exception("API CALL : getting netsize close-subscription, XML cannot be loaded, response=".(string) $response);
+			config::getLogger()->addError("NETSIZE API CALL : netsize close-subscription, XML cannot be loaded, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize close-subscription, XML cannot be loaded, response=".(string) $response);
 		}
 		$responseNode = $this->response;
 		$responseTypeNode = $responseNode['type'];
 		if($responseTypeNode == NULL) {
-			throw new Exception("API CALL : getting netsize close-subscription, response type attribute not found, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize close-subscription, response type attribute not found, response=".(string) $response);
 		}
 		if($responseTypeNode == 'error') {
 			$responseErrorNode = self::getNodeByName($responseNode, 'error');
 			if($responseErrorNode == NULL) {
-				throw new Exception("API CALL : getting netsize close-subscription, an unknown error occurred, response=".(string) $response);
+				throw new Exception("NETSIZE API CALL : getting netsize close-subscription, an unknown error occurred, response=".(string) $response);
 			}
-			throw new Exception("API CALL : getting netsize close-subscription, an error occurred, code=".$responseErrorNode['code'].", reason=".$responseErrorNode['reason'].", response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize close-subscription, an error occurred, code=".$responseErrorNode['code'].", reason=".$responseErrorNode['reason'].", response=".(string) $response);
 		}
 		$closeSubscriptionNode = self::getNodeByName($responseNode, 'close-subscription');
 		if($closeSubscriptionNode == NULL) {
-			throw new Exception("API CALL : getting netsize close-subscription, close-subscription node not found, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize close-subscription, close-subscription node not found, response=".(string) $response);
 		}
 		$transactionStatusNode = self::getNodeByName($closeSubscriptionNode, 'transaction-status');
 		if($transactionStatusNode == NULL) {
-			throw new Exception("API CALL : getting netsize close-subscription, transaction-status node not found, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize close-subscription, transaction-status node not found, response=".(string) $response);
 		}
 		$this->transactionStatusCode = $transactionStatusNode['code'];
 		$lastTransactionErrorNode = self::getNodeByName($closeSubscriptionNode, 'last-transaction-error');
@@ -696,28 +696,28 @@ class FinalizeResponse {
 	public function __construct($response) {
 		$this->response = simplexml_load_string($response);
 		if($this->response === false) {
-			config::getLogger()->addError("API CALL : netsize finalize, XML cannot be loaded, response=".(string) $response);
-			throw new Exception("API CALL : getting netsize finalize, XML cannot be loaded, response=".(string) $response);
+			config::getLogger()->addError("NETSIZE API CALL : netsize finalize, XML cannot be loaded, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize finalize, XML cannot be loaded, response=".(string) $response);
 		}
 		$responseNode = $this->response;
 		$responseTypeNode = $responseNode['type'];
 		if($responseTypeNode == NULL) {
-			throw new Exception("API CALL : getting netsize finalize, response type attribute not found, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize finalize, response type attribute not found, response=".(string) $response);
 		}
 		if($responseTypeNode == 'error') {
 			$responseErrorNode = self::getNodeByName($responseNode, 'error');
 			if($responseErrorNode == NULL) {
-				throw new Exception("API CALL : getting netsize finalize, an unknown error occurred, response=".(string) $response);
+				throw new Exception("NETSIZE API CALL : getting netsize finalize, an unknown error occurred, response=".(string) $response);
 			}
-			throw new Exception("API CALL : getting netsize finalize, an error occurred, code=".$responseErrorNode['code'].", reason=".$responseErrorNode['reason'].", response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize finalize, an error occurred, code=".$responseErrorNode['code'].", reason=".$responseErrorNode['reason'].", response=".(string) $response);
 		}
 		$getStatusNode = self::getNodeByName($responseNode, 'finalize');
 		if($getStatusNode == NULL) {
-			throw new Exception("API CALL : getting netsize , finalize node not found, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize , finalize node not found, response=".(string) $response);
 		}
 		$transactionStatusNode = self::getNodeByName($getStatusNode, 'transaction-status');
 		if($transactionStatusNode == NULL) {
-			throw new Exception("API CALL : getting netsize finalize, transaction-status node not found, response=".(string) $response);
+			throw new Exception("NETSIZE API CALL : getting netsize finalize, transaction-status node not found, response=".(string) $response);
 		}
 		$this->transactionStatusCode = $transactionStatusNode['code'];
 		$lastTransactionErrorNode = self::getNodeByName($getStatusNode, 'last-transaction-error');
