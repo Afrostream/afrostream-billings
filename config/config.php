@@ -376,10 +376,6 @@ if(getEnv('STATSD_NAMESPACE') === false) {
 	putEnv('STATSD_NAMESPACE=afrostream-billings');
 }
 
-if(getEnv('STATSD_NAMESPACE') === false) {
-	putEnv('STATSD_NAMESPACE=afrostream-billings');
-}
-
 if(getEnv('STATSD_KEY_PREFIX') === false) {
 	$dyno = str_replace('.', '-', getEnv('DYNO'));
 	putEnv('STATSD_KEY_PREFIX='.getEnv('BILLINGS_ENV').'.container.'.$dyno.'.worker.0.');
