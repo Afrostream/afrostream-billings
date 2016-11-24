@@ -108,7 +108,9 @@ class SubscriptionsController extends BillingsController {
 	}
 	
 	public function create(Request $request, Response $response, array $args) {
+		$starttime = microtime(true);
 		try {
+			BillingStatsd::inc('route.api.providers.all.subscriptions.create.hit');
 			$data = json_decode($request->getBody(), true);
 			if(!isset($data['userBillingUuid'])) {
 				//exception
@@ -150,19 +152,27 @@ class SubscriptionsController extends BillingsController {
 			}
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$subscription = $subscriptionsHandler->doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, $billing_info_array, $sub_opts);
+			BillingStatsd::inc('route.api.providers.all.subscriptions.create.success');
 			return($this->returnObjectAsJson($response, 'subscription', $subscription));
 		} catch(BillingsException $e) {
+			BillingStatsd::inc('route.api.providers.all.subscriptions.create.error');
+			BillingStatsd::inc('route.api.providers.all.subscriptions.create.infos.error.code.'.$e->getCode());
 			$msg = "an exception occurred while creating a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnBillingsExceptionAsJson($response, $e));
 			//
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.api.providers.all.subscriptions.create.error');
+			BillingStatsd::inc('route.api.providers.all.subscriptions.create.infos.error.code.0');
 			$msg = "an unknown exception occurred while creating an subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));
 			//
+		} finally {
+			$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.api.providers.all.subscriptions.create.responsetime', $responseTimeInMillis);
 		}
 	}
 	
