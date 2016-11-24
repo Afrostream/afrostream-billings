@@ -1355,6 +1355,20 @@ $app->post("/billings/providers/netsize/webhooks/", function ($request, $respons
 	return($webHooksController->netsizeWebHooksPosting($request, $response, $args));
 });
 
+//alive
+
+$app->get("/alive", function ($request, $response, $args) {
+	$json_as_array = array();
+	$json_as_array['alive'] = true;
+	$json_as_array['container'] = getEnv('DYNO');
+	$json_as_array['env'] = getEnv('BILLINGS_ENV');
+	$json = json_encode($json_as_array);
+	$response = $response->withStatus(200);
+	$response = $response->withHeader('Content-Type', 'application/json');
+	$response->getBody()->write($json);
+	return($response);
+});
+
 $app->run();
 
 ?>
