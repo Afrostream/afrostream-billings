@@ -41,6 +41,7 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 	}
 	$response = $next($req, $res);
 	$current_path = $req->getUri()->getPath();
+	$path_alive = '/alive';
 	$path_api = '/billings/api/';
 	$path_webhooks_prefix = '/billings/providers/';
 	$path_webhooks_suffix = '/webhooks/';
@@ -59,6 +60,10 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 			$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
 			$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
 			BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.success');
+		} else if(strpos($current_path, $path_alive) === 0) {
+			BillingStatsd::inc('route.alive.success');
+		} else {
+			BillingStatsd::inc('route.others.success');
 		}
 	}
 	/* error */
@@ -71,6 +76,10 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 			$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
 			$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
 			BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.error');
+		} else if(strpos($current_path, $path_alive) === 0) {
+			BillingStatsd::inc('route.alive.error');
+		} else {
+			BillingStatsd::inc('route.others.error');
 		}
 	}
 	/* anyway */
@@ -86,6 +95,12 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 		$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
 		BillingStatsd::timing('route.providers.'.$wilcard.'.webhooks.responsetime', $responseTimeInMillis);
 		BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.hit');
+	} else if(strpos($current_path, $path_alive) === 0) {
+		BillingStatsd::inc('route.alive.hit');
+		BillingStatsd::timing('route.alive.responsetime', $responseTimeInMillis);
+	} else {
+		BillingStatsd::inc('route.others.hit');
+		BillingStatsd::timing('route.others.responsetime', $responseTimeInMillis);
 	}
 	return $response;
 });
