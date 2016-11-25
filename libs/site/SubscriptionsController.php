@@ -110,7 +110,6 @@ class SubscriptionsController extends BillingsController {
 	public function create(Request $request, Response $response, array $args) {
 		$starttime = microtime(true);
 		try {
-			BillingStatsd::inc('route.api.providers.all.subscriptions.create.hit');
 			$data = json_decode($request->getBody(), true);
 			if(!isset($data['userBillingUuid'])) {
 				//exception
@@ -171,6 +170,7 @@ class SubscriptionsController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e));
 			//
 		} finally {
+			BillingStatsd::inc('route.api.providers.all.subscriptions.create.hit');
 			$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
 			BillingStatsd::timing('route.api.providers.all.subscriptions.create.responsetime', $responseTimeInMillis);
 		}
