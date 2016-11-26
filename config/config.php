@@ -9,6 +9,10 @@ use Monolog\Handler\StreamHandler;
 
 #General
 
+if(getEnv('DYNO') === false) {
+	putEnv('DYNO=web-0');
+}
+
 if(getEnv('BILLINGS_ENV') === false) {
 	putEnv('BILLINGS_ENV=staging');
 }
@@ -339,7 +343,6 @@ if(getEnv('PROXY_PWD') === false) {
 	putEnv('PROXY_PWD=afrostream77');
 }
 
-
 # stripe api key
 if(getEnv('STRIPE_API_KEY') === false) {
 	putEnv('STRIPE_API_KEY=sk_test_VaFvskbZOobGZ1L3x1iGwzOk');
@@ -353,6 +356,29 @@ if(getEnv('STRIPE_WH_HTTP_AUTH_USER') === false) {
 
 if(getEnv('STRIPE_WH_HTTP_AUTH_PWD') === false) {
 	putEnv('STRIPE_WH_HTTP_AUTH_PWD=pwd');
+}
+
+#statsd
+
+if(getEnv('STATSD_ACTIVATED') === false) {
+	putEnv('STATSD_ACTIVATED=1');
+}
+
+if(getEnv('STATSD_HOST') === false) {
+	putEnv('STATSD_HOST=graphite.afrostream.net');
+}
+
+if(getEnv('STATSD_PORT') === false) {
+	putEnv('STATSD_PORT=8125');
+}
+
+if(getEnv('STATSD_NAMESPACE') === false) {
+	putEnv('STATSD_NAMESPACE=afrostream-billings');
+}
+
+if(getEnv('STATSD_KEY_PREFIX') === false) {
+	$dyno = str_replace('.', '-', getEnv('DYNO'));
+	putEnv('STATSD_KEY_PREFIX='.getEnv('BILLINGS_ENV').'.container.'.$dyno.'.worker.0.');
 }
 
 #
@@ -370,8 +396,6 @@ class config {
 	private static $logger;
 	
 	public static function init() {
-		self::getLogger();
-		self::getDbConn();
 	}
 	
 	public static function getLogger() {
@@ -420,6 +444,32 @@ class config {
 		$db_conn = self::getDbConn(NULL, true);
 		return($db_conn);
 	}
+	
 }
 
 config::init();
+
+class BillingStatsd {
+	
+	private static $statsd;
+	
+	private static function getStatsd() {
+		if(self::$statsd == NULL) {
+			$conn = new \Domnikl\Statsd\Connection\UdpSocket(getEnv('STATSD_HOST'), getEnv('STATSD_PORT'));
+			self::$statsd = new \Domnikl\Statsd\Client($conn, getEnv('STATSD_NAMESPACE'));
+		}
+		return(self::$statsd);
+	}
+	
+	public static function inc($key, $sampleRate = 1) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->increment(getEnv('STATSD_KEY_PREFIX').$key, $sampleRate);
+		}
+	}
+	
+	public static function timing($key, $value, $sampleRate = 1) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->timing(getEnv('STATSD_KEY_PREFIX').$key, $value, $sampleRate);
+		}
+	}
+}

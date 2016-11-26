@@ -14,6 +14,8 @@ require_once __DIR__ . '/../libs/site/ContextsController.php';
 use \Slim\Http\Request;
 use \Slim\Http\Response;
 
+$starttime = microtime(true);
+
 $c = new \Slim\Container();
 $c['errorHandler'] = function ($c) {
     return function (Request $request, Response $response, Exception $exception) use ($c) {
@@ -29,7 +31,7 @@ $c['errorHandler'] = function ($c) {
 
 $app = new \Slim\App($c);
 
-$app->add(function (Request $req, Response $res, callable $next) {
+$app->add(function (Request $req, Response $res, callable $next) use ($starttime) {
 	if(getEnv('LOG_REQUESTS_ACTIVATED') == 1) {
 		$msg = "REQUEST method=".$req->getMethod();
 		$msg.= " path='".$req->getUri()->getPath()."'";
@@ -37,7 +39,70 @@ $app->add(function (Request $req, Response $res, callable $next) {
 		$msg.= " body='".$req->getBody()."'";
 		config::getLogger()->addInfo($msg);
 	}
-	return $next($req, $res);
+	$response = $next($req, $res);
+	$current_path = $req->getUri()->getPath();
+	$path_alive = '/alive';
+	$path_api = '/billings/api/';
+	$path_webhooks_prefix = '/billings/providers/';
+	$path_webhooks_suffix = '/webhooks/';
+	/* STATSD */
+	$array_status_code_ok = [200, 201, 202, 203, 204, 205, 206, 404];
+	$array_status_code_ko = [500];
+	/* route.all.hit */
+	BillingStatsd::inc('route.all.hit');
+	/* success */
+	if(in_array($response->getStatusCode(), $array_status_code_ok)) {
+		BillingStatsd::inc('route.all.success');
+		if(strpos($current_path, $path_api) === 0) {
+			BillingStatsd::inc('route.api.success');
+		} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix, $current_path)) {
+			BillingStatsd::inc('route.providers.all.webhooks.success');
+			$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
+			$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
+			BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.success');
+		} else if(strpos($current_path, $path_alive) === 0) {
+			BillingStatsd::inc('route.alive.success');
+		} else {
+			BillingStatsd::inc('route.others.success');
+		}
+	}
+	/* error */
+	if(in_array($response->getStatusCode(), $array_status_code_ko)) {
+		BillingStatsd::inc('route.all.error');
+		if(strpos($current_path, $path_api) === 0) {
+			BillingStatsd::inc('route.api.error');
+		} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix, $current_path)) {
+			BillingStatsd::inc('route.providers.all.webhooks.error');
+			$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
+			$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
+			BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.error');
+		} else if(strpos($current_path, $path_alive) === 0) {
+			BillingStatsd::inc('route.alive.error');
+		} else {
+			BillingStatsd::inc('route.others.error');
+		}
+	}
+	/* anyway */
+	$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
+	BillingStatsd::timing('route.all.responsetime', $responseTimeInMillis);
+	if(strpos($current_path, $path_api) === 0) {
+		BillingStatsd::inc('route.api.hit');
+		BillingStatsd::timing('route.api.responsetime', $responseTimeInMillis);
+	} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix, $current_path)) {
+		BillingStatsd::timing('route.providers.all.webhooks.responsetime', $responseTimeInMillis);
+		BillingStatsd::inc('route.providers.all.webhooks.hit');
+		$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
+		$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
+		BillingStatsd::timing('route.providers.'.$wilcard.'.webhooks.responsetime', $responseTimeInMillis);
+		BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.hit');
+	} else if(strpos($current_path, $path_alive) === 0) {
+		BillingStatsd::inc('route.alive.hit');
+		BillingStatsd::timing('route.alive.responsetime', $responseTimeInMillis);
+	} else {
+		BillingStatsd::inc('route.others.hit');
+		BillingStatsd::timing('route.others.responsetime', $responseTimeInMillis);
+	}
+	return $response;
 });
 
 //API BASIC AUTH ACTIVATION
@@ -468,7 +533,7 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/self-update", f
 
 /**
  * @api {get} /billings/api/subscriptions/ Request Subscriptions Information
- * @apiDescription It updates Subscriptions Information.
+ * @apiDescription It returns Subscriptions Information.
  * @apiParam {String} [userReferenceUuid] reference uuid of the user. It returns subscriptions which belong to users with the userReferenceUuid given.
  * @apiParam {String} [userBillingUuid] Api uuid of the user. It returns subscriptions which belong to users with the userBillingUuid given.
  *
@@ -1303,6 +1368,20 @@ $app->post("/billings/providers/braintree/webhooks/", function ($request, $respo
 $app->post("/billings/providers/netsize/webhooks/", function ($request, $response, $args) {
 	$webHooksController = new WebHooksController();
 	return($webHooksController->netsizeWebHooksPosting($request, $response, $args));
+});
+
+//alive
+
+$app->get("/alive", function ($request, $response, $args) {
+	$json_as_array = array();
+	$json_as_array['alive'] = true;
+	$json_as_array['container'] = getEnv('DYNO');
+	$json_as_array['env'] = getEnv('BILLINGS_ENV');
+	$json = json_encode($json_as_array);
+	$response = $response->withStatus(200);
+	$response = $response->withHeader('Content-Type', 'application/json');
+	$response->getBody()->write($json);
+	return($response);
 });
 
 $app->run();

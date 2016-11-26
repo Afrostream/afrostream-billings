@@ -43,17 +43,17 @@ class BouyguesTVClient {
 			$bouyguesSubscriptionResponse = new BouyguesSubscriptionResponse($content);
 			$bouyguesSubscription = $bouyguesSubscriptionResponse->getBouyguesSubscription();
 			if($bouyguesSubscription == NULL) {
-				config::getLogger()->addError("API CALL : getting BouyguesSubscription, No BouyguesSubscription was found");
-				throw new BillingsException(new ExceptionType(ExceptionType::provider), "API CALL : getting BouyguesSubscription, No BouyguesSubscription was found", ExceptionError::BOUYGUES_CALL_API_SUBSCRIPTION_NOT_FOUND);	
+				config::getLogger()->addError("BOUYGUESTV API CALL : getting BouyguesSubscription, No BouyguesSubscription was found");
+				throw new BillingsException(new ExceptionType(ExceptionType::provider), "BOUYGUESTV API CALL : getting BouyguesSubscription, No BouyguesSubscription was found", ExceptionError::BOUYGUES_CALL_API_SUBSCRIPTION_NOT_FOUND);	
 			}
 			$bouyguesSubscription->setSubscriptionId($subscriptionId);
 			if($bouyguesSubscription->getResult() != 403) {
-				config::getLogger()->addError("API CALL : getting BouyguesSubscription, result <> 403, result=".$bouyguesSubscription->getResult());
-				throw new BillingsException(new ExceptionType(ExceptionType::provider), "API CALL : getting BouyguesSubscription, result <> 403, result=".$bouyguesSubscription->getResult(), ExceptionError::BOUYGUES_CALL_API_BAD_RESULT);				
+				config::getLogger()->addError("BOUYGUESTV API CALL : getting BouyguesSubscription, result <> 403, result=".$bouyguesSubscription->getResult());
+				throw new BillingsException(new ExceptionType(ExceptionType::provider), "BOUYGUESTV API CALL : getting BouyguesSubscription, result <> 403, result=".$bouyguesSubscription->getResult(), ExceptionError::BOUYGUES_CALL_API_BAD_RESULT);				
 			}
 		} else {
-			config::getLogger()->addError("API CALL : getting BouyguesSubscription, code=".$httpCode);
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), "API CALL : getting BouyguesSubscription, code=".$httpCode." is unexpected...", ExceptionError::BOUYGUES_CALL_API_UNKNOWN_ERROR);
+			config::getLogger()->addError("BOUYGUESTV API CALL : getting BouyguesSubscription, code=".$httpCode);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), "BOUYGUESTV API CALL : getting BouyguesSubscription, code=".$httpCode." is unexpected...", ExceptionError::BOUYGUES_CALL_API_UNKNOWN_ERROR);
 		}
 		return($bouyguesSubscriptionResponse);
 	}
@@ -67,8 +67,8 @@ class BouyguesSubscriptionResponse {
 	public function __construct($response) {
 		$xml = simplexml_load_string($response);
 		if($xml === false) {
-			config::getLogger()->addError("API CALL : getting BouyguesSubscriptionResponse, XML cannot be loaded, response=".(string) $response);
-			throw new Exception("API CALL : getting BouyguesSubscriptionResponse, XML cannot be loaded, response=".(string) $response);
+			config::getLogger()->addError("BOUYGUESTV API CALL : getting BouyguesSubscriptionResponse, XML cannot be loaded, response=".(string) $response);
+			throw new Exception("BOUYGUESTV API CALL : getting BouyguesSubscriptionResponse, XML cannot be loaded, response=".(string) $response);
 		}
 		$json = json_encode($xml);
 		$this->response = json_decode($json, true);

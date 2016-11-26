@@ -553,6 +553,7 @@ class SubscriptionsHandler {
 	}
 	
 	public function doCancelSubscriptionByUuid($subscriptionBillingUuid, DateTime $cancel_date, $is_a_request = true) {
+		$starttime = microtime(true);
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
@@ -613,19 +614,27 @@ class SubscriptionsHandler {
 			$this->doFillSubscription($db_subscription);
 			//
 			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
+			BillingStatsd::inc('route.providers.all.subscriptions.cancel.success');
 		} catch(BillingsException $e) {
+			BillingStatsd::inc('route.providers.all.subscriptions.cancel.error');
 			$msg = "a billings exception occurred while dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription canceling failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.providers.all.subscriptions.cancel.error');
 			$msg = "an unknown exception occurred while dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription canceling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		} finally {
+			BillingStatsd::inc('route.providers.all.subscriptions.cancel.hit');
+			$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.providers.all.subscriptions.cancel.responsetime', $responseTimeInMillis);
 		}
 		return($db_subscription);
 	}
 	
 	public function doExpireSubscriptionByUuid($subscriptionBillingUuid, DateTime $expires_date, $is_a_request = true) {
+		$starttime = microtime(true);
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
@@ -696,14 +705,21 @@ class SubscriptionsHandler {
 			$this->doFillSubscription($db_subscription);
 			//
 			config::getLogger()->addInfo("dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
+			BillingStatsd::inc('route.providers.all.subscriptions.expire.success');
 		} catch(BillingsException $e) {
+			BillingStatsd::inc('route.providers.all.subscriptions.expire.error');
 			$msg = "a billings exception occurred while dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription expiring failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.providers.all.subscriptions.expire.error');
 			$msg = "an unknown exception occurred while dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription expiring failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		} finally {
+			BillingStatsd::inc('route.providers.all.subscriptions.expire.hit');
+			$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.providers.all.subscriptions.expire.responsetime', $responseTimeInMillis);
 		}
 		return($db_subscription);
 	}
