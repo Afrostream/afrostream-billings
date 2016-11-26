@@ -48,6 +48,7 @@ class ExceptionError extends Enum {
 	//SUBS
 	const SUBS_AUTO_ALREADY_EXISTS						=	420;
 	const SUBS_FUTURE_ALREADY_EXISTS					=	421;
+	const SUBS_ALREADY_EXISTS							=	422;
 	//COUPONS
 	const COUPON_REDEEMED								=	450;
 	const COUPON_EXPIRED								=	451;
