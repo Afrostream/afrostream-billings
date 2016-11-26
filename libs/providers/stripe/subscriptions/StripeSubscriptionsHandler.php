@@ -527,7 +527,17 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         if (is_null($subOpts->getOpt('customerBankAccountToken'))) {
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription. Missing stripe token');
         }
-
+        //couponCode
+        if(array_key_exists('couponCode', $subOpts->getOpts())) {
+        	$couponCode = $subOpts->getOpts()['couponCode'];
+        	if(strlen($couponCode) > 0) {
+				///HOT FIX
+        		//Exception
+        		$msg = "This couponCode '.$couponCode.' is not compatible with this Plan";
+        		config::getLogger()->addError($msg);
+        		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_INTERNALPLAN_INCOMPATIBLE);
+        	}
+        }
         try {
             $this->log('Update customer : set source : '.$subOpts->getOpt('customerBankAccountToken'));
 
