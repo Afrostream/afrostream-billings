@@ -43,11 +43,18 @@ class StripeTransactionsHandler {
 						config::getLogger()->addInfo("updating stripe transaction id=".$stripeChargeTransaction->id."...");
 						$metadata = $stripeChargeTransaction->metadata->__toArray();
 						$hasToBeProcessed = false;
+						$hasToBeIgnored = false;
+						if(array_key_exists('AfrIgnore', $metadata)) {
+							$afrIgnore = $metadata['AfrIgnore'];
+							if($afrIgnore == 'true') {
+								$hasToBeIgnored = true;
+							}
+						}
 						$isRecurlyTransaction = false;
 						if(array_key_exists('recurlyTransactionId', $metadata)) {
 							$isRecurlyTransaction = true;
 						}
-						$hasToBeProcessed = !$isRecurlyTransaction;
+						$hasToBeProcessed = !$hasToBeIgnored && !$isRecurlyTransaction;
 						if($hasToBeProcessed) {
 							$this->createOrUpdateChargeFromProvider($user, $userOpts, $stripeCustomer, $stripeChargeTransaction, $updateType);
 						} else {
@@ -379,11 +386,18 @@ class StripeTransactionsHandler {
 			}
 			$metadata = $stripeChargeTransaction->metadata->__toArray();
 			$hasToBeProcessed = false;
+			$hasToBeIgnored = false;
+			if(array_key_exists('AfrIgnore', $metadata)) {
+				$afrIgnore = $metadata['AfrIgnore'];
+				if($afrIgnore == 'true') {
+					$hasToBeIgnored = true;
+				}
+			}
 			$isRecurlyTransaction = false;
 			if(array_key_exists('recurlyTransactionId', $metadata)) {
 				$isRecurlyTransaction = true;
 			}
-			$hasToBeProcessed = !$isRecurlyTransaction;
+			$hasToBeProcessed = !$hasToBeIgnored && !$isRecurlyTransaction;
 			if($hasToBeProcessed) {
 				$this->createOrUpdateChargeFromProvider(NULL, NULL, NULL, $stripeChargeTransaction, $updateType);
 			} else {
