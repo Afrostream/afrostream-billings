@@ -134,11 +134,17 @@ class StripeTransactionsHandler {
 						$subscription_billing_uuid = $metadata['AfrSubscriptionBillingUuid'];
 						$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscription_billing_uuid);
 						if($subscription == NULL) {
-							$msg = "AfrSubscriptionBillingUuid=".$subscription_billing_uuid." in metadata cannot be found";
-							config::getLogger()->addError($msg);
-							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
+							if($stripeChargeTransaction->status != 'failed') {
+								$msg = "AfrSubscriptionBillingUuid=".$subscription_billing_uuid." in metadata cannot be found";
+								config::getLogger()->addError($msg);
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							} else {
+								$msg = "AfrSubscriptionBillingUuid=".$subscription_billing_uuid." in metadata cannot be found but has been ignored since subscription was not created";
+								config::getLogger()->addInfo($msg);								
+							}
+						} else {
+							$subId = $subscription->getId();
 						}
-						$subId = $subscription->getId();
 					} else {
 						$msg = "'AfrSubscriptionBillingUuid' field is missing in metadata";
 						config::getLogger()->addError($msg);
