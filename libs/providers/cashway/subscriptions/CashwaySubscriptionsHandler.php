@@ -268,7 +268,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 	}
 	
 	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
-		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()."...");
+		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->getSubUid().", id=".$db_subscription->getId()."...");
 		//UPDATE
 		$db_subscription_before_update = clone $db_subscription;
 		//
@@ -350,7 +350,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
-		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()." done successfully");
+		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->getSubUid().", id=".$db_subscription->getId()." done successfully");
 		return($db_subscription);
 	}
 	

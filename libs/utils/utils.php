@@ -263,6 +263,14 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			break;
+		case 'wecashup' :
+			if(!array_key_exists('transactionId', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'transactionId' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			break;
 		default :
 			//nothing
 			break;

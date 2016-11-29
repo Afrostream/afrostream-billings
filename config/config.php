@@ -393,6 +393,28 @@ if(getEnv('CONTEXTS_SWITCH_EXPIRED_DATE_BOUNDARY_TO_COMMON_CONTEXT') === false) 
 	putEnv('CONTEXTS_SWITCH_EXPIRED_DATE_BOUNDARY_TO_COMMON_CONTEXT=2016-11-21 23:59:59');
 }
 
+#Wecashup
+
+if(getEnv('WECASHUP_MERCHANT_UID') === false) {
+	putEnv('WECASHUP_MERCHANT_UID=nZpRMzyIg2Tgh7o2nIK2heGkfVB2');
+}
+
+if(getEnv('WECASHUP_MERCHANT_PUBLIC_KEY') === false) {
+	putEnv('WECASHUP_MERCHANT_PUBLIC_KEY=SM3xFy5l31t9HD5XuosCfNuhZvNNhEQHNexLu4VjPtu3');
+}
+
+if(getEnv('WECASHUP_MERCHANT_SECRET') === false) {
+	putEnv('WECASHUP_MERCHANT_SECRET=UGdE8slkMh434lhZ');
+}
+
+if(getEnv('WECASHUP_MERCHANT_SECRET') === false) {
+	putEnv('WECASHUP_MERCHANT_SECRET=UGdE8slkMh434lhZ');
+}
+
+if(getEnv('WECASHUP_API_URL') === false) {
+	putEnv('WECASHUP_API_URL=https://merchant-dashboard-dot-wecashup-payment.appspot.com/api/v1.0/merchants');
+}
+
 #logger, #db_conn, ...
 
 class config {
