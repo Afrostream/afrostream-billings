@@ -553,6 +553,7 @@ class SubscriptionsHandler {
 	}
 	
 	public function doCancelSubscriptionByUuid($subscriptionBillingUuid, DateTime $cancel_date, $is_a_request = true) {
+		$starttime = microtime(true);
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
@@ -613,19 +614,27 @@ class SubscriptionsHandler {
 			$this->doFillSubscription($db_subscription);
 			//
 			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
+			BillingStatsd::inc('route.providers.all.subscriptions.cancel.success');
 		} catch(BillingsException $e) {
+			BillingStatsd::inc('route.providers.all.subscriptions.cancel.error');
 			$msg = "a billings exception occurred while dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription canceling failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.providers.all.subscriptions.cancel.error');
 			$msg = "an unknown exception occurred while dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription canceling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		} finally {
+			BillingStatsd::inc('route.providers.all.subscriptions.cancel.hit');
+			$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.providers.all.subscriptions.cancel.responsetime', $responseTimeInMillis);
 		}
 		return($db_subscription);
 	}
 	
 	public function doExpireSubscriptionByUuid($subscriptionBillingUuid, DateTime $expires_date, $is_a_request = true) {
+		$starttime = microtime(true);
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
@@ -696,14 +705,21 @@ class SubscriptionsHandler {
 			$this->doFillSubscription($db_subscription);
 			//
 			config::getLogger()->addInfo("dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
+			BillingStatsd::inc('route.providers.all.subscriptions.expire.success');
 		} catch(BillingsException $e) {
+			BillingStatsd::inc('route.providers.all.subscriptions.expire.error');
 			$msg = "a billings exception occurred while dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription expiring failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.providers.all.subscriptions.expire.error');
 			$msg = "an unknown exception occurred while dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription expiring failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		} finally {
+			BillingStatsd::inc('route.providers.all.subscriptions.expire.hit');
+			$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.providers.all.subscriptions.expire.responsetime', $responseTimeInMillis);
 		}
 		return($db_subscription);
 	}
@@ -1102,6 +1118,13 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
+			$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription_after_update->getId());
+			$internalCoupon = NULL;
+			$internalCouponsCampaign = NULL;
+			if(isset($userInternalCoupon)) {
+				$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($userInternalCoupon->getInternalCouponsId());
+				$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+			}
 			//DATA <--
 			//DATA SUBSTITUTION -->
 			setlocale(LC_MONETARY, 'fr_FR.utf8');//TODO : Forced to French Locale for "," in floats...
@@ -1162,6 +1185,30 @@ class SubscriptionsHandler {
 			$substitions['%fullname%'] = $fullname;
 			//subscription
 			$substitions['%subscriptionbillinguuid%'] = $subscription_after_update->getSubscriptionBillingUuid();
+			//Coupon
+			$substitions['%couponCode%'] = '';
+			$substitions['%couponAmountForDisplay%'] = '';
+			$substitions['%couponDetails%'] = '';
+			$substitions['%couponAppliedSentence%'] = '';
+			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() == 'promo') {
+				$couponAmountForDisplay = '';
+				switch($internalCouponsCampaign->getDiscountType()) {
+					case 'percent' :
+						$couponAmountForDisplay = $internalCouponsCampaign->getPercent().'%';
+						break;
+					case 'amount' :
+						$couponAmountForDisplay = new Money((integer) $internalCouponsCampaign->getAmountInCents(), new Currency($internalCouponsCampaign->getCurrency()));
+						$couponAmountForDisplay = money_format('%!.2n', (float) ($couponAmountForDisplay->getAmount() / 100));
+						$couponAmountForDisplay = $couponAmountForDisplay.' '.dbGlobal::getCurrencyForDisplay($internalCouponsCampaign->getCurrency());  
+						break;
+				}
+				$substitions['%couponCode%'] = $userInternalCoupon->getCode();
+				$substitions['%couponAmountForDisplay%'] = $couponAmountForDisplay;
+				$substitions['%couponDetails%'] = $internalCouponsCampaign->getDescription();
+				$couponAppliedSentence = getEnv('SENDGRID_VAR_couponAppliedSentence');
+				$couponAppliedSentence = str_replace(array_keys($substitions), array_values($substitions), $couponAppliedSentence);
+				$substitions['%couponAppliedSentence%'] = $couponAppliedSentence;
+			}
 			//DATA SUBSTITUTION <--
 			$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
 			$email = new SendGrid\Email();

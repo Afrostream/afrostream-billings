@@ -87,12 +87,14 @@ class BillingCSVsWorkers extends BillingsWorkers {
 							throw new Exception('file for generating csv cannot be opened for writing');
 						}
 						//FILL FILE
-						$limit = 100;
+						$limit = 1000;
+						$offset = 0;
 						$idx = 0;
 						$lastId = NULL;
 						$totalCounter = NULL;
 						do {
-							$result = dbGlobal::loadSqlResult($fields[2], $limit, 0);
+							$result = dbGlobal::loadSqlResult($fields[2], $limit, $offset);
+							$offset = $offset + $limit;
 							if(is_null($totalCounter)) {$totalCounter = $result['total_counter'];}
 							$idx+= count($result['rows']);
 							$lastId = $result['lastId'];

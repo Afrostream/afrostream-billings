@@ -9,6 +9,10 @@ use Monolog\Handler\StreamHandler;
 
 #General
 
+if(getEnv('DYNO') === false) {
+	putEnv('DYNO=web-0');
+}
+
 if(getEnv('BILLINGS_ENV') === false) {
 	putEnv('BILLINGS_ENV=staging');
 }
@@ -151,7 +155,6 @@ if(getEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_SPONSORSHIP_NEW') === false) {
 	putEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_SPONSORSHIP_NEW=22a2e61c-565f-4270-a9bd-6ec7f592b3ed');
 }
 
-
 if(getEnv('SENDGRID_FROM') === false) {
 	putEnv('SENDGRID_FROM=abonnement@afrostream.tv');
 }
@@ -166,6 +169,10 @@ if(getEnv('SENDGRID_BCC') === false) {
 
 if(getEnv('SENDGRID_TO_IFNULL') === false) {
 	putEnv('SENDGRID_TO_IFNULL=null@afrostream.tv');
+}
+
+if(getEnv('SENDGRID_VAR_couponAppliedSentence') === false) {
+	putEnv('SENDGRID_VAR_couponAppliedSentence=La réduction de %couponAmountForDisplay% liée au code promo %couponCode% sera appliquée lors du prélèvement.');
 }
 
 #Event (MAIL)
@@ -336,7 +343,6 @@ if(getEnv('PROXY_PWD') === false) {
 	putEnv('PROXY_PWD=afrostream77');
 }
 
-
 # stripe api key
 if(getEnv('STRIPE_API_KEY') === false) {
 	putEnv('STRIPE_API_KEY=sk_test_VaFvskbZOobGZ1L3x1iGwzOk');
@@ -350,6 +356,35 @@ if(getEnv('STRIPE_WH_HTTP_AUTH_USER') === false) {
 
 if(getEnv('STRIPE_WH_HTTP_AUTH_PWD') === false) {
 	putEnv('STRIPE_WH_HTTP_AUTH_PWD=pwd');
+}
+
+#statsd
+
+if(getEnv('STATSD_ACTIVATED') === false) {
+	putEnv('STATSD_ACTIVATED=1');
+}
+
+if(getEnv('STATSD_HOST') === false) {
+	putEnv('STATSD_HOST=graphite.afrostream.net');
+}
+
+if(getEnv('STATSD_PORT') === false) {
+	putEnv('STATSD_PORT=8125');
+}
+
+if(getEnv('STATSD_NAMESPACE') === false) {
+	putEnv('STATSD_NAMESPACE=afrostream-billings');
+}
+
+if(getEnv('STATSD_DYNO_MODULO') === false) {
+	putEnv('STATSD_DYNO_MODULO=16');
+}
+
+if(getEnv('STATSD_KEY_PREFIX') === false) {
+	$dyno = str_replace('.', '-', getEnv('DYNO'));
+	$dynoNumber = substr($dyno, strrpos($dyno, '-') + 1) % getEnv('STATSD_DYNO_MODULO');
+	$dyno = substr($dyno, 0, strrpos($dyno, '-')).'-'.$dynoNumber;
+	putEnv('STATSD_KEY_PREFIX='.getEnv('BILLINGS_ENV').'.container.'.$dyno.'.worker.0.');
 }
 
 #
@@ -367,8 +402,6 @@ class config {
 	private static $logger;
 	
 	public static function init() {
-		self::getLogger();
-		self::getDbConn();
 	}
 	
 	public static function getLogger() {
@@ -417,6 +450,32 @@ class config {
 		$db_conn = self::getDbConn(NULL, true);
 		return($db_conn);
 	}
+	
 }
 
 config::init();
+
+class BillingStatsd {
+	
+	private static $statsd;
+	
+	private static function getStatsd() {
+		if(self::$statsd == NULL) {
+			$conn = new \Domnikl\Statsd\Connection\UdpSocket(getEnv('STATSD_HOST'), getEnv('STATSD_PORT'));
+			self::$statsd = new \Domnikl\Statsd\Client($conn, getEnv('STATSD_NAMESPACE'));
+		}
+		return(self::$statsd);
+	}
+	
+	public static function inc($key, $sampleRate = 1) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->increment(getEnv('STATSD_KEY_PREFIX').$key, $sampleRate);
+		}
+	}
+	
+	public static function timing($key, $value, $sampleRate = 1) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->timing(getEnv('STATSD_KEY_PREFIX').$key, $value, $sampleRate);
+		}
+	}
+}
