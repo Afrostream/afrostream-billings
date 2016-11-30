@@ -161,125 +161,24 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
-		try {
-			config::getLogger()->addInfo("wecashup subscription canceling...");
-			$doIt = false;
-			/*if($is_a_request == true) {
-				if(
-						$subscription->getSubStatus() == "requesting_canceled"
-						||
-						$subscription->getSubStatus() == "canceled"
-						||
-						$subscription->getSubStatus() == "expired"
-				) {
-					//nothing to do : already done or in process
-				} else {
-					//
-					$doIt = true;
-					$netsizeClient = new NetsizeClient();
-						
-					$closeSubscriptionRequest = new CloseSubscriptionRequest();
-					$closeSubscriptionRequest->setTransactionId($subscription->getSubUid());
-					$closeSubscriptionRequest->setTrigger(0);
-					$closeSubscriptionRequest->setReturnUrl('');//TODO : is it needed ?
-					
-					$closeSubscriptionResponse = $netsizeClient->closeSubscription($closeSubscriptionRequest);
-					
-					if($closeSubscriptionResponse->getTransactionStatusCode() != 422) {
-						$msg = "netsize subscription cannot be canceled, code=".$getStatusResponse->getTransactionStatusCode();
-						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
-					}
-				}
-			} else {*/
-				if(
-						$subscription->getSubStatus() == "canceled"
-						||
-						$subscription->getSubStatus() == "expired"
-				) {
-					//nothing to do : already done or in process
-				} else {
-					$doIt = true;
-					$netsizeClient = new NetsizeClient();
-						
-					$getStatusRequest = new GetStatusRequest();
-					$getStatusRequest->setTransactionId($subscription->getSubUid());
-						
-					$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
-					//422 - Activated (Termination in Progress)
-					//432 - Cancelled
-					$array_sub_is_canceled = [422, 432];
-					if(!in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_canceled)) {
-						$msg = "netsize subscription cannot be canceled, code=".$getStatusResponse->getTransactionStatusCode();
-						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
-					}
-				}
-			/*}*/
-			if($doIt == true) {
-				$subscription->setSubCanceledDate($cancel_date);
-				/*if($is_a_request == true) {
-					$subscription->setSubStatus('requesting_canceled');
-				} else {*/
-					$subscription->setSubStatus('canceled');
-				/*}*/
-				try {
-					//START TRANSACTION
-					pg_query("BEGIN");
-					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
-					BillingsSubscriptionDAO::updateSubStatus($subscription);
-					//COMMIT
-					pg_query("COMMIT");
-				} catch(Exception $e) {
-					pg_query("ROLLBACK");
-					throw $e;
-				}
-			}
-			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
-			config::getLogger()->addInfo("wecashup subscription canceling done successfully for wecashup_subscription_uuid=".$subscription->getSubUid());
-		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while canceling a wecashup subscription for wecashup_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("wecashup subscription canceling failed : ".$msg);
-			throw $e;
-		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while canceling a wecashup subscription for wecashup_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("wecashup subscription canceling failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		return($subscription);
-	}
-	
 	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
 		try {
 			config::getLogger()->addInfo("wecashup subscription expiring...");
-			$doIt = false;
 			if(
 					$subscription->getSubStatus() == "expired"
 			)
 			{
-				//nothing to do : already done or in process
+				//nothing todo : already done or in process
 			} else {
-				$doIt = true;
-				$netsizeClient = new NetsizeClient();
-				
-				$getStatusRequest = new GetStatusRequest();
-				$getStatusRequest->setTransactionId($subscription->getSubUid());
-				
-				$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
-				//430 - Expired
-				//431 - Suspended
-				//433 - Failed
-				$array_sub_is_expired = [430, 431, 433];
-				if(!in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_expired)) {
-					$msg = "netsize subscription cannot be expired, code=".$getStatusResponse->getTransactionStatusCode();
+				//
+				if($subscription->getSubPeriodEndsDate() <= $expires_date) {
+					$subscription->setSubExpiresDate($expires_date);
+					$subscription->setSubStatus("expired");
+				} else {
+					$msg = "cannot expire a subscription that has not ended yet";
 					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-			}
-			if($doIt == true) {
-				$subscription->setSubExpiresDate($expires_date);
-				$subscription->setSubStatus("expired");
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
@@ -292,6 +191,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 					throw $e;
 				}
 			}
+			//
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("wecashup subscription expiring done successfully for wecashup_subscription_uuid=".$subscription->getSubUid());
 			return($subscription);
@@ -334,13 +234,26 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
+				$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($db_subscription->getId());
 				//
-				//TODO
-				
-				
+				$api_subscription = clone $db_subscription;
 				//
-				
-				
+				$wecashupTransactionRequest = new WecashupTransactionRequest();
+				$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transactionId'));
+				$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
+				$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
+				if(count($wecashupTransactionsResponseArray) != 1) {
+					//Exception
+					$msg = "transaction with transactionUid=".$subOpts->getOpt('transactionId')." was not found";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$wecashupTransactionResponse = $wecashupTransactionsResponseArray[0];
+				if($wecashupTransactionResponse->getTransactionStatus() != 'success') {
+					$msg = "The transaction did not succeed, responseStatus=".$wecashupTransactionResponse->getTransactionStatus();
+					config::getLogger()->addError("wecashup subscription creation failed : ".$msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
+				}
 				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
 			} catch(Exception $e) {
 				$msg = "wecashup dbsubscription update failed for subscriptionBillingUuid=".$db_subscription->getSubscriptionBillingUuid().", message=".$e->getMessage();
@@ -351,95 +264,78 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 	}
 
 	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
-		//TODO
-		config::getLogger()->addInfo("wecashup dbsubscription update for userid=".$user->getId().", wecashup_subscription_uuid=".$api_subscription->getTransactionId().", id=".$db_subscription->getId()."...");
+		config::getLogger()->addInfo("wecashup dbsubscription update for userid=".$user->getId().", wecashup_subscription_uuid=".$api_subscription->getSubUid().", id=".$db_subscription->getId()."...");
 		//UPDATE
 		$db_subscription_before_update = clone $db_subscription;
 		//
-		$now = new DateTime();
 		//$db_subscription->setProviderId($provider->getId());//STATIC
 		//$db_subscription->setUserId($user->getId());//STATIC
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription = BillingsSubscriptionDAO::updatePlanId($db_subscription);
 		//$db_subscription->setSubUid($subscription_uuid);//STATIC
-		switch ($api_subscription->getTransactionStatusCode()) {
-			case 110 ://Authentification Pending
-			case 120 ://Success
-			case 210 ://Pending
-			case 220 ://Success
-			case 400 ://Started
-			case 410 ://Pending
-				$db_subscription->setSubStatus('future');
-				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-				break;
-			case 420 ://Activated
-			case 421 ://Activated (Auto Billed)
+		switch ($api_subscription->getSubStatus()) {
+			case 'active' :
 				$db_subscription->setSubStatus('active');
-				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-				if($db_subscription->getSubActivatedDate() == NULL) {
-					$db_subscription->setSubActivatedDate($now);//assume it's now only if not already set
-					$db_subscription = BillingsSubscriptionDAO::updateSubActivatedDate($db_subscription);
-				}
-				if($db_subscription->getSubPeriodStartedDate() == NULL) {
-					$db_subscription->setSubPeriodStartedDate($now);//assume it's now only if not already set
-					$db_subscription = BillingsSubscriptionDAO::updateSubStartedDate($db_subscription);
-				}
-				if($db_subscription->getSubPeriodEndsDate() == NULL) {
-					$start_date = $db_subscription->getSubPeriodStartedDate();
-					$start_date->setTimezone(new DateTimeZone(config::$timezone));
-					$end_date = NULL;
-					switch($internalPlan->getPeriodUnit()) {
-						case PlanPeriodUnit::day :
-							$end_date = clone $start_date;
-							$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
-							$end_date->setTime(23, 59, 59);//force the time to the end of the day
-							break;
-						case PlanPeriodUnit::month :
-							$end_date = clone $start_date;
-							$periodLengthInDays = 30 * $internalPlan->getPeriodLength();
-							$end_date->add(new DateInterval("P".$periodLengthInDays."D"));
-							$end_date->setTime(23, 59, 59);//force the time to the end of the day
-							break;
-						case PlanPeriodUnit::year :
-							$end_date = clone $start_date;
-							$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
-							$end_date->setTime(23, 59, 59);//force the time to the end of the day
-							break;
-						default :
-							$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
-							config::getLogger()->addError($msg);
-							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-							break;
-					}
-					$db_subscription->setSubPeriodEndsDate($end_date);
-					$db_subscription = BillingsSubscriptionDAO::updateSubEndsDate($db_subscription);
-				}
 				break;
-			case 422 ://Activated (Termination in Progress)
-			case 432 ://Cancelled
+			case 'canceled' :
 				$db_subscription->setSubStatus('canceled');
-				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-				if($db_subscription->getSubCanceledDate() == NULL) {
-					$db_subscription->setSubCanceledDate($now);//assume it's now only if not already set
-					$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
-				}
 				break;
-			case 430 ://Expired
-			case 431 ://Suspended
-			case 433 ://Failed
+			case 'future' :
+				$db_subscription->setSubStatus('future');
+				break;
+			case 'expired' :
 				$db_subscription->setSubStatus('expired');
-				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-				if($db_subscription->getSubExpiresDate() == NULL) {
-					$db_subscription->setSubExpiresDate($now);//assume it's now only if not already set
-					$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
-				}
 				break;
 			default :
-				$msg = "unknown subscription state : ".$api_subscription->getTransactionStatusCode();
+				$msg = "unknown subscription state : ".$api_subscription->getSubStatus();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				//break;
 		}
+		$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
+		//
+		$db_subscription->setSubActivatedDate($api_subscription->getSubActivatedDate());
+		$db_subscription = BillingsSubscriptionDAO::updateSubActivatedDate($db_subscription);
+		//
+		$db_subscription->setSubCanceledDate($api_subscription->getSubCanceledDate());
+		$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
+		//
+		$db_subscription->setSubExpiresDate($api_subscription->getSubExpiresDate());
+		$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+		//
+		$start_date = $api_subscription->getSubPeriodStartedDate();
+		$db_subscription->setSubPeriodStartedDate($start_date);
+		
+		$end_date = NULL;
+		switch($internalPlan->getPeriodUnit()) {
+			case PlanPeriodUnit::day :
+				$end_date = clone $start_date;
+				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				break;
+			case PlanPeriodUnit::month :
+				$end_date = clone $start_date;
+				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
+				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				break;
+			case PlanPeriodUnit::year :
+				$end_date = clone $start_date;
+				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
+				$end_date->setTime(23, 59, 59);//force the time to the end of the day
+				break;
+			default :
+				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				break;
+		}
+		$api_subscription->setSubPeriodEndsDate($end_date);
+		//
+		$db_subscription->setSubPeriodStartedDate($api_subscription->getSubPeriodStartedDate());
+		$db_subscription = BillingsSubscriptionDAO::updateSubStartedDate($db_subscription);
+		//
+		$db_subscription->setSubPeriodEndsDate($api_subscription->getSubPeriodEndsDate());
+		$db_subscription = BillingsSubscriptionDAO::updateSubEndsDate($db_subscription);
 		//
 		$db_subscription->setUpdateType($update_type);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateType($db_subscription);
@@ -450,8 +346,8 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
-		config::getLogger()->addInfo("netsize dbsubscription update for userid=".$user->getId().", netsize_subscription_uuid=".$api_subscription->getTransactionId().", id=".$db_subscription->getId()." done successfully");
-		return($db_subscription);		
+		config::getLogger()->addInfo("wecashup dbsubscription update for userid=".$user->getId().", wecashup_subscription_uuid=".$api_subscription->getSubUid().", id=".$db_subscription->getId()." done successfully");
+		return($db_subscription);	
 	}
 	
 	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
@@ -520,12 +416,27 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
+		$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($db_subscription->getId());
 		//
-		$netsizeClient = new NetsizeClient();
-		$getStatusRequest = new GetStatusRequest();
-		$getStatusRequest->setTransactionId($db_subscription->getSubUid());
-		$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
-		$api_subscription = $getStatusResponse;
+		$api_subscription = clone $db_subscription;
+		//
+		$wecashupClient = new WecashupClient();
+		$wecashupTransactionRequest = new WecashupTransactionRequest();
+		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transactionId'));
+		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
+		$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
+		if(count($wecashupTransactionsResponseArray) != 1) {
+			//Exception
+			$msg = "transaction with transactionUid=".$subOpts->getOpt('transactionId')." was not found";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$wecashupTransactionResponse = $wecashupTransactionsResponseArray[0];
+		if($wecashupTransactionResponse->getTransactionStatus() != 'success') {
+			$msg = "The transaction did not succeed, responseStatus=".$wecashupTransactionResponse->getTransactionStatus();
+			config::getLogger()->addError("wecashup subscription creation failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
+		}
 		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
 		return($db_subscription);
 	}

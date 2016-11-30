@@ -617,9 +617,15 @@ class SubscriptionsHandler {
 					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 					$db_subscription = $netsizeSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
+				case 'afr' :
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
 				case 'wecashup' :
-					$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
-					$db_subscription = $wecashupSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
