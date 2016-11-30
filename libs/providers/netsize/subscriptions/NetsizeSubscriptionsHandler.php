@@ -139,10 +139,10 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				$db_subscription->setSubPeriodEndsDate($end_date);
 				break;
 			case 422 ://Activated (Termination in Progress)
-			case 432 ://Cancelled
 				$db_subscription->setSubStatus('canceled');
 				$db_subscription->setSubCanceledDate($now);
 				break;
+			case 432 ://Cancelled
 			case 430 ://Expired
 			case 431 ://Suspended
 			case 433 ://Failed
@@ -224,8 +224,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 						
 					$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 					//422 - Activated (Termination in Progress)
-					//432 - Cancelled
-					$array_sub_is_canceled = [422, 432];
+					$array_sub_is_canceled = [422];
 					if(!in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_canceled)) {
 						$msg = "netsize subscription cannot be canceled, code=".$getStatusResponse->getTransactionStatusCode();
 						config::getLogger()->addError($msg);
@@ -374,8 +373,9 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 				//430 - Expired
 				//431 - Suspended
+				//432 - Cancelled
 				//433 - Failed
-				$array_sub_is_expired = [430, 431, 433];
+				$array_sub_is_expired = [430, 431, 432, 433];
 				if(!in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_expired)) {
 					$msg = "netsize subscription cannot be expired, code=".$getStatusResponse->getTransactionStatusCode();
 					config::getLogger()->addError($msg);
@@ -518,7 +518,6 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				}
 				break;
 			case 422 ://Activated (Termination in Progress)
-			case 432 ://Cancelled
 				$db_subscription->setSubStatus('canceled');
 				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
 				if($db_subscription->getSubCanceledDate() == NULL) {
@@ -526,6 +525,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 					$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
 				}
 				break;
+			case 432 ://Cancelled
 			case 430 ://Expired
 			case 431 ://Suspended
 			case 433 ://Failed
