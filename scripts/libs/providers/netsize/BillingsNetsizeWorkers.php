@@ -94,12 +94,12 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 				//421 - Activated (Auto Billed)
 				$array_sub_is_open = [420, 421];
 				//422 - Activated (Termination in Progress)
-				$array_sub_is_canceled = [422];
+				//432 - Cancelled
+				$array_sub_is_canceled = [422, 432];
 				//430 - Expired
 				//431 - Suspended
-				//432 - Cancelled
 				//433 - Failed
-				$array_sub_is_expired = [430, 431, 432, 433];
+				$array_sub_is_expired = [430, 431, 433];
 				if(in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_open)) {
 					pg_query("BEGIN");
 					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
