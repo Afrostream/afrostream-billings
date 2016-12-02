@@ -1370,6 +1370,13 @@ $app->post("/billings/providers/netsize/webhooks/", function ($request, $respons
 	return($webHooksController->netsizeWebHooksPosting($request, $response, $args));
 });
 
+//WebHooks - Wecashup
+
+$app->post("/billings/providers/wecashup/webhooks/", function ($request, $response, $args) {
+	$webHooksController = new WebHooksController();
+	return($webHooksController->wecashupWebHooksPosting($request, $response, $args));
+});
+
 //alive
 
 $app->get("/alive", function ($request, $response, $args) {

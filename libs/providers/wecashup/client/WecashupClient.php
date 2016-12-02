@@ -326,4 +326,11 @@ class WecashupValidateTransactionResponse {
 	
 }
 
+class WecashupCustomerResponse {
+	
+	public function __construct() {
+	}
+	
+}
+
 ?>

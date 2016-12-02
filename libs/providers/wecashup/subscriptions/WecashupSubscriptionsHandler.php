@@ -108,7 +108,14 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, BillingsSubscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("wecashup dbsubscription creation for userid=".$user->getId().", wecashup_subscription_uuid=".$api_subscription->getSubUid()."...");
-		//CREATE
+		//
+		if($subOpts == NULL) {
+			//Exception
+			$msg = "field 'subOpts' is missing";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//SUBSCRIPTION CREATE
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
 		$db_subscription->setProviderId($provider->getId());
@@ -143,7 +150,24 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted('false');
-		//NO MORE TRANSACTION (DONE BY CALLER)
+		//TRANSACTION CREATE
+		$billingsTransaction = new BillingsTransaction();
+		$billingsTransaction->setProviderId($user->getProviderId());
+		$billingsTransaction->setUserId($user->getId());
+		$billingsTransaction->setCouponId(NULL);
+		$billingsTransaction->setInvoiceId(NULL);
+		$billingsTransaction->setTransactionBillingUuid(guid());
+		$billingsTransaction->setTransactionProviderUuid($subOpts->getOpt('transactionId'));
+		$billingsTransaction->setTransactionCreationDate($api_subscription->getCreationDate());
+		$billingsTransaction->setAmountInCents($internalPlan->getAmountInCents());
+		$billingsTransaction->setCurrency($internalPlan->getCurrency());
+		$billingsTransaction->setCountry(isset($billingInfo) ? $billingInfo->getCountryCode() : NULL);
+		$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::success);
+		$billingsTransaction->setTransactionType(BillingsTransactionType::purchase);
+		$billingsTransaction->setInvoiceProviderUuid(NULL);
+		$billingsTransaction->setMessage('');
+		$billingsTransaction->setUpdateType('api');
+		//NO MORE DB TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
 		//BILLING_INFO
 		if(isset($billingInfo)) {
@@ -155,6 +179,11 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		if(isset($subOpts)) {
 			$subOpts->setSubId($db_subscription->getId());
 			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+		}
+		//TRANSACTION
+		if(isset($billingsTransaction)) {
+			$billingsTransaction->setSubId($db_subscription->getId());
+			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("wecashup dbsubscription creation for userid=".$user->getId().", wecashup_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
