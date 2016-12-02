@@ -5674,3 +5674,121 @@ class BillingProviderCouponsCampaignDAO {
 	}
 	
 }
+	
+class BillingsTransactionOpts implements JsonSerializable {
+	
+	private $transactionid;
+	private $opts = array();
+
+	public function __construct(array $opts = null)
+	{
+		if(!empty($opts)) {
+			$this->setOpts($opts);
+		}
+	}
+	
+	public function setTransactionId($id) {
+		$this->transactionid = $id;
+	}
+	
+	public function getTransactionId() {
+		return($this->transactionid);
+	}
+	
+	public function setOpt($key, $value) {
+		$this->opts[$key] = $value;
+	}
+	
+	public function setOpts($opts) {
+		$this->opts = $opts;
+	}
+	
+	public function getOpts() {
+		return($this->opts);
+	}
+	
+	public function getOpt($key)
+	{
+		if (array_key_exists($key, $this->opts)) {
+			return $this->opts[$key];
+		}
+	
+		return null;
+	}
+	
+	public function jsonSerialize() {
+		return($this->opts);
+	}
+	
+}
+
+class BillingsTransactionOptsDAO {
+	
+	public static function getBillingsTransactionOptByTransactionId($transactionid) {
+		$query = "SELECT _id, transactionid, key, value FROM billing_transactions_opts WHERE deleted = false AND transactionid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($transactionid));
+	
+		$out = new BillingsTransactionOpts();
+		$out->setTransactionId($transactionid);
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out->setOpt($row["key"], $row["value"]);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function addBillingsTransactionOpts(BillingsTransactionOpts $billingsTransactionOpts) {
+		foreach ($billingsTransactionOpts->getOpts() as $k => $v) {
+			if(isset($v) && is_scalar($v)) {
+				$query = "INSERT INTO billing_transactions_opts (transactionid, key, value)";
+				$query.= " VALUES ($1, $2, $3) RETURNING _id";
+				$result = pg_query_params(config::getDbConn(), $query,
+						array($billingsTransactionOpts->getTransactionId(),
+								trim($k),
+								trim($v)));
+				// free result
+				pg_free_result($result);
+			}
+		}
+		return(self::getBillingsTransactionOptByTransactionId($billingsTransactionOpts->getTransactionId()));
+	}
+	
+	public static function updateBillingsTransactionOptsKey($transactionid, $key, $value) {
+		if(is_scalar($value)) {
+			$query = "UPDATE billing_transactions_opts SET value = $3 WHERE transactionid = $1 AND key = $2 AND deleted = false";
+			$result = pg_query_params(config::getDbConn(), $query, array($transactionid, $key, trim($value)));
+			// free result
+			pg_free_result($result);
+		}
+	}
+	
+	public static function deleteBillingsTransactionOptsKey($transactionid, $key) {
+		$query = "UPDATE billing_transactions_opts SET deleted = true WHERE transactionid = $1 AND key = $2 AND deleted = false";
+		$result = pg_query_params(config::getDbConn(), $query, array($transactionid, $key));
+		// free result
+		pg_free_result($result);
+	}
+	
+	public static function addBillingsTransactionOptsKey($transactionid, $key, $value) {
+		if(is_scalar($value)) {
+			$query = "INSERT INTO billing_transactions_opts (transactionid, key, value)";
+			$query.= " VALUES ($1, $2, $3) RETURNING _id";
+			$result = pg_query_params(config::getDbConn(), $query,
+					array($transactionid,
+							trim($key),
+							trim($value)));
+			// free result
+			pg_free_result($result);
+		}
+	}
+	
+	public static function deleteBillingsTransactionOptsByTransactionId($transactionid) {
+		$query = "UPDATE billing_transactions_opts SET deleted = true WHERE transactionid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($transactionid));
+		// free result
+		pg_free_result($result);
+	}
+	
+}

@@ -376,7 +376,7 @@ class WebHooksController extends BillingsController {
 		$validated = false;
 		
 		$post_data = file_get_contents('php://input');
-		$post_data_as_array = parse_str($post_data);
+		parse_str($post_data, $post_data_as_array);
 		
 		$received_transaction_merchant_secret = NULL;
 		if(in_array('merchant_secret', $post_data_as_array)) {
