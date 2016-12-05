@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
+require_once __DIR__ . '/../subscriptions/WecashupSubscriptionsHandler.php';
 
 class WecashupWebHooksHandler {
 	
@@ -69,18 +70,52 @@ class WecashupWebHooksHandler {
 			}
 			//OK
 			if($billingsTransaction->getSubId() == NULL) {
-				//Exception
+				$msg = "transaction with transaction_uuid=".$billingsTransaction->getTransactionProviderUuid()." is not linked to any subscription";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($billingsTransaction->getSubId());
 			if($db_subscription == NULL) {
-				//Exception
+				$msg = "unknown subscription with id=".$billingsTransaction->getSubId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$user = UserDAO::getUserById($db_subscription->getUserId());
+			if($user == NULL) {
+				$msg = "unknown user with id : ".$db_subscription->getUserId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+			$plan = PlanDAO::getPlanById($db_subscription->getPlanId()); 
+			if($plan == NULL) {
+				$msg = "unknown plan with id : ".$db_subscription->getPlanId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
+			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+			if($internalPlan == NULL) {
+				$msg = "plan with uuid=".$plan->getPlanUuid()." for provider wecashup is not linked to an internal plan";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId()); 
+			$api_subscription = clone $db_subscription;
+			$now = new DateTime();
 			switch ($received_transaction_status) {
 				case 'PAID' :
-					//future -> active (see cashway...)
+					$api_subscription->setSubStatus('active');
+					$api_subscription->setSubActivatedDate($now);
+					$api_subscription->setSubPeriodStartedDate($now);
+					$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::success);
+					$billingsTransaction->setUpdateType($update_type);
 					break;
 				case 'FAILED' :
-					//future -> ??? (delete ?)
+					$api_subscription->setSubStatus('expired');
+					$api_subscription->setSubExpiresDate($now);
+					$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::failed);
+					$billingsTransaction->setUpdateType($update_type);
 					break;
 				default :
 					//Exception
@@ -89,7 +124,20 @@ class WecashupWebHooksHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
-			//
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				//SUBSCRIPTION UPDATE
+				$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
+				$db_subscription = $wecashupSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $billingsWebHook->getId());	
+				//TRANSACTION UPDATE
+				$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 			config::getLogger()->addInfo("processing wecashup webHook with id=".$billingsWebHook->getId()." done successfully");
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while processing wecashup webHook with id=".$billingsWebHook->getId().", message=".$e->getMessage();

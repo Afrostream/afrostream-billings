@@ -251,7 +251,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			try {
 				$plan = PlanDAO::getPlanById($db_subscription->getPlanId());
 				if($plan == NULL) {
-					$msg = "unknown plan with id : ".$subscription->getPlanId();
+					$msg = "unknown plan with id : ".$db_subscription->getPlanId();
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
@@ -287,7 +287,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			} catch(Exception $e) {
 				$msg = "wecashup dbsubscription update failed for subscriptionBillingUuid=".$db_subscription->getSubscriptionBillingUuid().", message=".$e->getMessage();
 				config::getLogger()->addError($msg);
-			}		
+			}	
 		}
 		config::getLogger()->addInfo("wecashup dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
@@ -433,7 +433,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		$plan = PlanDAO::getPlanById($db_subscription->getPlanId());
 		if($plan == NULL) {
-			$msg = "unknown plan with id : ".$subscription->getPlanId();
+			$msg = "unknown plan with id : ".$db_subscription->getPlanId();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
