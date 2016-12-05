@@ -13,13 +13,11 @@ class WecashupUsersHandler {
 		try {
 			config::getLogger()->addInfo("wecashup user creation...");
 			if(isset($user_provider_uuid)) {
-				//TODO
-			} else {
-				//TODO
-				$msg = "unsupported feature for provider named wecashup, userProviderUuid has to be provided";
+				$msg = "unsupported feature for provider named wecashup, userProviderUuid has NOT to be provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$user_provider_uuid = guid();
 			config::getLogger()->addInfo("wecashup user creation done successfully, user_provider_uuid=".$user_provider_uuid);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while creating a wecashup user for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();

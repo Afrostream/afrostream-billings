@@ -73,36 +73,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$api_subscription = new BillingsSubscription();
 		$api_subscription->setSubUid($sub_uuid);
-		$api_subscription->setSubStatus('active');
-		$start_date = new DateTime();
-		$start_date->setTimezone(new DateTimeZone(config::$timezone));
-		$api_subscription->setSubActivatedDate($start_date);
-		$api_subscription->setSubPeriodStartedDate($start_date);
-		$end_date = NULL;
-		switch($internalPlan->getPeriodUnit()) {
-			case PlanPeriodUnit::day :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::month :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::year :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			default :
-				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
-		}
-		$api_subscription->setSubPeriodEndsDate($end_date);
-		//
+		$api_subscription->setSubStatus('future');
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
@@ -162,7 +133,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$billingsTransaction->setAmountInCents($internalPlan->getAmountInCents());
 		$billingsTransaction->setCurrency($internalPlan->getCurrency());
 		$billingsTransaction->setCountry(isset($billingInfo) ? $billingInfo->getCountryCode() : NULL);
-		$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::success);
+		$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::waiting);
 		$billingsTransaction->setTransactionType(BillingsTransactionType::purchase);
 		$billingsTransaction->setInvoiceProviderUuid(NULL);
 		$billingsTransaction->setMessage('');

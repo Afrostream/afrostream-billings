@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/WecashupSubscriptionsHandler.php';
+require_once __DIR__ . '/../client/WecashupClient.php';
 
 class WecashupWebHooksHandler {
 	
@@ -47,6 +48,29 @@ class WecashupWebHooksHandler {
 				$msg = "merchant secret given does not match";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$wecashupClient = new WecashupClient();
+			$wecashupTransactionRequest = new WecashupTransactionRequest();
+			$wecashupTransactionRequest->setTransactionUid($received_transaction_uid);
+			$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
+			$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
+			if(count($wecashupTransactionsResponseArray) != 1) {
+				//Exception
+				$msg = "transaction with transactionUid=".$received_transaction_uid." was not found";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$wecashupTransactionResponse = $wecashupTransactionsResponseArray[0];
+			switch($wecashupTransactionResponse->getTransactionType()) {
+				case 'payment' :
+					
+					break;
+				case 'refund' :
+					
+					break;
+				default :
+					//Message
+					break;
 			}
 			//check transaction
 			$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($provider->getId(), $received_transaction_uid);
