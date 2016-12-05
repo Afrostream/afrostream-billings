@@ -888,8 +888,8 @@ class SubscriptionsHandler {
 				$netsizeSubscriptionsHandler->doFillSubscription($subscription);
 				break;
 			case 'wecashup' :
-				$cashupSubscriptionsHandler = new CashupSubscriptionsHandler();
-				$cashupSubscriptionsHandler->doFillSubscription($subscription);
+				$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
+				$wecashupSubscriptionsHandler->doFillSubscription($subscription);
 				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
