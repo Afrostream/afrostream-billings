@@ -674,7 +674,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $billingSubscription->setSubExpiresDate(NULL);
         $billingSubscription->setSubPeriodStartedDate($this->createDate($subscription['current_period_start']));
         $billingSubscription->setSubPeriodEndsDate($this->createDate($subscription['current_period_end']));
-        $billingSubscription->setDeleted('false');
+        $billingSubscription->setDeleted(false);
         return $billingSubscription;
     }
 
