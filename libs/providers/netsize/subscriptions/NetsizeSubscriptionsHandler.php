@@ -224,7 +224,8 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 						
 					$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 					//422 - Activated (Termination in Progress)
-					$array_sub_is_canceled = [422];
+					//432 - Cancelled
+					$array_sub_is_canceled = [422, 432];
 					if(!in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_canceled)) {
 						$msg = "netsize subscription cannot be canceled, code=".$getStatusResponse->getTransactionStatusCode();
 						config::getLogger()->addError($msg);
