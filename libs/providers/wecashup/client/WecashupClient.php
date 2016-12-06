@@ -80,11 +80,14 @@ class WecashupClient {
 
 class WecashupRequest {
 	//
-	private $merchantUid = getEnv('WECASHUP_MERCHANT_UID');
-	private $merchantPublicKey = getEnv('WECASHUP_MERCHANT_PUBLIC_KEY');
-	private $merchantSecret = getEnv('WECASHUP_MERCHANT_SECRET');
+	private $merchantUid;
+	private $merchantPublicKey;
+	private $merchantSecret;
 	//
 	public function __construct() {
+		$this->merchantUid = getEnv('WECASHUP_MERCHANT_UID');
+		$this->merchantPublicKey = getEnv('WECASHUP_MERCHANT_PUBLIC_KEY');
+		$this->merchantSecret = getEnv('WECASHUP_MERCHANT_SECRET');
 	}
 	
 	public function getMerchantUid() {
