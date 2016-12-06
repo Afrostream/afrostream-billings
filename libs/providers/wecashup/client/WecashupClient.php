@@ -120,40 +120,64 @@ class WecashupTransactionRequest extends WecashupRequest {
 
 class WecashupTransactionResponse {
 	
-	private $transactionId;
+	private $transactionUid;
 	private $transactionType;
-	private $transactionAmount;
-	private $transactionAmountSplitted;
+	private $transactionSenderTotalAmount;
+	private $transactionSenderSplittedAmount;
 	private $transactionDate;
 	private $transactionStatus;
-	private $transactionCurrency;
-	private $transactionSenderId;
-	private $transactionReceiverId;
-	private $transactionDescription;
+	private $transactionSenderCurrency;
+	private $transactionSenderUid;
+	private $transactionReceiverUid;
+	private $transactionProviderMode;
+	private $transactionProviderCommunicationMode;
+	private $transactionParentUid;
+	private $transactionSenderCountryCodeIso2;
+	private $transactionSenderLang;
+	private $transactionToken;
+	private $transactionReceiverReference;
+	private $transactionConversionRate;
+	private $transactionProviderName;
+	private $transactionReceiverTotalAmount;
+	private $transactionConfirmationCode;
+	private $transactionSenderReference;
+	private $transactionReceiverCurrency;
 	
 	public function __construct() {
 	}
 	
 	public static function getInstance(array $response) {
 		$out = new WecashupTransactionResponse();
-		$out->setTransactionId($response["transaction_id"]);
+		$out->setTransactionUid($response["transaction_uid"]);
 		$out->setTransactionType($response["transaction_type"]);
-		$out->setTransactionAmount($response["transaction_amount"]);
-		$out->setTransactionAmountSplitted($response["transaction_amount_splitted"]);
-		$out->setTransactionDate($response["transaction_date"]);
+		$out->setTransactionSenderTotalAmount($response["transaction_sender_total_amount"]);
+		$out->setTransactionSenderSplittedAmount($response["transaction_sender_splitted_amount"]);
+		$out->setTransactionDate($response["date"]);
 		$out->setTransactionStatus($response["transaction_status"]);
-		$out->setTransactionCurrency($response["transaction_currency"]);
-		$out->setTransactionSenderId($response["transaction_sender_id"]);
-		$out->setTransactionReceiverId($response["transaction_receiver_id"]);
-		$out->setTransactionDescription($response["transaction_description"]);
+		$out->setTransactionSenderCurrency($response["transaction_sender_currency"]);
+		$out->setTransactionSenderUid($response["transaction_sender_uid"]);
+		$out->setTransactionReceiverUid($response["transaction_receiver_uid"]);
+		$out->setTransactionProviderMode($response["transaction_provider_mode"]);
+		$out->setTransactionProviderCommunicationMode($response["transaction_provider_communication_mode"]);
+		$out->setTransactionProviderName($response["transaction_provider_name"]);
+		$out->setTransactionParentUid($response["transaction_parent_uid"]);
+		$out->setTransactionSenderCountryCodeIso2($response["transaction_sender_country_code_iso2"]);
+		$out->setTransactionToken($response["transaction_token"]);
+		$out->setTransactionSenderLang($response["transaction_sender_lang"]);
+		$out->setTransactionReceiverReference($response["transaction_receiver_reference"]);
+		$out->setTransactionConversionRate($response["transaction_conversion_rate"]);
+		$out->setTransactionReceiverTotalAmount($response["transaction_receiver_total_amount"]);
+		$out->setTransactionConfirmationCode($response["transaction_confirmation_code"]);
+		$out->setTransactionSenderReference($response["transaction_sender_reference"]);
+		$out->setTransactionReceiverCurrency($response["transaction_receiver_currency"]);
 	}
 	
-	public function setTransactionId($transactionId) {
-		$this->transactionId = $transactionId;
+	public function setTransactionUid($transactionUid) {
+		$this->transactionUid = $transactionUid;
 	}
 	
-	public function getTransactionId() {
-		return($this->transactionId);
+	public function getTransactionUid() {
+		return($this->transactionUid);
 	}
 	
 	public function setTransactionType($transactionType) {
@@ -164,20 +188,20 @@ class WecashupTransactionResponse {
 		return($this->transactionType);
 	}
 	
-	public function setTransactionAmount($transactionAmount) {
-		$this->transactionAmount = $transactionAmount;
+	public function setTransactionSenderTotalAmount($transactionSenderTotalAmount) {
+		$this->transactionSenderTotalAmount = $transactionSenderTotalAmount;
 	}
 	
-	public function getTransactionAmount() {
-		return($this->transactionAmount);
+	public function getTransactionSenderTotalAmount() {
+		return($this->transactionSenderTotalAmount);
 	}
 	
-	public function setTransactionAmountSplitted($transactionAmountSplitted) {
-		$this->transactionAmountSplitted = $transactionAmountSplitted;
+	public function setTransactionSenderSplittedAmount($transactionSenderSplittedAmount) {
+		$this->transactionSenderSplittedAmount = $transactionSenderSplittedAmount;
 	}
 	
-	public function getTransactionAmountSplitted() {
-		return($this->transactionAmountSplitted);
+	public function getTransactionSenderSplittedAmount() {
+		return($this->transactionSenderSplittedAmount);
 	}
 	
 	public function setTransactionDate($transactionDate) {
@@ -196,42 +220,141 @@ class WecashupTransactionResponse {
 		return($this->transactionStatus);
 	}
 	
-	public function setTransactionCurrency($transactionCurrency) {
-		$this->transactionCurrency = $transactionCurrency;
+	public function setTransactionSenderCurrency($transactionSenderCurrency) {
+		$this->transactionSenderCurrency = $transactionSenderCurrency;
 	}
 	
-	public function getTransactionCurrency() {
-		return($this->transactionCurrency);
+	public function getTransactionSenderCurrency() {
+		return($this->transactionSenderCurrency);
 	}
 	
-	public function setTransactionSenderId($transactionSenderId) {
-		$this->transactionSenderId = $transactionSenderId;
+	public function setTransactionSenderUid($transactionSenderUid) {
+		$this->transactionSenderUid = $transactionSenderUid;
 	}
 	
-	public function getTransactionSenderId() {
-		return($this->transactionSenderId);
+	public function getTransactionSenderUid() {
+		return($this->transactionSenderUid);
 	}
 	
-	public function setTransactionReceiverId($transactionReceiverId) {
-		$this->transactionReceiverId = $transactionReceiverId;
+	public function setTransactionReceiverUid($transactionReceiverUid) {
+		$this->transactionReceiverUid = $transactionReceiverUid;
 	}
 	
-	public function getTransactionReceiverId() {
-		return($this->transactionReceiverId);
+	public function getTransactionReceiverUid() {
+		return($this->transactionReceiverUid);
 	}
 	
-	public function setTransactionDescription($transactionDescription) {
-		$this->transactionDescription = $transactionDescription;
+	public function setTransactionProviderMode($transactionProviderMode) {
+		$this->transactionProviderMode = $transactionProviderMode;
 	}
 	
-	public function getTransactionDescription() {
-		return($this->transactionDescription);
+	public function getTransactionProviderMode() {
+		return($this->transactionProviderMode);
+	}
+	
+	public function setTransactionProviderCommunicationMode($transactionProviderCommunicationMode) {
+		$this->transactionProviderCommunicationMode = $transactionProviderCommunicationMode;
+	}
+	
+	public function getTransactionProviderCommunicationMode() {
+		return($this->transactionProviderCommunicationMode);
+	}
+
+	public function setTransactionProviderName($transactionProviderName) {
+		$this->transactionProviderName = $transactionProviderName;
+	}
+	
+	public function getTransactionProviderName() {
+		return($this->transactionProviderName);
+	}
+	
+	public function setTransactionParentUid($transactionParentUid) {
+		$this->transactionParentUid = $transactionParentUid;
+	}
+	
+	public function getTransactionParentUid() {
+		return($this->transactionParentUid);
+	}
+	
+	public function setTransactionSenderCountryCodeIso2($transactionSenderCountryCodeIso2) {
+		$this->transactionSenderCountryCodeIso2 = $transactionSenderCountryCodeIso2;
+	}
+	
+	public function getTransactionSenderCountryCodeIso2() {
+		return($this->transactionSenderCountryCodeIso2);
+	}
+	
+	public function setTransactionToken($transactionToken) {
+		$this->transactionToken = $transactionToken;
+	}
+	
+	public function getTransactionToken() {
+		return($this->transactionToken);
+	}
+	
+	public function setTransactionSenderLang($transactionSenderLang) {
+		$this->transactionSenderLang = $transactionSenderLang;
+	}
+	
+	public function getTransactionSenderLang() {
+		return($this->transactionSenderLang);
+	}
+	
+	public function setTransactionReceiverReference($transactionReceiverReference) {
+		$this->transactionReceiverReference = $transactionReceiverReference;
+	}
+	
+	public function getTransactionReceiverReference() {
+		return($this->transactionReceiverReference);
+	}
+
+	public function setTransactionConversionRate($transactionConversionRate) {
+		$this->transactionConversionRate = $transactionConversionRate;
+	}
+	
+	public function getTransactionConversionRate() {
+		return($this->transactionConversionRate);
+	}
+	
+	public function setTransactionReceiverTotalAmount($transactionReceiverTotalAmount) {
+		$this->transactionReceiverTotalAmount = $transactionReceiverTotalAmount;
+	}
+	
+	public function getTransactionReceiverTotalAmount() {
+		return($this->transactionReceiverTotalAmount);
+	}
+	
+	public function setTransactionConfirmationCode($transactionConfirmationCode) {
+		$this->transactionConfirmationCode = $transactionConfirmationCode;
+	}
+	
+	public function getTransactionConfirmationCode() {
+		return($this->transactionConfirmationCode);
+	}
+	
+	public function setTransactionSenderReference($transactionSenderReference) {
+		$this->transactionSenderReference = $transactionSenderReference;
+	}
+	
+	public function getTransactionSenderReference() {
+		return($this->transactionSenderReference);
+	}
+	
+	public function setTransactionReceiverCurrency($transactionReceiverCurrency) {
+		$this->transactionReceiverCurrency = $transactionReceiverCurrency;
+	}
+	
+	public function getTransactionReceiverCurrency() {
+		return($this->transactionReceiverCurrency);
 	}
 	
 }
 
 class WecashupTransactionsResponse {
 	
+	private $responseDetails;
+	private $responseCode;
+	private $responseStatus;
 	private $wecashupTransactionsResponseArray = array();
 	
 	public function __construct() {
@@ -239,11 +362,16 @@ class WecashupTransactionsResponse {
 	
 	public static function getInstance(array $response) {
 		$out = new WecashupTransactionsResponse();
-		foreach ($response['transactions'] as $transaction) {
-			$out->addWecashupTransactionResponse(WecashupTransactionResponse::getInstance($transaction));
+		$out->setResponseDetails($response['response_details']);
+		if(in_array('response_content', $response)) {
+			$responseContent = $response['response_content'];
+			foreach ($responseContent['transactions'] as $transaction) {
+				$out->addWecashupTransactionResponse(WecashupTransactionResponse::getInstance($transaction));
+			}
 		}
+		$out->setResponseCode($response['response_code']);
+		$out->setResponseStatus($response['response_status']);
 		return($out);
-		
 	}
 	
 	public function addWecashupTransactionResponse(WecashupTransactionResponse $wecashupTransactionResponse) {
@@ -252,6 +380,30 @@ class WecashupTransactionsResponse {
 	
 	public function getWecashupTransactionsResponseArray() {
 		return($this->wecashupTransactionsResponseArray);
+	}
+	
+	public function setResponseDetails($responseDetails) {
+		$this->responseDetails = $responseDetails;
+	}
+	
+	public function getResponseDetails() {
+		return($this->responseDetails);
+	}
+	
+	public function setResponseStatus($responseStatus) {
+		$this->responseStatus = $responseStatus;
+	}
+	
+	public function getResponseStatus() {
+		return($this->responseStatus);
+	}
+	
+	public function setResponseCode($responseCode) {
+		$this->responseCode = $responseCode;
+	}
+	
+	public function getResponseCode() {
+		return($this->responseCode);
 	}
 	
 }

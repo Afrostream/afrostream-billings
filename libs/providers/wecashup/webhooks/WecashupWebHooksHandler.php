@@ -7,19 +7,15 @@ require_once __DIR__ . '/../client/WecashupClient.php';
 
 class WecashupWebHooksHandler {
 	
+	private $provider = NULL;
+	
 	public function __construct() {
+		$this->provider = ProviderDAO::getProviderByName('wecashup');
 	}
 	
 	public function doProcessWebHook(BillingsWebHook $billingsWebHook, $update_type = 'hook') {
 		try {
 			config::getLogger()->addInfo("processing wecashup webHook with id=".$billingsWebHook->getId()."...");
-			//provider
-			$provider = ProviderDAO::getProviderByName('wecashup');
-			if($provider == NULL) {
-				$msg = "provider named 'wecashup' not found";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
 			$post_data = $billingsWebHook->getPostData();
 			parse_str($post_data, $post_data_as_array);
 			
@@ -63,23 +59,37 @@ class WecashupWebHooksHandler {
 			$wecashupTransactionResponse = $wecashupTransactionsResponseArray[0];
 			switch($wecashupTransactionResponse->getTransactionType()) {
 				case 'payment' :
-					
+					$this->doProcessPayment($wecashupTransactionResponse, $received_transaction_token, $update_type, $billingsWebHook->getId());					
 					break;
 				case 'refund' :
-					
+					$this->doProcessRefund($wecashupTransactionResponse, $received_transaction_token, $update_type, $billingsWebHook->getId());
 					break;
 				default :
-					//Message
+					config::getLogger()->addWarning('transactionType : '.$wecashupTransactionResponse->getTransactionType().' is not yet implemented');
 					break;
 			}
-			//check transaction
-			$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($provider->getId(), $received_transaction_uid);
-			if($billingsTransaction == NULL) {
-				//Exception ? Maybe bypass only...
-				$msg = "no transaction with transaction_uid=".$received_transaction_uid." found";
+			config::getLogger()->addInfo("processing wecashup webHook with id=".$billingsWebHook->getId()." done successfully");
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while processing wecashup webHook with id=".$billingsWebHook->getId().", message=".$e->getMessage();
+			config::getLogger()->addError("processing wecashup webHook with id=".$billingsWebHook->getId()." failed : ". $msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+	}
+	
+	private function doProcessPayment(WecashupTransactionResponse $paymentTransaction, $received_transaction_token, $update_type, $updateId) {
+		config::getLogger()->addInfo('Processing wecashup hook payment...');
+		//check transaction
+		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $paymentTransaction->getTransactionUid());
+		if($billingsTransaction == NULL) {
+			if($paymentTransaction->getTransactionStatus() != 'FAILED') {
+				$msg = "no transaction with transaction_uid=".$paymentTransaction->getTransactionUid()." found";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			} else {
+				$msg = "no transaction with transaction_uid=".$paymentTransaction->getTransactionUid()." found but has been ignored";
+				config::getLogger()->addInfo($msg);
 			}
+		} else {
 			$billingsTransactionOpts = BillingsTransactionOptsDAO::getBillingsTransactionOptByTransactionId($billingsTransaction->getId());
 			if(!array_key_exists('transactionToken', $billingsTransactionOpts->getOpts())) {
 				$msg = "no transactionToken linked to the transaction";
@@ -111,7 +121,7 @@ class WecashupWebHooksHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-			$plan = PlanDAO::getPlanById($db_subscription->getPlanId()); 
+			$plan = PlanDAO::getPlanById($db_subscription->getPlanId());
 			if($plan == NULL) {
 				$msg = "unknown plan with id : ".$db_subscription->getPlanId();
 				config::getLogger()->addError($msg);
@@ -124,10 +134,10 @@ class WecashupWebHooksHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId()); 
+			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 			$api_subscription = clone $db_subscription;
 			$now = new DateTime();
-			switch ($received_transaction_status) {
+			switch ($paymentTransaction->getTransactionStatus()) {
 				case 'PAID' :
 					$api_subscription->setSubStatus('active');
 					$api_subscription->setSubActivatedDate($now);
@@ -143,7 +153,7 @@ class WecashupWebHooksHandler {
 					break;
 				default :
 					//Exception
-					$msg = "unknown transaction_status=".$received_transaction_status;
+					$msg = "unknown transaction_status=".$paymentTransaction->getTransactionStatus();
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
@@ -153,7 +163,7 @@ class WecashupWebHooksHandler {
 				pg_query("BEGIN");
 				//SUBSCRIPTION UPDATE
 				$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
-				$db_subscription = $wecashupSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $billingsWebHook->getId());	
+				$db_subscription = $wecashupSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $billingsWebHook->getId());
 				//TRANSACTION UPDATE
 				$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 				//COMMIT
@@ -162,12 +172,16 @@ class WecashupWebHooksHandler {
 				pg_query("ROLLBACK");
 				throw $e;
 			}
-			config::getLogger()->addInfo("processing wecashup webHook with id=".$billingsWebHook->getId()." done successfully");
-		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while processing wecashup webHook with id=".$billingsWebHook->getId().", message=".$e->getMessage();
-			config::getLogger()->addError("processing wecashup webHook with id=".$billingsWebHook->getId()." failed : ". $msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		//DONE
+		config::getLogger()->addInfo('Processing wecashup hook payment done successfully');
+	}
+	
+	private function doProcessRefund(WecashupTransactionResponse $refundTransaction, $received_transaction_token, $update_type, $updateId) {
+		config::getLogger()->addInfo('Processing wecashup hook refund...');
+		//TODO
+		//DONE
+		config::getLogger()->addInfo('Processing wecashup hook refund done successfully');
 	}
 	
 }
