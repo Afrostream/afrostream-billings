@@ -1786,7 +1786,7 @@ class BillingsSubscription implements JsonSerializable {
 	private $sub_period_ends_date;
 	private $update_type;
 	private $updateId;
-	private $deleted;
+	private $deleted = false;
 	//
 	private $is_active;
 	//
