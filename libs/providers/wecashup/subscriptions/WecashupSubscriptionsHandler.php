@@ -53,14 +53,14 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$wecashupClient = new WecashupClient();
+		/*$wecashupClient = new WecashupClient();
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
-		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transactionId'));
+		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
 		$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray(); 
 		if(count($wecashupTransactionsResponseArray) != 1) {
 			//Exception
-			$msg = "transaction with transactionUid=".$subOpts->getOpt('transactionId')." was not found";
+			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -69,9 +69,10 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			$msg = "The transaction did not succeed, responseStatus=".$wecashupTransactionResponse->getTransactionStatus();
 			config::getLogger()->addError("wecashup subscription creation failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
-		}
+		}*/
 		//
 		$api_subscription = new BillingsSubscription();
+		$api_subscription->setCreationDate(new DateTime());
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('future');
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
@@ -86,6 +87,23 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		/*$wecashupClient = new WecashupClient();
+		$wecashupTransactionRequest = new WecashupTransactionRequest();
+		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
+		$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
+		if(count($wecashupTransactionsResponseArray) != 1) {
+			//Exception
+			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$wecashupTransactionResponse = $wecashupTransactionsResponseArray[0];
+		if($wecashupTransactionResponse->getTransactionStatus() != 'success') {
+			$msg = "The transaction did not succeed, responseStatus=".$wecashupTransactionResponse->getTransactionStatus();
+			config::getLogger()->addError("wecashup subscription creation failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
+		}*/
 		//SUBSCRIPTION CREATE
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
@@ -122,13 +140,19 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted(false);
 		//TRANSACTION CREATE
+		/*$country = NULL;
+		if($wecashupTransactionResponse->getTransactionSenderCountryCodeIso2() != NULL) {
+			$country = $wecashupTransactionResponse->getTransactionSenderCountryCodeIso2();
+		} else {
+			$country = isset($billingInfo) ? $billingInfo->getCountryCode() : NULL;
+		}*/
 		$billingsTransaction = new BillingsTransaction();
 		$billingsTransaction->setProviderId($user->getProviderId());
 		$billingsTransaction->setUserId($user->getId());
 		$billingsTransaction->setCouponId(NULL);
 		$billingsTransaction->setInvoiceId(NULL);
 		$billingsTransaction->setTransactionBillingUuid(guid());
-		$billingsTransaction->setTransactionProviderUuid($subOpts->getOpt('transactionId'));
+		$billingsTransaction->setTransactionProviderUuid($subOpts->getOpt('transaction_uuid'));
 		$billingsTransaction->setTransactionCreationDate($api_subscription->getCreationDate());
 		$billingsTransaction->setAmountInCents($internalPlan->getAmountInCents());
 		$billingsTransaction->setCurrency($internalPlan->getCurrency());
@@ -239,12 +263,12 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 				$api_subscription = clone $db_subscription;
 				//
 				$wecashupTransactionRequest = new WecashupTransactionRequest();
-				$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transactionId'));
+				$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
 				$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
 				$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
 				if(count($wecashupTransactionsResponseArray) != 1) {
 					//Exception
-					$msg = "transaction with transactionUid=".$subOpts->getOpt('transactionId')." was not found";
+					$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
@@ -422,22 +446,67 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$wecashupClient = new WecashupClient();
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
-		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transactionId'));
+		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
 		$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
 		if(count($wecashupTransactionsResponseArray) != 1) {
 			//Exception
-			$msg = "transaction with transactionUid=".$subOpts->getOpt('transactionId')." was not found";
+			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$wecashupTransactionResponse = $wecashupTransactionsResponseArray[0];
-		if($wecashupTransactionResponse->getTransactionStatus() != 'success') {
-			$msg = "The transaction did not succeed, responseStatus=".$wecashupTransactionResponse->getTransactionStatus();
-			config::getLogger()->addError("wecashup subscription creation failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
+		$paymentTransaction = $wecashupTransactionsResponseArray[0];
+		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($provider->getId(), $paymentTransaction->getTransactionUid());
+		if($billingsTransaction == NULL) {
+			$msg = "no transaction with transaction_uid=".$paymentTransaction->getTransactionUid()." found";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		switch ($paymentTransaction->getTransactionStatus()) {
+			case 'TOVALIDATE' :
+				$api_subscription->setSubStatus('future');
+				$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::waiting);
+				$billingsTransaction->setUpdateType($update_type);
+				if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
+					$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
+				}
+				break;
+			case 'PENDING' :
+				$api_subscription->setSubStatus('future');
+				$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::waiting);
+				$billingsTransaction->setUpdateType($update_type);
+				if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
+					$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
+				}
+				break;
+			case 'PAID' :
+				$api_subscription->setSubStatus('active');
+				$api_subscription->setSubActivatedDate($now);
+				$api_subscription->setSubPeriodStartedDate($now);
+				$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::success);
+				$billingsTransaction->setUpdateType($update_type);
+				if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
+					$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
+				}
+				break;
+			case 'FAILED' :
+				$api_subscription->setSubStatus('expired');
+				$api_subscription->setSubExpiresDate($now);
+				$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::failed);
+				$billingsTransaction->setUpdateType($update_type);
+				if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
+					$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
+				}
+				break;
+			default :
+				//Exception
+				$msg = "unknown transaction_status=".$paymentTransaction->getTransactionStatus();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				break;
+		}		
 		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
+		$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		return($db_subscription);
 	}
 	

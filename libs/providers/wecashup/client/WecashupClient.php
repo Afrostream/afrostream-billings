@@ -280,7 +280,9 @@ class WecashupTransactionResponse {
 	}
 	
 	public function setTransactionSenderCountryCodeIso2($transactionSenderCountryCodeIso2) {
-		$this->transactionSenderCountryCodeIso2 = $transactionSenderCountryCodeIso2;
+		if(isset($transactionSenderCountryCodeIso2)) {
+			$this->transactionSenderCountryCodeIso2 = strtoupper($transactionSenderCountryCodeIso2);
+		}
 	}
 	
 	public function getTransactionSenderCountryCodeIso2() {
