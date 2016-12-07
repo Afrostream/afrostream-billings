@@ -1428,7 +1428,7 @@ class BillingsSubscriptionDAO {
 						dbGlobal::toISODate($subscription->getSubPeriodEndsDate()),
 						$subscription->getUpdateType(),
 						$subscription->getUpdateId(),
-						$subscription->getDeleted(),
+						$subscription->getDeleted() === true ? 'true' : 'false',
 						$subscription->getBillingInfoId()));
 		$row = pg_fetch_row($result);
 		// free result
@@ -1573,7 +1573,7 @@ class BillingsSubscriptionDAO {
 	public static function updateDeleted(BillingsSubscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, deleted = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
-				array(	$subscription->getDeleted(),
+				array(	$subscription->getDeleted() === true ? 'true' : 'false',
 						$subscription->getId()));
 		// free result
 		pg_free_result($result);
