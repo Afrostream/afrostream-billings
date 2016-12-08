@@ -573,7 +573,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             		}
             	}
             }
-            $amount = number_format(floor($amount - $discount));
+            $amount = floor($amount - $discount);
             $chargeData = array(
                 "amount" => $amount,
                 "currency" => $internalPlan->getCurrency(),
