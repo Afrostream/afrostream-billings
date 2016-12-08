@@ -528,7 +528,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription. Missing stripe token');
         }
         //couponCode
-        if(array_key_exists('couponCode', $subOpts->getOpts())) {
+        /*if(array_key_exists('couponCode', $subOpts->getOpts())) {
         	$couponCode = $subOpts->getOpts()['couponCode'];
         	if(strlen($couponCode) > 0) {
 				///HOT FIX
@@ -537,7 +537,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         		config::getLogger()->addError($msg);
         		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_INTERNALPLAN_INCOMPATIBLE);
         	}
-        }
+        }*/
         try {
             $this->log('Update customer : set source : '.$subOpts->getOpt('customerBankAccountToken'));
 
@@ -545,9 +545,33 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             $customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
             $customer->source = $subOpts->getOpt('customerBankAccountToken');
             $customer->save();
-			
+            
+            $amount = $internalPlan->getAmountInCents();
+            $discount = 0;
+            if(array_key_exists('couponCode', $subOpts->getOpts())) {
+            	$couponCode = $subOpts->getOpts()['couponCode'];
+            	if(strlen($couponCode) > 0) {
+            		$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+            		$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+            		if($billingInternalCouponsCampaign->getDiscountDuration() != 'once') {
+            			$msg = "discount is not compatible with this plan";
+            			config::getLogger()->addError($msg);
+            			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+            		}
+            		switch($billingInternalCouponsCampaign->getDiscountType()) {
+            			case 'amount' :
+            				break;
+            			case 'percent':
+            				break;
+            			default :
+            				$msg = "unsupported discount_type=".$billingInternalCouponsCampaign->getDiscountType();
+            				config::getLogger()->addError($msg);
+            				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+            				break;
+            		}
+            	}
+            }
             $chargeData = array(
-                "amount" => $internalPlan->getAmountInCents(),
                 "currency" => $internalPlan->getCurrency(),
                 "customer" => $user->getUserProviderUuid(),
                 "description" => $plan->getPlanUuid(),
