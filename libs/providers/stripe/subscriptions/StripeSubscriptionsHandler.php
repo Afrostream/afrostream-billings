@@ -551,7 +551,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             if(array_key_exists('couponCode', $subOpts->getOpts())) {
             	$couponCode = $subOpts->getOpts()['couponCode'];
             	if(strlen($couponCode) > 0) {
-            		$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+            		$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
             		$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
             		if($billingInternalCouponsCampaign->getDiscountDuration() != 'once') {
             			$msg = "discount is not compatible with this plan";
