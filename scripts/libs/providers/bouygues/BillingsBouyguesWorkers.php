@@ -84,52 +84,53 @@ class BillingsBouyguesWorkers extends BillingsWorkers {
 		try {
 			//
 			ScriptsConfig::getLogger()->addInfo("refreshing bouygues subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()."...");
-			try {
-				$user = UserDAO::getUserById($subscription->getUserId());
-				if($user == NULL) {
-					$msg = "unknown user with id : ".$subscription->getUserId();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
-				if($providerPlan == NULL) {
-					$msg = "unknown plan with id : ".$subscription->getPlanId();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				$bouyguesTVClient = new BouyguesTVClient($user->getUserProviderUuid());
-				$bouyguesSubscriptionResponse = $bouyguesTVClient->getSubscription($providerPlan->getPlanUuid());
-				$bouyguesSubscription = $bouyguesSubscriptionResponse->getBouyguesSubscription();
-				if($bouyguesSubscription->getResultMessage() == 'SubscribedNotCoupled')
-				{
+			$user = UserDAO::getUserById($subscription->getUserId());
+			if($user == NULL) {
+				$msg = "unknown user with id : ".$subscription->getUserId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
+			if($providerPlan == NULL) {
+				$msg = "unknown plan with id : ".$subscription->getPlanId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$bouyguesTVClient = new BouyguesTVClient($user->getUserProviderUuid());
+			$bouyguesSubscriptionResponse = $bouyguesTVClient->getSubscription($providerPlan->getPlanUuid());
+			$bouyguesSubscription = $bouyguesSubscriptionResponse->getBouyguesSubscription();
+			if($bouyguesSubscription->getResultMessage() == 'SubscribedNotCoupled') {
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
+				try {
 					pg_query("BEGIN");
-					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
 					$subscriptionsHandler = new SubscriptionsHandler();
 					$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
 					$billingsSubscriptionActionLog->setProcessingStatus('done');
-					BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 					//COMMIT
 					pg_query("COMMIT");
-				} else if($bouyguesSubscription->getResultMessage() == 'NotSubscribedNotCoupled') {
+				} catch (Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			} else if($bouyguesSubscription->getResultMessage() == 'NotSubscribedNotCoupled') {
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_expire");
+				try {
 					pg_query("BEGIN");
-					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_expire");
 					$subscriptionsHandler = new SubscriptionsHandler();
 					$subscriptionsHandler->doExpireSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), new DateTime(), false);
 					$billingsSubscriptionActionLog->setProcessingStatus('done');
-					BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 					//COMMIT
 					pg_query("COMMIT");
-				} else {
-					$msg = "BouyguesSubscription resultMessage not in (SubscribedNotCoupled, NotSubscribedNotCoupled), resultMessage=".$bouyguesSubscription->getResultMessage();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::BOUYGUES_SUBSCRIPTION_BAD_STATUS);
+				} catch (Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
 				}
-			} catch (BillingsException $e) {
-				pg_query("ROLLBACK");
-				throw $e;
-			} catch (Exception $e) {
-				pg_query("ROLLBACK");
-				throw $e;
+			} else {
+				$msg = "BouyguesSubscription resultMessage not in (SubscribedNotCoupled, NotSubscribedNotCoupled), resultMessage=".$bouyguesSubscription->getResultMessage();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::BOUYGUES_SUBSCRIPTION_BAD_STATUS);
 			}
 			ScriptsConfig::getLogger()->addInfo("refreshing bouygues subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()." done successfully");
 			$billingsSubscriptionActionLog = NULL;
@@ -152,7 +153,7 @@ class BillingsBouyguesWorkers extends BillingsWorkers {
 			throw $e;
 		} finally {
 			if(isset($billingsSubscriptionActionLog)) {
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 			}
 		}
 	}

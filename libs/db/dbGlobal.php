@@ -2560,7 +2560,7 @@ class BillingsWebHookLogDAO {
 		$row = pg_fetch_row($result);
 		// free result
 		pg_free_result($result);
-		return(self::getBillingsWebHookLogById($row[0]));
+		return(self::getBillingsWebHookLogById($billingsWebHookLog->getId()));
 	}
 
 	public static function getBillingsWebHookLogById($id) {
@@ -2752,7 +2752,7 @@ class BillingsSubscriptionActionLogDAO {
 		$row = pg_fetch_row($result);
 		// free result
 		pg_free_result($result);
-		return(self::getBillingsSubscriptionActionLogById($row[0]));
+		return(self::getBillingsSubscriptionActionLogById($billingsSubscriptionActionLog->getId()));
 	}
 	
 	public static function getBillingsSubscriptionActionLogById($id) {
@@ -2871,7 +2871,7 @@ class ProcessingLogDAO {
 		$row = pg_fetch_row($result);
 		// free result
 		pg_free_result($result);
-		return(self::getProcessingLogById($row[0]));
+		return(self::getProcessingLogById($processingLog->getId()));
 	}
 	
 	public static function getProcessingLogById($id) {

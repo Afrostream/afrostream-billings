@@ -83,13 +83,13 @@ class BillingsGocardlessWorkers extends BillingsWorkers {
 		try {
 			//
 			ScriptsConfig::getLogger()->addInfo("refreshing gocardless subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()."...");
+			$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
 			try {
 				pg_query("BEGIN");
-				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
 				$subscriptionsHandler = new SubscriptionsHandler();
 				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch (Exception $e) {
@@ -108,7 +108,7 @@ class BillingsGocardlessWorkers extends BillingsWorkers {
 			throw $e;
 		} finally {
 			if(isset($billingsSubscriptionActionLog)) {
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 			}
 		}
 	}
