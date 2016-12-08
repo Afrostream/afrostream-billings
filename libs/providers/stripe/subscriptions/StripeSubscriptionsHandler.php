@@ -560,8 +560,10 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             		}
             		switch($billingInternalCouponsCampaign->getDiscountType()) {
             			case 'amount' :
+            				$discount = $billingInternalCouponsCampaign->getAmountInCents();
             				break;
             			case 'percent':
+            				$discount = $internalPlan->getAmountInCents() * $billingInternalCouponsCampaign->getPercent() / 100;
             				break;
             			default :
             				$msg = "unsupported discount_type=".$billingInternalCouponsCampaign->getDiscountType();
@@ -571,7 +573,9 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             		}
             	}
             }
+            $amount = number_format(floor($amount - $discount));
             $chargeData = array(
+                "amount" => $amount,
                 "currency" => $internalPlan->getCurrency(),
                 "customer" => $user->getUserProviderUuid(),
                 "description" => $plan->getPlanUuid(),
