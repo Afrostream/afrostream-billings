@@ -270,6 +270,24 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			if(!array_key_exists('transaction_token', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'transaction_token' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('transaction_confirmation_code', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'transaction_confirmation_code' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('transaction_provider_name', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'transaction_provider_name' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			break;
 		default :
 			//nothing

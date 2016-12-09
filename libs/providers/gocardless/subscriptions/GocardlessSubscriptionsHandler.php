@@ -325,9 +325,11 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$db_subscription->setSubStatus('future');
 				break;
 			case 'finished' :
-				$db_subscription->setSubStatus('expired');
+				//For more infos : https://developer.gocardless.com/api-reference/#subscriptions-get-a-single-subscription
+				//It tells us that we will have no more payments but the subscripion will end later
+				$db_subscription->setSubStatus('active');
 				//we do not really know
-				$db_subscription->setSubExpiresDate(new DateTime($api_subscription->created_at));
+				$db_subscription->setSubActivatedDate(new DateTime($api_subscription->created_at));
 				break;
 			case 'customer_approval_denied' :
 				$db_subscription->setSubStatus('expired');
@@ -478,12 +480,9 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
 				break;
 			case 'finished' :
-				$db_subscription->setSubStatus('expired');
-				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-				if($db_subscription->getSubExpiresDate() == NULL) {
-					$db_subscription->setSubExpiresDate($now);
-					$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
-				}
+				//For more infos : https://developer.gocardless.com/api-reference/#subscriptions-get-a-single-subscription
+				//It tells us that we will have no more payments but the subscripion will end later
+				config::getLogger()->addInfo("gocardless dbsubscription update for userid=".$user->getId().", gocardless_subscription_uuid=".$api_subscription->id.", id=".$db_subscription->getId().", gocardless_subscription_status=finished ignored");
 				break;
 			case 'customer_approval_denied' :
 				$db_subscription->setSubStatus('expired');

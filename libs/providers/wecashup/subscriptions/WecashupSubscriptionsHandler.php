@@ -23,7 +23,38 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			}
 			checkSubOptsArray($subOpts->getOpts(), 'wecashup', 'create');
 			$wecashupClient = new WecashupClient();
+			//Check
+			$wecashupTransactionRequest = new WecashupTransactionRequest();
+			$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+			$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
+			$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
+			if(count($wecashupTransactionsResponseArray) != 1) {
+				//Exception
+				$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$wecashupTransactionResponse = $wecashupTransactionsResponseArray[0];
+			if($internalPlan->getCurrency() != $wecashupTransactionResponse->getTransactionReceiverCurrency()) {
+				//Exception
+				$msg = "currency of the transaction differs from currency of the plan";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			}
+			$amount_from_transaction = $wecashupTransactionResponse->getTransactionReceiverTotalAmount();
+			$amount_in_cents_from_transation = intval($amount_from_transaction * 100);
+			if($internalPlan->getAmountInCents() != $amount_in_cents_from_transation) {
+				//Exception
+				$msg = "amount in cents (".$amount_in_cents_from_transation.") of the transaction differs from currency of the plan (".$internalPlan->getAmountInCents().")";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//Validate
 			$wecashupValidateTransactionRequest = new WecashupValidateTransactionRequest();
+			$wecashupValidateTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+			$wecashupValidateTransactionRequest->setTransactionToken($subOpts->getOpt('transaction_token'));
+			$wecashupValidateTransactionRequest->setTransactionConfirmationCode($subOpts->getOpt('transaction_confirmation_code'));
+			$wecashupValidateTransactionRequest->setTransactionProviderName($subOpts->getOpt('transaction_confirmation_code'));
 			$wecashupValidateTransactionResponse = $wecashupClient->validateTransaction($wecashupValidateTransactionRequest);
 			if($wecashupValidateTransactionResponse->getResponseStatus() != 'success') {
 				$msg = "The transaction did not succeed, responseStatus=".$wecashupValidateTransactionResponse->getResponseStatus().', responseCode='.$wecashupValidateTransactionResponse->getResponseCode();
