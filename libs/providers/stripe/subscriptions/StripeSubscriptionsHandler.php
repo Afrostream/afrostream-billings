@@ -145,9 +145,6 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         	//
         	$now = new DateTime();
         	//userInternalCoupon
-        	if($userInternalCoupon->getId() == NULL) {
-        		$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
-        	}
         	$userInternalCoupon->setStatus("redeemed");
         	$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
         	$userInternalCoupon->setRedeemedDate($now);

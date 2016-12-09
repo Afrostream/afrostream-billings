@@ -1392,6 +1392,7 @@ class SubscriptionsHandler {
 			$userInternalCoupon->setUuid(guid());
 			$userInternalCoupon->setUserId($user->getId());
 			$userInternalCoupon->setExpiresDate($internalCoupon->getExpiresDate());
+			$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
 		}
 		//Check userInternalCoupon
 		if($userInternalCoupon->getStatus() == 'redeemed') {
