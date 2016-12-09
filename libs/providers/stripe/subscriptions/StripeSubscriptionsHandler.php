@@ -527,17 +527,6 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         if (is_null($subOpts->getOpt('customerBankAccountToken'))) {
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription. Missing stripe token');
         }
-        //couponCode
-        /*if(array_key_exists('couponCode', $subOpts->getOpts())) {
-        	$couponCode = $subOpts->getOpts()['couponCode'];
-        	if(strlen($couponCode) > 0) {
-				///HOT FIX
-        		//Exception
-        		$msg = "This couponCode '.$couponCode.' is not compatible with this Plan";
-        		config::getLogger()->addError($msg);
-        		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_INTERNALPLAN_INCOMPATIBLE);
-        	}
-        }*/
         try {
             $this->log('Update customer : set source : '.$subOpts->getOpt('customerBankAccountToken'));
 
@@ -553,6 +542,8 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             	if(strlen($couponCode) > 0) {
             		$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
             		$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+            		$billingInternalCoupon = $couponsInfos['internalCoupon'];
+            		$billingUserInternalCoupon = $couponsInfos['userInternalCoupon'];
             		if($billingInternalCouponsCampaign->getDiscountDuration() != 'once') {
             			$msg = "discount is not compatible with this plan";
             			config::getLogger()->addError($msg);
@@ -571,9 +562,18 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
             				break;
             		}
+            		//
+            		$metadata['AfrCouponsCampaignInternalBillingUuid'] = $billingInternalCouponsCampaign->getUuid();
+            		$metadata['AfrInternalCouponBillingUuid'] = $billingInternalCoupon->getUuid();
+            		$metadata['AfrInternalUserCouponBillingUuid'] =	$billingUserInternalCoupon->getUuid();
             	}
             }
             $amount = floor($amount - $discount);
+            if($amount <= 0) {
+            	$msg = "amount is not compatible with this plan";
+            	config::getLogger()->addError($msg);
+            	throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+            }
             $chargeData = array(
                 "amount" => $amount,
                 "currency" => $internalPlan->getCurrency(),
