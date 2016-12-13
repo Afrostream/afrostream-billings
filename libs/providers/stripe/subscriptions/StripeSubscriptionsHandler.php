@@ -279,26 +279,36 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      */
     public function doCancelSubscription(BillingsSubscription $billingSubscription, \DateTime $cancelDate)
     {
-        // already canceled, return gracefully
         if (in_array($billingSubscription->getSubStatus(), ['canceled', 'expired'])) {
-            return(BillingsSubscriptionDAO::getBillingsSubscriptionById($billingSubscription->getId()));
+        	//nothing todo : already done or in process
         } else {
-
 	        // get user
 	        $user = UserDAO::getUserById($billingSubscription->getUserId());
-	
-	        $subscription = $this->getSubscription($billingSubscription->getSubUid(), $user);
-	
-	        $this->log('Cancel subscription id %s ', [$subscription['id']]);
-	
-	        $subscription->cancel(['at_period_end' => true]);
-	        $subscription->save();
-	
-	        $billingSubscription->setSubCanceledDate($cancelDate);
-	        $billingSubscription->setSubStatus('canceled');
-	
-	        return(BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription));
+            $internalPlanId = InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($billingSubscription->getPlanId());
+            $internalPlan   = InternalPlanDAO::getInternalPlanById($internalPlanId);
+            if ($internalPlan->getCycle() == PlanCycle::auto) {
+           		$subscription = $this->getSubscription($billingSubscription->getSubUid(), $user);
+             	$this->log('Cancel subscription id %s ', [$subscription['id']]);
+                $subscription->cancel(['at_period_end' => true]);
+            	$subscription->save();
+            } else {
+            	throw new BillingsException(new ExceptionType(ExceptionType::internal), "Subscription with cycle=".$internalPlan->getCycle()." cannot be canceled");
+            }
+            $billingSubscription->setSubCanceledDate($cancelDate);
+            $billingSubscription->setSubStatus('canceled');
+            try {
+            	//START TRANSACTION
+            	pg_query("BEGIN");
+            	BillingsSubscriptionDAO::updateSubCanceledDate($billingSubscription);
+            	BillingsSubscriptionDAO::updateSubStatus($billingSubscription);
+            	//COMMIT
+            	pg_query("COMMIT");
+            } catch(Exception $e) {
+            	pg_query("ROLLBACK");
+            	throw $e;
+            }
         }
+        return(BillingsSubscriptionDAO::getBillingsSubscriptionById($billingSubscription->getId()));
     }
 
 

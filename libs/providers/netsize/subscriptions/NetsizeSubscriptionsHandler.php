@@ -374,9 +374,10 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 				//430 - Expired
 				//431 - Suspended
+				//432 - Cancelled
 				//433 - Failed
-				$array_sub_is_expired = [430, 431, 433];
-				if(!in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_expired)) {
+				$array_sub_can_be_expired = [430, 431, 432, 433];
+				if(!in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_can_be_expired)) {
 					$msg = "netsize subscription cannot be expired, code=".$getStatusResponse->getTransactionStatusCode();
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
