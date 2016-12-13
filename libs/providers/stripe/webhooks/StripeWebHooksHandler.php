@@ -99,3 +99,5 @@ class StripeWebHooksHandler
         config::getLogger()->addInfo('STRIPE - '.$message);
     }
 }
+
+?>

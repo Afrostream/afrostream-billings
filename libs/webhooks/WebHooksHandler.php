@@ -72,6 +72,10 @@ class WebHooksHander {
 					$netsizeWebHooksHandler = new NetsizeWebHooksHandler();
 					$netsizeWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
 					break;
+				case 'wecashup' :
+					$wecashupWebHooksHandler = new WecashupWebHooksHandler();
+					$wecashupWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);

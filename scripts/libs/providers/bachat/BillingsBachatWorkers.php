@@ -665,7 +665,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$subscriptionsHandler = new SubscriptionsHandler();
 				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch(Exception $e) {
@@ -692,7 +692,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			/*throw $e;*/
 		} finally {
 			if(isset($billingsSubscriptionActionLog)) {
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 			}
 		}
 	}
@@ -901,7 +901,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$subscriptionsHandler = new SubscriptionsHandler();
 				$subscriptionsHandler->doCancelSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), $cancel_date, false);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch(Exception $e) {

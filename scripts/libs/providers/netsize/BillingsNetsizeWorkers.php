@@ -83,61 +83,68 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 		try {
 			//
 			ScriptsConfig::getLogger()->addInfo("refreshing netsize subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()."...");
-			try {
-				$netsizeClient = new NetsizeClient();
-				
-				$getStatusRequest = new GetStatusRequest();
-				$getStatusRequest->setTransactionId($subscription->getSubUid());
-				
-				$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
-				//420 - Activated
-				//421 - Activated (Auto Billed)
-				$array_sub_is_open = [420, 421];
-				//422 - Activated (Termination in Progress)
-				//432 - Cancelled
-				$array_sub_is_canceled = [422, 432];
-				//430 - Expired
-				//431 - Suspended
-				//433 - Failed
-				$array_sub_is_expired = [430, 431, 433];
-				if(in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_open)) {
+			$netsizeClient = new NetsizeClient();
+			
+			$getStatusRequest = new GetStatusRequest();
+			$getStatusRequest->setTransactionId($subscription->getSubUid());
+			
+			$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
+			//420 - Activated
+			//421 - Activated (Auto Billed)
+			$array_sub_is_open = [420, 421];
+			//422 - Activated (Termination in Progress)
+			//432 - Cancelled
+			$array_sub_is_canceled = [422, 432];
+			//430 - Expired
+			//431 - Suspended
+			//433 - Failed
+			$array_sub_is_expired = [430, 431, 433];
+			if(in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_open)) {
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
+				try {
 					pg_query("BEGIN");
-					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
 					$subscriptionsHandler = new SubscriptionsHandler();
 					$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
 					$billingsSubscriptionActionLog->setProcessingStatus('done');
-					BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 					//COMMIT
 					pg_query("COMMIT");
-				} else if(in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_canceled)) {
+				} catch (Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			} else if(in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_canceled)) {
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_cancel");
+				try {
 					pg_query("BEGIN");
-					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_cancel");
 					$subscriptionsHandler = new SubscriptionsHandler();
 					$subscriptionsHandler->doCancelSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), new DateTime(), false);
 					$billingsSubscriptionActionLog->setProcessingStatus('done');
-					BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 					//COMMIT
 					pg_query("COMMIT");
-				} else if(in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_expired)) {
+				} catch (Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			} else if(in_array($getStatusResponse->getTransactionStatusCode(), $array_sub_is_expired)) {
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_expire");
+				try {
 					pg_query("BEGIN");
-					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_expire");
 					$subscriptionsHandler = new SubscriptionsHandler();
 					$subscriptionsHandler->doExpireSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), new DateTime(), false);
 					$billingsSubscriptionActionLog->setProcessingStatus('done');
-					BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 					//COMMIT
 					pg_query("COMMIT");
-				} else {
-					$msg = "transaction-status/@code ".$getStatusResponse->getTransactionStatusCode()." is unknown";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::NETSIZE_SUBSCRIPTION_BAD_STATUS);
+				} catch (Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
 				}
-			} catch (BillingsException $e) {
-				pg_query("ROLLBACK");
-				throw $e;
-			} catch (Exception $e) {
-				pg_query("ROLLBACK");
-				throw $e;
+			} else {
+				$msg = "transaction-status/@code ".$getStatusResponse->getTransactionStatusCode()." is unknown";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::NETSIZE_SUBSCRIPTION_BAD_STATUS);
 			}
 			ScriptsConfig::getLogger()->addInfo("refreshing netsize subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()." done successfully");
 			$billingsSubscriptionActionLog = NULL;
@@ -160,7 +167,7 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 			throw $e;
 		} finally {
 			if(isset($billingsSubscriptionActionLog)) {
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 			}
 		}
 	}

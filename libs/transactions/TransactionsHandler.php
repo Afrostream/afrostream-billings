@@ -81,7 +81,24 @@ class TransactionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 	}
-		
+	
+	//TODO
+	/*public function doCreateTransaction(BillingsTransaction $billingsTransaction,
+			User $user, 
+			BillingsSubscription $billingsSubscription = NULL,
+			BillingUserInternalCoupon $billingUserInternalCoupon = NULL,
+			BillingsTransaction $parentBillingTransaction = NULL)
+	{
+		$billingsTransaction->setProviderId($user->getProviderId());
+		$billingsTransaction->setUserId($user->getId());
+		$billingsTransaction->setSubId(isset($billingsSubscription) ? $billingsSubscription->getId() : NULL);
+		$billingsTransaction->setCouponId(isset($billingUserInternalCoupon) ? $billingUserInternalCoupon->getId() : NULL);
+		$billingsTransaction->setInvoiceId(NULL);
+		$billingsTransaction->setTransactionBillingUuid(guid());
+		$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
+		return($billingsTransaction);
+	}*/
+	
 }
 
 ?>
