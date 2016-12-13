@@ -12,6 +12,7 @@ require_once __DIR__ . '/../providers/bouygues/users/BouyguesUsersHandler.php';
 require_once __DIR__ . '/../providers/stripe/users/StripeUsersHandler.php';
 require_once __DIR__ . '/../providers/braintree/users/BraintreeUsersHandler.php';
 require_once __DIR__ . '/../providers/netsize/users/NetsizeUsersHandler.php';
+require_once __DIR__ . '/../providers/wecashup/users/WecashupUsersHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/utils.php';
 
@@ -253,6 +254,10 @@ class UsersHandler {
 					$netsizeUsersHandler = new NetsizeUsersHandler();
 					$user_provider_uuid = $netsizeUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
 					break;
+				case 'wecashup' :
+					$wecashupUsersHandler = new WecashupUsersHandler();
+					$user_provider_uuid = $wecashupUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider_name;
 					config::getLogger()->addError($msg);
@@ -351,10 +356,6 @@ class UsersHandler {
 				case 'braintree' :
 					$braintreeUsersHandler = new BraintreeUsersHandler();
 					$braintreeUsersHandler->doUpdateUserOpts($db_user->getUserProviderUuid(), $db_user_opts->getOpts());
-					break;
-				case 'netsize' :
-					$netsizeUsersHandler = new NetsizeUsersHandler();
-					$netsizeUsersHandler->doUpdateUserOpts($db_user->getUserProviderUuid(), $db_user_opts->getOpts());
 					break;
 				default:
 					//nothing to do

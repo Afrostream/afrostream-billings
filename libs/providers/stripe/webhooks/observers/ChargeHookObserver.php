@@ -82,3 +82,5 @@ class ChargeHookObserver implements HookInterface
     }
 
 }
+
+?>

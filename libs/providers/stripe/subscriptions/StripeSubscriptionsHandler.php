@@ -145,9 +145,6 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         	//
         	$now = new DateTime();
         	//userInternalCoupon
-        	if($userInternalCoupon->getId() == NULL) {
-        		$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
-        	}
         	$userInternalCoupon->setStatus("redeemed");
         	$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
         	$userInternalCoupon->setRedeemedDate($now);
@@ -289,13 +286,18 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
 
 	        // get user
 	        $user = UserDAO::getUserById($billingSubscription->getUserId());
-	
-	        $subscription = $this->getSubscription($billingSubscription->getSubUid(), $user);
-	
-	        $this->log('Cancel subscription id %s ', [$subscription['id']]);
-	
-	        $subscription->cancel(['at_period_end' => true]);
-	        $subscription->save();
+
+            $internalPlanId = InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($billingSubscription->getPlanId());
+            $internalPlan   = InternalPlanDAO::getInternalPlanById($internalPlanId);
+
+            if ($internalPlan->getCycle() == PlanCycle::auto) {
+                $subscription = $this->getSubscription($billingSubscription->getSubUid(), $user);
+
+                $this->log('Cancel subscription id %s ', [$subscription['id']]);
+
+                $subscription->cancel(['at_period_end' => true]);
+                $subscription->save();
+            }
 	
 	        $billingSubscription->setSubCanceledDate($cancelDate);
 	        $billingSubscription->setSubStatus('canceled');
@@ -527,17 +529,6 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         if (is_null($subOpts->getOpt('customerBankAccountToken'))) {
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription. Missing stripe token');
         }
-        //couponCode
-        if(array_key_exists('couponCode', $subOpts->getOpts())) {
-        	$couponCode = $subOpts->getOpts()['couponCode'];
-        	if(strlen($couponCode) > 0) {
-				///HOT FIX
-        		//Exception
-        		$msg = "This couponCode '.$couponCode.' is not compatible with this Plan";
-        		config::getLogger()->addError($msg);
-        		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_INTERNALPLAN_INCOMPATIBLE);
-        	}
-        }
         try {
             $this->log('Update customer : set source : '.$subOpts->getOpt('customerBankAccountToken'));
 
@@ -545,9 +536,48 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             $customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
             $customer->source = $subOpts->getOpt('customerBankAccountToken');
             $customer->save();
-			
+            
+            $amount = $internalPlan->getAmountInCents();
+            $discount = 0;
+            if(array_key_exists('couponCode', $subOpts->getOpts())) {
+            	$couponCode = $subOpts->getOpts()['couponCode'];
+            	if(strlen($couponCode) > 0) {
+            		$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
+            		$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+            		$billingInternalCoupon = $couponsInfos['internalCoupon'];
+            		$billingUserInternalCoupon = $couponsInfos['userInternalCoupon'];
+            		if($billingInternalCouponsCampaign->getDiscountDuration() != 'once') {
+            			$msg = "discount is not compatible with this plan";
+            			config::getLogger()->addError($msg);
+            			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+            		}
+            		switch($billingInternalCouponsCampaign->getDiscountType()) {
+            			case 'amount' :
+            				$discount = $billingInternalCouponsCampaign->getAmountInCents();
+            				break;
+            			case 'percent':
+            				$discount = $internalPlan->getAmountInCents() * $billingInternalCouponsCampaign->getPercent() / 100;
+            				break;
+            			default :
+            				$msg = "unsupported discount_type=".$billingInternalCouponsCampaign->getDiscountType();
+            				config::getLogger()->addError($msg);
+            				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+            				break;
+            		}
+            		//
+            		$metadata['AfrCouponsCampaignInternalBillingUuid'] = $billingInternalCouponsCampaign->getUuid();
+            		$metadata['AfrInternalCouponBillingUuid'] = $billingInternalCoupon->getUuid();
+            		$metadata['AfrInternalUserCouponBillingUuid'] =	$billingUserInternalCoupon->getUuid();
+            	}
+            }
+            $amount = floor($amount - $discount);
+            if($amount <= 0) {
+            	$msg = "amount is not compatible with this plan";
+            	config::getLogger()->addError($msg);
+            	throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+            }
             $chargeData = array(
-                "amount" => $internalPlan->getAmountInCents(),
+                "amount" => $amount,
                 "currency" => $internalPlan->getCurrency(),
                 "customer" => $user->getUserProviderUuid(),
                 "description" => $plan->getPlanUuid(),
@@ -674,7 +704,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $billingSubscription->setSubExpiresDate(NULL);
         $billingSubscription->setSubPeriodStartedDate($this->createDate($subscription['current_period_start']));
         $billingSubscription->setSubPeriodEndsDate($this->createDate($subscription['current_period_end']));
-        $billingSubscription->setDeleted('false');
+        $billingSubscription->setDeleted(false);
         return $billingSubscription;
     }
 

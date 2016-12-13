@@ -194,6 +194,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
 		$api_subscription = new BillingsSubscription();
+		$api_subscription->setCreationDate(new DateTime());
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('active');
 		$start_date = new DateTime();
@@ -263,7 +264,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setUpdateType($update_type);
 		//
 		$db_subscription->setUpdateId($updateId);
-		$db_subscription->setDeleted('false');
+		$db_subscription->setDeleted(false);
 		//?COUPON? JUST TEST IF READY TO USE (all other case seen before)
 		$internalCoupon = NULL;
 		$userInternalCoupon = NULL;

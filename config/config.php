@@ -393,6 +393,24 @@ if(getEnv('CONTEXTS_SWITCH_EXPIRED_DATE_BOUNDARY_TO_COMMON_CONTEXT') === false) 
 	putEnv('CONTEXTS_SWITCH_EXPIRED_DATE_BOUNDARY_TO_COMMON_CONTEXT=2016-11-21 23:59:59');
 }
 
+#Wecashup
+
+if(getEnv('WECASHUP_MERCHANT_UID') === false) {
+	putEnv('WECASHUP_MERCHANT_UID=bzmSSCP8WqUMDDH4sPb2w8hB14F2');
+}
+
+if(getEnv('WECASHUP_MERCHANT_PUBLIC_KEY') === false) {
+	putEnv('WECASHUP_MERCHANT_PUBLIC_KEY=NoZ7voE0KDRSBnxaB7oqcGdWQnrLVxAZm9NLiEIMyYvq');
+}
+
+if(getEnv('WECASHUP_MERCHANT_SECRET') === false) {
+	putEnv('WECASHUP_MERCHANT_SECRET=PwWqkwwq8L7nlb61');
+}
+
+if(getEnv('WECASHUP_API_URL') === false) {
+	putEnv('WECASHUP_API_URL=https://www.wecashup.com/api/v1.0/merchants');
+}
+
 #logger, #db_conn, ...
 
 class config {
