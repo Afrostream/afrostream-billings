@@ -42,10 +42,10 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
 			}
 			$amount_from_transaction = $wecashupTransactionResponse->getTransactionReceiverTotalAmount();
-			$amount_in_cents_from_transation = intval($amount_from_transaction * 100);
-			if($internalPlan->getAmountInCents() != $amount_in_cents_from_transation) {
+			$amount_in_cents_from_transaction = intval($amount_from_transaction * 100);
+			if($internalPlan->getAmountInCents() != $amount_in_cents_from_transaction) {
 				//Exception
-				$msg = "amount in cents (".$amount_in_cents_from_transation.") of the transaction differs from currency of the plan (".$internalPlan->getAmountInCents().")";
+				$msg = "amount in cents (".$amount_in_cents_from_transaction.") of the transaction differs from currency of the plan (".$internalPlan->getAmountInCents().")";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
