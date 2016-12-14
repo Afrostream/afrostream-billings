@@ -62,13 +62,13 @@ class CashwayWebHooksHandler {
 				if($userInternalCoupon->getSubId() != NULL) {
 					$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($userInternalCoupon->getSubId());
 					if($db_subscription == NULL) {
-						$msg = "subscription with id=".$userInternalCoupon->getSubId();
+						$msg = "unknown subscription with id=".$userInternalCoupon->getSubId();
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					$user = UserDAO::getUserById($db_subscription->getUserId());
 					if($user == NULL) {
-						$msg = "user with id=".$db_subscription->getUserId();
+						$msg = "unknown user with id=".$db_subscription->getUserId();
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}

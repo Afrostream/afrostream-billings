@@ -14,6 +14,7 @@ require_once __DIR__ . '/../providers/bouygues/subscriptions/BouyguesSubscriptio
 require_once __DIR__ . '/../providers/stripe/subscriptions/StripeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/braintree/subscriptions/BraintreeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/netsize/subscriptions/NetsizeSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/wecashup/subscriptions/WecashupSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/BillingsException.php';
 require_once __DIR__ . '/../utils/utils.php';
@@ -176,6 +177,10 @@ class SubscriptionsHandler {
 						$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 						$sub_uuid = $netsizeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
 						break;						
+					case 'wecashup' :
+						$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
+						$sub_uuid = $wecashupSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
+						break;
 					default:
 						$msg = "unsupported feature for provider named : ".$provider->getName();
 						config::getLogger()->addError($msg);
@@ -234,6 +239,10 @@ class SubscriptionsHandler {
 						case 'netsize' :
 							$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 							$db_subscription = $netsizeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
+							break;
+						case 'wecashup' :
+							$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
+							$db_subscription = $wecashupSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						default:
 							$msg = "record new: unsupported feature for provider named : ".$provider->getName();
@@ -320,6 +329,10 @@ class SubscriptionsHandler {
 					break;
 				case 'netsize' :
 					$subscriptionsHandler = new NetsizeSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'wecashup' :
+					$subscriptionsHandler = new WecashupSubscriptionsHandler();
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				default:
@@ -422,6 +435,10 @@ class SubscriptionsHandler {
 				case 'netsize' :
 					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 					$netsizeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
+					break;
+				case 'wecashup' :
+					$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
+					$wecashupSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
 					break;
 				default:
 					//nothing to do (unknown)
@@ -600,6 +617,16 @@ class SubscriptionsHandler {
 					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 					$db_subscription = $netsizeSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
+				case 'afr' :
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+				case 'wecashup' :
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
@@ -692,6 +719,10 @@ class SubscriptionsHandler {
 				case 'stripe' :
 					$stripeSubscriptionsHandler = new StripeSubscriptionsHandler();
 					$db_subscription = $stripeSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
+				case 'wecashup' :
+					$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
+					$db_subscription = $wecashupSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -855,6 +886,10 @@ class SubscriptionsHandler {
 			case 'netsize' :
 				$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 				$netsizeSubscriptionsHandler->doFillSubscription($subscription);
+				break;
+			case 'wecashup' :
+				$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
+				$wecashupSubscriptionsHandler->doFillSubscription($subscription);
 				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -1357,6 +1392,7 @@ class SubscriptionsHandler {
 			$userInternalCoupon->setUuid(guid());
 			$userInternalCoupon->setUserId($user->getId());
 			$userInternalCoupon->setExpiresDate($internalCoupon->getExpiresDate());
+			$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
 		}
 		//Check userInternalCoupon
 		if($userInternalCoupon->getStatus() == 'redeemed') {

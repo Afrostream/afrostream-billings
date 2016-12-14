@@ -58,9 +58,16 @@ class InternalPlansHandler {
 				}
 				$context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
 				if($context == NULL) {
+					//switch contextBillingUuid to 'common' when context is 'mobile' only
+					$oldContextBillingUuid = $contextBillingUuid;
+					if($contextBillingUuid == 'mobile') {
+						$contextBillingUuid = 'common';
+					}
+					//switch country
 					$oldContextCountry = $contextCountry;
 					$contextCountry = "FR";//back to France
-					config::getLogger()->addInfo("unknown context with contextBillingUuid : ".$contextBillingUuid." AND contextCountry : ".$oldContextCountry.", rollback to contextCountry=".$contextCountry);
+					config::getLogger()->addInfo("unknown context with contextBillingUuid=".$oldContextBillingUuid.", contextCountry=".$oldContextCountry.
+							", rollback to contextBillingUuid=".$contextBillingUuid.", contextCountry=".$contextCountry);
 					$context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
 				}
 				if($context == NULL) {
