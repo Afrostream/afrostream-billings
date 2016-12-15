@@ -37,7 +37,8 @@ class NetsizeWebHooksHandler {
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while processing netsize webHook with id=".$billingsWebHook->getId().", message=".$e->getMessage();
 			config::getLogger()->addError("processing netsize webHook with id=".$billingsWebHook->getId()." failed : ". $msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			//HACK : no more errors returned to netsize
+			//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 	}
 	

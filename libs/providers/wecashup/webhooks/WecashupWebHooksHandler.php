@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/WecashupSubscriptionsHandler.php';
+require_once __DIR__ . '/../transactions/WecashupTransactionsHandler.php';
 require_once __DIR__ . '/../client/WecashupClient.php';
 
 class WecashupWebHooksHandler {
@@ -201,7 +202,22 @@ class WecashupWebHooksHandler {
 	
 	private function doProcessRefund(WecashupTransactionResponse $refundTransaction, $received_transaction_token, $update_type, $updateId) {
 		config::getLogger()->addInfo('Processing wecashup hook refund...');
-		//TODO
+		//Search for payment : bdd Side
+		$billingsPaymentTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $refundTransaction->getTransactionParentUid());
+		if($billingsPaymentTransaction == NULL) {
+			$msg = "refund transaction with id=".$refundTransaction->getTransactionUid()." is related to an unkown payment id=".$refundTransaction->getTransactionParentUid();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$user = UserDAO::getUserById($billingsPaymentTransaction->getUserId());
+		if($user == NULL) {
+			$msg = "unknown user with id : ".$billingsPaymentTransaction->getUserId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+		$wecashupTransactionsHandler = new WecashupTransactionsHandler();
+		$wecashupTransactionsHandler->createOrUpdateRefundFromProvider($user, $userOpts, NULL, $refundTransaction, $billingsPaymentTransaction, $update_type);
 		//DONE
 		config::getLogger()->addInfo('Processing wecashup hook refund done successfully');
 	}
