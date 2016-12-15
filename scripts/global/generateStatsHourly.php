@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/db/dbStats.php';
@@ -139,6 +140,33 @@ foreach ($transactionEvents as $transactionEvent) {
 	$msg.= "transaction_billing_uuid=".$transactionEvent['transaction_billing_uuid'];
 	sendMessage($msg, $channelTransactions);
 	sendMessage('---------------------------------------------------', $channelTransactions);
+}
+
+//Grafana
+
+$numberOfActiveSubscriptions = dbStats::getNumberOfActiveSubscriptions($now);
+$providerIdsToIgnore = array();
+$providerNamesToIgnore = ['orange', 'bouygues'];
+foreach ($providerNamesToIgnore as $providerNameToIgnore) {
+	$provider = ProviderDAO::getProviderByName($providerNameToIgnore);
+	if($provider == NULL) {
+		$msg = "unknown provider named : ".$providerNameToIgnore;
+		ScriptsConfig::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+	}
+	$providerIdsToIgnore[] = $provider->getId();
+}
+
+$numberOfActiveSubscriptionsExceptMultiscreen = dbStats::getNumberOfActiveSubscriptions($now, $providerIdsToIgnore);
+
+//Active Subscriptions Number
+BillingStatsd::gauge('route.providers.all.subscriptions.status.active.counter', $numberOfActiveSubscriptions['total']);
+//Active Subscriptions Number Except Temporary Subscriptions
+BillingStatsd::gauge('route.providers.allMinusTemporaries.subscriptions.status.active.counter', $numberOfActiveSubscriptionsExceptMultiscreen['total']);
+//Active Subscriptions By Provider
+$numberOfActiveSubscriptionsByProvider = $numberOfActiveSubscriptions['providers'];
+foreach ($numberOfActiveSubscriptionsByProvider as $provider_name => $counters) {
+	BillingStatsd::gauge('route.providers.'.$provider_name.'.subscriptions.status.active.counter', $counters['total']);
 }
 
 print_r("processing done\n");
