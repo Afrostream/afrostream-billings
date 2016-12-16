@@ -48,7 +48,7 @@ class CancelSubscription implements HookInterface
         $billingSubscription->setSubExpiresDate($this->createDate($subscription['canceled_at']));
         //if not already set, SubCanceledDate = subExpiresDate when ends before the end of current_period, that generally means a payment failed
         if($billingSubscription->getSubCanceledDate() != NULL) {
-	        if($subscription['ended_at'] == $subscription['current_period_end']) {   	
+	        if($subscription['ended_at'] != $subscription['current_period_end']) {
 	        	$billingSubscription->setSubCanceledDate($this->createDate($subscription['canceled_at']));
 	        }
         }
