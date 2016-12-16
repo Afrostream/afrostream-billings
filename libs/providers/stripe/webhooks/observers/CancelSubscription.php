@@ -37,7 +37,7 @@ class CancelSubscription implements HookInterface
         $billingSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $subscription['id']);
 
         if (empty($billingSubscription)) {
-            config::getLogger()->addInfo(sprintf('STRIPE - customer.subscription.created : unable to find subscription %s for provider %s', $subscription['id'], $provider->getId()));
+            config::getLogger()->addInfo(sprintf('STRIPE - '.self::REQUESTED_HOOK_TYPE.' : unable to find subscription %s for provider %s', $subscription['id'], $provider->getId()));
             return null;
         }
 
@@ -47,7 +47,7 @@ class CancelSubscription implements HookInterface
         $billingSubscription->setSubStatus('expired');
         $billingSubscription->setSubExpiresDate($this->createDate($subscription['canceled_at']));
         //if not already set, SubCanceledDate = subExpiresDate when ends before the end of current_period, that generally means a payment failed
-        if($billingSubscription->getSubCanceledDate() != NULL) {
+        if($billingSubscription->getSubCanceledDate() == NULL) {
 	        if($subscription['ended_at'] != $subscription['current_period_end']) {
 	        	$billingSubscription->setSubCanceledDate($this->createDate($subscription['canceled_at']));
 	        }
@@ -56,7 +56,7 @@ class CancelSubscription implements HookInterface
 
         $this->subscriptionHandler->doSendSubscriptionEvent($oldSubscription, $billingSubscription);
         
-        config::getLogger()->addInfo('STRIPE - customer.subscription.deleted : expire subscription #'.$billingSubscription->getId());
+        config::getLogger()->addInfo('STRIPE - '.self::REQUESTED_HOOK_TYPE.' : expire subscription #'.$billingSubscription->getId());
     }
     
     /**
