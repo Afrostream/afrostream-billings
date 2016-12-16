@@ -17,6 +17,7 @@ interface HookInterface
      * @return mixed
      */
     public function event(Event $event, Provider $provider);
+    
 }
 
 ?>
