@@ -73,6 +73,21 @@ class UpdateSubscription implements HookInterface
 
         config::getLogger()->addInfo('STRIPE - customer.subscription.updated : update subscription '.$billingSubscription->getId());
     }
+    
+    /**
+     * Return date with the given timestamp
+     *
+     * @param int|null $timestamp
+     *
+     * @return null|string
+     */
+    protected function createDate($timestamp) {
+    	if (empty($timestamp)) {
+    		return null;
+    	}
+    
+    	return new \DateTime(date('c', $timestamp));
+    }
 	
 }
 
