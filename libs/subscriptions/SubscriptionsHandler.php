@@ -641,7 +641,6 @@ class SubscriptionsHandler {
 			$this->doFillSubscription($db_subscription);
 			//
 			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
-			BillingStatsd::inc('route.providers.all.subscriptions.cancel.success');
 		} catch(BillingsException $e) {
 			BillingStatsd::inc('route.providers.all.subscriptions.cancel.error');
 			$msg = "a billings exception occurred while dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -736,7 +735,6 @@ class SubscriptionsHandler {
 			$this->doFillSubscription($db_subscription);
 			//
 			config::getLogger()->addInfo("dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
-			BillingStatsd::inc('route.providers.all.subscriptions.expire.success');
 		} catch(BillingsException $e) {
 			BillingStatsd::inc('route.providers.all.subscriptions.expire.error');
 			$msg = "a billings exception occurred while dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -969,6 +967,20 @@ class SubscriptionsHandler {
 			$hasEvent = ($event != NULL);
 			if($hasEvent) {
 				$this->doSendEmail($subscription_after_update, $event, $sendgrid_template_id);
+				switch ($event) {
+					case 'subscription_is_new' :
+						//nothing to do : creation is made only by API calls already traced 
+						break;
+					case 'subscription_is_canceled' :
+						BillingStatsd::inc('route.providers.all.subscriptions.cancel.success');
+						break;
+					case 'subscription_is_expired' :
+						BillingStatsd::inc('route.providers.all.subscriptions.expire.success');
+						break;
+					default :
+						//nothing to do
+						break;
+				}
 			}
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid()." done successfully");
 		} catch(Exception $e) {
