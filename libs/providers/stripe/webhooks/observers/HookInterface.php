@@ -18,21 +18,6 @@ interface HookInterface
      */
     public function event(Event $event, Provider $provider);
     
-    /**
-     * Return date with the given timestamp
-     *
-     * @param int|null $timestamp
-     *
-     * @return null|string
-     */
-    protected function createDate($timestamp) {
-    	if (empty($timestamp)) {
-    		return null;
-    	}
-    
-    	return new \DateTime(date('c', $timestamp));
-    }
-    
 }
 
 ?>
