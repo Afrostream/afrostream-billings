@@ -496,4 +496,25 @@ class BillingStatsd {
 			self::getStatsd()->timing(getEnv('STATSD_KEY_PREFIX').$key, $value, $sampleRate);
 		}
 	}
+	
+	public static function gauge($key, $value) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->gauge($key, $value);
+		}
+	}
+	
+	public static function startTiming($key) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->startTiming($key);
+		}
+	}
+	
+	public static function endTiming($key, $sampleRate = 1) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->endTiming($key, $sampleRate);
+		}		
+	}
+	
 }
+
+?>
