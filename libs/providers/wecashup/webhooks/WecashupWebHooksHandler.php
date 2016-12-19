@@ -168,6 +168,9 @@ class WecashupWebHooksHandler {
 				case 'FAILED' :
 					$api_subscription->setSubStatus('expired');
 					$api_subscription->setSubExpiresDate($now);
+					if($api_subscription->getSubCanceledDate() == NULL) {
+						$api_subscription->setSubCanceledDate($now);
+					}
 					$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::failed);
 					$billingsTransaction->setUpdateType($update_type);
 					if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
