@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/BillingsExportAfrSubscriptions.php';
@@ -9,25 +10,27 @@ use Aws\S3\S3Client;
 
 class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 
-	private $providerid = NULL;
+	private $provider = NULL;
+	private $processingType = 'subscriptions_export';
 	
 	public function __construct() {
 		parent::__construct();
-		$this->providerid = ProviderDAO::getProviderByName('afr')->getId();
+		$this->provider = ProviderDAO::getProviderByName('afr');
 	}
 	
 	public function doExportSubscriptions() {
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->providerid, 'subscriptions_export', $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("exporting daily afr subscriptions bypassed - already done today -");
 				return;
 			}
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.hit');
 			
 			ScriptsConfig::getLogger()->addInfo("exporting daily afr subscriptions...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->providerid, 'subscriptions_export');
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingType);
 			//
 			$billingsExportAfrSubscriptions = new BillingsExportAfrSubscriptions();
 			//
@@ -142,7 +145,9 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			ScriptsConfig::getLogger()->addInfo("exporting daily afr subscriptions done successfully");
 			$processingLog = NULL;
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.success');
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.error');
 			$msg = "an error occurred while exporting daily afr subscriptions, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
 			if(isset($processingLog)) {
