@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../BillingsWorkers.php';
 require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
@@ -8,6 +9,8 @@ use Aws\S3\S3Client;
 
 class BillingCSVsWorkers extends BillingsWorkers {
 	
+	private $processingType = 'csvs_generator';
+	
 	public function __construct() {
 		parent::__construct();
 	}
@@ -15,15 +18,16 @@ class BillingCSVsWorkers extends BillingsWorkers {
 	public function doGenerateCSVs() {
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, 'csvs_generator', $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("generating csvs bypassed - already done today -");
 				return;
 			}
+			BillingStatsd::inc('route.scripts.workers.providers.global.workertype.'.$this->processingType.'.hit');
 		
 			ScriptsConfig::getLogger()->addInfo("generating csvs...");
 		
-			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, 'csvs_generator');
+			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, $this->processingType);
 			$s3 = S3Client::factory(array(
 					'region' => getEnv('AWS_REGION'),
 					'version' => getEnv('AWS_VERSION')));
@@ -135,7 +139,9 @@ class BillingCSVsWorkers extends BillingsWorkers {
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			ScriptsConfig::getLogger()->addInfo("generating csvs done successfully");
 			$processingLog = NULL;
+			BillingStatsd::inc('route.scripts.workers.providers.global.workertype.'.$this->processingType.'.success');
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.scripts.workers.providers.global.workertype.'.$this->processingType.'.error');
 			$msg = "an error occurred while generating csvs, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
 			if(isset($processingLog)) {

@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/BillingsExportGocardlessSubscriptions.php';
@@ -9,25 +10,27 @@ use Aws\S3\S3Client;
 
 class BillingsExportGocardlessSubscriptionsWorkers extends BillingsWorkers {
 	
-	private $providerid = NULL;
+	private $provider = NULL;
+	private $processingType = 'subscriptions_export';
 	
 	public function __construct() {
 		parent::__construct();
-		$this->providerid = ProviderDAO::getProviderByName('gocardless')->getId();
+		$this->provider = ProviderDAO::getProviderByName('gocardless');
 	}
 	
 	public function doExportSubscriptions() {
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->providerid, 'subscriptions_export', $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("exporting daily gocardless subscriptions bypassed - already done today -");
 				return;
 			}
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.hit');
 			
 			ScriptsConfig::getLogger()->addInfo("exporting daily gocardless subscriptions...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->providerid, 'subscriptions_export');
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingType);
 			//
 			$billingsExportGocardlessSubscriptions = new BillingsExportGocardlessSubscriptions();
 			//
@@ -142,7 +145,9 @@ class BillingsExportGocardlessSubscriptionsWorkers extends BillingsWorkers {
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			ScriptsConfig::getLogger()->addInfo("exporting daily gocardless subscriptions done successfully");
 			$processingLog = NULL;
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.success');
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.error');
 			$msg = "an error occurred while exporting daily gocardless subscriptions, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
 			if(isset($processingLog)) {
