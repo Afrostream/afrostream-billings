@@ -26,12 +26,15 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 			}*/
 			$lastSubscription = $subscriptions[0];
 			if($lastSubscription->getIsActive() == 'yes') {
-				//NC : DO NOT BLOCK UNTIL WE REALLY KNOW THAT SUBSCRIPTIONS AUTO-RENEW OR NOT (VERY SOON !!!)
-				/*$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($lastSubscription->getPlanId()));
+				//NC : CAN BLOCK NOW  (WAS DO NOT BLOCK UNTIL WE REALLY KNOW THAT SUBSCRIPTIONS AUTO-RENEW OR NOT (VERY SOON !!!))
+				$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($lastSubscription->getPlanId()));
 				if($internalPlan->getCycle() == PlanCycle::auto) {
-					$msg = "you already have a subscription that's auto renew, you can't take a new subscription";
+					$msg = "you already have an active subscription that's auto renew, you can't take a new subscription";
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_AUTO_ALREADY_EXISTS);
-				}*/
+				} else {
+					$msg = "you already have an active subscription, you can't take a new subscription";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_ALREADY_EXISTS);					
+				}
 			}
 			$now = new DateTime();
 			$lastDate = NULL;

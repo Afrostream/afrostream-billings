@@ -255,6 +255,40 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 				}
 			}
 			break;
+		case 'cashway' :
+			if(!array_key_exists('couponCode', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'couponCode' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			break;
+		case 'wecashup' :
+			if(!array_key_exists('transaction_uuid', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'transaction_uuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('transaction_token', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'transaction_token' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('transaction_confirmation_code', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'transaction_confirmation_code' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(!array_key_exists('transaction_provider_name', $sub_opts_as_array)) {
+				//exception
+				$msg = "subOpts field 'transaction_provider_name' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			break;
 		default :
 			//nothing
 			break;
@@ -264,6 +298,17 @@ function checkSubOptsKeys(array $sub_opts_as_array, $providerName, $case = 'all'
 function checkSubOptsValues(array $sub_opts_as_array, $providerName, $case = 'all') {
 	switch($providerName) {
 		case 'bachat' :
+			break;
+		case 'cashway' :
+			if(array_key_exists('couponCode', $sub_opts_as_array)) {
+				$str = $sub_opts_as_array['couponCode'];
+				if(strlen(trim($str)) == 0) {
+					//exception
+					$msg = "'couponCode' value is empty";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
 			break;
 		default :
 			//nothing
@@ -325,6 +370,39 @@ function doSortSubscriptions(&$subscriptions) {
 							return(strcmp(dbGlobal::toISODate($b->getCreationDate()), dbGlobal::toISODate($a->getCreationDate())));
 						}
 					}
+				}
+			}
+		);
+}
+
+//passage par référence !!!
+function doSortPaymentMethods(&$paymentMethodsArray, $allPaymentMethods) {
+	//
+	$allPaymentMethodsByPaymentMethodType = array();
+	foreach ($allPaymentMethods as $providerName => $paymentMethod) {
+		$allPaymentMethodsByPaymentMethodType[$paymentMethod->getPaymentMethodType()] = $paymentMethod; 
+	}
+	//
+	uksort($paymentMethodsArray,
+			function($A, $B) use ($allPaymentMethodsByPaymentMethodType) {
+				$idxA = NULL; $idxB = NULL;
+				if(array_key_exists($A, $allPaymentMethodsByPaymentMethodType)) {
+					$idxA = $allPaymentMethodsByPaymentMethodType[$A]->getIndex();
+				}
+				if(array_key_exists($B, $allPaymentMethodsByPaymentMethodType)) {
+					$idxB = $allPaymentMethodsByPaymentMethodType[$B]->getIndex();
+				}
+				if(isset($idxA) && isset($idxB)) {
+					return($idxA - $idxB);
+				} else if(isset($idxA)) {
+					//idxB is NULL
+					return(-1);
+				} else if(isset($idxB)) {
+					//idxA is NULL
+					return(1);
+				} else {
+					//idxA AND idxB are NULL
+					return(0);
 				}
 			}
 		);

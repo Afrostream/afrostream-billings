@@ -91,14 +91,14 @@ class OrangeTVClient {
 		if($httpCode == 200) {
 			$orangeSubscriptionsResponse = new OrangeSubscriptionsResponse($content);
 		} else if($httpCode == 401) {
-			config::getLogger()->addError("API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Token");
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), "API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Token", ExceptionError::ORANGE_CALL_API_INVALID_TOKEN);
+			config::getLogger()->addError("ORANGETV API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Token");
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), "ORANGETV API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Token", ExceptionError::ORANGE_CALL_API_INVALID_TOKEN);
 		} else if($httpCode == 403) {
-			config::getLogger()->addError("API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Request");
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), "API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Request", ExceptionError::ORANGE_CALL_API_INVALID_REQUEST);	
+			config::getLogger()->addError("ORANGETV API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Request");
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), "ORANGETV API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Request", ExceptionError::ORANGE_CALL_API_INVALID_REQUEST);	
 		} else {
-			config::getLogger()->addError("API CALL : getting OrangeSubscriptions, code=".$httpCode);
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), "API CALL : getting OrangeSubscriptions, code=".$httpCode." is unexpected...", ExceptionError::ORANGE_CALL_API_UNKNOWN_ERROR);
+			config::getLogger()->addError("ORANGETV API CALL : getting OrangeSubscriptions, code=".$httpCode);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), "ORANGETV API CALL : getting OrangeSubscriptions, code=".$httpCode." is unexpected...", ExceptionError::ORANGE_CALL_API_UNKNOWN_ERROR);
 		}
 		return($orangeSubscriptionsResponse);
 	}

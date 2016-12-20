@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/db/dbStats.php';
@@ -68,8 +69,12 @@ $couponsActivated = dbStats::getCouponsActivation($start_date, $end_date);
 sendMessage(count($couponsActivated)." activated coupons between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
-	$msg = sprintf('couponType=%s creator=%s recipient=%s planName=%s (%s)', 
-			$coupon['coupon_type'], $coupon['user_email'], $coupon['recipient_email'], $coupon['plan_name'], $coupon['provider_name']);
+	$msg = sprintf('couponType=%s creator=%s recipient=%s campaignName=%s prefix=%s',
+			$coupon['coupon_type'],
+			$coupon['user_email'],
+			$coupon['recipient_email'],
+			$coupon['coupons_campaign_name'],
+			$coupon['coupons_campaign_prefix']);
 	sendMessage($msg, $channelCoupons);
 	sendMessage('---------------------------------------------------', $channelCoupons);
 }
@@ -80,8 +85,12 @@ $couponsActivated = dbStats::getCouponsCashwayGenerated($start_date, $end_date);
 sendMessage(count($couponsActivated)." generated cashway coupons between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
-	$msg = sprintf('couponType=%s creator=%s recipient=%s planName=%s (%s)', 
-			$coupon['coupon_type'], $coupon['user_email'], $coupon['recipient_email'], $coupon['plan_name'], $coupon['provider_name']);
+	$msg = sprintf('couponType=%s creator=%s recipient=%s campaignName=%s prefix=%s',
+			$coupon['coupon_type'],
+			$coupon['user_email'],
+			$coupon['recipient_email'],
+			$coupon['coupons_campaign_name'],
+			$coupon['coupons_campaign_prefix']);
 	sendMessage($msg, $channelCoupons);
 	sendMessage('---------------------------------------------------', $channelCoupons);
 }
@@ -92,8 +101,12 @@ $couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new 
 sendMessage(count($couponsActivated)." generated sponsorship coupons between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
-	$msg = sprintf('couponType=%s creator=%s recipient=%s planName=%s (%s)', 
-			$coupon['coupon_type'], $coupon['user_email'], $coupon['recipient_email'], $coupon['plan_name'], $coupon['provider_name']);
+	$msg = sprintf('couponType=%s creator=%s recipient=%s campaignName=%s prefix=%s', 
+			$coupon['coupon_type'],
+			$coupon['user_email'],
+			$coupon['recipient_email'],
+			$coupon['coupons_campaign_name'],
+			$coupon['coupons_campaign_prefix']);
 	sendMessage($msg, $channelCoupons);
 	sendMessage('---------------------------------------------------', $channelCoupons);
 }
@@ -104,8 +117,12 @@ $couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new 
 sendMessage(count($couponsActivated)." generated standard coupons between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
-	$msg = sprintf('couponType=%s creator=%s recipient=%s planName=%s (%s)', 
-			$coupon['coupon_type'], $coupon['user_email'], $coupon['recipient_email'], $coupon['plan_name'], $coupon['provider_name']);
+	$msg = sprintf('couponType=%s creator=%s recipient=%s campaignName=%s prefix=%s',
+			$coupon['coupon_type'],
+			$coupon['user_email'],
+			$coupon['recipient_email'],
+			$coupon['coupons_campaign_name'],
+			$coupon['coupons_campaign_prefix']);
 	sendMessage($msg, $channelCoupons);
 	sendMessage('---------------------------------------------------', $channelCoupons);
 }
@@ -123,6 +140,33 @@ foreach ($transactionEvents as $transactionEvent) {
 	$msg.= "transaction_billing_uuid=".$transactionEvent['transaction_billing_uuid'];
 	sendMessage($msg, $channelTransactions);
 	sendMessage('---------------------------------------------------', $channelTransactions);
+}
+
+//Grafana
+
+$numberOfActiveSubscriptions = dbStats::getNumberOfActiveSubscriptions($now);
+$providerIdsToIgnore = array();
+$providerNamesToIgnore = ['orange', 'bouygues'];
+foreach ($providerNamesToIgnore as $providerNameToIgnore) {
+	$provider = ProviderDAO::getProviderByName($providerNameToIgnore);
+	if($provider == NULL) {
+		$msg = "unknown provider named : ".$providerNameToIgnore;
+		ScriptsConfig::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+	}
+	$providerIdsToIgnore[] = $provider->getId();
+}
+
+$numberOfActiveSubscriptionsExceptMultiscreen = dbStats::getNumberOfActiveSubscriptions($now, $providerIdsToIgnore);
+
+//Active Subscriptions Number
+BillingStatsd::gauge('route.providers.all.subscriptions.status.active.counter', $numberOfActiveSubscriptions['total']);
+//Active Subscriptions Number Except Temporary Subscriptions
+BillingStatsd::gauge('route.providers.allMinusTemporaries.subscriptions.status.active.counter', $numberOfActiveSubscriptionsExceptMultiscreen['total']);
+//Active Subscriptions By Provider
+$numberOfActiveSubscriptionsByProvider = $numberOfActiveSubscriptions['providers'];
+foreach ($numberOfActiveSubscriptionsByProvider as $provider_name => $counters) {
+	BillingStatsd::gauge('route.providers.'.$provider_name.'.subscriptions.status.active.counter', $counters['total']);
 }
 
 print_r("processing done\n");

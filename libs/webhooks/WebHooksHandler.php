@@ -72,6 +72,10 @@ class WebHooksHander {
 					$netsizeWebHooksHandler = new NetsizeWebHooksHandler();
 					$netsizeWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
 					break;
+				case 'wecashup' :
+					$wecashupWebHooksHandler = new WecashupWebHooksHandler();
+					$wecashupWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
@@ -85,7 +89,6 @@ class WebHooksHander {
 			$billingsWebHookLog = BillingsWebHookLogDAO::updateBillingsWebHookLogProcessingStatus($billingsWebHookLog);
 			//
 			config::getLogger()->addInfo("processing webHook with id=".$id." done successfully");
-		
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while processing webHook with id=".$id.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("processing webHook failed : ".$msg);

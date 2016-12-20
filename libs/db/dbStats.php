@@ -44,7 +44,7 @@ class dbStats {
 	 * 				"gocardless" => 2222,
 	 * 				"bachat" => 2222 
 	 */
-	public static function getNumberOfActiveSubscriptions(DateTime $date, $providerIdsToIgnore_array = NULL) {
+	public static function getNumberOfActiveSubscriptions(DateTime $date, $providerIdsToIgnore_array = NULL, $providerId = NULL) {
 		$date->setTimezone(new DateTimeZone(config::$timezone));
 		$date_as_str = dbGlobal::toISODate($date);
 		$params = array();
@@ -60,7 +60,7 @@ class dbStats {
 		$query.= " AND (BS.sub_expires_date IS NULL OR BS.sub_expires_date > '".$date_as_str."')";
 		if(isset($providerIdsToIgnore_array) && count($providerIdsToIgnore_array) > 0) {
 			$firstLoop = true;
-			$query.= " AND BU.providerid not in (";
+			$query.= " AND BS.providerid not in (";
 			foreach($providerIdsToIgnore_array as $providerIdToIgnore) {
 				$params[] = $providerIdToIgnore;
 				if($firstLoop) {
@@ -71,6 +71,10 @@ class dbStats {
 				}
 			}
 			$query.= ")";
+		}
+		if(isset($providerId)) {
+			$params[] = $providerId;
+			$query.= " AND BS.providerid = $".(count($params));
 		}
 		$query.= " GROUP BY BP._id";
 		$result = pg_query_params(config::getDbConn(), $query, $params);
@@ -86,9 +90,10 @@ class dbStats {
 		return($out);
 	}
 	
-	public static function getNumberOfActivatedSubscriptions(DateTime $date) {
+	public static function getNumberOfActivatedSubscriptions(DateTime $date, $providerId = NULL) {
 		$date->setTimezone(new DateTimeZone(config::$timezone));
 		$date_as_str = dbGlobal::toISODate($date);
+		$params = array();
 		$query = "SELECT BP.name as provider_name, count(*) as counter, count(BSB._id) as counter_returning FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
@@ -101,8 +106,12 @@ class dbStats {
 		$query.= " WHERE (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " AND";
 		$query.= " date(BS.sub_activated_date AT TIME ZONE 'Europe/Paris') = date('".$date_as_str."')";
+		if(isset($providerId)) {
+			$params[] = $providerId;
+			$query.= " AND BS.providerid = $".(count($params));
+		}
 		$query.= " GROUP BY BP._id";
-		$result = pg_query(config::getDbConn(), $query);
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$total = 0;
 		$total_returning = 0;
 		$total_new = 0;
@@ -197,7 +206,7 @@ class dbStats {
 		return($out);
 	}
 	
-	public static function getNumberOfExpiredSubscriptions(DateTime $dateStart = NULL, DateTime $dateEnd = NULL) {
+	public static function getNumberOfExpiredSubscriptions(DateTime $dateStart = NULL, DateTime $dateEnd = NULL, $providerId = NULL) {
 		$date_start_str = NULL;
 		if(isset($dateStart)) {
 			$dateStart->setTimezone(new DateTimeZone(config::$timezone));
@@ -208,6 +217,7 @@ class dbStats {
 			$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
 			$date_end_str = dbGlobal::toISODate($dateEnd);
 		}
+		$params = array();
 		$query = "SELECT BP.name as provider_name, count(*) as counter,";
 		$query.= " sum(CASE WHEN (sub_expires_date = sub_canceled_date) THEN 1 ELSE 0 END) as expired_cause_pb_counter,";
 		$query.= " sum(CASE WHEN (sub_canceled_date IS NULL OR sub_expires_date <> sub_canceled_date) THEN 1 ELSE 0 END) as expired_cause_ended_counter";
@@ -228,8 +238,12 @@ class dbStats {
 			$query.= " AND";
 			$query.= " BS.sub_expires_date <= '".$date_end_str."'";
 		}
+		if(isset($providerId)) {
+			$params[] = $providerId;
+			$query.= " AND BS.providerid = $".(count($params));
+		}
 		$query.= " GROUP BY BP._id";
-		$result = pg_query(config::getDbConn(), $query);
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$total = 0;
 		$total_expired_cause_pb = 0;
 		$expired_cause_ended = 0;
@@ -327,24 +341,22 @@ class dbStats {
 		$date_end_str = dbGlobal::toISODate($dateEnd);
 
 		$query =<<<EOL
-		SELECT bcc.coupon_type AS coupon_type,
-		plans.name AS plan_name,
-		bp.name AS provider_name,
-		buo.value AS user_email,
-		(CASE WHEN bco.value IS NULL THEN buo.value ELSE bco.value END) AS recipient_email
+		SELECT BICC.coupon_type AS coupon_type,
+		BUO.value AS user_email,
+		(CASE WHEN BUICO.value IS NULL THEN BUO.value ELSE BUICO.value END) AS recipient_email,
+		BICC.name AS coupons_campaign_name,
+		BICC.prefix AS coupons_campaign_prefix
 		FROM
-		billing_coupons AS bc
-		INNER JOIN billing_providers AS bp ON (bc.providerid = bp._id)
-		INNER JOIN billing_plans AS plans ON (bc.providerplanid = plans._id)
-		INNER JOIN billing_users AS bu ON (bc.userid = bu._id)
-		INNER JOIN billing_users_opts AS buo ON (bu._id = buo.userid)
-		INNER JOIN billing_coupons_campaigns AS bcc ON (bc.couponscampaignsid = bcc._id)
-		LEFT JOIN billing_coupons_opts AS bco ON (bc._id = bco.couponid AND bco.key = 'recipientEmail' AND bco.deleted = false)
+		billing_users_internal_coupons BUIC
+		INNER JOIN billing_users BU ON (BUIC.userid = BU._id)
+		INNER JOIN billing_users_opts BUO ON (BU._id = BUO.userid)
+		INNER JOIN billing_internal_coupons BIC ON (BUIC.internalcouponsid = BIC._id)
+		INNER JOIN billing_internal_coupons_campaigns BICC ON (BIC.internalcouponscampaignsid = BICC._id)
+		LEFT JOIN billing_users_internal_coupons_opts BUICO ON (BUIC._id = BUICO.userinternalcouponsid AND BUICO.key = 'recipientEmail' AND BUICO.deleted = false)
 		WHERE
-		bc.coupon_status='redeemed'
-		AND (bc.redeemed_date  AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
-		AND buo.key = 'email'
-		AND buo.deleted = false
+		(BUIC.redeemed_date  AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		AND BUO.key = 'email'
+		AND BUO.deleted = false
 EOL;
 		$query = sprintf($query, $date_start_str, $date_end_str);
 
@@ -375,23 +387,25 @@ EOL;
 		$date_end_str = dbGlobal::toISODate($dateEnd);
 
 		$query =<<<EOL
-		SELECT bcc.coupon_type AS coupon_type,
-		plans.name AS plan_name,
-		bp.name AS provider_name,
-		buo.value AS user_email,
-		buo.value AS recipient_email
+		SELECT BICC.coupon_type AS coupon_type,
+		BUO.value AS user_email,
+		(CASE WHEN BUICO.value IS NULL THEN BUO.value ELSE BUICO.value END) AS recipient_email,
+		BICC.name AS coupons_campaign_name,
+		BICC.prefix AS coupons_campaign_prefix
 		FROM
-		billing_coupons AS bc
-		INNER JOIN billing_providers AS bp ON (bc.providerid=bp._id)
-		INNER JOIN billing_plans AS plans ON (bc.providerplanid=plans._id)
-		INNER JOIN billing_users AS bu ON (bc.userid=bu._id)
-		INNER JOIN billing_users_opts AS buo ON (bu._id=buo.userid)
-		INNER JOIN billing_coupons_campaigns AS bcc ON (bc.couponscampaignsid = bcc._id)
+		billing_users_internal_coupons BUIC
+		INNER JOIN billing_users BU ON (BUIC.userid = BU._id)
+		INNER JOIN billing_users_opts BUO ON (BU._id = BUO.userid)
+		INNER JOIN billing_internal_coupons BIC ON (BUIC.internalcouponsid = BIC._id)
+		INNER JOIN billing_internal_coupons_campaigns BICC ON (BIC.internalcouponscampaignsid = BICC._id)
+		LEFT JOIN billing_users_internal_coupons_opts BUICO ON (BUIC._id = BUICO.userinternalcouponsid AND BUICO.key = 'recipientEmail' AND BUICO.deleted = false)
+		INNER JOIN billing_provider_coupons_campaigns BPCC ON (BICC._id = BPCC.internalcouponscampaignsid)
+		INNER JOIN billing_providers BP ON (BPCC.providerid = BP._id)
 		WHERE
-		bp.name = 'cashway'
-		AND (bc.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
-		AND buo.key = 'email'
-		AND buo.deleted = false
+		BP.name = 'cashway'
+		AND (BUIC.creation_date  AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		AND BUO.key = 'email'
+		AND BUO.deleted = false
 EOL;
 
 		$query = sprintf($query, $date_start_str, $date_end_str);
@@ -414,25 +428,26 @@ EOL;
 		$date_end_str = dbGlobal::toISODate($dateEnd);
 		
 		$query =<<<EOL
-		SELECT bcc.coupon_type AS coupon_type,
-		plans.name AS plan_name,
-		bp.name AS provider_name,
-		buo.value AS user_email,
-		(CASE WHEN bco.value IS NULL THEN buo.value ELSE bco.value END) AS recipient_email
-		FROM 
-		billing_coupons AS bc
-		INNER JOIN billing_providers AS bp ON (bc.providerid=bp._id)
-		INNER JOIN billing_plans AS plans ON (bc.providerplanid=plans._id)
-		INNER JOIN billing_users AS bu ON (bc.userid=bu._id)
-		INNER JOIN billing_users_opts AS buo ON (bu._id=buo.userid)
-		INNER JOIN billing_coupons_campaigns AS bcc ON (bc.couponscampaignsid=bcc._id)
-		LEFT JOIN billing_coupons_opts AS bco ON (bc._id=bco.couponid AND bco.key = 'recipientEmail' AND bco.deleted = false)
+		SELECT BICC.coupon_type AS coupon_type,
+		BUO.value AS user_email,
+		(CASE WHEN BUICO.value IS NULL THEN BUO.value ELSE BUICO.value END) AS recipient_email,
+		BICC.name AS coupons_campaign_name,
+		BICC.prefix AS coupons_campaign_prefix
+		FROM
+		billing_users_internal_coupons BUIC
+		INNER JOIN billing_users BU ON (BUIC.userid = BU._id)
+		INNER JOIN billing_users_opts BUO ON (BU._id = BUO.userid)
+		INNER JOIN billing_internal_coupons BIC ON (BUIC.internalcouponsid = BIC._id)
+		INNER JOIN billing_internal_coupons_campaigns BICC ON (BIC.internalcouponscampaignsid = BICC._id)
+		LEFT JOIN billing_users_internal_coupons_opts BUICO ON (BUIC._id = BUICO.userinternalcouponsid AND BUICO.key = 'recipientEmail' AND BUICO.deleted = false)
+		INNER JOIN billing_provider_coupons_campaigns BPCC ON (BICC._id = BPCC.internalcouponscampaignsid)
+		INNER JOIN billing_providers BP ON (BPCC.providerid = BP._id)
 		WHERE
-		bp.name = 'afr'
-		AND (bc.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
-		AND buo.key = 'email'
-		AND buo.deleted = false
-		AND bcc.coupon_type = '%s'
+		BP.name = 'afr'
+		AND (BUIC.creation_date  AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		AND BUO.key = 'email'
+		AND BUO.deleted = false
+		AND BICC.coupon_type = '%s'
 EOL;
 		$query = sprintf($query, $date_start_str, $date_end_str, $couponCampaignType->getValue());
 		
@@ -604,16 +619,15 @@ EOL;
 		$date_end_str = dbGlobal::toISODate($dateEnd);
 		
 		$query =<<<EOL
-		SELECT BP.name AS provider_name,
-		count(*) as counter,
-		BCC.coupon_type as coupon_type
+		SELECT BICC.coupon_type AS coupon_type,
+		count(*) as counter
 		FROM
-		billing_coupons BC
-		INNER JOIN billing_providers BP ON (BC.providerid = BP._id)
-		INNER JOIN billing_coupons_campaigns BCC ON (BC.couponscampaignsid = BCC._id)
+		billing_users_internal_coupons BUIC
+		INNER JOIN billing_internal_coupons BIC ON (BUIC.internalcouponsid = BIC._id)
+		INNER JOIN billing_internal_coupons_campaigns BICC ON (BIC.internalcouponscampaignsid = BICC._id)
 		WHERE
-		(BC.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
-		GROUP BY BP._id, BCC._id ORDER BY BP._id
+		(BUIC.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		GROUP BY BICC._id ORDER BY BICC._id
 EOL;
 		$query = sprintf($query, $date_start_str, $date_end_str);
 		
@@ -631,7 +645,8 @@ EOL;
 			} else {
 				$out['coupon_types'][$row['coupon_type']]['total'] = $row['counter'];
 			}
-			if(isset($out['providers'][$row['provider_name']]['total'])) {
+			//TODO : To be added later (removed)
+			/*if(isset($out['providers'][$row['provider_name']]['total'])) {
 				$out['providers'][$row['provider_name']]['total']+= $row['counter'];
 			} else {
 				$out['providers'][$row['provider_name']]['total'] = $row['counter'];
@@ -640,7 +655,7 @@ EOL;
 				$out['providers'][$row['provider_name']]['coupon_types'][$row['coupon_type']]['total']+= $row['counter'];
 			} else {
 				$out['providers'][$row['provider_name']]['coupon_types'][$row['coupon_type']]['total'] = $row['counter'];
-			}
+			}*/
 		}
 		// free result
 		pg_free_result($result);
@@ -655,17 +670,15 @@ EOL;
 		$date_end_str = dbGlobal::toISODate($dateEnd);
 		
 		$query =<<<EOL
-		SELECT BP.name AS provider_name,
-		count(*) as counter,
-		BCC.coupon_type as coupon_type
+		SELECT BICC.coupon_type AS coupon_type,
+		count(*) as counter
 		FROM
-		billing_coupons BC
-		INNER JOIN billing_providers BP ON (BC.providerid = BP._id)
-		INNER JOIN billing_coupons_campaigns BCC ON (BC.couponscampaignsid = BCC._id)
+		billing_users_internal_coupons BUIC
+		INNER JOIN billing_internal_coupons BIC ON (BUIC.internalcouponsid = BIC._id)
+		INNER JOIN billing_internal_coupons_campaigns BICC ON (BIC.internalcouponscampaignsid = BICC._id)
 		WHERE
-		BC.coupon_status='redeemed'
-		AND (BC.redeemed_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
-		GROUP BY BP._id, BCC._id ORDER BY BP._id
+		(BUIC.redeemed_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		GROUP BY BICC._id ORDER BY BICC._id
 EOL;
 		$query = sprintf($query, $date_start_str, $date_end_str);
 		
@@ -683,7 +696,8 @@ EOL;
 			} else {
 				$out['coupon_types'][$row['coupon_type']]['total'] = $row['counter'];
 			}
-			if(isset($out['providers'][$row['provider_name']]['total'])) {
+			//TODO : To be added later (removed)
+			/*if(isset($out['providers'][$row['provider_name']]['total'])) {
 				$out['providers'][$row['provider_name']]['total']+= $row['counter'];
 			} else {
 				$out['providers'][$row['provider_name']]['total'] = $row['counter'];
@@ -692,7 +706,7 @@ EOL;
 				$out['providers'][$row['provider_name']]['coupon_types'][$row['coupon_type']]['total']+= $row['counter'];
 			} else {
 				$out['providers'][$row['provider_name']]['coupon_types'][$row['coupon_type']]['total'] = $row['counter'];
-			}
+			}*/
 		}
 		// free result
 		pg_free_result($result);

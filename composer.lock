@@ -4,21 +4,21 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "d6a7f22bb9dab278a6f57e60eb2eb017",
-    "content-hash": "3d7c3aa8fa7e0bfa28d8f1461aa6fb23",
+    "hash": "d04f7c97986d1c0f31cbb96cffdd2ce7",
+    "content-hash": "7f83bd4e7d75972a08d1ba9c823aeddb",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.19.2",
+            "version": "3.19.31",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "3cb90413129da42c9d3289d542bee0ae1049892c"
+                "reference": "3b7777e4091f4bf4de1dee19cfdad87249facb0e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/3cb90413129da42c9d3289d542bee0ae1049892c",
-                "reference": "3cb90413129da42c9d3289d542bee0ae1049892c",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/3b7777e4091f4bf4de1dee19cfdad87249facb0e",
+                "reference": "3b7777e4091f4bf4de1dee19cfdad87249facb0e",
                 "shasum": ""
             },
             "require": {
@@ -85,20 +85,20 @@
                 "s3",
                 "sdk"
             ],
-            "time": "2016-08-23 20:58:48"
+            "time": "2016-11-21 23:17:16"
         },
         {
             "name": "braintree/braintree_php",
-            "version": "3.15.0",
+            "version": "3.18.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/braintree/braintree_php.git",
-                "reference": "1026b6cca5f2dd5dfdd5447843b920cc74d2b8ca"
+                "reference": "cc7f22d1aaf0aa7abee7b8dd890f0c198c12db4f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/braintree/braintree_php/zipball/1026b6cca5f2dd5dfdd5447843b920cc74d2b8ca",
-                "reference": "1026b6cca5f2dd5dfdd5447843b920cc74d2b8ca",
+                "url": "https://api.github.com/repos/braintree/braintree_php/zipball/cc7f22d1aaf0aa7abee7b8dd890f0c198c12db4f",
+                "reference": "cc7f22d1aaf0aa7abee7b8dd890f0c198c12db4f",
                 "shasum": ""
             },
             "require": {
@@ -132,7 +132,7 @@
                 }
             ],
             "description": "Braintree PHP Client Library",
-            "time": "2016-07-18 21:55:50"
+            "time": "2016-11-14 21:04:29"
         },
         {
             "name": "container-interop/container-interop",
@@ -160,6 +160,53 @@
             ],
             "description": "Promoting the interoperability of container objects (DIC, SL, etc.)",
             "time": "2014-12-30 15:22:37"
+        },
+        {
+            "name": "domnikl/statsd",
+            "version": "2.4.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/domnikl/statsd-php.git",
+                "reference": "f1a443f6ff2cae6bab46ebe8e27576d9b4cbeabf"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/domnikl/statsd-php/zipball/f1a443f6ff2cae6bab46ebe8e27576d9b4cbeabf",
+                "reference": "f1a443f6ff2cae6bab46ebe8e27576d9b4cbeabf",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">= 5.3.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": ">= 4.4.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Domnikl\\Statsd\\": "lib/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Dominik Liebler",
+                    "email": "liebler.dominik@gmail.com"
+                }
+            ],
+            "description": "a PHP client for statsd",
+            "homepage": "https://domnikl.github.com/statsd-php",
+            "keywords": [
+                "Metrics",
+                "monitoring",
+                "statistics",
+                "statsd",
+                "udp"
+            ],
+            "time": "2016-07-06 07:58:06"
         },
         {
             "name": "gocardless/gocardless-pro",
@@ -311,16 +358,16 @@
         },
         {
             "name": "guzzlehttp/guzzle",
-            "version": "6.2.1",
+            "version": "6.2.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle.git",
-                "reference": "3f808fba627f2c5b69e2501217bf31af349c1427"
+                "reference": "ebf29dee597f02f09f4d5bbecc68230ea9b08f60"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/3f808fba627f2c5b69e2501217bf31af349c1427",
-                "reference": "3f808fba627f2c5b69e2501217bf31af349c1427",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/ebf29dee597f02f09f4d5bbecc68230ea9b08f60",
+                "reference": "ebf29dee597f02f09f4d5bbecc68230ea9b08f60",
                 "shasum": ""
             },
             "require": {
@@ -369,20 +416,20 @@
                 "rest",
                 "web service"
             ],
-            "time": "2016-07-15 17:22:37"
+            "time": "2016-10-08 15:01:37"
         },
         {
             "name": "guzzlehttp/promises",
-            "version": "1.2.0",
+            "version": "1.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/promises.git",
-                "reference": "c10d860e2a9595f8883527fa0021c7da9e65f579"
+                "reference": "2693c101803ca78b27972d84081d027fca790a1e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/promises/zipball/c10d860e2a9595f8883527fa0021c7da9e65f579",
-                "reference": "c10d860e2a9595f8883527fa0021c7da9e65f579",
+                "url": "https://api.github.com/repos/guzzle/promises/zipball/2693c101803ca78b27972d84081d027fca790a1e",
+                "reference": "2693c101803ca78b27972d84081d027fca790a1e",
                 "shasum": ""
             },
             "require": {
@@ -420,7 +467,7 @@
             "keywords": [
                 "promise"
             ],
-            "time": "2016-05-18 16:56:05"
+            "time": "2016-11-18 17:47:58"
         },
         {
             "name": "guzzlehttp/psr7",
@@ -479,48 +526,6 @@
                 "uri"
             ],
             "time": "2016-06-24 23:00:38"
-        },
-        {
-            "name": "ircmaxell/password-compat",
-            "version": "v1.0.4",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/ircmaxell/password_compat.git",
-                "reference": "5c5cde8822a69545767f7c7f3058cb15ff84614c"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/ircmaxell/password_compat/zipball/5c5cde8822a69545767f7c7f3058cb15ff84614c",
-                "reference": "5c5cde8822a69545767f7c7f3058cb15ff84614c",
-                "shasum": ""
-            },
-            "require-dev": {
-                "phpunit/phpunit": "4.*"
-            },
-            "type": "library",
-            "autoload": {
-                "files": [
-                    "lib/password.php"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Anthony Ferrara",
-                    "email": "ircmaxell@php.net",
-                    "homepage": "http://blog.ircmaxell.com"
-                }
-            ],
-            "description": "A compatibility library for the proposed simplified password hashing algorithm: https://wiki.php.net/rfc/password_hash",
-            "homepage": "https://github.com/ircmaxell/password_compat",
-            "keywords": [
-                "hashing",
-                "password"
-            ],
-            "time": "2014-11-20 16:49:30"
         },
         {
             "name": "julien-c/iso3166",
@@ -608,6 +613,7 @@
                 "Value Object",
                 "money"
             ],
+            "abandoned": "moneyphp/money",
             "time": "2016-01-16 22:03:46"
         },
         {
@@ -745,16 +751,16 @@
         },
         {
             "name": "myclabs/php-enum",
-            "version": "1.4.2",
+            "version": "1.5.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/myclabs/php-enum.git",
-                "reference": "e83e992a5b5a0858ef7adbc9239a749d71fb6979"
+                "reference": "e42fa9d2ae5dd660dbd0fb573d94c61e5a0dbb02"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/myclabs/php-enum/zipball/e83e992a5b5a0858ef7adbc9239a749d71fb6979",
-                "reference": "e83e992a5b5a0858ef7adbc9239a749d71fb6979",
+                "url": "https://api.github.com/repos/myclabs/php-enum/zipball/e42fa9d2ae5dd660dbd0fb573d94c61e5a0dbb02",
+                "reference": "e42fa9d2ae5dd660dbd0fb573d94c61e5a0dbb02",
                 "shasum": ""
             },
             "require": {
@@ -785,7 +791,7 @@
             "keywords": [
                 "enum"
             ],
-            "time": "2016-08-01 15:48:47"
+            "time": "2016-10-09 21:43:05"
         },
         {
             "name": "nikic/fast-route",
@@ -832,23 +838,23 @@
         },
         {
             "name": "paypal/rest-api-sdk-php",
-            "version": "1.7.4",
+            "version": "1.10.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/paypal/PayPal-PHP-SDK.git",
-                "reference": "d62e8db407827229c6c7aabfa54792d0113b99e4"
+                "reference": "f87c4306cccf31be9acea71a55c4978a7f77afcf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/paypal/PayPal-PHP-SDK/zipball/d62e8db407827229c6c7aabfa54792d0113b99e4",
-                "reference": "d62e8db407827229c6c7aabfa54792d0113b99e4",
+                "url": "https://api.github.com/repos/paypal/PayPal-PHP-SDK/zipball/f87c4306cccf31be9acea71a55c4978a7f77afcf",
+                "reference": "f87c4306cccf31be9acea71a55c4978a7f77afcf",
                 "shasum": ""
             },
             "require": {
                 "ext-curl": "*",
                 "ext-json": "*",
                 "php": ">=5.3.0",
-                "psr/log": "1.0.0"
+                "psr/log": "^1.0.0"
             },
             "require-dev": {
                 "phpunit/phpunit": "3.7.*"
@@ -861,7 +867,7 @@
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
-                "Apache2"
+                "Apache-2.0"
             ],
             "authors": [
                 {
@@ -877,7 +883,7 @@
                 "rest",
                 "sdk"
             ],
-            "time": "2016-07-15 20:42:18"
+            "time": "2016-10-27 21:14:38"
         },
         {
             "name": "pimple/pimple",
@@ -977,22 +983,30 @@
         },
         {
             "name": "psr/log",
-            "version": "1.0.0",
+            "version": "1.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-fig/log.git",
-                "reference": "fe0936ee26643249e916849d48e3a51d5f5e278b"
+                "reference": "4ebe3a8bf773a19edfe0a84b6585ba3d401b724d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-fig/log/zipball/fe0936ee26643249e916849d48e3a51d5f5e278b",
-                "reference": "fe0936ee26643249e916849d48e3a51d5f5e278b",
+                "url": "https://api.github.com/repos/php-fig/log/zipball/4ebe3a8bf773a19edfe0a84b6585ba3d401b724d",
+                "reference": "4ebe3a8bf773a19edfe0a84b6585ba3d401b724d",
                 "shasum": ""
             },
+            "require": {
+                "php": ">=5.3.0"
+            },
             "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
             "autoload": {
-                "psr-0": {
-                    "Psr\\Log\\": ""
+                "psr-4": {
+                    "Psr\\Log\\": "Psr/Log/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -1006,25 +1020,26 @@
                 }
             ],
             "description": "Common interface for logging libraries",
+            "homepage": "https://github.com/php-fig/log",
             "keywords": [
                 "log",
                 "psr",
                 "psr-3"
             ],
-            "time": "2012-12-21 11:40:51"
+            "time": "2016-10-10 12:19:37"
         },
         {
             "name": "recurly/recurly-client",
-            "version": "2.6.0",
+            "version": "2.7.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/recurly/recurly-client-php.git",
-                "reference": "d184253daaeb68cf503031abdb304dc38d9f947f"
+                "reference": "bf9a973982b5562f979b961db844bc44bffa76e4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/recurly/recurly-client-php/zipball/d184253daaeb68cf503031abdb304dc38d9f947f",
-                "reference": "d184253daaeb68cf503031abdb304dc38d9f947f",
+                "url": "https://api.github.com/repos/recurly/recurly-client-php/zipball/bf9a973982b5562f979b961db844bc44bffa76e4",
+                "reference": "bf9a973982b5562f979b961db844bc44bffa76e4",
                 "shasum": ""
             },
             "require": {
@@ -1056,7 +1071,7 @@
                 "payments",
                 "recurly"
             ],
-            "time": "2016-08-09 16:24:24"
+            "time": "2016-09-15 18:36:20"
         },
         {
             "name": "sendgrid/sendgrid",
@@ -1155,16 +1170,16 @@
         },
         {
             "name": "slim/slim",
-            "version": "3.5.0",
+            "version": "3.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/slimphp/Slim.git",
-                "reference": "184352bc1913d7ba552ab4131d62f4730ddb0893"
+                "reference": "a685fe91a9435e1432e8eeb7cf516e2f5cee7f64"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/slimphp/Slim/zipball/184352bc1913d7ba552ab4131d62f4730ddb0893",
-                "reference": "184352bc1913d7ba552ab4131d62f4730ddb0893",
+                "url": "https://api.github.com/repos/slimphp/Slim/zipball/a685fe91a9435e1432e8eeb7cf516e2f5cee7f64",
+                "reference": "a685fe91a9435e1432e8eeb7cf516e2f5cee7f64",
                 "shasum": ""
             },
             "require": {
@@ -1221,20 +1236,20 @@
                 "micro",
                 "router"
             ],
-            "time": "2016-07-26 15:12:13"
+            "time": "2016-11-20 20:48:49"
         },
         {
             "name": "stripe/stripe-php",
-            "version": "v3.20.0",
+            "version": "v3.23.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/stripe/stripe-php.git",
-                "reference": "2ebcac34b287bfc017b13c6fecb6a7dbb96f1e7b"
+                "reference": "c702a2ed92f4b39603c4a796492d87bcc16c819c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/stripe/stripe-php/zipball/2ebcac34b287bfc017b13c6fecb6a7dbb96f1e7b",
-                "reference": "2ebcac34b287bfc017b13c6fecb6a7dbb96f1e7b",
+                "url": "https://api.github.com/repos/stripe/stripe-php/zipball/c702a2ed92f4b39603c4a796492d87bcc16c819c",
+                "reference": "c702a2ed92f4b39603c4a796492d87bcc16c819c",
                 "shasum": ""
             },
             "require": {
@@ -1276,20 +1291,20 @@
                 "payment processing",
                 "stripe"
             ],
-            "time": "2016-08-08 19:50:55"
+            "time": "2016-09-15 18:16:59"
         },
         {
             "name": "symfony/event-dispatcher",
-            "version": "v2.8.9",
+            "version": "v2.8.14",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/event-dispatcher.git",
-                "reference": "889983a79a043dfda68f38c38b6dba092dd49cd8"
+                "reference": "25c576abd4e0f212e678fe8b2bd9a9a98c7ea934"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/event-dispatcher/zipball/889983a79a043dfda68f38c38b6dba092dd49cd8",
-                "reference": "889983a79a043dfda68f38c38b6dba092dd49cd8",
+                "url": "https://api.github.com/repos/symfony/event-dispatcher/zipball/25c576abd4e0f212e678fe8b2bd9a9a98c7ea934",
+                "reference": "25c576abd4e0f212e678fe8b2bd9a9a98c7ea934",
                 "shasum": ""
             },
             "require": {
@@ -1336,24 +1351,25 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "https://symfony.com",
-            "time": "2016-07-28 16:56:28"
+            "time": "2016-10-13 01:43:15"
         },
         {
             "name": "tuupola/slim-basic-auth",
-            "version": "2.0.4",
+            "version": "2.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/tuupola/slim-basic-auth.git",
-                "reference": "c219d8d9e40433fc7449f8034c15d473d11b4e11"
+                "reference": "98dc4679e742c53171efaff042659d60a3160606"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/tuupola/slim-basic-auth/zipball/c219d8d9e40433fc7449f8034c15d473d11b4e11",
-                "reference": "c219d8d9e40433fc7449f8034c15d473d11b4e11",
+                "url": "https://api.github.com/repos/tuupola/slim-basic-auth/zipball/98dc4679e742c53171efaff042659d60a3160606",
+                "reference": "98dc4679e742c53171efaff042659d60a3160606",
                 "shasum": ""
             },
             "require": {
-                "ircmaxell/password-compat": "^1.0"
+                "php": "^5.5 || ^7.0",
+                "psr/http-message": "^1.0"
             },
             "require-dev": {
                 "phpunit/phpunit": "~4.3",
@@ -1384,7 +1400,7 @@
                 "middleware",
                 "psr-7"
             ],
-            "time": "2016-05-20 12:21:44"
+            "time": "2016-09-21 20:50:02"
         }
     ],
     "packages-dev": [],

@@ -283,7 +283,7 @@ class API
     }
 
     /**
-     * @api
+     * 
     */
     public function __construct($conf)
     {
@@ -350,7 +350,7 @@ class API
      * Generic wrapper to set orders.
      * Call setOrder('platform', ...);
      *
-     * @api
+     * 
     */
     public function setOrder()
     {
@@ -395,7 +395,7 @@ class API
     /**
      * Open a confirmed CashWay transaction for the set order.
      *
-     * @api
+     * 
      *
      * @return array
     */
@@ -416,7 +416,7 @@ class API
     }
 
     /**
-     * @api
+     * 
      *
      * @return array
     */
@@ -438,7 +438,7 @@ class API
      * Report a failed payment to CashWay, in order to be notified
      * x minutes later if no subsequent order has been made.
      *
-     * @api
+     * 
      *
      * @param string   $order_id         order or cart id
      * @param float    $order_amount
@@ -493,7 +493,7 @@ class API
      * ));
      * </code>
      *
-     * @api
+     * 
      *
      * @param Array $params
      *

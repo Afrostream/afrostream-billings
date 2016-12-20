@@ -325,9 +325,11 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$db_subscription->setSubStatus('future');
 				break;
 			case 'finished' :
-				$db_subscription->setSubStatus('expired');
+				//For more infos : https://developer.gocardless.com/api-reference/#subscriptions-get-a-single-subscription
+				//It tells us that we will have no more payments but the subscripion will end later
+				$db_subscription->setSubStatus('active');
 				//we do not really know
-				$db_subscription->setSubExpiresDate(new DateTime($api_subscription->created_at));
+				$db_subscription->setSubActivatedDate(new DateTime($api_subscription->created_at));
 				break;
 			case 'customer_approval_denied' :
 				$db_subscription->setSubStatus('expired');
@@ -373,7 +375,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setUpdateType($update_type);
 		//
 		$db_subscription->setUpdateId($updateId);
-		$db_subscription->setDeleted('false');
+		$db_subscription->setDeleted(false);
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
 		//BILLING_INFO
@@ -478,12 +480,9 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
 				break;
 			case 'finished' :
-				$db_subscription->setSubStatus('expired');
-				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-				if($db_subscription->getSubExpiresDate() == NULL) {
-					$db_subscription->setSubExpiresDate($now);
-					$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
-				}
+				//For more infos : https://developer.gocardless.com/api-reference/#subscriptions-get-a-single-subscription
+				//It tells us that we will have no more payments but the subscripion will end later
+				config::getLogger()->addInfo("gocardless dbsubscription update for userid=".$user->getId().", gocardless_subscription_uuid=".$api_subscription->id.", id=".$db_subscription->getId().", gocardless_subscription_status=finished ignored");
 				break;
 			case 'customer_approval_denied' :
 				$db_subscription->setSubStatus('expired');
@@ -509,7 +508,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateId($db_subscription);
-		//$db_subscription->setDeleted('false');//STATIC
+		//$db_subscription->setDeleted(false);//STATIC
 		//
 		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
@@ -554,7 +553,7 @@ class GocardlessSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
 		if($internalPlan == NULL) {
-			$msg = "plan with uuid=".$providerPlan->getId()." for provider gocardless is not linked to an internal plan";
+			$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider gocardless is not linked to an internal plan";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}

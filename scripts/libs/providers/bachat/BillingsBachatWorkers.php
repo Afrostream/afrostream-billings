@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../../../config/config.php';
+require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php';
@@ -8,8 +10,15 @@ ini_set("auto_detect_line_endings", true);
 
 class BillingsBachatWorkers extends BillingsWorkers {
 	
+	private $provider = NULL;
+	private $processingTypeSubsRequestRenew = 'subs_request_renew';
+	private $processingTypeSubsResponseRenew = 'subs_response_renew';
+	private $processingTypeSubsRequestCancel = 'subs_request_cancel';
+	private $processingTypeSubsResponseCancel = 'subs_response_cancel';
+	
 	public function __construct() {
 		parent::__construct();
+		$this->provider = ProviderDAO::getProviderByName('bachat');
 	}
 	
 	public function doRequestRenewSubscriptions($force = true) {
@@ -19,26 +28,17 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$current_par_ren_file_res = NULL;
 		$billingsSubscriptionsOkToProceed = array();
 		try {
-			$provider_name = "bachat";
-				
-			$provider = ProviderDAO::getProviderByName($provider_name);
-				
-			if($provider == NULL) {
-				$msg = "unknown provider named : ".$provider_name;
-				ScriptsConfig::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_request_renew', $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingTypeSubsRequestRenew, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal bypassed - already done today -");
 				return;
 			}
-			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_renew');
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingTypeSubsRequestRenew);
 			$now = (new DateTime())->setTimezone(new DateTimeZone(self::$timezone));
 			$lastAttemptDate = clone $now;
 			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
 			if($lastAttemptDate > $now) {
+				BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsRequestRenew.'.hit');
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal...");
 				
 				if(($current_par_ren_file_path = tempnam('', 'tmp')) === false) {
@@ -62,7 +62,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$lastId = NULL;
 				$totalCounter = NULL;
 				do {
-					$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $provider->getId(), $sub_period_ends_date, $status_array, $lastId);
+					$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $this->provider->getId(), $sub_period_ends_date, $status_array, $lastId);
 					if(is_null($totalCounter)) {$totalCounter = $endingBillingsSubscriptions['total_counter'];}
 					$idx+= count($endingBillingsSubscriptions['subscriptions']);
 					$lastId = $endingBillingsSubscriptions['lastId'];
@@ -143,12 +143,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				self::setRequestsAreDone($billingsSubscriptionActionLogs);
 				$processingLog->setProcessingStatus('done');
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal done successfully");
+				BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsRequestRenew.'.success');
 			} else {
 				//NOTHING TO DO YET
 				$processingLog->setProcessingStatus('postponed');
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal postponed successfully");
 			}
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsRequestRenew.'.error');
 			$msg = "an error occurred while requesting bachat subscriptions renewal, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
 			self::setRequestsAreFailed($billingsSubscriptionActionLogs, $e->getMessage());
@@ -264,26 +266,17 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$current_par_can_file_res = NULL;
 		$billingsSubscriptionsOkToProceed = array();
 		try {
-			$provider_name = "bachat";
-				
-			$provider = ProviderDAO::getProviderByName($provider_name);
-				
-			if($provider == NULL) {
-				$msg = "unknown provider named : ".$provider_name;
-				ScriptsConfig::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_request_cancel', $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingTypeSubsRequestCancel, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions canceling bypassed - already done today -");
 				return;
 			}
-			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_request_cancel');
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingTypeSubsRequestCancel);
 			$now = (new DateTime())->setTimezone(new DateTimeZone(self::$timezone));
 			$lastAttemptDate = clone $now;
 			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
 			if($lastAttemptDate > $now) {
+				BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsRequestCancel.'.hit');
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions canceling...");
 				if(($current_par_can_file_path = tempnam('', 'tmp')) === false) {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), "PAR_CAN file cannot be created");
@@ -303,7 +296,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$lastId = NULL;
 				$totalCounter = NULL;
 				do {
-					$requestingCanceledBillingsSubscriptions = BillingsSubscriptionDAO::getRequestingCanceledBillingsSubscriptions($limit, 0, $provider->getId(), $status_array, $lastId);
+					$requestingCanceledBillingsSubscriptions = BillingsSubscriptionDAO::getRequestingCanceledBillingsSubscriptions($limit, 0, $this->provider->getId(), $status_array, $lastId);
 					if(is_null($totalCounter)) {$totalCounter = $requestingCanceledBillingsSubscriptions['total_counter'];}
 					$idx+= count($requestingCanceledBillingsSubscriptions['subscriptions']);
 					$lastId = $requestingCanceledBillingsSubscriptions['lastId'];
@@ -384,12 +377,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				self::setRequestsAreDone($billingsSubscriptionActionLogs);
 				$processingLog->setProcessingStatus('done');
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions canceling done successfully");
+				BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsRequestCancel.'.success');
 			} else {
 				//NOTHING TO DO YET
 				$processingLog->setProcessingStatus('postponed');
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions canceling postponed successfully");
 			}
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsRequestCancel.'.error');
 			$msg = "an error occurred while requesting bachat subscriptions canceling, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
 			self::setRequestsAreFailed($billingsSubscriptionActionLogs, $e->getMessage());
@@ -461,17 +456,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$current_ren_file_path = NULL;
 		$current_ren_file_res = NULL;
 		try {
-			$provider_name = "bachat";
-			
-			$provider = ProviderDAO::getProviderByName($provider_name);
-			
-			if($provider == NULL) {
-				$msg = "unknown provider named : ".$provider_name;
-				ScriptsConfig::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-				
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_renew', $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingTypeSubsResponseRenew, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal bypassed - already done today -");
 				return;
@@ -479,7 +464,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions renewal file...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_response_renew');
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingTypeSubsResponseRenew);
 			
 			if(($current_ren_file_path = tempnam('', 'tmp')) === false) {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), "REN file cannot be created");
@@ -540,6 +525,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			fclose($current_ren_file_res);
 			$current_ren_file_res = NULL;
 			if($file_found) {
+				BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsResponseRenew.'.hit');
 				if(($current_ren_file_res = fopen($current_ren_file_path, "r")) === false) {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), "REN file cannot be open (for read)");
 				}
@@ -550,12 +536,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$current_ren_file_path = NULL;
 				$processingLog->setProcessingStatus('done');
 				ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions renewal file done successfully");
+				BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsResponseRenew.'.success');
 			} else {
 				//NOTHING TO DO YET
 				$processingLog->setProcessingStatus('postponed');
 				ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions renewal file postponed successfully");
 			}
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsResponseRenew.'.error');
 			$msg = "an error occurred while checking bachat subscriptions renewal file, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
 			if(isset($processingLog)) {
@@ -665,7 +653,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$subscriptionsHandler = new SubscriptionsHandler();
 				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch(Exception $e) {
@@ -692,7 +680,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			/*throw $e;*/
 		} finally {
 			if(isset($billingsSubscriptionActionLog)) {
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 			}
 		}
 	}
@@ -702,17 +690,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$current_can_file_path = NULL;
 		$current_can_file_res = NULL;
 		try {
-			$provider_name = "bachat";
-			
-			$provider = ProviderDAO::getProviderByName($provider_name);
-			
-			if($provider == NULL) {
-				$msg = "unknown provider named : ".$provider_name;
-				ScriptsConfig::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_response_cancel', $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingTypeSubsResponseCancel, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions canceling bypassed - already done today -");
 				return;
@@ -720,7 +698,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions cancel file...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_response_cancel');
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingTypeSubsResponseCancel);
 			
 			if(($current_can_file_path = tempnam('', 'tmp')) === false) {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), "CAN file cannot be created");
@@ -781,6 +759,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			fclose($current_can_file_res);
 			$current_can_file_res = NULL;
 			if($file_found) {
+				BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsResponseCancel.'.hit');
 				if(($current_can_file_res = fopen($current_can_file_path, "r")) === false) {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), "CAN file cannot be open (for read)");
 				}
@@ -791,12 +770,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$current_can_file_path = NULL;
 				$processingLog->setProcessingStatus('done');
 				ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions cancel file done successfully");
+				BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsResponseCancel.'.success');
 			} else {
 				//NOTHING TO DO YET
 				$processingLog->setProcessingStatus('postponed');
 				ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions cancel file postponed successfully");
 			}
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsResponseCancel.'.error');
 			$msg = "an error occurred while checking bachat subscriptions cancel file, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
 			if(isset($processingLog)) {
@@ -901,7 +882,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$subscriptionsHandler = new SubscriptionsHandler();
 				$subscriptionsHandler->doCancelSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), $cancel_date, false);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch(Exception $e) {

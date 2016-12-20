@@ -85,6 +85,11 @@ class RecurlyTransactionsHandler {
 		if(isset($recurlyAccount->billing_info)) {
 			$country = $recurlyAccount->billing_info->get()->country;
 		}
+		if($country == NULL) {
+			if(isset($billingsTransaction)) {
+				$country = $billingsTransaction->getCountry();
+			}
+		}
 		$subId = NULL;
 		if($recurlyTransaction->source == 'subscription') {
 			$subscription_provider_uuid = $recurlyTransaction->subscription->get()->uuid;
@@ -168,6 +173,11 @@ class RecurlyTransactionsHandler {
 		$country = NULL;
 		if(isset($recurlyAccount->billing_info)) {
 			$country = $recurlyAccount->billing_info->get()->country;
+		}
+		if($country == NULL) {
+			if(isset($billingsTransaction)) {
+				$country = $billingsTransaction->getCountry();
+			}
 		}
 		$subId = NULL;
 		if($recurlyRefundTransaction->source == 'subscription') {

@@ -6,32 +6,27 @@ require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php
 
 class BillingsGocardlessWorkers extends BillingsWorkers {
 	
+	private $provider = NULL;
+	private $processingType = 'subs_refresh';
+	
 	public function __construct() {
 		parent::__construct();
+		$this->provider = ProviderDAO::getProviderByName('gocardless');
 	}
 	
 	public function doRefreshSubscriptions() {
 		$processingLog  = NULL;
 		try {
-			$provider_name = "gocardless";
-			
-			$provider = ProviderDAO::getProviderByName($provider_name);
-		
-			if($provider == NULL) {
-				$msg = "unknown provider named : ".$provider_name;
-				ScriptsConfig::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_refresh', $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("refreshing gocardless subscriptions bypassed - already done today -");
 				return;
 			}
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.hit');
 				
 			ScriptsConfig::getLogger()->addInfo("refreshing gocardless subscriptions...");
 				
-			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_refresh');
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingType);
 			//
 			$limit = 100;
 			//will select all day strictly before today
@@ -44,7 +39,7 @@ class BillingsGocardlessWorkers extends BillingsWorkers {
 			$lastId = NULL;
 			$totalCounter = NULL;
 			do {
-				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $provider->getId(), $sub_period_ends_date, $status_array, $lastId);
+				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $this->provider->getId(), $sub_period_ends_date, $status_array, $lastId);
 				if(is_null($totalCounter)) {$totalCounter = $endingBillingsSubscriptions['total_counter'];}
 				$idx+= count($endingBillingsSubscriptions['subscriptions']);
 				$lastId = $endingBillingsSubscriptions['lastId'];
@@ -64,7 +59,9 @@ class BillingsGocardlessWorkers extends BillingsWorkers {
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			ScriptsConfig::getLogger()->addInfo("refreshing gocardless subscriptions done successfully");
 			$processingLog = NULL;
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.success');
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.error');
 			$msg = "an error occurred while refreshing gocardless subscriptions, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
 			if(isset($processingLog)) {
@@ -83,13 +80,13 @@ class BillingsGocardlessWorkers extends BillingsWorkers {
 		try {
 			//
 			ScriptsConfig::getLogger()->addInfo("refreshing gocardless subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()."...");
+			$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
 			try {
 				pg_query("BEGIN");
-				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
 				$subscriptionsHandler = new SubscriptionsHandler();
 				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch (Exception $e) {
@@ -108,7 +105,7 @@ class BillingsGocardlessWorkers extends BillingsWorkers {
 			throw $e;
 		} finally {
 			if(isset($billingsSubscriptionActionLog)) {
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 			}
 		}
 	}

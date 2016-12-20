@@ -14,6 +14,7 @@ require_once __DIR__ . '/../providers/bouygues/subscriptions/BouyguesSubscriptio
 require_once __DIR__ . '/../providers/stripe/subscriptions/StripeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/braintree/subscriptions/BraintreeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/netsize/subscriptions/NetsizeSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/wecashup/subscriptions/WecashupSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/BillingsException.php';
 require_once __DIR__ . '/../utils/utils.php';
@@ -176,6 +177,10 @@ class SubscriptionsHandler {
 						$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 						$sub_uuid = $netsizeSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
 						break;						
+					case 'wecashup' :
+						$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
+						$sub_uuid = $wecashupSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
+						break;
 					default:
 						$msg = "unsupported feature for provider named : ".$provider->getName();
 						config::getLogger()->addError($msg);
@@ -225,7 +230,7 @@ class SubscriptionsHandler {
 							break;
 						case 'stripe':
 							$stripeSubscriptionHandler = new StripeSubscriptionsHandler();
-							$db_subscription = $stripeSubscriptionHandler->createDbSubscriptionFromApiSubscription($billingSubscription, $subOpts, $billingInfo, $subscription_billing_uuid, 'api', 0);
+							$db_subscription = $stripeSubscriptionHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts,  $billingInfo, $subscription_billing_uuid, $billingSubscription, 'api', 0);
 							break;
 						case 'braintree' :
 							$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler();
@@ -234,6 +239,10 @@ class SubscriptionsHandler {
 						case 'netsize' :
 							$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 							$db_subscription = $netsizeSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
+							break;
+						case 'wecashup' :
+							$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
+							$db_subscription = $wecashupSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						default:
 							$msg = "record new: unsupported feature for provider named : ".$provider->getName();
@@ -320,6 +329,10 @@ class SubscriptionsHandler {
 					break;
 				case 'netsize' :
 					$subscriptionsHandler = new NetsizeSubscriptionsHandler();
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
+					break;
+				case 'wecashup' :
+					$subscriptionsHandler = new WecashupSubscriptionsHandler();
 					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
 					break;
 				default:
@@ -422,6 +435,10 @@ class SubscriptionsHandler {
 				case 'netsize' :
 					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 					$netsizeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
+					break;
+				case 'wecashup' :
+					$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
+					$wecashupSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
 					break;
 				default:
 					//nothing to do (unknown)
@@ -553,6 +570,7 @@ class SubscriptionsHandler {
 	}
 	
 	public function doCancelSubscriptionByUuid($subscriptionBillingUuid, DateTime $cancel_date, $is_a_request = true) {
+		$starttime = microtime(true);
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
@@ -599,6 +617,16 @@ class SubscriptionsHandler {
 					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 					$db_subscription = $netsizeSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
 					break;
+				case 'afr' :
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+				case 'wecashup' :
+					$msg = "unsupported feature for provider named : ".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
@@ -614,18 +642,25 @@ class SubscriptionsHandler {
 			//
 			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
 		} catch(BillingsException $e) {
+			BillingStatsd::inc('route.providers.all.subscriptions.cancel.error');
 			$msg = "a billings exception occurred while dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription canceling failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.providers.all.subscriptions.cancel.error');
 			$msg = "an unknown exception occurred while dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription canceling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		} finally {
+			BillingStatsd::inc('route.providers.all.subscriptions.cancel.hit');
+			$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.providers.all.subscriptions.cancel.responsetime', $responseTimeInMillis);
 		}
 		return($db_subscription);
 	}
 	
 	public function doExpireSubscriptionByUuid($subscriptionBillingUuid, DateTime $expires_date, $is_a_request = true) {
+		$starttime = microtime(true);
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
@@ -684,6 +719,10 @@ class SubscriptionsHandler {
 					$stripeSubscriptionsHandler = new StripeSubscriptionsHandler();
 					$db_subscription = $stripeSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
 					break;
+				case 'wecashup' :
+					$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
+					$db_subscription = $wecashupSubscriptionsHandler->doExpireSubscription($db_subscription, $expires_date, $is_a_request);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
@@ -697,13 +736,19 @@ class SubscriptionsHandler {
 			//
 			config::getLogger()->addInfo("dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
 		} catch(BillingsException $e) {
+			BillingStatsd::inc('route.providers.all.subscriptions.expire.error');
 			$msg = "a billings exception occurred while dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription expiring failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.providers.all.subscriptions.expire.error');
 			$msg = "an unknown exception occurred while dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription expiring failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		} finally {
+			BillingStatsd::inc('route.providers.all.subscriptions.expire.hit');
+			$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.providers.all.subscriptions.expire.responsetime', $responseTimeInMillis);
 		}
 		return($db_subscription);
 	}
@@ -781,7 +826,7 @@ class SubscriptionsHandler {
 			$subscription->setIsCancelable(false);
 		} else {
 			$array_status_cancelable = ['future', 'active'];
-			if(array_key_exists($subscription->getSubStatus() , $array_status_cancelable)) {
+			if(in_array($subscription->getSubStatus() , $array_status_cancelable)) {
 				$subscription->setIsCancelable(true);
 			} else {
 				$subscription->setIsCancelable(false);
@@ -839,6 +884,10 @@ class SubscriptionsHandler {
 			case 'netsize' :
 				$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
 				$netsizeSubscriptionsHandler->doFillSubscription($subscription);
+				break;
+			case 'wecashup' :
+				$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
+				$wecashupSubscriptionsHandler->doFillSubscription($subscription);
 				break;
 			default:
 				$msg = "unsupported feature for provider named : ".$provider->getName();
@@ -918,6 +967,20 @@ class SubscriptionsHandler {
 			$hasEvent = ($event != NULL);
 			if($hasEvent) {
 				$this->doSendEmail($subscription_after_update, $event, $sendgrid_template_id);
+				switch ($event) {
+					case 'subscription_is_new' :
+						//nothing to do : creation is made only by API calls already traced 
+						break;
+					case 'subscription_is_canceled' :
+						BillingStatsd::inc('route.providers.all.subscriptions.cancel.success');
+						break;
+					case 'subscription_is_expired' :
+						BillingStatsd::inc('route.providers.all.subscriptions.expire.success');
+						break;
+					default :
+						//nothing to do
+						break;
+				}
 			}
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid()." done successfully");
 		} catch(Exception $e) {
@@ -1102,6 +1165,13 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
+			$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription_after_update->getId());
+			$internalCoupon = NULL;
+			$internalCouponsCampaign = NULL;
+			if(isset($userInternalCoupon)) {
+				$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($userInternalCoupon->getInternalCouponsId());
+				$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+			}
 			//DATA <--
 			//DATA SUBSTITUTION -->
 			setlocale(LC_MONETARY, 'fr_FR.utf8');//TODO : Forced to French Locale for "," in floats...
@@ -1162,6 +1232,30 @@ class SubscriptionsHandler {
 			$substitions['%fullname%'] = $fullname;
 			//subscription
 			$substitions['%subscriptionbillinguuid%'] = $subscription_after_update->getSubscriptionBillingUuid();
+			//Coupon
+			$substitions['%couponCode%'] = '';
+			$substitions['%couponAmountForDisplay%'] = '';
+			$substitions['%couponDetails%'] = '';
+			$substitions['%couponAppliedSentence%'] = '';
+			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() == 'promo') {
+				$couponAmountForDisplay = '';
+				switch($internalCouponsCampaign->getDiscountType()) {
+					case 'percent' :
+						$couponAmountForDisplay = $internalCouponsCampaign->getPercent().'%';
+						break;
+					case 'amount' :
+						$couponAmountForDisplay = new Money((integer) $internalCouponsCampaign->getAmountInCents(), new Currency($internalCouponsCampaign->getCurrency()));
+						$couponAmountForDisplay = money_format('%!.2n', (float) ($couponAmountForDisplay->getAmount() / 100));
+						$couponAmountForDisplay = $couponAmountForDisplay.' '.dbGlobal::getCurrencyForDisplay($internalCouponsCampaign->getCurrency());  
+						break;
+				}
+				$substitions['%couponCode%'] = $userInternalCoupon->getCode();
+				$substitions['%couponAmountForDisplay%'] = $couponAmountForDisplay;
+				$substitions['%couponDetails%'] = $internalCouponsCampaign->getDescription();
+				$couponAppliedSentence = getEnv('SENDGRID_VAR_couponAppliedSentence');
+				$couponAppliedSentence = str_replace(array_keys($substitions), array_values($substitions), $couponAppliedSentence);
+				$substitions['%couponAppliedSentence%'] = $couponAppliedSentence;
+			}
 			//DATA SUBSTITUTION <--
 			$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
 			$email = new SendGrid\Email();
@@ -1225,6 +1319,124 @@ class SubscriptionsHandler {
 			}
 		}
 		return(false);
+	}
+	
+	protected function getCouponInfos($couponCode, Provider $provider, User $user, InternalPlan $internalPlan) {
+		//
+		$out = array();
+		$internalCoupon = NULL;
+		$internalCouponsCampaign = NULL;
+		$providerCouponsCampaign = NULL;
+		$userInternalCoupon = NULL;
+		//
+		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+		if($internalCoupon == NULL) {
+			$msg = "coupon : code=".$couponCode." NOT FOUND";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_CODE_NOT_FOUND);
+		}
+		//Check internalCoupon
+		if($internalCoupon->getStatus() == 'redeemed') {
+			$msg = "coupon : code=".$couponCode." already redeemed";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_REDEEMED);
+		}
+		if($internalCoupon->getStatus() == 'expired') {
+			$msg = "coupon : code=".$couponCode." expired";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_EXPIRED);
+		}
+		if($internalCoupon->getStatus() == 'pending') {
+			$msg = "coupon : code=".$couponCode." pending";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PENDING);
+		}
+		if($internalCoupon->getStatus() != 'waiting') {
+			$msg = "coupon : code=".$couponCode." cannot be used";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_NOT_READY);
+		}
+		//
+		$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+		if($internalCouponsCampaign == NULL) {
+			$msg = "unknown internalCouponsCampaign with id : ".$internalCoupon->getInternalCouponsCampaignsId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//Check compatibility
+		$isProviderCompatible = false;
+		$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+		foreach ($providerCouponsCampaigns as $currentProviderCouponsCampaign) {
+			if($currentProviderCouponsCampaign->getProviderId() == $provider->getId()) {
+				$providerCouponsCampaign = $currentProviderCouponsCampaign;
+				$isProviderCompatible = true;
+				break;
+			}
+		}
+		if($isProviderCompatible == false) {
+			//Exception
+			$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$provider->getName();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PROVIDER_INCOMPATIBLE);
+		}
+		$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+		$isInternalPlanCompatible = false;
+		foreach($billingInternalCouponsCampaignInternalPlans as $billingInternalCouponsCampaignInternalPlan) {
+			if($billingInternalCouponsCampaignInternalPlan->getInternalPlanId() == $internalPlan->getId()) {
+				$isInternalPlanCompatible = true; break;
+			}
+		}
+		if($isInternalPlanCompatible == false) {
+			//Exception
+			$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with internalPlan : ".$internalPlan->getInternalPlanUuid();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_INTERNALPLAN_INCOMPATIBLE);
+		}
+		//
+		$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCoupon->getId());
+		if(count($userInternalCoupons) > 0) {
+			//TAKING FIRST (EQUALS LAST GENERATED)
+			$userInternalCoupon = $userInternalCoupons[0];
+		} else {
+			$userInternalCoupon = new BillingUserInternalCoupon();
+			$userInternalCoupon->setInternalCouponsId($internalCoupon->getId());
+			$userInternalCoupon->setCode($internalCoupon->getCode());
+			$userInternalCoupon->setUuid(guid());
+			$userInternalCoupon->setUserId($user->getId());
+			$userInternalCoupon->setExpiresDate($internalCoupon->getExpiresDate());
+			$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
+		}
+		//Check userInternalCoupon
+		if($userInternalCoupon->getStatus() == 'redeemed') {
+			$msg = "coupon : code=".$couponCode." already redeemed";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_REDEEMED);
+		}
+		if($userInternalCoupon->getStatus() == 'expired') {
+			$msg = "coupon : code=".$couponCode." expired";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_EXPIRED);
+		}
+		if($userInternalCoupon->getStatus() == 'pending') {
+			$msg = "coupon : code=".$couponCode." pending";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PENDING);
+		}
+		if($userInternalCoupon->getStatus() != 'waiting') {
+			$msg = "coupon : code=".$couponCode." cannot be used";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_NOT_READY);
+		}
+		if($userInternalCoupon->getSubId() != NULL) {
+			$msg = "coupon : code=".$couponCode." is already linked to another subscription";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_ALREADY_LINKED);
+		}
+		$out['internalCoupon'] = $internalCoupon;
+		$out['internalCouponsCampaign'] = $internalCouponsCampaign;
+		$out['providerCouponsCampaign'] = $providerCouponsCampaign;
+		$out['userInternalCoupon'] = $userInternalCoupon;
+		return($out);
 	}
 	
 }

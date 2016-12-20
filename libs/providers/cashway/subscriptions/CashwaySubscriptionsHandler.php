@@ -23,63 +23,91 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$couponCode = $subOpts->getOpts()['couponCode'];
-			$coupon = CouponDAO::getCoupon($provider->getId(), $couponCode);
-			if($coupon == NULL) {
+			$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+			if($internalCoupon == NULL) {
 				$msg = "coupon : code=".$couponCode." NOT FOUND";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_CODE_NOT_FOUND);				
 			}
-			$couponProviderPlan = PlanDAO::getPlanById($coupon->getProviderPlanId());
-			if($couponProviderPlan == NULL) {
-				$msg = "unknown coupon plan with id : ".$coupon->getProviderPlanId();
+			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+			if($internalCouponsCampaign == NULL) {
+				$msg = "unknown internalCouponsCampaign with id : ".$internalCoupon->getInternalCouponsCampaignsId();
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$couponInternalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($couponProviderPlan->getId()));
-			if($couponInternalPlan == NULL) {
-				$msg = "coupon plan with uuid=".$couponProviderPlan->getPlanUuid()." for provider cashway is not linked to an internal plan";
+			//Check compatibility
+			$isProviderCompatible = false;
+			$providerCouponsCampaign = NULL;
+			$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+			foreach ($providerCouponsCampaigns as $currentProviderCouponsCampaign) {
+				if($currentProviderCouponsCampaign->getProviderId() == $provider->getId()) {
+					$providerCouponsCampaign = $currentProviderCouponsCampaign;
+					$isProviderCompatible = true;
+					break;
+				}
+			}
+			if($isProviderCompatible == false) {
+				//Exception
+				$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$provider->getName();
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);		
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PROVIDER_INCOMPATIBLE);
 			}
-			if($internalPlan->getId() != $couponInternalPlan->getId()) {
-				$msg = "coupon : code=".$couponCode." cannot be used with internalPlan with uuid=".$internalPlan->getInternalPlanUuid();
+			$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
+			if(count($billingInternalCouponsCampaignInternalPlans) == 0) {
+				//Exception
+				$msg = "no internalPlan associated to internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid();
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
-			}
-			if($coupon->getUserId() == NULL) {
-				$msg = "coupon : code=".$couponCode." is linked to nobody";
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			} else if(count($billingInternalCouponsCampaignInternalPlans) == 1) {
+				$billingInternalCouponsCampaignInternalPlan = $billingInternalCouponsCampaignInternalPlans[0];
+				if($internalPlan->getId() != $billingInternalCouponsCampaignInternalPlan->getInternalPlanId()) {
+					//Exception
+					$msg = "coupon : code=".$couponCode." cannot be used with internalPlan with uuid=".$internalPlan->getInternalPlanUuid();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_INTERNALPLAN_INCOMPATIBLE);
+				}
+			} else {
+				//Exception
+				$msg = "only one internalPlan can be associated to internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid();
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if($coupon->getUserId() != $user->getId()) {
-				$msg = "coupon : code=".$couponCode." is not linked to the current user";
+			$userInternalCoupon = NULL;
+			$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCoupon->getId());
+			if(count($userInternalCoupons) == 0) {
+				//exception
+				$msg = "coupon : code=".$couponCode." NOT FOUND FOR YOU";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_CODE_NOT_FOUND);
+			} else {
+				//TAKING FIRST (EQUALS LAST GENERATED)
+				$userInternalCoupon = $userInternalCoupons[0];
 			}
-			if($coupon->getStatus() == 'redeemed') {
+			//
+			if($userInternalCoupon->getStatus() == 'redeemed') {
 				$msg = "coupon : code=".$couponCode." already redeemed";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_REDEEMED);				
 			}
-			if($coupon->getStatus() == 'expired') {
+			if($userInternalCoupon->getStatus() == 'expired') {
 				$msg = "coupon : code=".$couponCode." expired";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_EXPIRED);
 			}
-			if($coupon->getStatus() == 'pending') {
+			if($userInternalCoupon->getStatus() == 'pending') {
 				$msg = "coupon : code=".$couponCode." pending";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PENDING);
 			}
-			if($coupon->getStatus() != 'waiting') {
+			if($userInternalCoupon->getStatus() != 'waiting') {
 				$msg = "coupon : code=".$couponCode." cannot be used";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_NOT_READY);
 			}
-			if($coupon->getSubId() != NULL) {
+			if($userInternalCoupon->getSubId() != NULL) {
 				$msg = "coupon : code=".$couponCode." is already linked to another subscription";
 				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_ALREADY_LINKED);
 			}
 			//OK
 			$sub_uuid = guid();
@@ -98,6 +126,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
 		$api_subscription = new BillingsSubscription();
+		$api_subscription->setCreationDate(new DateTime());
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('future');
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
@@ -139,50 +168,60 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setUpdateType($update_type);
 		//
 		$db_subscription->setUpdateId($updateId);
-		$db_subscription->setDeleted('false');
+		$db_subscription->setDeleted(false);
 		//?COUPON? JUST TEST IF READY TO USE (all other case seen before)
-		$coupon = NULL;
-		if(isset($subOpts)) {
-			$couponCode = $subOpts->getOpts()['couponCode'];			
-			$coupon = CouponDAO::getCoupon($provider->getId(), $couponCode);
-			if($coupon == NULL) {
-				$msg = "coupon : code=".$couponCode." NOT FOUND";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			if($coupon->getStatus() != 'waiting') {
-				$msg = "coupon : code=".$couponCode." cannot be used";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			//ADD CouponCode URL
-			$subOpts->setOpt('couponCodeUrl', getEnv('CASHWAY_COUPON_URL').$couponCode.".h");
+		$internalCoupon = NULL;
+		$userInternalCoupon = NULL;
+		if($subOpts == NULL) {
+			//Exception
+			$msg = "field 'subOpts' is missing";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		$couponCode = $subOpts->getOpts()['couponCode'];
+		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+		if($internalCoupon == NULL) {
+			$msg = "coupon : code=".$couponCode." NOT FOUND";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCoupon->getId());
+		if(count($userInternalCoupons) == 0) {
+			//exception
+			$msg = "coupon : code=".$couponCode." NOT FOUND FOR YOU";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		} else {
+			//TAKING FIRST (EQUALS LAST GENERATED)
+			$userInternalCoupon = $userInternalCoupons[0];
+		}
+		if($userInternalCoupon->getStatus() != 'waiting') {
+			$msg = "coupon : code=".$couponCode." cannot be used";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//ADD CouponCode URL
+		$subOpts->setOpt('couponCodeUrl', getEnv('CASHWAY_COUPON_URL').$couponCode.".h");
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
-		//BILLING_INFO
+		//BILLING_INFO (NOT MANDATORY)
 		if(isset($billingInfo)) {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
-		//SUB_OPTS
-		if(isset($subOpts)) {
-			$subOpts->setSubId($db_subscription->getId());
-			$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
-		}
-		//COUPON
-		if(isset($coupon)) {
-			$coupon->setStatus("pending");
-			$coupon = CouponDAO::updateStatus($coupon);
-			/*
-			$coupon->setRedeemedDate(new DateTime());
-			$coupon = CouponDAO::updateRedeemedDate($coupon);*/
-			$coupon->setSubId($db_subscription->getId());
-			$coupon = CouponDAO::updateSubId($coupon);
-			/*$coupon->setUserId($user->getId());
-			$coupon = CouponDAO::updateUserId($coupon);*/
-		}
+		//SUB_OPTS (MANDATORY)
+		$subOpts->setSubId($db_subscription->getId());
+		$subOpts = BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+		//COUPON (MANDATORY)
+		//userInternalCoupon
+		$userInternalCoupon->setStatus("pending");
+		$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
+		$userInternalCoupon->setSubId($db_subscription->getId());
+		$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+		//internalCoupon
+		$internalCoupon->setStatus("pending");
+		$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("cashway dbsubscription creation for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
 		return($db_subscription);
@@ -230,7 +269,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 	}
 	
 	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
-		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()."...");
+		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->getSubUid().", id=".$db_subscription->getId()."...");
 		//UPDATE
 		$db_subscription_before_update = clone $db_subscription;
 		//
@@ -308,11 +347,11 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateId($db_subscription);
-		//$db_subscription->setDeleted('false');//STATIC
+		//$db_subscription->setDeleted(false);//STATIC
 		//
 		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
-		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()." done successfully");
+		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->getSubUid().", id=".$db_subscription->getId()." done successfully");
 		return($db_subscription);
 	}
 	
