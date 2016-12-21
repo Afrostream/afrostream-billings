@@ -1,8 +1,5 @@
 <?php
 
-use ChartMogul;
-use Braintree\Exception;
-
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../BillingsWorkers.php';
@@ -99,8 +96,8 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, $this->processingTypeSyncCustomers);
 			//
 			$providerIds = array();
-			//TODO : to be completed
-			$providerNames = ['recurly', 'afr', 'braintree'];
+			//TODO : should by dynamically loaded
+			$providerNames = ['celery', 'recurly', 'braintree', 'bachat', 'gocardless', 'afr'];
 			foreach ($providerNames as $providerName) {
 				$provider = ProviderDAO::getProviderByName($providerName);
 				if($provider == NULL) {
@@ -111,13 +108,15 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 				$providerIds[] = $provider->getId();
 			}
 			//
+			$chartmogulStatus_array = ['waiting', 'failed'];
+			//
 			$limit = 1000;
 			$offset = 0;
 			$idx = 0;
 			$lastId = NULL;
 			$totalCounter = NULL;
 			do {
-				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $providerIds, 'waiting');
+				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $providerIds, $chartmogulStatus_array);
 				if(is_null($totalCounter)) {$totalCounter = $users['total_counter'];}
 				$idx+= count($users['users']);
 				$lastId = $users['lastId'];
@@ -154,30 +153,46 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 	}
 	
 	private function doSyncCustomer(User $user) {
-		$chartmogulCustomers = ChartMogul\Enrichment\Customer::all([
-				'external_id' => $user->getUserProviderUuid()
-		]);
-		if(count($chartmogulCustomers->entries) == 0) {
-			//Exception
-			throw new Exception('no customer found with external_id='.$user->getUserProviderUuid());
-		}
-		if(count($chartmogulCustomers->entries) > 1) {
-			//Exception
-			throw new Exception('more than one customer found with external_id='.$user->getUserProviderUuid());
-		}
-		$chartmogulCustomer = $chartmogulCustomers->entries[0];
+		$chartmogulCustomerUuid = NULL;
+		$chartmogulStatus = NULL;
 		try {
-			//START TRANSACTION
-			pg_query("BEGIN");
-			$user->setChartmogulCustomerUuid($chartmogulCustomer->uuid);
-			$user = UserDAO::updateChartmogulCustomerUuid($user);
-			$user->setChartmogulMergeStatus('pending');
-			$user = UserDAO::updateChartmogulStatus($user);
-			//COMMIT
-			pg_query("COMMIT");
+			ScriptsConfig::getLogger()->addInfo("syncing chartmogul customer for user with id=".$user->getId()."...");
+			$chartmogulCustomers = ChartMogul\Enrichment\Customer::all([
+					'external_id' => $user->getUserProviderUuid()
+			]);
+			if(count($chartmogulCustomers->entries) == 0) {
+				//Exception
+				throw new Exception('no customer found with external_id='.$user->getUserProviderUuid());
+			}
+			if(count($chartmogulCustomers->entries) > 1) {
+				//Exception
+				throw new Exception('more than one customer found with external_id='.$user->getUserProviderUuid());
+			}
+			$chartmogulCustomer = $chartmogulCustomers->entries[0];
+			$chartmogulCustomerUuid = $chartmogulCustomer->uuid;
+			$chartmogulStatus = 'pending';
+			ScriptsConfig::getLogger()->addInfo("syncing chartmogul customer for user with id=".$user->getId()." done successfully");
 		} catch(Exception $e) {
-			pg_query("ROLLBACK");
+			$chartmogulStatus = 'failed';
+			$msg = "an error occurred while syncing chartmogul customer for user with id=".$user->getId().", message=".$e->getMessage();
+			ScriptsConfig::getLogger()->addError($msg);
 			throw $e;
+		} finally {
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				if(isset($chartmogulCustomerUuid)) {
+					$user->setChartmogulCustomerUuid($chartmogulCustomerUuid);
+					$user = UserDAO::updateChartmogulCustomerUuid($user);
+				}
+				$user->setChartmogulMergeStatus($chartmogulStatus);
+				$user = UserDAO::updateChartmogulStatus($user);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
 		}
 		return($user);
 	}

@@ -194,7 +194,7 @@ EOL;
 			$offset = 0,
 			$afterId = NULL,
 			$providerIds_array = NULL,
-			$chartmogulStatus = NULL) {
+			$chartmogulStatus_array = NULL) {
 		$params = array();
 		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_users BU";
 		$query.= " WHERE BU.deleted = false";
@@ -212,9 +212,19 @@ EOL;
 			}
 			$query.= ")";
 		}
-		if(isset($chartmogulStatus)) {
-			$params[] = $chartmogulStatus;
-			$query.= " AND BU.chartmogul_merge_status = $".(count($params));
+		if(isset($chartmogulStatus_array) && count($chartmogulStatus_array) > 0) {
+			$firstLoop = true;
+			$query.= " AND BU.chartmogul_merge_status in (";
+			foreach($chartmogulStatus_array as $chartmogulStatus) {
+				$params[] = $chartmogulStatus;
+				if($firstLoop) {
+					$firstLoop = false;
+					$query .= "$".(count($params));
+				} else {
+					$query .= ", $".(count($params));
+				}
+			}
+			$query.= ")";
 		}
 		if(isset($afterId)) {
 			$query.= " AND BU._id > ".$afterId;
