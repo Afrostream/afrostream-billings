@@ -191,7 +191,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 		try {
 			ScriptsConfig::getLogger()->addInfo("merging chartmogul customer for user with id=".$user->getId()."...");
 			//get users
-			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid(), $this->supportedProvidersIds));
+			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid()));
 			$masterUser = self::getFirstUserByChartmogulMergeStatus($users, 'master');
 			if($masterUser == NULL) {
 				$masterUser = self::getFirstUserByChartmogulMergeStatus($users, 'pending');
@@ -199,7 +199,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 				$masterUser = UserDAO::updateChartmogulStatus($masterUser);
 			}
 			//update users
-			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid(), $this->supportedProvidersIds));
+			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid()));
 			$pendingUsers = self::getUsersByChartmogulMergeStatus($users, 'pending');
 			foreach ($pendingUsers as $pendingUser) {
 				try {
