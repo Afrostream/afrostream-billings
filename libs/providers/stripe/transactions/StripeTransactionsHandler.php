@@ -233,9 +233,9 @@ class StripeTransactionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);					
 				}
 			} else {
-				$msg = "no invoice linked to the transaction, so subscription cannot be found";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				$msg = "no invoice linked to the transaction, so transaction cannot be linked to a subscription";
+				config::getLogger()->addInfo($msg);
+				//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
 			}
 			//should not happen
 			if($userId == NULL) {
