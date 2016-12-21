@@ -53,7 +53,7 @@ class UserDAO {
 	BU._id, BU.creation_date, BU.providerid, 
 	BU.user_billing_uuid, BU.user_reference_uuid, 
 	BU.user_provider_uuid, BU.deleted,
-	BU.chartmogul_customer_uuid , BU.chartmogul_merge_status
+	BU.chartmogul_customer_uuid, BU.chartmogul_merge_status
 EOL;
 	
 	private static function getUserFromRow($row) {
