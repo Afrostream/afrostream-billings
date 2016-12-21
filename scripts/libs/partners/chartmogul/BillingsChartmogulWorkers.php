@@ -9,46 +9,26 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 
 	private $processingTypeMergeCustomers = 'merge_customers';
 	private $processingTypeSyncCustomers = 'sync_customers';
+	//TODO : should by dynamically loaded
+	private $supportedProviderNames = ['celery', 'recurly', 'braintree', 'bachat', 'gocardless', 'afr'];
+	private $supportedProviders = array();
+	private $supportedProvidersIds = array();
 	
 	public function __construct() {
 		parent::__construct();
 		ChartMogul\Configuration::getDefaultConfiguration()
 		->setAccountToken(getEnv('CHARTMOGUL_API_ACCOUNT_TOKEN'))
 		->setSecretKey(getEnv('CHARTMOGUL_API_SECRET_KEY'));
+		foreach ($this->supportedProviderNames as $providerName) {
+			$provider = ProviderDAO::getProviderByName($providerName);
+			$this->supportedProviders[] = $provider;
+			$this->supportedProvidersIds[] = $provider->getId();
+		}
 	}
 	
 	public function doMergeCustomers() {
 		$processingLog  = NULL;
 		try {
-			try {
-				//Sample
-				//$custId = 'cus_3dbe4aaa-a351-11e6-9b5a-4b4e13282e35';
-				//$externalId = '243b08a4-0cbd-aa79-25ed-4c146047d398';
-				//$customer = ChartMogul\Enrichment\Customer::all([
-				//		'external_id' => $externalId
-				//]);
-				//$customer = ChartMogul\Enrichment\Customer::retrieve($custId);
-				//sissou_972@hotmail.com
-				//$externalId = "4013c270-50ce-11e5-9199-4bb4ee4a104f";//(RECURLY)
-				$externalIdInRecurly = "sissou_972@hotmail.com";//(RECURLY)
-				$externalIdInBraintree = "691322408";//(BRAINTREE)
-				$customerFromRecurly = ChartMogul\Enrichment\Customer::all([
-					'external_id' => $externalIdInRecurly
-				]);
-				ScriptsConfig::getLogger()->addInfo("customerFromRecurly=".$customerFromRecurly);
-				$customerFromBraintree = ChartMogul\Enrichment\Customer::all([
-					'external_id' => $externalIdInBraintree
-				]);
-				$bool = ChartMogul\Enrichment\Customer::merge(
-						["customer_uuid" => $customerFromRecurly->entries[0]->uuid], 
-						["customer_uuid" => $customerFromBraintree->entries[0]->uuid]);
-				//ScriptsConfig::getLogger()->addInfo("Chartmogul CustomerCustId : ".$customer->entries[0]->uuid);
-				ScriptsConfig::getLogger()->addInfo("bool : ".$bool);
-			} catch (Exception $e) {
-				ScriptsConfig::getLogger()->addInfo("Exception !!".$e->getMessage());
-			}
-			exit;
-			//
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingTypeMergeCustomers, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("merging chartmogul customers bypassed - already done today -");
@@ -60,6 +40,29 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 			
 			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, $this->processingTypeMergeCustomers);
 			//
+			$chartmogulStatus_array = ['pending'];
+			//
+			$limit = 1000;
+			$offset = 0;
+			$idx = 0;
+			$lastId = NULL;
+			$totalCounter = NULL;
+			do {
+				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $this->supportedProvidersIds, $chartmogulStatus_array);
+				if(is_null($totalCounter)) {$totalCounter = $users['total_counter'];}
+				$idx+= count($users['users']);
+				$lastId = $users['lastId'];
+				//
+				ScriptsConfig::getLogger()->addInfo("processing...total_counter=".$totalCounter.", idx=".$idx);
+				foreach($users['users'] as $user) {
+					try {
+						$this->doMergeCustomer($user);
+					} catch(Exception $e) {
+						$msg = "an error occurred while merging chartmogul customer for user with id=".$user->getId().", message=".$e->getMessage();
+						ScriptsConfig::getLogger()->addError($msg);
+					}
+				}
+			} while ($idx < $totalCounter && count($users['users']) > 0);
 			//DONE
 			$processingLog->setProcessingStatus('done');
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
@@ -95,19 +98,6 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 			
 			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, $this->processingTypeSyncCustomers);
 			//
-			$providerIds = array();
-			//TODO : should by dynamically loaded
-			$providerNames = ['celery', 'recurly', 'braintree', 'bachat', 'gocardless', 'afr'];
-			foreach ($providerNames as $providerName) {
-				$provider = ProviderDAO::getProviderByName($providerName);
-				if($provider == NULL) {
-					$msg = "unknown provider named : ".$providerName;
-					ScriptsConfig::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				$providerIds[] = $provider->getId();
-			}
-			//
 			$chartmogulStatus_array = ['waiting', 'failed'];
 			//
 			$limit = 1000;
@@ -116,7 +106,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 			$lastId = NULL;
 			$totalCounter = NULL;
 			do {
-				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $providerIds, $chartmogulStatus_array);
+				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $this->supportedProvidersIds, $chartmogulStatus_array);
 				if(is_null($totalCounter)) {$totalCounter = $users['total_counter'];}
 				$idx+= count($users['users']);
 				$lastId = $users['lastId'];
@@ -197,6 +187,85 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 		return($user);
 	}
 	
+	private function doMergeCustomer(User $user) {
+		try {
+			ScriptsConfig::getLogger()->addInfo("merging chartmogul customer for user with id=".$user->getId()."...");
+			//get users
+			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid(), $this->supportedProvidersIds));
+			$masterUser = self::getFirstUserByChartmogulMergeStatus($users, 'master');
+			if($masterUser == NULL) {
+				$masterUser = self::getFirstUserByChartmogulMergeStatus($users, 'pending');
+				$masterUser->setChartmogulMergeStatus('master');
+				$masterUser = UserDAO::updateChartmogulStatus($masterUser);
+			}
+			//update users
+			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid(), $this->supportedProvidersIds));
+			$pendingUsers = self::getUsersByChartmogulMergeStatus($users, 'pending');
+			foreach ($pendingUsers as $pendingUser) {
+				try {
+					try {
+						if(ChartMogul\Enrichment\Customer::merge(["customer_uuid" => $pendingUser->getChartmogulCustomerUuid()],
+						 	["customer_uuid" => $masterUser->getChartmogulCustomerUuid()]) == false) {
+						 		throw new Exception("charmogul api : cannot merge, no reason given");
+						}
+					} catch(Exception $e) {
+						throw $e;
+					}
+					try {
+						//START TRANSACTION
+						pg_query("BEGIN");
+						$pendingUser->setChartmogulMergeStatus('slave');
+						$pendingUser = UserDAO::updateChartmogulStatus($pendingUser);
+						//COMMIT
+						pg_query("COMMIT");
+					} catch(Exception $e) {
+						pg_query("ROLLBACK");
+						throw $e;
+					}
+				} catch(Exception $e) {
+					ScriptsConfig::getLogger()->addWarning("cannot merge from chartmogul_customer_uuid="
+							.$pendingUser->getChartmogulCustomerUuid()." to chartmogul_customer_uuid="
+							.$masterUser->getChartmogulCustomerUuid().", message=".$e->getMessage());
+				}
+			}
+			//
+			ScriptsConfig::getLogger()->addInfo("merging chartmogul customer for user with id=".$user->getId()." done successfully");
+		} catch(Exception $e) {
+			$msg = "an error occurred while merging chartmogul customer for user with id=".$user->getId().", message=".$e->getMessage();
+			ScriptsConfig::getLogger()->addError($msg);
+			throw $e;
+		}
+		return($user);
+	}
+	
+	private static function filterUsersBySupportedProvidersIds(array $users, array $supportedProvidersIds) {
+		$result = array();
+		foreach ($users as $user) {
+			if(in_array($user->getProviderId(), $supportedProvidersIds)) {
+				$result[] = $user;
+			}
+		}
+		return($result);
+	}
+	
+	private static function getFirstUserByChartmogulMergeStatus(array $users, $chartmogulMergeStatus) {
+		foreach ($users as $user) {
+			if($user->getChartmogulMergeStatus() == $chartmogulMergeStatus) {
+				return($user);
+			}
+		}
+		return NULL;		
+	}
+	
+	private static function getUsersByChartmogulMergeStatus(array $users, $chartmogulMergeStatus) {
+		$result = array();
+		foreach ($users as $user) {
+			if($user->getChartmogulMergeStatus() == $chartmogulMergeStatus) {
+				$result[] = $user;
+			}
+		}
+		return($result);
+	}
 }
 
 ?>
