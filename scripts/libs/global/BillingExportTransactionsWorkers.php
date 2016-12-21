@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../BillingsWorkers.php';
 require_once __DIR__ . '/BillingExportTransactions.php';
@@ -9,6 +10,8 @@ use Aws\S3\S3Client;
 
 class BillingExportTransactionsWorkers extends BillingsWorkers {
 	
+	private $processingType = 'transactions_export';
+	
 	public function __construct() {
 		parent::__construct();
 	}
@@ -16,15 +19,16 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 	public function doExportTransactions() {
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, 'transactions_export', $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("exporting transactions bypassed - already done today -");
 				return;
 			}
+			BillingStatsd::inc('route.scripts.workers.providers.global.workertype.'.$this->processingType.'.hit');
 		
 			ScriptsConfig::getLogger()->addInfo("exporting transactions...");
 		
-			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, 'transactions_export');
+			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, $this->processingType);
 			//
 			$billingExportTransactions = new BillingExportTransactions();
 			//
@@ -165,7 +169,9 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			ScriptsConfig::getLogger()->addInfo("exporting transactions done successfully");
 			$processingLog = NULL;
+			BillingStatsd::inc('route.scripts.workers.providers.global.workertype.'.$this->processingType.'.success');
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.scripts.workers.providers.global.workertype.'.$this->processingType.'.error');
 			$msg = "an error occurred while exporting transactions, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
 			if(isset($processingLog)) {

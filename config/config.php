@@ -503,6 +503,18 @@ class BillingStatsd {
 		}
 	}
 	
+	public static function startTiming($key) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->startTiming($key);
+		}
+	}
+	
+	public static function endTiming($key, $sampleRate = 1) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->endTiming($key, $sampleRate);
+		}		
+	}
+	
 }
 
 ?>
