@@ -60,7 +60,7 @@ class WecashupClient {
 		config::getLogger()->addInfo("WECASHUP-VALIDATETRANSACTION-REQUEST=".$fields_string);
 		
 		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_VERBOSE);
+		curl_setopt($ch, CURLOPT_VERBOSE, true);
 		curl_setopt($ch, CURLOPT_URL, $url);
 		curl_setopt($ch, CURLOPT_POST, count($fields));
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
@@ -433,6 +433,7 @@ class WecashupValidateTransactionRequest extends WecashupRequest {
 	private $transactionProviderName;
 	//
 	public function __construct() {
+		parent::__construct();
 	}
 	
 	public function setTransactionUid($transactionUid) {

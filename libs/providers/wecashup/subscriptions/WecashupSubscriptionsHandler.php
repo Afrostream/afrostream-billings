@@ -54,7 +54,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			$wecashupValidateTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 			$wecashupValidateTransactionRequest->setTransactionToken($subOpts->getOpt('transaction_token'));
 			$wecashupValidateTransactionRequest->setTransactionConfirmationCode($subOpts->getOpt('transaction_confirmation_code'));
-			$wecashupValidateTransactionRequest->setTransactionProviderName($subOpts->getOpt('transaction_confirmation_code'));
+			$wecashupValidateTransactionRequest->setTransactionProviderName($subOpts->getOpt('transaction_provider_name'));
 			$wecashupValidateTransactionResponse = $wecashupClient->validateTransaction($wecashupValidateTransactionRequest);
 			if($wecashupValidateTransactionResponse->getResponseStatus() != 'success') {
 				$msg = "The transaction did not succeed, responseStatus=".$wecashupValidateTransactionResponse->getResponseStatus().', responseCode='.$wecashupValidateTransactionResponse->getResponseCode();
