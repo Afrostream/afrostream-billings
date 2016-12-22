@@ -7,11 +7,11 @@ class WecashupClient {
 	
 	public function getTransaction(WecashupTransactionRequest $wecashupTransactionRequest) {
 		$url = getEnv('WECASHUP_API_URL').'/'.
-				$wecashupValidateTransactionRequest->getMerchantUid().
+				$wecashupTransactionRequest->getMerchantUid().
 				'/transactions/'.
-				$wecashupValidateTransactionRequest->getTransactionUid().
+				$wecashupTransactionRequest->getTransactionUid().
 				'?merchant_public_key='.
-				$wecashupValidateTransactionRequest->getMerchantPublicKey().
+				$wecashupTransactionRequest->getMerchantPublicKey().
 				'&merchant_secret='.
 				$wecashupTransactionRequest->getMerchantSecret();
 		config::getLogger()->addInfo("WECASHUP-GETTRANSACTION-REQUEST=".$url);
