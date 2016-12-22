@@ -7,8 +7,8 @@ require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 
 class BillingsChartmogulWorkers extends BillingsWorkers {
 
-	private $processingTypeMergeCustomers = 'merge_customers';
-	private $processingTypeSyncCustomers = 'sync_customers';
+	private $processingTypeMergeCustomers = 'chartmogul_merge_customers';
+	private $processingTypeSyncCustomers = 'chartmogul_sync_customers';
 	//TODO : should by dynamically loaded
 	private $supportedProviderNames = ['celery', 'recurly', 'braintree', 'bachat', 'gocardless', 'afr'];
 	private $supportedProviders = array();
