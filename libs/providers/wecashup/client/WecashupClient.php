@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../../../config/config.php';
+
 class WecashupClient {
 		
 	public function __construct() {
@@ -7,11 +9,11 @@ class WecashupClient {
 	
 	public function getTransaction(WecashupTransactionRequest $wecashupTransactionRequest) {
 		$url = getEnv('WECASHUP_API_URL').'/'.
-				$wecashupValidateTransactionRequest->getMerchantUid().
+				$wecashupTransactionRequest->getMerchantUid().
 				'/transactions/'.
-				$wecashupValidateTransactionRequest->getTransactionUid().
+				$wecashupTransactionRequest->getTransactionUid().
 				'?merchant_public_key='.
-				$wecashupValidateTransactionRequest->getMerchantPublicKey().
+				$wecashupTransactionRequest->getMerchantPublicKey().
 				'&merchant_secret='.
 				$wecashupTransactionRequest->getMerchantSecret();
 		config::getLogger()->addInfo("WECASHUP-GETTRANSACTION-REQUEST=".$url);
@@ -58,7 +60,7 @@ class WecashupClient {
 		config::getLogger()->addInfo("WECASHUP-VALIDATETRANSACTION-REQUEST=".$fields_string);
 		
 		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_VERBOSE);
+		curl_setopt($ch, CURLOPT_VERBOSE, true);
 		curl_setopt($ch, CURLOPT_URL, $url);
 		curl_setopt($ch, CURLOPT_POST, count($fields));
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
@@ -111,6 +113,7 @@ class WecashupTransactionRequest extends WecashupRequest {
 	private $transactionUid;
 	//
 	public function __construct() {
+		parent::__construct();
 	}
 	
 	public function setTransactionUid($transactionUid) {
@@ -181,6 +184,7 @@ class WecashupTransactionResponse {
 		$out->setTransactionConfirmationCode($response["transaction_confirmation_code"]);
 		$out->setTransactionSenderReference($response["transaction_sender_reference"]);
 		$out->setTransactionReceiverCurrency($response["transaction_receiver_currency"]);
+		return($out);
 	}
 	
 	public function setTransactionUid($transactionUid) {
@@ -376,7 +380,7 @@ class WecashupTransactionsResponse {
 	public static function getInstance(array $response) {
 		$out = new WecashupTransactionsResponse();
 		$out->setResponseDetails($response['response_details']);
-		if(in_array('response_content', $response)) {
+		if(array_key_exists('response_content', $response)) {
 			$responseContent = $response['response_content'];
 			foreach ($responseContent['transactions'] as $transaction) {
 				$out->addWecashupTransactionResponse(WecashupTransactionResponse::getInstance($transaction));
@@ -429,6 +433,7 @@ class WecashupValidateTransactionRequest extends WecashupRequest {
 	private $transactionProviderName;
 	//
 	public function __construct() {
+		parent::__construct();
 	}
 	
 	public function setTransactionUid($transactionUid) {
