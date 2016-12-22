@@ -11,7 +11,9 @@ class WecashupClient {
 				'/transactions/'.
 				$wecashupValidateTransactionRequest->getTransactionUid().
 				'?merchant_public_key='.
-				$wecashupValidateTransactionRequest->getMerchantPublicKey();
+				$wecashupValidateTransactionRequest->getMerchantPublicKey().
+				'&merchant_secret='.
+				$wecashupTransactionRequest->getMerchantSecret();
 		config::getLogger()->addInfo("WECASHUP-GETTRANSACTION-REQUEST=".$url);
 		$curl_options = array(
 			CURLOPT_URL => $url,
