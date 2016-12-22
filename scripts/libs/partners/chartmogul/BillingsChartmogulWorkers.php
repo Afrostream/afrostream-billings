@@ -164,8 +164,6 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 			ScriptsConfig::getLogger()->addInfo("syncing chartmogul customer for user with id=".$user->getId()." done successfully");
 		} catch(Exception $e) {
 			$chartmogulStatus = 'failed';
-			$msg = "an error occurred while syncing chartmogul customer for user with id=".$user->getId().", message=".$e->getMessage();
-			ScriptsConfig::getLogger()->addError($msg);
 			throw $e;
 		} finally {
 			try {
