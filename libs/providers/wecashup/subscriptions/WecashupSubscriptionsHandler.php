@@ -25,12 +25,12 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			$wecashupClient = new WecashupClient();
 			//Check
 			$wecashupTransactionRequest = new WecashupTransactionRequest();
-			$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+			$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 			$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
 			$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
 			if(count($wecashupTransactionsResponseArray) != 1) {
 				//Exception
-				$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
+				$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uid')." was not found";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -51,7 +51,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			}
 			//Validate
 			$wecashupValidateTransactionRequest = new WecashupValidateTransactionRequest();
-			$wecashupValidateTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+			$wecashupValidateTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 			$wecashupValidateTransactionRequest->setTransactionToken($subOpts->getOpt('transaction_token'));
 			$wecashupValidateTransactionRequest->setTransactionConfirmationCode($subOpts->getOpt('transaction_confirmation_code'));
 			$wecashupValidateTransactionRequest->setTransactionProviderName($subOpts->getOpt('transaction_confirmation_code'));
@@ -86,12 +86,12 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		/*$wecashupClient = new WecashupClient();
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
-		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
 		$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray(); 
 		if(count($wecashupTransactionsResponseArray) != 1) {
 			//Exception
-			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
+			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uid')." was not found";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -120,12 +120,12 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		/*$wecashupClient = new WecashupClient();
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
-		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
 		$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
 		if(count($wecashupTransactionsResponseArray) != 1) {
 			//Exception
-			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
+			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uid')." was not found";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -183,7 +183,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$billingsTransaction->setCouponId(NULL);
 		$billingsTransaction->setInvoiceId(NULL);
 		$billingsTransaction->setTransactionBillingUuid(guid());
-		$billingsTransaction->setTransactionProviderUuid($subOpts->getOpt('transaction_uuid'));
+		$billingsTransaction->setTransactionProviderUuid($subOpts->getOpt('transaction_uid'));
 		$billingsTransaction->setTransactionCreationDate($api_subscription->getCreationDate());
 		$billingsTransaction->setAmountInCents($internalPlan->getAmountInCents());
 		$billingsTransaction->setCurrency($internalPlan->getCurrency());
@@ -294,12 +294,12 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 				$api_subscription = clone $db_subscription;
 				//
 				$wecashupTransactionRequest = new WecashupTransactionRequest();
-				$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+				$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 				$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
 				$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
 				if(count($wecashupTransactionsResponseArray) != 1) {
 					//Exception
-					$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
+					$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uid')." was not found";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
@@ -477,12 +477,12 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$wecashupClient = new WecashupClient();
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
-		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
 		$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
 		if(count($wecashupTransactionsResponseArray) != 1) {
 			//Exception
-			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
+			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uid')." was not found";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
