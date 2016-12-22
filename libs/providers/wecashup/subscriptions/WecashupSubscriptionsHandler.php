@@ -189,7 +189,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$billingsTransaction->setCurrency($internalPlan->getCurrency());
 		$billingsTransaction->setCountry(isset($billingInfo) ? $billingInfo->getCountryCode() : NULL);
 		$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
-		$billingsTransaction->setTransactionType(BillingsTransactionType::purchase);
+		$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
 		$billingsTransaction->setInvoiceProviderUuid(NULL);
 		$billingsTransaction->setMessage('');
 		$billingsTransaction->setUpdateType('api');
