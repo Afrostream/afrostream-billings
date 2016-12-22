@@ -111,6 +111,7 @@ class WecashupTransactionRequest extends WecashupRequest {
 	private $transactionUid;
 	//
 	public function __construct() {
+		parent::__construct();
 	}
 	
 	public function setTransactionUid($transactionUid) {
