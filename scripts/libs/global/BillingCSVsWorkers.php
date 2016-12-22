@@ -16,6 +16,7 @@ class BillingCSVsWorkers extends BillingsWorkers {
 	}
 	
 	public function doGenerateCSVs() {
+		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingType, $this->today);
@@ -149,6 +150,8 @@ class BillingCSVsWorkers extends BillingsWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
+			$timingInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.scripts.workers.providers.global.workertype.'.$this->processingType.'.timing', $timingInMillis);
 			if(isset($processingLog)) {
 				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			}

@@ -27,6 +27,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 	}
 	
 	public function doMergeCustomers() {
+		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingTypeMergeCustomers, $this->today);
@@ -78,6 +79,8 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
+			$timingInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.scripts.workers.providers.global.workertype.'.$this->processingTypeMergeCustomers.'.timing', $timingInMillis);
 			if(isset($processingLog)) {
 				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			}
@@ -85,6 +88,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 	}
 	
 	public function doSyncCustomers() {
+		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingTypeSyncCustomers, $this->today);
@@ -136,6 +140,8 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
+			$timingInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.scripts.workers.providers.global.workertype.'.$this->processingTypeSyncCustomers.'.timing', $timingInMillis);
 			if(isset($processingLog)) {
 				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			}
