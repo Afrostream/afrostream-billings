@@ -105,7 +105,7 @@ class WecashupWebHooksHandler {
 			}
 			//OK
 			if($billingsTransaction->getSubId() == NULL) {
-				$msg = "transaction with transaction_uuid=".$billingsTransaction->getTransactionProviderUuid()." is not linked to any subscription";
+				$msg = "transaction with transaction_uid=".$billingsTransaction->getTransactionProviderUuid()." is not linked to any subscription";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
