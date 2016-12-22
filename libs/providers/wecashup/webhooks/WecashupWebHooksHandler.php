@@ -141,7 +141,7 @@ class WecashupWebHooksHandler {
 			switch ($paymentTransaction->getTransactionStatus()) {
 				case 'TOVALIDATE' :
 					$api_subscription->setSubStatus('future');
-					$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::waiting);
+					$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
 					$billingsTransaction->setUpdateType($update_type);
 					if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
 						$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
@@ -149,7 +149,7 @@ class WecashupWebHooksHandler {
 					break;
 				case 'PENDING' :
 					$api_subscription->setSubStatus('future');
-					$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::waiting);
+					$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
 					$billingsTransaction->setUpdateType($update_type);
 					if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
 						$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
@@ -159,7 +159,7 @@ class WecashupWebHooksHandler {
 					$api_subscription->setSubStatus('active');
 					$api_subscription->setSubActivatedDate($now);
 					$api_subscription->setSubPeriodStartedDate($now);
-					$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::success);
+					$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
 					$billingsTransaction->setUpdateType($update_type);
 					if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
 						$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
@@ -171,7 +171,7 @@ class WecashupWebHooksHandler {
 					if($api_subscription->getSubCanceledDate() == NULL) {
 						$api_subscription->setSubCanceledDate($now);
 					}
-					$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::failed);
+					$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::failed));
 					$billingsTransaction->setUpdateType($update_type);
 					if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
 						$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());

@@ -188,7 +188,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$billingsTransaction->setAmountInCents($internalPlan->getAmountInCents());
 		$billingsTransaction->setCurrency($internalPlan->getCurrency());
 		$billingsTransaction->setCountry(isset($billingInfo) ? $billingInfo->getCountryCode() : NULL);
-		$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::waiting);
+		$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
 		$billingsTransaction->setTransactionType(BillingsTransactionType::purchase);
 		$billingsTransaction->setInvoiceProviderUuid(NULL);
 		$billingsTransaction->setMessage('');
@@ -496,7 +496,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		switch ($paymentTransaction->getTransactionStatus()) {
 			case 'TOVALIDATE' :
 				$api_subscription->setSubStatus('future');
-				$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::waiting);
+				$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
 				$billingsTransaction->setUpdateType($update_type);
 				if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
 					$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
@@ -504,7 +504,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 			case 'PENDING' :
 				$api_subscription->setSubStatus('future');
-				$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::waiting);
+				$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
 				$billingsTransaction->setUpdateType($update_type);
 				if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
 					$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
@@ -514,7 +514,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 				$api_subscription->setSubStatus('active');
 				$api_subscription->setSubActivatedDate($now);
 				$api_subscription->setSubPeriodStartedDate($now);
-				$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::success);
+				$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
 				$billingsTransaction->setUpdateType($update_type);
 				if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
 					$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
@@ -523,7 +523,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			case 'FAILED' :
 				$api_subscription->setSubStatus('expired');
 				$api_subscription->setSubExpiresDate($now);
-				$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::failed);
+				$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::failed));
 				$billingsTransaction->setUpdateType($update_type);
 				if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
 					$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
