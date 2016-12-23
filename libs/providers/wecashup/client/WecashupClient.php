@@ -160,7 +160,7 @@ class WecashupTransactionResponse {
 		$out->setTransactionType($response["transaction_type"]);
 		$out->setTransactionSenderTotalAmount($response["transaction_sender_total_amount"]);
 		$out->setTransactionSenderSplittedAmount($response["transaction_sender_splitted_amount"]);
-		$transactionDate = DateTime::createFromFormat('Y-m-d\TH:i:s.uO', $response["date"]);
+		$transactionDate = DateTime::createFromFormat(DateTime::ISO8601, $response["date"]);
 		if($transactionDate === false) {
 			$msg = "transaction date : ".$response["date"]." cannot be parsed, using current time";
 			config::getLogger()->addError($msg);
