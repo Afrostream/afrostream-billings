@@ -15,6 +15,7 @@ class BillingStatsWorkers extends BillingsWorkers {
 	}
 	
 	public function doGenerateStats(DateTime $from, DateTime $to) {
+		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingType, $this->today);
@@ -46,6 +47,8 @@ class BillingStatsWorkers extends BillingsWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
+			$timingInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.scripts.workers.providers.global.workertype.'.$this->processingType.'.timing', $timingInMillis);
 			if(isset($processingLog)) {
 				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			}

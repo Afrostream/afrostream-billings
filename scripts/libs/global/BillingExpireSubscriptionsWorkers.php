@@ -16,6 +16,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 	}
 	
 	public function doExpireCanceledSubscriptions() {
+		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingTypeSubsExpireCanceled, $this->today);
@@ -80,6 +81,8 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
+			$timingInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.scripts.workers.providers.global.workertype.'.$this->processingTypeSubsExpireCanceled.'.timing', $timingInMillis);
 			if(isset($processingLog)) {
 				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			}
@@ -87,6 +90,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 	}
 	
 	public function doExpireEndedSubscriptions() {
+		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingTypeSubsExpireEnded, $this->today);
@@ -151,6 +155,8 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
+			$timingInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.scripts.workers.providers.global.workertype.'.$this->processingTypeSubsExpireEnded.'.timing', $timingInMillis);
 			if(isset($processingLog)) {
 				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			}

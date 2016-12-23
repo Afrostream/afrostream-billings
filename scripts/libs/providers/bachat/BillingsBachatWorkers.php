@@ -22,6 +22,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 	}
 	
 	public function doRequestRenewSubscriptions($force = true) {
+		$starttime = microtime(true);
 		$processingLog  = NULL;
 		$billingsSubscriptionActionLogs = array();
 		$current_par_ren_file_path = NULL;
@@ -159,6 +160,8 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
+			$timingInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsRequestRenew.'.timing', $timingInMillis);
 			if(isset($current_par_ren_file_res)) {
 				fclose($current_par_ren_file_res);
 				$current_par_ren_file_res = NULL;
@@ -260,6 +263,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 	}
 	
 	public function doRequestCancelSubscriptions($force = true) {
+		$starttime = microtime(true);
 		$processingLog  = NULL;
 		$billingsSubscriptionActionLogs = array();
 		$current_par_can_file_path = NULL;
@@ -393,6 +397,8 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
+			$timingInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsRequestCancel.'.timing', $timingInMillis);
 			if(isset($current_par_can_file_res)) {
 				fclose($current_par_can_file_res);
 				$current_par_can_file_res = NULL;
@@ -452,6 +458,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 	}
 	
 	public function doCheckRenewResultFile() {
+		$starttime = microtime(true);
 		$processingLog  = NULL;
 		$current_ren_file_path = NULL;
 		$current_ren_file_res = NULL;
@@ -551,6 +558,8 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
+			$timingInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsResponseRenew.'.timing', $timingInMillis);
 			if(isset($current_ren_file_res)) {
 				fclose($current_ren_file_res);
 				$current_ren_file_res = NULL;
@@ -686,6 +695,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 	}
 	
 	public function doCheckCancelResultFile() {
+		$starttime = microtime(true);
 		$processingLog  = NULL;
 		$current_can_file_path = NULL;
 		$current_can_file_res = NULL;
@@ -785,6 +795,8 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
+			$timingInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingTypeSubsResponseCancel.'.timing', $timingInMillis);
 			if(isset($processingLog)) {
 				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			}
