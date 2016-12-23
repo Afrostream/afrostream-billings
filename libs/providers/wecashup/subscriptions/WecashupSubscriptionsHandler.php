@@ -118,7 +118,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		/*$wecashupClient = new WecashupClient();
+		$wecashupClient = new WecashupClient();
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
 		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
@@ -130,11 +130,6 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$wecashupTransactionResponse = $wecashupTransactionsResponseArray[0];
-		if($wecashupTransactionResponse->getTransactionStatus() != 'success') {
-			$msg = "The transaction did not succeed, responseStatus=".$wecashupTransactionResponse->getTransactionStatus();
-			config::getLogger()->addError("wecashup subscription creation failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
-		}*/
 		//SUBSCRIPTION CREATE
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
@@ -171,12 +166,12 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted(false);
 		//TRANSACTION CREATE
-		/*$country = NULL;
+		$country = NULL;
 		if($wecashupTransactionResponse->getTransactionSenderCountryCodeIso2() != NULL) {
 			$country = $wecashupTransactionResponse->getTransactionSenderCountryCodeIso2();
 		} else {
 			$country = isset($billingInfo) ? $billingInfo->getCountryCode() : NULL;
-		}*/
+		}
 		$billingsTransaction = new BillingsTransaction();
 		$billingsTransaction->setProviderId($user->getProviderId());
 		$billingsTransaction->setUserId($user->getId());
@@ -184,10 +179,10 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$billingsTransaction->setInvoiceId(NULL);
 		$billingsTransaction->setTransactionBillingUuid(guid());
 		$billingsTransaction->setTransactionProviderUuid($subOpts->getOpt('transaction_uid'));
-		$billingsTransaction->setTransactionCreationDate($api_subscription->getCreationDate());
+		$billingsTransaction->setTransactionCreationDate($wecashupTransactionResponse->getTransactionDate());
 		$billingsTransaction->setAmountInCents($internalPlan->getAmountInCents());
 		$billingsTransaction->setCurrency($internalPlan->getCurrency());
-		$billingsTransaction->setCountry(isset($billingInfo) ? $billingInfo->getCountryCode() : NULL);
+		$billingsTransaction->setCountry($country);
 		$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
 		$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
 		$billingsTransaction->setInvoiceProviderUuid(NULL);
