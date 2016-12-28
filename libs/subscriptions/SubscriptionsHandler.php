@@ -362,7 +362,7 @@ class SubscriptionsHandler {
 			foreach ($users as $user) {
 				$provider = ProviderDAO::getProviderById($user->getProviderId());
 				$currentProviderSubscriptionsHandler = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
-				array_push($subscriptions, $currentProviderSubscriptionsHandler->doGetUserSubscriptions($user));
+				$subscriptions = array_merge($subscriptions, $currentProviderSubscriptionsHandler->doGetUserSubscriptions($user));
 			}
 			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid." done successfully");
 		} catch(BillingsException $e) {
