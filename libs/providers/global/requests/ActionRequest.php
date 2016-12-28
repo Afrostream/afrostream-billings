@@ -7,7 +7,7 @@ class ActionRequest {
 	public function __construct() {
 	}
 	
-	public function setIsAnApiRequest(boolean $isAnApiRequest) {
+	public function setIsAnApiRequest($isAnApiRequest) {
 		$this->isAnApiRequest = $isAnApiRequest;
 	}
 	

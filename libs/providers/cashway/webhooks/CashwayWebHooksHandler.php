@@ -25,21 +25,21 @@ class CashwayWebHooksHandler {
 	private function doProcessNotification($post_data, $update_type, $updateId) {
 		config::getLogger()->addInfo('Processing cashway hook notification...');
 		$data = json_decode($post_data, true);
+		
+		$provider_name = "cashway";
+		
+		$provider = ProviderDAO::getProviderByName($provider_name);
+		if($provider == NULL) {
+			$msg = "unknown provider named : ".$provider_name;
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}		
 		//TODO : Merge to be done later
-		$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler();
+		$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler($provider);
 		$subscriptionsHandler = new SubscriptionsHandler();
 		switch($data['event']) {
 			case 'transaction_paid' :
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].'...');
-				
-				$provider_name = "cashway";
-				
-				$provider = ProviderDAO::getProviderByName($provider_name);
-				if($provider == NULL) {
-					$msg = "unknown provider named : ".$provider_name;
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
 				$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($data['order_id']);
 				if($userInternalCoupon == NULL) {
 					$msg = "no user coupon found with coupon_billing_uuid=".$data['order_id'];

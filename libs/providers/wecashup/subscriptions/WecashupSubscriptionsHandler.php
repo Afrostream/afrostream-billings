@@ -4,13 +4,11 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
-require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ . '/../client/WecashupClient.php';
+require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 
-class WecashupSubscriptionsHandler extends SubscriptionsHandler {
-	
-	public function __construct() {
-	}
+class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
@@ -208,27 +206,30 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("wecashup dbsubscription creation for userid=".$user->getId().", wecashup_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
-	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("wecashup subscription expiring...");
 			if(
-					$subscription->getSubStatus() == "expired"
+				$subscription->getSubStatus() == "expired"
 			)
 			{
 				//nothing todo : already done or in process
 			} else {
 				//
-				if($subscription->getSubPeriodEndsDate() <= $expires_date) {
-					$subscription->setSubExpiresDate($expires_date);
-					$subscription->setSubStatus("expired");
-				} else {
-					$msg = "cannot expire a subscription that has not ended yet";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
+				//
+				if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+					if($expireSubscriptionRequest->getIsForced() == false) {
+						$msg = "cannot expire a subscription that has not ended yet";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
 				}
+				$subscription->setSubExpiresDate($expiresDate);
+				$subscription->setSubStatus("expired");
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
@@ -244,7 +245,6 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			//
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("wecashup subscription expiring done successfully for wecashup_subscription_uuid=".$subscription->getSubUid());
-			return($subscription);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while expiring a wecashup subscription for wecashup_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("wecashup subscription expiring failed : ".$msg);
@@ -254,6 +254,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError("wecashup subscription expiring failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		return($this->doFillSubscription($subscription));
 	}
 	
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
@@ -397,12 +398,13 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
 		config::getLogger()->addInfo("wecashup dbsubscription update for userid=".$user->getId().", wecashup_subscription_uuid=".$api_subscription->getSubUid().", id=".$db_subscription->getId()." done successfully");
-		return($db_subscription);	
+		return($this->doFillSubscription($db_subscription));	
 	}
 	
 	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
-			return;
+			return NULL;
 		}
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
@@ -533,7 +535,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		}		
 		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
 		$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
 }

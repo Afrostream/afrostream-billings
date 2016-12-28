@@ -4,13 +4,11 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
-require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 
-class AfrSubscriptionsHandler extends SubscriptionsHandler {
-	
-	public function __construct() {
-	}
-	
+class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
+		
 	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
@@ -390,12 +388,13 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("afr dbsubscription creation for userid=".$user->getId().", afr_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
 	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
-			return;
+			return NULL;
 		}
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
@@ -432,26 +431,30 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		$subscription->setIsActive($is_active);
 		$subscription->setIsCancelable(false);
+		return($subscription);
 	}
 	
-	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("afr subscription expiring...");
 			if(
-					$subscription->getSubStatus() == "expired"
+				$subscription->getSubStatus() == "expired"
 			)
 			{
 				//nothing todo : already done or in process
 			} else {
 				//
-				if($subscription->getSubPeriodEndsDate() <= $expires_date) {
-					$subscription->setSubExpiresDate($expires_date);
-					$subscription->setSubStatus("expired");
-				} else {
-					$msg = "cannot expire a subscription that has not ended yet";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
+				//
+				if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+					if($expireSubscriptionRequest->getIsForced() == false) {
+						$msg = "cannot expire a subscription that has not ended yet";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
 				}
+				$subscription->setSubExpiresDate($expiresDate);
+				$subscription->setSubStatus("expired");
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
@@ -467,7 +470,6 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 			//
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("afr subscription expiring done successfully for afr_subscription_uuid=".$subscription->getSubUid());
-			return($subscription);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while expiring a afr subscription for afr_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("afr subscription expiring failed : ".$msg);
@@ -477,6 +479,7 @@ class AfrSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError("afr subscription expiring failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		return($this->doFillSubscription($subscription));
 	}
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {

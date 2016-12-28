@@ -6,7 +6,7 @@ require_once __DIR__ . '/../subscriptions/SubscriptionsFilteredHandler.php';
 require_once __DIR__ . '/BillingsController.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/utils.php';
-require_once __DIR__ . '/../global/requests/ExpireSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/ExpireSubscriptionRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -426,7 +426,10 @@ class SubscriptionsController extends BillingsController {
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
 			//
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
-			$subscription = $subscriptionsHandler->doExpireSubscriptionByUuid($subscriptionBillingUuid, new DateTime(), true);
+			$expireSubscriptionRequest = new ExpireSubscriptionRequest();
+			$expireSubscriptionRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
+			$expireSubscriptionRequest->setIsAnApiRequest(true);
+			$subscription = $subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {

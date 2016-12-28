@@ -1349,42 +1349,53 @@ class PlanOptsDAO {
 
 class ProviderDAO {
 	
+	private static $providersById = array();
+	private static $providersByName = array();
+	
 	private static $sfields = "_id, name";
 	
 	private static function getProviderFromRow($row) {
 		$out = new Provider();
 		$out->setId($row["_id"]);
 		$out->setName($row["name"]);
+		//<-- cache -->
+		self::$providersById[$out->getId()] = $out;
+		self::$providersByName[$out->getName()] = $out;
+		//<-- cache -->
 		return($out);
 	}
 	
 	public static function getProviderByName($name) {
-		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE name = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($name));
-		
-		$out = null;
-		
-		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getProviderFromRow($row);
+		$out = NULL;
+		if(array_key_exists($name, self::$providersByName)) {
+			$out = self::$providersByName[$name];
+		} else {
+			$query = "SELECT ".self::$sfields." FROM billing_providers WHERE name = $1";
+			$result = pg_query_params(config::getDbConn(), $query, array($name));
+			
+			if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+				$out = self::getProviderFromRow($row);
+			}
+			// free result
+			pg_free_result($result);
 		}
-		// free result
-		pg_free_result($result);
-	
 		return($out);
 	}
 	
 	public static function getProviderById($providerid) {
-		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE _id = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($providerid));
-	
-		$out = null;
-	
-		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getProviderFromRow($row);
+		$out = NULL;
+		if(array_key_exists($providerid, self::$providersById)) {
+			$out = self::$providersById[$providerid];
+		} else {
+			$query = "SELECT ".self::$sfields." FROM billing_providers WHERE _id = $1";
+			$result = pg_query_params(config::getDbConn(), $query, array($providerid));
+			
+			if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+				$out = self::getProviderFromRow($row);
+			}
+			// free result
+			pg_free_result($result);	
 		}
-		// free result
-		pg_free_result($result);
-	
 		return($out);
 	}
 	
