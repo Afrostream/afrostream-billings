@@ -559,7 +559,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	}
 	
 	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
-		parent::doFillSubscription($subscription);
+		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
 			return NULL;
 		}

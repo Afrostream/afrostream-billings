@@ -402,7 +402,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	}
 	
 	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
-		parent::doFillSubscription($subscription);
+		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
 			return NULL;
 		}
@@ -437,6 +437,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		}
 		//done
 		$subscription->setIsActive($is_active);
+		return($subscription);
 	}
 	
 	public function doUpdateUserSubscription(BillingsSubscription $db_subscription) {
