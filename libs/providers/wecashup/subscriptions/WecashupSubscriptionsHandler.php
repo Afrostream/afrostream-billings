@@ -188,6 +188,9 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$billingsTransaction->setInvoiceProviderUuid(NULL);
 		$billingsTransaction->setMessage('');
 		$billingsTransaction->setUpdateType('api');
+		//
+		$billingsTransactionOpts = new BillingsTransactionOpts();
+		$billingsTransactionOpts->setOpt('transaction_token', $subOpts->getOpt('transaction_token'));
 		//NO MORE DB TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
 		//BILLING_INFO
@@ -205,6 +208,11 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		if(isset($billingsTransaction)) {
 			$billingsTransaction->setSubId($db_subscription->getId());
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
+		}
+		//TRANSACTION_OPTS
+		if(isset($billingsTransactionOpts)) {
+			$billingsTransactionOpts->setTransactionId($billingsTransaction->getId());
+			$billingsTransactionOpts = BillingsTransactionOptsDAO::addBillingsTransactionOpts($billingsTransactionOpts);
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("wecashup dbsubscription creation for userid=".$user->getId().", wecashup_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());

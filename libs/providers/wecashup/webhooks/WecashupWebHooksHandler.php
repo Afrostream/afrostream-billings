@@ -92,14 +92,14 @@ class WecashupWebHooksHandler {
 			}
 		} else {
 			$billingsTransactionOpts = BillingsTransactionOptsDAO::getBillingsTransactionOptByTransactionId($billingsTransaction->getId());
-			if(!array_key_exists('transactionToken', $billingsTransactionOpts->getOpts())) {
-				$msg = "no transactionToken linked to the transaction";
+			if(!array_key_exists('transaction_token', $billingsTransactionOpts->getOpts())) {
+				$msg = "no transaction_token linked to the transaction";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$transactionToken = $billingsTransactionOpts->getOpt('transactionToken');
+			$transactionToken = $billingsTransactionOpts->getOpt('transaction_token');
 			if($transactionToken != $received_transaction_token) {
-				$msg = "transactionToken given does not match";
+				$msg = "transaction_token given does not match";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
