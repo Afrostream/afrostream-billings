@@ -25,19 +25,19 @@ class WecashupWebHooksHandler {
 			$received_transaction_status  = NULL;
 			$received_transaction_details = NULL;
 			$received_transaction_token = NULL;
-			if(in_array('merchant_secret', $post_data_as_array)) {
+			if(array_key_exists('merchant_secret', $post_data_as_array)) {
 				$received_transaction_merchant_secret = $post_data_as_array['merchant_secret'];
 			}
-			if(in_array('transaction_uid', $post_data_as_array)) {
+			if(array_key_exists('transaction_uid', $post_data_as_array)) {
 				$received_transaction_uid = $post_data_as_array['transaction_uid'];
 			}			
-			if(in_array('transaction_status', $post_data_as_array)) {
+			if(array_key_exists('transaction_status', $post_data_as_array)) {
 				$received_transaction_status = $post_data_as_array['transaction_status'];
 			}
-			if(in_array('transaction_details', $post_data_as_array)) {
+			if(array_key_exists('transaction_details', $post_data_as_array)) {
 				$received_transaction_details = $post_data_as_array['transaction_details'];
 			}
-			if(in_array('transaction_token', $post_data_as_array)) {
+			if(array_key_exists('transaction_token', $post_data_as_array)) {
 				$received_transaction_token = $post_data_as_array['transaction_token'];
 			}
 			//check merchant
