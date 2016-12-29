@@ -366,27 +366,29 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$db_subscription->setSubPeriodStartedDate($start_date);
 		
 		$end_date = NULL;
-		switch($internalPlan->getPeriodUnit()) {
-			case PlanPeriodUnit::day :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::month :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::year :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			default :
-				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
+		if(isset($start_date)) {
+			switch($internalPlan->getPeriodUnit()) {
+				case PlanPeriodUnit::day :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				case PlanPeriodUnit::month :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				case PlanPeriodUnit::year :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				default :
+					$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
 		}
 		$api_subscription->setSubPeriodEndsDate($end_date);
 		//
