@@ -4,17 +4,17 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
+require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 
 use \Stripe\Subscription;
 
-class StripeSubscriptionsHandler extends SubscriptionsHandler
+class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 {
-	protected $provider = NULL;
 	
-    public function __construct()
-    {
-    	$this->provider = ProviderDAO::getProviderByName('stripe');
-        \Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+    public function __construct($provider) {
+    	parent::__construct($provider);
+    	\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
     }
 
     /**
@@ -66,7 +66,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             }
         }
 
-        return $this->getNewBillingSubscription($provider, $user, $plan, $subscription, $subscription_billing_uuid);
+        return $this->doFillSubscription($this->getNewBillingSubscription($provider, $user, $plan, $subscription, $subscription_billing_uuid));
     }
 
     /**
@@ -160,7 +160,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         	}
         }
         //<-- DATABASE -->
-        return $billingSubscription;
+        return $this->doFillSubscription($billingSubscription);
     }
 
     /**
@@ -239,8 +239,9 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      */
     public function doFillSubscription(BillingsSubscription $subscription = NULL)
     {
+    	$subscription = parent::doFillSubscription($subscription);
         if($subscription == NULL) {
-            return;
+            return NULL;
         }
         $is_active = NULL;
         switch($subscription->getSubStatus()) {
@@ -269,6 +270,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         if($subscription->getSubStatus() == 'canceled') {
             $subscription->setIsReactivable(true);
         }
+        return($subscription);
     }
 
     /**
@@ -277,7 +279,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
      * @param BillingsSubscription $billingSubscription
      * @param DateTime             $cancelDate
      */
-    public function doCancelSubscription(BillingsSubscription $billingSubscription, \DateTime $cancelDate)
+    public function doCancelSubscription(BillingsSubscription $billingSubscription, DateTime $cancelDate)
     {
         if (in_array($billingSubscription->getSubStatus(), ['canceled', 'expired'])) {
         	//nothing todo : already done or in process
@@ -308,7 +310,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
             	throw $e;
             }
         }
-        return(BillingsSubscriptionDAO::getBillingsSubscriptionById($billingSubscription->getId()));
+        return($this->doFillSubscription(BillingsSubscriptionDAO::getBillingsSubscriptionById($billingSubscription->getId())));
     }
 
 
@@ -337,8 +339,8 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $subscription->save();
 
         $billingSubscription->setPlanId($plan->getId());
-
-        BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
+		$billingSubscription = BillingsSubscriptionDAO::updatePlanId($subscription);
+        return($this->doFillSubscription($billingSubscription));
     }
 
     /**
@@ -358,25 +360,33 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
        $this->doFillSubscription($billingSubscription);
 
        // always active , nothing to do
-        if ($billingSubscription->getStatus() == 'active') {
-            return;
-        }
-
-       try {
-           // reactivable and canceled but still active, we rollback the canceling
-           if ($billingSubscription->isReactivable() && $billingSubscription->getSubStatus() == 'canceled' && $billingSubscription->getIsActive() == 'yes') {
-               $subscription = \Stripe\Subscription::retrieve($billingSubscription->getSubUid());
-               $subscription->cancel_at_period_end = false;
-               $subscription->save();
-           }
-
-           $billingSubscription->setSubStatus('active');
-           $billingSubscription->setSubCanceledDate(null);
-
-           BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
-       } catch (\Exception $e) {
-           throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
+        if ($billingSubscription->getStatus() != 'active') {
+	       try {
+	           // reactivable and canceled but still active, we rollback the canceling
+	           if ($billingSubscription->isReactivable() && $billingSubscription->getSubStatus() == 'canceled' && $billingSubscription->getIsActive() == 'yes') {
+	               $subscription = \Stripe\Subscription::retrieve($billingSubscription->getSubUid());
+	               $subscription->cancel_at_period_end = false;
+	               $subscription->save();
+	           }
+	           $billingSubscription->setSubStatus('active');
+	           $billingSubscription->setSubCanceledDate(NULL);
+	       		try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($billingSubscription);
+					BillingsSubscriptionDAO::updateSubStatus($billingSubscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+	       } catch (Exception $e) {
+	           throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage());
+	       }
        }
+       $billingSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($billingSubscription->getId());
+       return($this->doFillSubscription($billingSubscription));
    }
 
     /**
@@ -435,7 +445,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         $status = self::getMappedStatus($subscription['status']);
 
         if (is_null($status)) {
-            throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow stripe subscritpion status');
+            throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow stripe subscription status');
         }
 
         return $status;
@@ -719,23 +729,26 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
         config::getLogger()->addInfo('STRIPE - '.$message);
     }
     
-    public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+    public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
     	try {
     		config::getLogger()->addInfo("stripe subscription expiring...");
     		if(
-    				$subscription->getSubStatus() == "expired"
+    			$subscription->getSubStatus() == "expired"
     		)
     		{
     			//nothing todo : already done or in process
     		} else {
     			//
-    			if($subscription->getSubPeriodEndsDate() > $expires_date) {
-    				//exception
-    				$msg = "cannot expire a subscription that has not ended yet";
-    				config::getLogger()->addError($msg);
-    				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    			$expiresDate = $expireSubscriptionRequest->getExpiresDate();
+    			//
+    			if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+    				if($expireSubscriptionRequest->getIsForced() == false) {
+	    				$msg = "cannot expire a subscription that has not ended yet";
+	    				config::getLogger()->addError($msg);
+	    				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    				}
     			}
-    			$subscription->setSubExpiresDate($expires_date);
+    			$subscription->setSubExpiresDate($expiresDate);
     			$subscription->setSubStatus("expired");
     			try {
     				//START TRANSACTION
@@ -752,7 +765,6 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
     		//
     		$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
     		config::getLogger()->addInfo("stripe subscription expiring done successfully for stripe_subscription_uuid=".$subscription->getSubUid());
-    		return($subscription);
     	} catch(BillingsException $e) {
     		$msg = "a billings exception occurred while expiring a stripe subscription for stripe_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
     		config::getLogger()->addError("stripe subscription expiring failed : ".$msg);
@@ -762,6 +774,7 @@ class StripeSubscriptionsHandler extends SubscriptionsHandler
     		config::getLogger()->addError("stripe subscription expiring failed : ".$msg);
     		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
     	}
+    	return($this->doFillSubscription($subscription));
     }
     
 }

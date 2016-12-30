@@ -188,7 +188,7 @@ class WecashupWebHooksHandler {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				//SUBSCRIPTION UPDATE
-				$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
+				$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler($this->provider);
 				$db_subscription = $wecashupSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
 				//TRANSACTION UPDATE
 				$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);

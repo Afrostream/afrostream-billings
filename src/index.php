@@ -705,6 +705,33 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/updateinternalp
 });
 
 /**
+ * @api {put} /billings/api/subscriptions/:subscriptionBillingUuid/expire Request Subscription Expiration
+ * @apiDescription It expires a subscription.
+ * @apiParam {String} :subscriptionBillingUuid Api uuid of the subscription.
+ * Will expire Subscription which Api uuid is the subscriptionBillingUuid given.
+ *
+ * @apiSuccess {json} Subscription Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *				"subscription" {
+ *					"..."
+ *				}
+ *			}
+ *		}
+ */
+
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/expire", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->expire($request, $response, $args));
+});
+
+/**
  * @api {get} /billings/api/internalplans/:internalPlanUuid Request InternalPlan Information
  * @apiDescription It returns an InternalPlan Information.
  * @apiParam {String} :internalPlanUuid Api uuid of the internalPlan. It returns the internalPlan with the internalPlanUuid given.

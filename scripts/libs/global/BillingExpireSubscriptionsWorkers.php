@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../BillingsWorkers.php';
 require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../libs/subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../../libs/providers/global/requests/ExpireSubscriptionRequest.php';
 
 class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 	
@@ -172,7 +173,11 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 			try {
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
-				$subscriptionsHandler->doExpireSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), $subscription->getSubPeriodEndsDate(), false);
+				$expireSubscriptionRequest = new ExpireSubscriptionRequest();
+				$expireSubscriptionRequest->setIsAnApiRequest(false);
+				$expireSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+				$expireSubscriptionRequest->setExpiresDate($subscription->getSubPeriodEndsDate());
+				$subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
 				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
