@@ -47,11 +47,13 @@ class CelerySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//
 				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
-				if($subscription->getSubPeriodEndsDate() > $expiresDate) {
-					if($expireSubscriptionRequest->getIsForced() == false) {
-						$msg = "cannot expire a subscription that has not ended yet";
-						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
+					if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+						if($expireSubscriptionRequest->getIsForced() == false) {
+							$msg = "cannot expire a subscription that has not ended yet";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						}
 					}
 				}
 				$subscription->setSubExpiresDate($expiresDate);

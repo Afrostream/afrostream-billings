@@ -12,7 +12,7 @@ use Money\Currency;
 
 class ProviderSubscriptionsHandler {
 	
-	private $provider = NULL;
+	protected $provider = NULL;
 	
 	public function __construct(Provider $provider) {
 		$this->provider = $provider;

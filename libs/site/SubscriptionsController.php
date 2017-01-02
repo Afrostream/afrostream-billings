@@ -429,7 +429,7 @@ class SubscriptionsController extends BillingsController {
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$expireSubscriptionRequest = new ExpireSubscriptionRequest();
 			$expireSubscriptionRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
-			$expireSubscriptionRequest->setIsAnApiRequest(true);
+			$expireSubscriptionRequest->setOrigin('api');
 			$subscription = $subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));

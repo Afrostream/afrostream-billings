@@ -2,17 +2,17 @@
 
 class ActionRequest {
 
-	private $isAnApiRequest = true;
+	private $origin = 'api';//other possible values : hook, script, import, sync, etc...
 	
 	public function __construct() {
 	}
 	
-	public function setIsAnApiRequest($isAnApiRequest) {
-		$this->isAnApiRequest = $isAnApiRequest;
+	public function setOrigin($origin) {
+		$this->origin = $origin;
 	}
 	
-	public function getIsAnApiRequest() {
-		return($this->isAnApiRequest);
+	public function getOrigin() {
+		return($this->origin);
 	}
 	
 }
