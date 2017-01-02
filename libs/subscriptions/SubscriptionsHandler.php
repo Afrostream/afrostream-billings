@@ -515,7 +515,7 @@ class SubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 				case 'gocardless' :
-					$gocardlessSubscriptionsHandler = new GoCardlessSubscriptionsHandler();
+					$gocardlessSubscriptionsHandler = new GoCardlessSubscriptionsHandler($provider);
 					$db_subscription = $gocardlessSubscriptionsHandler->doRenewSubscription($db_subscription, $start_date, $end_date);
 					break;
 				case 'celery' :
