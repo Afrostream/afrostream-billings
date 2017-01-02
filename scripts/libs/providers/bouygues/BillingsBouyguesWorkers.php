@@ -122,7 +122,7 @@ class BillingsBouyguesWorkers extends BillingsWorkers {
 					pg_query("BEGIN");
 					$subscriptionsHandler = new SubscriptionsHandler();
 					$expireSubscriptionRequest = new ExpireSubscriptionRequest();
-					$expireSubscriptionRequest->setIsAnApiRequest(false);
+					$expireSubscriptionRequest->setOrigin('script');
 					$expireSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
 					$expireSubscriptionRequest->setExpiresDate(new DateTime());
 					$subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);

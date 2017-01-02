@@ -7,6 +7,7 @@ class ExpireSubscriptionRequest extends ActionRequest {
 	private $subscriptionBillingUuid = NULL;
 	private $expiresDate = NULL;
 	private $isForced = false;
+	private $isRefundEnabled = false;
 	
 	public function __construct() {
 		parent::__construct();
@@ -25,7 +26,7 @@ class ExpireSubscriptionRequest extends ActionRequest {
 	}
 	
 	public function getExpiresDate() {
-		if($this->getIsAnApiRequest() == true) {
+		if($this->getOrigin() == 'api') {
 			$this->expiresDate = new DateTime();
 		} else if($this->expiresDate == NULL) {
 			$this->expiresDate = new DateTime();
@@ -39,6 +40,14 @@ class ExpireSubscriptionRequest extends ActionRequest {
 	
 	public function getIsForced() {
 		return($this->isForced);
+	}
+	
+	public function setIsRefundEnabled($isRefundEnabled) {
+		$this->isRefundEnabled = $isRefundEnabled;
+	}
+	
+	public function getIsRefundEnabled() {
+		return($this->$isRefundEnabled);
 	}
 	
 }

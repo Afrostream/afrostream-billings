@@ -551,6 +551,60 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($subscription));
 	}
 	
+	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
+		try {
+			config::getLogger()->addInfo("recurly subscription expiring...");
+			if(
+				$subscription->getSubStatus() == "expired"
+			)
+			{
+				//nothing todo : already done or in process
+			} else {
+				//
+				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
+				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+				//
+				$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
+				//
+				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+					$api_subscription->terminateAndRefund();
+				} else {
+					$api_subscription->terminateWithoutRefund();
+				}
+				//
+				$subscription->setSubExpiresDate($expireSubscriptionRequest->getExpiresDate());
+				$subscription->setSubStatus('expired');
+				//
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			}
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("recurly subscription expiring done successfully for recurly_subscription_uuid=".$subscription->getSubUid());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while expiring a recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription expiring failed : ".$msg);
+			throw $e;
+		} catch (Recurly_ValidationError $e) {
+			$msg = "a validation error exception occurred while expiring a recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while expiring a recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($this->doFillSubscription($subscription));		
+	}
+	
 }
 
 ?>

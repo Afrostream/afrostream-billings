@@ -693,7 +693,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 							'environment' => getEnv('GOCARDLESS_API_ENV')
 					));
 					$api_subscription = $client->subscriptions()->get($subscription->getSubUid());
-					if($expireSubscriptionRequest->getIsAnApiRequest() || $api_subscription->status != 'cancelled') {
+					if($expireSubscriptionRequest->getOrigin() == 'api' || $api_subscription->status != 'cancelled') {
 						//anyway
 						$metadata_array = array();
 						foreach ($api_subscription->metadata as $key => $value) {
