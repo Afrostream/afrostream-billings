@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/BillingsExportBachatSubscriptions.php';

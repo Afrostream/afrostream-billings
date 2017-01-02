@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../users/UsersHandler.php';
 require_once __DIR__ . '/../subscriptions/SubscriptionsFilteredHandler.php';
 require_once __DIR__ . '/BillingsController.php';
+require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/utils.php';
 require_once __DIR__ . '/../providers/global/requests/ExpireSubscriptionRequest.php';
