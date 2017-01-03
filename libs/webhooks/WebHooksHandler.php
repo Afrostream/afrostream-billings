@@ -8,6 +8,7 @@ require_once __DIR__ . '/../providers/cashway/webhooks/CashwayWebHooksHandler.ph
 require_once __DIR__ . '/../providers/stripe/webhooks/StripeWebHooksHandler.php';
 require_once __DIR__ . '/../providers/braintree/webhooks/BraintreeWebHooksHandler.php';
 require_once __DIR__ . '/../providers/netsize/webhooks/NetsizeWebHooksHandler.php';
+require_once __DIR__ . '/../providers/wecashup/webhooks/WecashupWebHooksHandler.php';
 
 class WebHooksHander {
 	

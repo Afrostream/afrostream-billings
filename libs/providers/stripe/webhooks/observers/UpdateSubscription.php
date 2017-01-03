@@ -4,8 +4,9 @@ require_once __DIR__ . '/../../../../../config/config.php';
 require_once __DIR__ . '/../../../../utils/utils.php';
 require_once __DIR__ . '/../../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../../db/dbGlobal.php';
-require_once __DIR__.'/HookInterface.php';
+require_once __DIR__ . '/HookInterface.php';
 require_once __DIR__ . '/../../subscriptions/StripeSubscriptionsHandler.php';
+require_once __DIR__ . '/../../../global/ProviderHandlersBuilder.php';
 
 use \Stripe\Event;
 
@@ -15,12 +16,9 @@ use \Stripe\Event;
 class UpdateSubscription implements HookInterface
 {
     const REQUESTED_HOOK_TYPE = 'customer.subscription.updated';
-
-    protected $subscriptionHandler;
-
+	
     public function __construct()
     {
-        $this->subscriptionHandler = new SubscriptionsHandler();
     }
 
     public function event(Event $event, Provider $provider)
@@ -69,7 +67,9 @@ class UpdateSubscription implements HookInterface
 
         $billingSubscription = BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
 
-        $this->subscriptionHandler->doSendSubscriptionEvent($oldSubscription, $billingSubscription);
+        $providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
+        
+        $providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($oldSubscription, $billingSubscription);
 
         config::getLogger()->addInfo('STRIPE - '.self::REQUESTED_HOOK_TYPE.' : update subscription '.$billingSubscription->getId());
     }

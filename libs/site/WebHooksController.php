@@ -379,7 +379,7 @@ class WebHooksController extends BillingsController {
 		parse_str($post_data, $post_data_as_array);
 		
 		$received_transaction_merchant_secret = NULL;
-		if(in_array('merchant_secret', $post_data_as_array)) {
+		if(array_key_exists('merchant_secret', $post_data_as_array)) {
 			$received_transaction_merchant_secret = $post_data_as_array['merchant_secret'];
 		}
 		if(getEnv('WECASHUP_MERCHANT_SECRET') === $received_transaction_merchant_secret) {

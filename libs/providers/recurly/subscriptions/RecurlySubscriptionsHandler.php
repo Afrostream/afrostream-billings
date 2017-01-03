@@ -4,12 +4,9 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
-require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
 
-class RecurlySubscriptionsHandler extends SubscriptionsHandler {
-	
-	public function __construct() {
-	}
+class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
@@ -297,7 +294,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("recurly dbsubscription creation for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid." done successfully, id=".$db_subscription->getId());
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
 	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, Recurly_Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
@@ -356,7 +353,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
 		config::getLogger()->addInfo("recurly dbsubscription update for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()." done successfully");
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
 	private function getDbSubscriptionByUuid(array $db_subscriptions, $subUuid) {
@@ -426,12 +423,13 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError("recurly subscription canceling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		return($subscription);
+		return($this->doFillSubscription($subscription));
 	}
 	
 	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
-			return;
+			return NULL;
 		}
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
@@ -439,7 +437,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 				$is_active = 'yes';//always 'yes' : recurly is managing the status
 				break;
 			case 'canceled' :
-				$is_active = 'yes';//always 'yes' : recurly is managning the status (will change to expired status automatically)
+				$is_active = 'yes';//always 'yes' : recurly is managing the status (will change to expired status automatically)
 				break;
 			case 'future' :
 				$is_active = 'no';
@@ -456,6 +454,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 		if($subscription->getSubStatus() == 'canceled') {
 			$subscription->setIsReactivable(true);
 		}
+		return($subscription);
 	}
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
@@ -507,7 +506,7 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError("recurly subscription reactivating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		return($subscription);
+		return($this->doFillSubscription($subscription));
 	}
 	
 	public function doUpdateInternalPlan(BillingsSubscription $subscription, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts) {
@@ -549,7 +548,61 @@ class RecurlySubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError("recurly subscription updating Plan failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		return($subscription);
+		return($this->doFillSubscription($subscription));
+	}
+	
+	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
+		try {
+			config::getLogger()->addInfo("recurly subscription expiring...");
+			if(
+				$subscription->getSubStatus() == "expired"
+			)
+			{
+				//nothing todo : already done or in process
+			} else {
+				//
+				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
+				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+				//
+				$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
+				//
+				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+					$api_subscription->terminateAndRefund();
+				} else {
+					$api_subscription->terminateWithoutRefund();
+				}
+				//
+				$subscription->setSubExpiresDate($expireSubscriptionRequest->getExpiresDate());
+				$subscription->setSubStatus('expired');
+				//
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			}
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("recurly subscription expiring done successfully for recurly_subscription_uuid=".$subscription->getSubUid());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while expiring a recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription expiring failed : ".$msg);
+			throw $e;
+		} catch (Recurly_ValidationError $e) {
+			$msg = "a validation error exception occurred while expiring a recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while expiring a recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("recurly subscription expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($this->doFillSubscription($subscription));		
 	}
 	
 }

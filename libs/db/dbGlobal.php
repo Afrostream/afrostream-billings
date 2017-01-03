@@ -49,7 +49,12 @@ class dbGlobal {
 
 class UserDAO {
 	
-	private static $sfields = "BU._id, BU.creation_date, BU.providerid, BU.user_billing_uuid, BU.user_reference_uuid, BU.user_provider_uuid, BU.deleted";
+	private static $sfields = <<<EOL
+	BU._id, BU.creation_date, BU.providerid, 
+	BU.user_billing_uuid, BU.user_reference_uuid, 
+	BU.user_provider_uuid, BU.deleted,
+	BU.chartmogul_customer_uuid, BU.chartmogul_merge_status
+EOL;
 	
 	private static function getUserFromRow($row) {
 		$out = new User();
@@ -60,6 +65,8 @@ class UserDAO {
 		$out->setUserReferenceUuid($row["user_reference_uuid"]);
 		$out->setUserProviderUuid($row["user_provider_uuid"]);
 		$out->setDeleted($row["deleted"] == 't' ? true : false);
+		$out->setChartmogulCustomerUuid($row["chartmogul_customer_uuid"]);
+		$out->setChartmogulMergeStatus($row["chartmogul_merge_status"]);
 		return($out);
 	}
 	
@@ -183,6 +190,84 @@ class UserDAO {
 		return($out);
 	}
 	
+	public static function getUsersByChartmogulStatus($limit = 0,
+			$offset = 0,
+			$afterId = NULL,
+			$providerIds_array = NULL,
+			$chartmogulStatus_array = NULL) {
+		$params = array();
+		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_users BU";
+		$query.= " WHERE BU.deleted = false";
+		if(isset($providerIds_array) && count($providerIds_array) > 0) {
+			$firstLoop = true;
+			$query.= " AND BU.providerid in (";
+			foreach($providerIds_array as $providerId) {
+				$params[] = $providerId;
+				if($firstLoop) {
+					$firstLoop = false;
+					$query .= "$".(count($params));
+				} else {
+					$query .= ", $".(count($params));
+				}
+			}
+			$query.= ")";
+		}
+		if(isset($chartmogulStatus_array) && count($chartmogulStatus_array) > 0) {
+			$firstLoop = true;
+			$query.= " AND BU.chartmogul_merge_status in (";
+			foreach($chartmogulStatus_array as $chartmogulStatus) {
+				$params[] = $chartmogulStatus;
+				if($firstLoop) {
+					$firstLoop = false;
+					$query .= "$".(count($params));
+				} else {
+					$query .= ", $".(count($params));
+				}
+			}
+			$query.= ")";
+		}
+		if(isset($afterId)) {
+			$query.= " AND BU._id > ".$afterId;
+		}
+		$query.= " ORDER BY BU._id ASC";
+		if($limit > 0) { $query.= " LIMIT ".$limit; }
+		if($offset > 0) { $query.= " OFFSET ".$offset; }
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		$out = array();
+		$out['total_counter'] = 0;
+		$out['users'] = array();
+		$out['lastId'] = NULL;
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out['total_counter'] = $row['total_counter'];
+			$out['users'][] = self::getUserFromRow($row);
+			$out['lastId'] = $row['_id'];
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function updateChartmogulStatus(User $user) {
+		$query = "UPDATE billing_users SET chartmogul_merge_status = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$user->getChartmogulMergeStatus(),
+						$user->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getUserById($user->getId()));
+	}
+	
+	public static function updateChartmogulCustomerUuid(User $user) {
+		$query = "UPDATE billing_users SET chartmogul_customer_uuid = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$user->getChartmogulCustomerUuid(),
+						$user->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getUserById($user->getId()));
+	}
+	
 }
 
 class User implements JsonSerializable {
@@ -194,6 +279,8 @@ class User implements JsonSerializable {
 	private $user_reference_uuid;
 	private $user_provider_uuid;
 	private $deleted;
+	private $chartmogul_customer_uuid;
+	private $chartmogul_merge_status;
 
 	public function getId() {
 		return($this->_id);
@@ -249,6 +336,22 @@ class User implements JsonSerializable {
 	
 	public function setDeleted($bool) {
 		$this->deleted = $bool;
+	}
+	
+	public function setChartmogulCustomerUuid($uuid) {
+		$this->chartmogul_customer_uuid = $uuid;
+	}
+	
+	public function getChartmogulCustomerUuid() {
+		return($this->chartmogul_customer_uuid);
+	}
+	
+	public function setChartmogulMergeStatus($status) {
+		$this->chartmogul_merge_status = $status;
+	}
+	
+	public function getChartmogulMergeStatus() {
+		return($this->chartmogul_merge_status);
 	}
 	
 	public function jsonSerialize() {
@@ -1246,42 +1349,53 @@ class PlanOptsDAO {
 
 class ProviderDAO {
 	
+	private static $providersById = array();
+	private static $providersByName = array();
+	
 	private static $sfields = "_id, name";
 	
 	private static function getProviderFromRow($row) {
 		$out = new Provider();
 		$out->setId($row["_id"]);
 		$out->setName($row["name"]);
+		//<-- cache -->
+		self::$providersById[$out->getId()] = $out;
+		self::$providersByName[$out->getName()] = $out;
+		//<-- cache -->
 		return($out);
 	}
 	
 	public static function getProviderByName($name) {
-		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE name = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($name));
-		
-		$out = null;
-		
-		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getProviderFromRow($row);
+		$out = NULL;
+		if(array_key_exists($name, self::$providersByName)) {
+			$out = self::$providersByName[$name];
+		} else {
+			$query = "SELECT ".self::$sfields." FROM billing_providers WHERE name = $1";
+			$result = pg_query_params(config::getDbConn(), $query, array($name));
+			
+			if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+				$out = self::getProviderFromRow($row);
+			}
+			// free result
+			pg_free_result($result);
 		}
-		// free result
-		pg_free_result($result);
-	
 		return($out);
 	}
 	
 	public static function getProviderById($providerid) {
-		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE _id = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($providerid));
-	
-		$out = null;
-	
-		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getProviderFromRow($row);
+		$out = NULL;
+		if(array_key_exists($providerid, self::$providersById)) {
+			$out = self::$providersById[$providerid];
+		} else {
+			$query = "SELECT ".self::$sfields." FROM billing_providers WHERE _id = $1";
+			$result = pg_query_params(config::getDbConn(), $query, array($providerid));
+			
+			if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+				$out = self::getProviderFromRow($row);
+			}
+			// free result
+			pg_free_result($result);	
 		}
-		// free result
-		pg_free_result($result);
-	
 		return($out);
 	}
 	

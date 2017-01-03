@@ -45,7 +45,7 @@ class WecashupTransactionsHandler {
 			$billingsRefundTransaction->setCurrency($wecashupTransactionResponse->getTransactionSenderCurrency());
 			$billingsRefundTransaction->setCountry($country);
 			$billingsRefundTransaction->setTransactionStatus(self::getMappedTransactionStatus($wecashupTransactionResponse));
-			$billingsRefundTransaction->setTransactionType(BillingsTransactionType::refund);
+			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);
 			$billingsRefundTransaction->setMessage("provider_status=".$wecashupTransactionResponse->getTransactionStatus());
 			$billingsRefundTransaction->setUpdateType($updateType);
@@ -65,7 +65,7 @@ class WecashupTransactionsHandler {
 			$billingsRefundTransaction->setCurrency($wecashupTransactionResponse->getTransactionSenderCurrency());
 			$billingsRefundTransaction->setCountry($country);
 			$billingsRefundTransaction->setTransactionStatus(self::getMappedTransactionStatus($wecashupTransactionResponse));
-			$billingsRefundTransaction->setTransactionType(BillingsTransactionType::refund);
+			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);
 			$billingsRefundTransaction->setMessage("provider_status=".$wecashupTransactionResponse->getTransactionStatus());
 			$billingsRefundTransaction->setUpdateType($updateType);

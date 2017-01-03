@@ -499,19 +499,19 @@ class BillingStatsd {
 	
 	public static function gauge($key, $value) {
 		if(getEnv('STATSD_ACTIVATED') == 1) {
-			self::getStatsd()->gauge($key, $value);
+			self::getStatsd()->gauge(getEnv('STATSD_KEY_PREFIX').$key, $value);
 		}
 	}
 	
 	public static function startTiming($key) {
 		if(getEnv('STATSD_ACTIVATED') == 1) {
-			self::getStatsd()->startTiming($key);
+			self::getStatsd()->startTiming(getEnv('STATSD_KEY_PREFIX').$key);
 		}
 	}
 	
 	public static function endTiming($key, $sampleRate = 1) {
 		if(getEnv('STATSD_ACTIVATED') == 1) {
-			self::getStatsd()->endTiming($key, $sampleRate);
+			self::getStatsd()->endTiming(getEnv('STATSD_KEY_PREFIX').$key, $sampleRate);
 		}		
 	}
 	

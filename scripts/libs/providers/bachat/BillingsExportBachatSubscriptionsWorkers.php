@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/BillingsExportBachatSubscriptions.php';
@@ -18,6 +19,7 @@ class BillingsExportBachatSubscriptionsWorkers extends BillingsWorkers {
 	}
 	
 	public function doExportSubscriptions() {
+		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingType, $this->today);
@@ -153,6 +155,8 @@ class BillingsExportBachatSubscriptionsWorkers extends BillingsWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
+			$timingInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.timing', $timingInMillis);
 			if(isset($processingLog)) {
 				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			}

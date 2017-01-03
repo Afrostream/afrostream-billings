@@ -4,13 +4,11 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
-require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ . '/../client/WecashupClient.php';
+require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 
-class WecashupSubscriptionsHandler extends SubscriptionsHandler {
-	
-	public function __construct() {
-	}
+class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
@@ -25,12 +23,12 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			$wecashupClient = new WecashupClient();
 			//Check
 			$wecashupTransactionRequest = new WecashupTransactionRequest();
-			$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+			$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 			$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
 			$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
 			if(count($wecashupTransactionsResponseArray) != 1) {
 				//Exception
-				$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
+				$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uid')." was not found";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -51,10 +49,10 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			}
 			//Validate
 			$wecashupValidateTransactionRequest = new WecashupValidateTransactionRequest();
-			$wecashupValidateTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+			$wecashupValidateTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 			$wecashupValidateTransactionRequest->setTransactionToken($subOpts->getOpt('transaction_token'));
 			$wecashupValidateTransactionRequest->setTransactionConfirmationCode($subOpts->getOpt('transaction_confirmation_code'));
-			$wecashupValidateTransactionRequest->setTransactionProviderName($subOpts->getOpt('transaction_confirmation_code'));
+			$wecashupValidateTransactionRequest->setTransactionProviderName($subOpts->getOpt('transaction_provider_name'));
 			$wecashupValidateTransactionResponse = $wecashupClient->validateTransaction($wecashupValidateTransactionRequest);
 			if($wecashupValidateTransactionResponse->getResponseStatus() != 'success') {
 				$msg = "The transaction did not succeed, responseStatus=".$wecashupValidateTransactionResponse->getResponseStatus().', responseCode='.$wecashupValidateTransactionResponse->getResponseCode();
@@ -86,12 +84,12 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		/*$wecashupClient = new WecashupClient();
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
-		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
 		$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray(); 
 		if(count($wecashupTransactionsResponseArray) != 1) {
 			//Exception
-			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
+			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uid')." was not found";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -118,23 +116,18 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		/*$wecashupClient = new WecashupClient();
+		$wecashupClient = new WecashupClient();
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
-		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
 		$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
 		if(count($wecashupTransactionsResponseArray) != 1) {
 			//Exception
-			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
+			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uid')." was not found";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$wecashupTransactionResponse = $wecashupTransactionsResponseArray[0];
-		if($wecashupTransactionResponse->getTransactionStatus() != 'success') {
-			$msg = "The transaction did not succeed, responseStatus=".$wecashupTransactionResponse->getTransactionStatus();
-			config::getLogger()->addError("wecashup subscription creation failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
-		}*/
 		//SUBSCRIPTION CREATE
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
@@ -171,28 +164,31 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted(false);
 		//TRANSACTION CREATE
-		/*$country = NULL;
+		$country = NULL;
 		if($wecashupTransactionResponse->getTransactionSenderCountryCodeIso2() != NULL) {
 			$country = $wecashupTransactionResponse->getTransactionSenderCountryCodeIso2();
 		} else {
 			$country = isset($billingInfo) ? $billingInfo->getCountryCode() : NULL;
-		}*/
+		}
 		$billingsTransaction = new BillingsTransaction();
 		$billingsTransaction->setProviderId($user->getProviderId());
 		$billingsTransaction->setUserId($user->getId());
 		$billingsTransaction->setCouponId(NULL);
 		$billingsTransaction->setInvoiceId(NULL);
 		$billingsTransaction->setTransactionBillingUuid(guid());
-		$billingsTransaction->setTransactionProviderUuid($subOpts->getOpt('transaction_uuid'));
-		$billingsTransaction->setTransactionCreationDate($api_subscription->getCreationDate());
+		$billingsTransaction->setTransactionProviderUuid($subOpts->getOpt('transaction_uid'));
+		$billingsTransaction->setTransactionCreationDate($wecashupTransactionResponse->getTransactionDate());
 		$billingsTransaction->setAmountInCents($internalPlan->getAmountInCents());
 		$billingsTransaction->setCurrency($internalPlan->getCurrency());
-		$billingsTransaction->setCountry(isset($billingInfo) ? $billingInfo->getCountryCode() : NULL);
-		$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::waiting);
-		$billingsTransaction->setTransactionType(BillingsTransactionType::purchase);
+		$billingsTransaction->setCountry($country);
+		$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
+		$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
 		$billingsTransaction->setInvoiceProviderUuid(NULL);
 		$billingsTransaction->setMessage('');
 		$billingsTransaction->setUpdateType('api');
+		//
+		$billingsTransactionOpts = new BillingsTransactionOpts();
+		$billingsTransactionOpts->setOpt('transaction_token', $subOpts->getOpt('transaction_token'));
 		//NO MORE DB TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
 		//BILLING_INFO
@@ -211,29 +207,37 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			$billingsTransaction->setSubId($db_subscription->getId());
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		}
+		//TRANSACTION_OPTS
+		if(isset($billingsTransactionOpts)) {
+			$billingsTransactionOpts->setTransactionId($billingsTransaction->getId());
+			$billingsTransactionOpts = BillingsTransactionOptsDAO::addBillingsTransactionOpts($billingsTransactionOpts);
+		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("wecashup dbsubscription creation for userid=".$user->getId().", wecashup_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
-	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("wecashup subscription expiring...");
 			if(
-					$subscription->getSubStatus() == "expired"
+				$subscription->getSubStatus() == "expired"
 			)
 			{
 				//nothing todo : already done or in process
 			} else {
 				//
-				if($subscription->getSubPeriodEndsDate() <= $expires_date) {
-					$subscription->setSubExpiresDate($expires_date);
-					$subscription->setSubStatus("expired");
-				} else {
-					$msg = "cannot expire a subscription that has not ended yet";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
+				//
+				if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+					if($expireSubscriptionRequest->getIsForced() == false) {
+						$msg = "cannot expire a subscription that has not ended yet";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
 				}
+				$subscription->setSubExpiresDate($expiresDate);
+				$subscription->setSubStatus("expired");
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
@@ -249,7 +253,6 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			//
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("wecashup subscription expiring done successfully for wecashup_subscription_uuid=".$subscription->getSubUid());
-			return($subscription);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while expiring a wecashup subscription for wecashup_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("wecashup subscription expiring failed : ".$msg);
@@ -259,6 +262,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError("wecashup subscription expiring failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		return($this->doFillSubscription($subscription));
 	}
 	
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
@@ -294,12 +298,12 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 				$api_subscription = clone $db_subscription;
 				//
 				$wecashupTransactionRequest = new WecashupTransactionRequest();
-				$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+				$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 				$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
 				$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
 				if(count($wecashupTransactionsResponseArray) != 1) {
 					//Exception
-					$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
+					$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uid')." was not found";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
@@ -362,27 +366,29 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setSubPeriodStartedDate($start_date);
 		
 		$end_date = NULL;
-		switch($internalPlan->getPeriodUnit()) {
-			case PlanPeriodUnit::day :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::month :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::year :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			default :
-				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
+		if(isset($start_date)) {
+			switch($internalPlan->getPeriodUnit()) {
+				case PlanPeriodUnit::day :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				case PlanPeriodUnit::month :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				case PlanPeriodUnit::year :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				default :
+					$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
 		}
 		$api_subscription->setSubPeriodEndsDate($end_date);
 		//
@@ -402,12 +408,13 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
 		config::getLogger()->addInfo("wecashup dbsubscription update for userid=".$user->getId().", wecashup_subscription_uuid=".$api_subscription->getSubUid().", id=".$db_subscription->getId()." done successfully");
-		return($db_subscription);	
+		return($this->doFillSubscription($db_subscription));	
 	}
 	
 	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
-			return;
+			return NULL;
 		}
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
@@ -440,6 +447,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//done
 		$subscription->setIsActive($is_active);
+		return($subscription);
 	}
 	
 	public function doUpdateUserSubscription(BillingsSubscription $db_subscription) {
@@ -477,12 +485,12 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$wecashupClient = new WecashupClient();
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
-		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uuid'));
+		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
 		$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
 		if(count($wecashupTransactionsResponseArray) != 1) {
 			//Exception
-			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uuid')." was not found";
+			$msg = "transaction with transactionUid=".$subOpts->getOpt('transaction_uid')." was not found";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -496,7 +504,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		switch ($paymentTransaction->getTransactionStatus()) {
 			case 'TOVALIDATE' :
 				$api_subscription->setSubStatus('future');
-				$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::waiting);
+				$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
 				$billingsTransaction->setUpdateType($update_type);
 				if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
 					$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
@@ -504,7 +512,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 			case 'PENDING' :
 				$api_subscription->setSubStatus('future');
-				$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::waiting);
+				$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
 				$billingsTransaction->setUpdateType($update_type);
 				if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
 					$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
@@ -514,7 +522,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 				$api_subscription->setSubStatus('active');
 				$api_subscription->setSubActivatedDate($now);
 				$api_subscription->setSubPeriodStartedDate($now);
-				$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::success);
+				$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
 				$billingsTransaction->setUpdateType($update_type);
 				if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
 					$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
@@ -523,7 +531,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			case 'FAILED' :
 				$api_subscription->setSubStatus('expired');
 				$api_subscription->setSubExpiresDate($now);
-				$billingsTransaction->setTransactionStatus(BillingsTransactionStatus::failed);
+				$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::failed));
 				$billingsTransaction->setUpdateType($update_type);
 				if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
 					$billingsTransaction->setCountry($paymentTransaction->getTransactionSenderCountryCodeIso2());
@@ -538,7 +546,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		}		
 		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
 		$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
 }

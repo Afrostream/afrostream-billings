@@ -129,7 +129,7 @@ class RecurlyWebHooksHandler {
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
-		$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler();
+		$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler($provider);
 		try {
 			//START TRANSACTION
 			pg_query("BEGIN");

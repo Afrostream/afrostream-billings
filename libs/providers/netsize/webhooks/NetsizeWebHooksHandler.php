@@ -110,7 +110,7 @@ class NetsizeWebHooksHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
-			$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+			$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler($provider);
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
