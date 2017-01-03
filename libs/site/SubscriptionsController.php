@@ -272,7 +272,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function cancel(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
@@ -306,7 +306,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function renew(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
@@ -340,7 +340,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function reactivate(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
@@ -374,7 +374,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function updateInternalPlan(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
@@ -416,7 +416,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function expire(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
@@ -426,10 +426,15 @@ class SubscriptionsController extends BillingsController {
 			}
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
 			//
+			$forceBeforeEndsDate = false;
+			if(isset($data['forceBeforeEndsDate'])) {
+				$forceBeforeEndsDate = $data['forceBeforeEndsDate'] == 'true' ? true : false;
+			}
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$expireSubscriptionRequest = new ExpireSubscriptionRequest();
 			$expireSubscriptionRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
 			$expireSubscriptionRequest->setOrigin('api');
+			$expireSubscriptionRequest->setForceBeforeEndsDate($forceBeforeEndsDate);
 			$subscription = $subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));

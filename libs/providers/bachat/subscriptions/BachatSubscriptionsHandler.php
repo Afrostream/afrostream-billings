@@ -328,13 +328,13 @@ class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//
 				if($subscription->getSubStatus() != "canceled") {
 					//exception
-					$msg = "cannot expire a subscription that has not been canceled";
+					$msg = "cannot expire a ".$this->provider->getName()." subscription that has not been canceled";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				if($subscription->getSubPeriodEndsDate() > $expiresDate) {
-					if($expireSubscriptionRequest->getIsForced() == false) {
-						$msg = "cannot expire a subscription that has not ended yet";
+					if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+						$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}

@@ -446,11 +446,18 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//
 				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
-				if($subscription->getSubPeriodEndsDate() > $expiresDate) {
-					if($expireSubscriptionRequest->getIsForced() == false) {
-						$msg = "cannot expire a subscription that has not ended yet";
-						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
+					if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+						if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+							$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						}
+					}
+				}
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
+					if($subscription->getSubCanceledDate() == NULL) {
+						$subscription->setSubCanceledDate($expiresDate);
 					}
 				}
 				$subscription->setSubExpiresDate($expiresDate);
@@ -458,6 +465,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
 					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
 					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT

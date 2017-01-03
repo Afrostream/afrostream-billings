@@ -646,15 +646,39 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
 				if($subscription->getSubStatus() != "canceled") {
-					$msg = "cannot expire a subscription that has not been canceled";
+					$msg = "cannot expire a ".$this->provider->getName()." subscription that has not been canceled";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				if($subscription->getSubPeriodEndsDate() > $expiresDate) {
-					if($expireSubscriptionRequest->getIsForced() == false) {
-						$msg = "cannot expire a subscription that has not ended yet";
-						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
+					if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+						if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+							$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						}
+					}
+				}
+				if(in_array($expireSubscriptionRequest->getOrigin(), ['api', 'hook'])) {
+					if($subscription->getSubStatus() == "canceled") {
+						//already canceled, nothing can be done in braintree side
+					} else {
+						//
+						Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
+						Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
+						Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
+						Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+						//
+						$result = Braintree\Subscription::cancel($subscription->getSubUid());
+						if (!$result->success) {
+							$msg = 'a braintree api error occurred : ';
+							$errorString = $result->message;
+							foreach($result->errors->deepAll() as $error) {
+								$errorString.= '; Code=' . $error->code . ", msg=" . $error->message;
+							}
+							throw new Exception($msg.$errorString);
+						}
+						$subscription->setSubCanceledDate($expiresDate);
 					}
 				}
 				$subscription->setSubExpiresDate($expiresDate);
@@ -662,6 +686,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
 					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
 					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT

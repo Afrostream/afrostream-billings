@@ -366,6 +366,18 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			{
 				//nothing to do : already done or in process
 			} else {
+				//NC : only check via the API as we are not sure about dates when looking status in the script
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
+					if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
+						if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+							if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+								$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
+								config::getLogger()->addError($msg);
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							}
+						}
+					}
+				}
 				$doIt = true;
 				$netsizeClient = new NetsizeClient();
 				

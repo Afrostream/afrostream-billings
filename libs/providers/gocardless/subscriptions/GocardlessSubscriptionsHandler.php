@@ -685,31 +685,42 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//
 				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
-				if($subscription->getSubStatus() == "canceled") {
-					//already cancelled, nothing can be done in gocardless side
-				} else {
-					$client = new Client(array(
-							'access_token' => getEnv('GOCARDLESS_API_KEY'),
-							'environment' => getEnv('GOCARDLESS_API_ENV')
-					));
-					$api_subscription = $client->subscriptions()->get($subscription->getSubUid());
-					if($expireSubscriptionRequest->getOrigin() == 'api' || $api_subscription->status != 'cancelled') {
-						//anyway
-						$metadata_array = array();
-						foreach ($api_subscription->metadata as $key => $value) {
-							$metadata_array[$key] = $value;
+				if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
+					if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+						if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+							$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						}
-						$metadata_array['status'] = 'expired';
-						$sub_params = ['params' =>
-								[
-										'metadata' => $metadata_array
-								]
-						];
-						$api_subscription = $client->subscriptions()->update($api_subscription->id, $sub_params);
-						//
-						$client->subscriptions()->cancel($api_subscription->id);
 					}
-					$subscription->setSubCanceledDate($expiresDate);
+				}
+				if(in_array($expireSubscriptionRequest->getOrigin(), ['api', 'hook'])) {
+					if($subscription->getSubStatus() == "canceled") {
+						//already canceled, nothing can be done in gocardless side
+					} else {
+						$client = new Client(array(
+								'access_token' => getEnv('GOCARDLESS_API_KEY'),
+								'environment' => getEnv('GOCARDLESS_API_ENV')
+						));
+						$api_subscription = $client->subscriptions()->get($subscription->getSubUid());
+						if($api_subscription->status != 'cancelled') {
+							//anyway
+							$metadata_array = array();
+							foreach ($api_subscription->metadata as $key => $value) {
+								$metadata_array[$key] = $value;
+							}
+							$metadata_array['status'] = 'expired';
+							$sub_params = ['params' =>
+									[
+											'metadata' => $metadata_array
+									]
+							];
+							$api_subscription = $client->subscriptions()->update($api_subscription->id, $sub_params);
+							//
+							$client->subscriptions()->cancel($api_subscription->id);
+						}
+						$subscription->setSubCanceledDate($expiresDate);
+					}
 				}
 				$subscription->setSubExpiresDate($expiresDate);
 				$subscription->setSubStatus('expired');

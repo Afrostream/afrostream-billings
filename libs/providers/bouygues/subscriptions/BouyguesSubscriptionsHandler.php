@@ -289,6 +289,11 @@ class BouyguesSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			{
 				//nothing todo : already done or in process
 			} else {
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
+					$msg = "cannot expire a ".$this->provider->getName()." subscription from api"; 
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
 				//
 				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
