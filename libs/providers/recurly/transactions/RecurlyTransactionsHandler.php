@@ -289,14 +289,15 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 	public function doRefundTransaction(BillingsTransaction $transaction, RefundTransactionRequest $refundTransactionRequest) {
 		try {
 			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
-			//TODO
-			//
-			$user = UserDAO::getUserById($transaction->getUserId());
-			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 			//
 			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 			//
+			$api_invoice = Recurly_Invoice::get($transaction->getInvoiceProviderUuid());
+			$api_invoice->refund(["uuid" => $transaction->getTransactionProviderUuid(), "quantity" => 1, "prorate" => false] ,'transaction');
+			//
+			$user = UserDAO::getUserById($transaction->getUserId());
+			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 			$recurlyAccount = Recurly_Account::get($user->getUserProviderUuid());
 			$transaction = $this->createOrUpdateChargeFromProvider($user, $userOpts, $recurlyAccount, $api_payment, $refundTransactionRequest->getOrigin());
 			//
