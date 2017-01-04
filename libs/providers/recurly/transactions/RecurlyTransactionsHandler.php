@@ -286,6 +286,33 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 		return($billingTransactionType);
 	}
 	
+	public function doRefundTransaction(BillingsTransaction $transaction, RefundTransactionRequest $refundTransactionRequest) {
+		try {
+			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
+			//TODO
+			//
+			$user = UserDAO::getUserById($transaction->getUserId());
+			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+			//
+			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
+			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			//
+			$recurlyAccount = Recurly_Account::get($user->getUserProviderUuid());
+			$transaction = $this->createOrUpdateChargeFromProvider($user, $userOpts, $recurlyAccount, $api_payment, $refundTransactionRequest->getOrigin());
+			//
+			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("refunding a ".$this->provider->getName()." transaction failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("refunding a ".$this->provider->getName()." transaction failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
+		}
+		return($transaction);
+	}
+	
 }
 
 ?>

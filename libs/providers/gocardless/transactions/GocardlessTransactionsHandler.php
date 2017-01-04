@@ -240,7 +240,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 	
 	public function doRefundTransaction(BillingsTransaction $transaction, RefundTransactionRequest $refundTransactionRequest) {
 		try {
-			config::getLogger()->addInfo("refunding gocardless transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
+			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
 			$client = new Client(array(
 					'access_token' => getEnv('GOCARDLESS_API_KEY'),
 					'environment' => getEnv('GOCARDLESS_API_ENV')
@@ -258,6 +258,8 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 										"total_amount_confirmation" => $api_payment->amount,
 										"links" => ["payment" => $api_payment->id]]
 								]);
+					//reload payment, in order to be up to date
+					$api_payment = $client->payments()->get($transaction->getTransactionProviderUuid());
 					break;
 				case 'submitted' :
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), "current status : ".$api_payment->status." does not allow refund, please retry later");
@@ -277,14 +279,14 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 			$gocardlessCustomer = $client->customers()->get($user->getUserProviderUuid());
 			$transaction = $this->createOrUpdateChargeFromProvider($user, $userOpts, $gocardlessCustomer, $api_payment, $refundTransactionRequest->getOrigin());
 			//
-			config::getLogger()->addInfo("refunding gocardless transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()." done successfully");
+			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()." done successfully");
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while refunding gocardless transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("refunding gocardless transaction failed : ".$msg);
+			$msg = "a billings exception occurred while refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("refunding a ".$this->provider->getName()." transaction failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while refunding gocardless transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("refunding gocardless transaction failed : ".$msg);
+			$msg = "an unknown exception occurred while refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("refunding a ".$this->provider->getName()." transaction failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
 		return($transaction);

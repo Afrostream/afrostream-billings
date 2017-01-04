@@ -4098,6 +4098,8 @@ class BillingsTransaction implements JsonSerializable {
 				'currency' => $this->currency,
 				'amountInCents' => $this->amountInCents,
 				'amount' => (string) number_format((float) $this->amountInCents / 100, 2, ',', ''),//Forced to French Locale
+				'transactionOpts' => (BillingsTransactionOptsDAO::getBillingsTransactionOptByTransactionId($this->_id)->jsonSerialize()),
+				'linkedTransactions' => BillingsTransactionDAO::getBillingsTransactionsByTransactionLinkId($this->_id)
 		];
 		return($return);
 	}
@@ -4255,6 +4257,20 @@ EOL;
 		return($out);
 	}
 	
+	public static function getBillingsTransactionsByTransactionLinkId($transactionLinkId) {
+		$query = "SELECT ".self::$sfields." FROM billing_transactions WHERE transactionlinkid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($transactionLinkId));
+		
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getBillingsTransactionFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
 }
 
 class BillingPaymentMethod implements JsonSerializable {

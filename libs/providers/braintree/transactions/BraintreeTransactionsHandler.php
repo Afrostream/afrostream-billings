@@ -266,6 +266,73 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 		return($billingTransactionType);
 	}
 	
+	public function doRefundTransaction(BillingsTransaction $transaction, RefundTransactionRequest $refundTransactionRequest) {
+		try {
+			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
+			$api_payment = Braintree\Transaction::find($transaction->getTransactionProviderUuid());
+			switch ($api_payment->status) {
+				case Braintree\Transaction::AUTHORIZED :
+				case Braintree\Transaction::SUBMITTED_FOR_SETTLEMENT :
+					$result = Braintree\Transaction::void($api_payment->id);
+					if (!$result->success) {
+						$msg = 'a braintree api error occurred : ';
+						$errorString = $result->message;
+						foreach($result->errors->deepAll() as $error) {
+							$errorString.= '; Code=' . $error->code . ", msg=" . $error->message;
+						}
+						throw new Exception($msg.$errorString);
+					}
+					break;
+				case Braintree\Transaction::SETTLING :
+				case Braintree\Transaction::SETTLED :
+					$result = Braintree\Transaction::refund($api_payment->id);
+					if (!$result->success) {
+						$msg = 'a braintree api error occurred : ';
+						$errorString = $result->message;
+						foreach($result->errors->deepAll() as $error) {
+							$errorString.= '; Code=' . $error->code . ", msg=" . $error->message;
+						}
+						throw new Exception($msg.$errorString);
+					}
+					break;
+				case Braintree\Transaction::AUTHORIZATION_EXPIRED :
+				case Braintree\Transaction::PROCESSOR_DECLINED :
+				case Braintree\Transaction::GATEWAY_REJECTED :
+				case Braintree\Transaction::FAILED :
+				case Braintree\Transaction::VOIDED :
+				case Braintree\Transaction::SETTLEMENT_DECLINED :
+				case Braintree\Transaction::SETTLEMENT_PENDING :
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), "status : ".$api_payment->status." does not allow refund");
+					break;
+				case Braintree\Transaction::UNRECOGNIZED :
+				case Braintree\Transaction::AUTHORIZING :
+				case Braintree\Transaction::SETTLEMENT_CONFIRMED :
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), "unexpected braintree transaction status : ".$api_payment->status);
+					break;
+				default :
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), "unknown braintree transaction status : ".$api_payment->status);
+					break;
+			}
+			//reload payment, in order to be up to date
+			$api_payment = Braintree\Transaction::find($transaction->getTransactionProviderUuid());
+			//
+			$user = UserDAO::getUserById($transaction->getUserId());
+			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+			$transaction = $this->createOrUpdateChargeFromProvider($user, $userOpts, $api_payment, $refundTransactionRequest->getOrigin());
+			//
+			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("refunding a ".$this->provider->getName()." transaction failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("refunding a ".$this->provider->getName()." transaction failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
+		}
+		return($transaction);
+	}
+		
 }
 
 ?>
