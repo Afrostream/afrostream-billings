@@ -269,6 +269,12 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 	public function doRefundTransaction(BillingsTransaction $transaction, RefundTransactionRequest $refundTransactionRequest) {
 		try {
 			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
+			//
+			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
+			Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
+			Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
+			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+			//
 			$api_payment = Braintree\Transaction::find($transaction->getTransactionProviderUuid());
 			switch ($api_payment->status) {
 				case Braintree\Transaction::AUTHORIZED :
