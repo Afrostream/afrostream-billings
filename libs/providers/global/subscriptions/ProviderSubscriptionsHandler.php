@@ -192,7 +192,7 @@ class ProviderSubscriptionsHandler {
 	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
 		$msg = "unsupported feature for provider named : ".$this->provider->getName();
 		config::getLogger()->addError($msg);
-		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {

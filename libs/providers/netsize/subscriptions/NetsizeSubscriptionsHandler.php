@@ -366,6 +366,11 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			{
 				//nothing to do : already done or in process
 			} else {
+				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+					$msg = "cannot expire and refund a ".$this->provider->getName()." subscription";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_UNSUPPORTED);
+				}
 				//NC : only check via the API as we are not sure about dates when looking status in the script
 				if($expireSubscriptionRequest->getOrigin() == 'api') {
 					if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
@@ -373,7 +378,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 							if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
 								$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
 								config::getLogger()->addError($msg);
-								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
 							}
 						}
 					}

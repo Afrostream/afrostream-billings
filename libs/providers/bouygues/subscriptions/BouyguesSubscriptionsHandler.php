@@ -289,6 +289,11 @@ class BouyguesSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			{
 				//nothing todo : already done or in process
 			} else {
+				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+					$msg = "cannot expire and refund a ".$this->provider->getName()." subscription";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_UNSUPPORTED);
+				}
 				if($expireSubscriptionRequest->getOrigin() == 'api') {
 					$msg = "cannot expire a ".$this->provider->getName()." subscription from api"; 
 					config::getLogger()->addError($msg);

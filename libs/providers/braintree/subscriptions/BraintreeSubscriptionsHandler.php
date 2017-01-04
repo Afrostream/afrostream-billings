@@ -642,6 +642,11 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			{
 				//nothing todo : already done or in process
 			} else {
+				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+					$msg = "cannot expire and refund a ".$this->provider->getName()." subscription";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_UNSUPPORTED);
+				}
 				//
 				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
@@ -655,7 +660,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 						if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
 							$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
 							config::getLogger()->addError($msg);
-							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
 						}
 					}
 				}
