@@ -219,7 +219,7 @@ class WecashupWebHooksHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		$wecashupTransactionsHandler = new WecashupTransactionsHandler();
+		$wecashupTransactionsHandler = new WecashupTransactionsHandler($this->provider);
 		$wecashupTransactionsHandler->createOrUpdateRefundFromProvider($user, $userOpts, NULL, $refundTransaction, $billingsPaymentTransaction, $update_type);
 		//DONE
 		config::getLogger()->addInfo('Processing wecashup hook refund done successfully');

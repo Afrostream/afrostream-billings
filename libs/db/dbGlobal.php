@@ -3903,7 +3903,7 @@ class BillingsTransactionType extends Enum implements JsonSerializable {
 	}
 }
 
-class BillingsTransaction {
+class BillingsTransaction implements JsonSerializable {
 	
 	private $_id;
 	private $transactionLinkId;
@@ -4084,6 +4084,23 @@ class BillingsTransaction {
 	public function setUpdateType($updateType) {
 		$this->updateType = $updateType;
 	}
+	
+	public function jsonSerialize() {
+		$return = [
+				'transactionBillingUuid' => $this->transactionBillingUuid,
+				'transactionProviderUuid' => $this->transactionProviderUuid,
+				'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
+				'transactionCreationDate' => dbGlobal::toISODate($this->transactionCreationDate),
+				'creationDate' => dbGlobal::toISODate($this->creationDate),
+				'updatedDate' => dbGlobal::toISODate($this->updatedDate),
+				'transactionStatus' => $this->transactionStatus,
+				'transactionType' => $this->transactionType,
+				'currency' => $this->currency,
+				'amountInCents' => $this->amountInCents,
+				'amount' => (string) number_format((float) $this->amountInCents / 100, 2, ',', ''),//Forced to French Locale
+		];
+		return($return);
+	}
 }
 
 class BillingsTransactionDAO {
@@ -4211,6 +4228,21 @@ EOL;
 	public static function getBillingsTransactionByTransactionProviderUuid($providerId, $transaction_provider_uuid) {
 		$query = "SELECT ".self::$sfields." FROM billing_transactions WHERE providerid = $1 AND transaction_provider_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $transaction_provider_uuid));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingsTransactionFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getBillingsTransactionByTransactionBillingUuid($transactionBillingUuid) {
+		$query = "SELECT ".self::$sfields." FROM billing_transactions WHERE transaction_billing_uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($transactionBillingUuid));
 	
 		$out = null;
 	

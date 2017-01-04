@@ -10,6 +10,7 @@ require_once __DIR__ . '/../libs/site/UsersInternalCouponsController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
 require_once __DIR__ . '/../libs/site/InternalCouponsCampaignsController.php';
 require_once __DIR__ . '/../libs/site/ContextsController.php';
+require_once __DIR__ . '/../libs/site/TransactionsController.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -1344,6 +1345,18 @@ $app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/removein
 $app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/moveinternalplan/{internalPlanUuid}/{index}", function ($request, $response, $args) {
 	$contextsController = new ContextsController();
 	return($contextsController->setInternalPlanIndexInContext($request, $response, $args));
+});
+
+//transactions
+
+$app->get("/billings/api/transactions/{transactionBillingUuid}", function ($request, $response, $args) {
+	$transactionsController = new TransactionsController();
+	return($transactionsController->getOne($request, $response, $args));
+});
+
+$app->put("/billings/api/transactions/{transactionBillingUuid}/refund", function ($request, $response, $args) {
+	$transactionsController = new TransactionsController();
+	return($transactionsController->refund($request, $response, $args));
 });
 
 //WebHooks

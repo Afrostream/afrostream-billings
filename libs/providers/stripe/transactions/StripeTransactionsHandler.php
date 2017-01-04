@@ -3,15 +3,15 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.php';
 
-class StripeTransactionsHandler {
+class StripeTransactionsHandler extends ProviderTransactionsHandler {
 	
-	private $provider = NULL;
 	const STRIPE_LIMIT = 50;
 	
-	public function __construct() {
+	public function __construct($provider) {
+		parent::__construct($provider);
 		\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
-		$this->provider = ProviderDAO::getProviderByName('stripe');
 	}
 	
 	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL, $updateType) {

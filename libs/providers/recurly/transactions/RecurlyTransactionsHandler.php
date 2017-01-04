@@ -3,11 +3,9 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.php';
 
-class RecurlyTransactionsHandler {
-	
-	public function __construct() {
-	}
+class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 	
 	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL, $updateType) {
 		try {
