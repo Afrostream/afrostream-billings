@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
 require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
+require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 
 class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		
@@ -487,7 +488,8 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	}
 	
 	protected function doCheckSponsoring(User $user) {
-		$subscriptions = $this->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid());
+		$subscriptionsHandler = new SubscriptionsHandler();
+		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid());
 		foreach ($subscriptions as $subscription) {
 			$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription->getId());
 			if(isset($userInternalCoupon)) {
