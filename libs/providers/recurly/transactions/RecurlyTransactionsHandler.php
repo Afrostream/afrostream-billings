@@ -293,7 +293,8 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 			//
-			$api_invoice = Recurly_Invoice::get($transaction->getInvoiceProviderUuid());
+			$api_transaction = Recurly_Transaction::get($transaction->getTransactionProviderUuid());
+			$api_invoice = $api_transaction->invoice->get();
 			$api_invoice->refund(["uuid" => $transaction->getTransactionProviderUuid(), "quantity" => 1, "prorate" => false] ,'transaction');
 			//
 			$user = UserDAO::getUserById($transaction->getUserId());
