@@ -47,7 +47,7 @@ class ExpireSubscriptionRequest extends ActionRequest {
 	}
 	
 	public function getIsRefundEnabled() {
-		return($this->$isRefundEnabled);
+		return($this->isRefundEnabled);
 	}
 	
 }
