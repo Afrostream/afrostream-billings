@@ -411,12 +411,21 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 						}
 					}
 				}
-				$db_subscription->setSubStatus($subscriptionStatus);
-				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-				$db_subscription->setSubCanceledDate($subCanceledDate);
-				$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
-				$db_subscription->setSubExpiresDate($subExpiresDate);
-				$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+				//NC : cannot replace status when 'expired'
+				if($db_subscription->getSubStatus() != 'expired') {
+					$db_subscription->setSubStatus($subscriptionStatus);
+					$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
+				}
+				//NC : cannot replace canceledDate if already set 
+				if($db_subscription->getSubCanceledDate() == NULL) {
+					$db_subscription->setSubCanceledDate($subCanceledDate);
+					$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
+				}
+				//NC : cannot replace expiredDate if already set
+				if($db_subscription->getSubExpiresDate() == NULL) {
+					$db_subscription->setSubExpiresDate($subExpiresDate);
+					$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+				}
 				break;
 			case Braintree\Subscription::EXPIRED :
 				$db_subscription->setSubStatus('expired');
@@ -425,7 +434,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
 				break;
 			case Braintree\Subscription::PAST_DUE :
-				$db_subscription->setSubStatus('active');//TODO : check
+				$db_subscription->setSubStatus('active');
 				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
 				break;
 			case Braintree\Subscription::PENDING :
