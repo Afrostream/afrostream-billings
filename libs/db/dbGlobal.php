@@ -4271,6 +4271,82 @@ EOL;
 		
 		return($out);
 	}
+	
+	public static function getBillingsTransactions($limit = 0,
+			$offset = 0,
+			DateTime $afterTransactionCreationDate = NULL,
+			$subId = NULL,
+			$transaction_type_array = NULL,
+			$order = 'descending') {
+		$params = array();
+		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_transactions";
+		$where = "";
+		if(isset($subId)) {
+			$params[] = $subId;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "subid = $".(count($params));
+		}
+		if(isset($afterTransactionCreationDate)) {
+			$afterTransactionCreationDateSQL = NULL;
+			if($order == 'descending') {
+				$afterTransactionCreationDateSQL = "transaction_creation_date < ".dbGlobal::toISODate($afterTransactionCreationDate);
+			} else {
+				$afterTransactionCreationDateSQL = "transaction_creation_date > ".dbGlobal::toISODate($afterTransactionCreationDate);
+			}
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= $afterTransactionCreationDateSQL;
+		}
+		if(isset($transaction_type_array) && count($transaction_type_array) > 0) {
+			$firstLoop = true;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "transaction_type in (";
+			foreach($transaction_type_array as $transaction_type) {
+				$params[] = $transaction_type;
+				if($firstLoop) {
+					$firstLoop = false;
+					$where.= "$".(count($params));
+				} else {
+					$where.= ", $".(count($params));
+				}
+			}
+			$where.= ")";
+		}
+		$query.= $where;
+		if($order == 'descending') {
+			$query.= " ORDER BY transaction_creation_date DESC";
+		} else {
+			$query.= " ORDER BY transaction_creation_date ASC";
+		}
+		if($limit > 0) { $query.= " LIMIT ".$limit; }
+		if($offset > 0) { $query.= " OFFSET ".$offset; }
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		$out = array();
+		$out['total_counter'] = 0;
+		$out['transactions'] = array();
+		$out['last_transaction_creation_date'] = NULL;
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out['total_counter'] = $row['total_counter'];
+			$out['transactions'][] = self::getBillingsTransactionFromRow($row);
+			$out['last_transaction_creation_date'] = $row['transaction_creation_date'];
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+	
 }
 
 class BillingPaymentMethod implements JsonSerializable {
