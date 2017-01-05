@@ -293,15 +293,17 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 			//
-			$api_transaction = Recurly_Transaction::get($transaction->getTransactionProviderUuid());
-			$api_invoice = $api_transaction->invoice->get();
+			$api_payment = Recurly_Transaction::get($transaction->getTransactionProviderUuid());
+			$api_invoice = $api_payment->invoice->get();
 			//@see : https://dev.recurly.com/docs/line-item-refunds
 			$line_items = $api_invoice->line_items;
 			$adjustments = array_map(
 					function($line_item) { return $line_item->toRefundAttributes(); }, 
 					$api_invoice->line_items
 			);
-			$refund_invoice = $api_invoice->refund($adjustments, 'transaction');		
+			$refund_invoice = $api_invoice->refund($adjustments, 'transaction');
+			//reload payment, in order to be up to date
+			$api_payment = Recurly_Transaction::get($transaction->getTransactionProviderUuid());
 			//
 			$user = UserDAO::getUserById($transaction->getUserId());
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
