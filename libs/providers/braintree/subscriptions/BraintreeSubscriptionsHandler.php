@@ -4,8 +4,11 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
+require_once __DIR__ . '/../../global/ProviderHandlersBuilder.php';
 require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.php';
 require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
+require_once __DIR__ . '/../../global/requests/RefundTransactionRequest.php';
 
 class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
@@ -642,19 +645,9 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			{
 				//nothing todo : already done or in process
 			} else {
-				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-					$msg = "cannot expire and refund a ".$this->provider->getName()." subscription";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_UNSUPPORTED);
-				}
 				//
 				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
-				if($subscription->getSubStatus() != "canceled") {
-					$msg = "cannot expire a ".$this->provider->getName()." subscription that has not been canceled";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
 				if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
 					if($subscription->getSubPeriodEndsDate() > $expiresDate) {
 						if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
@@ -699,6 +692,17 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				} catch(Exception $e) {
 					pg_query("ROLLBACK");
 					throw $e;
+				}
+				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase']);
+					if(count($transactionsResult['transactions']) == 1) {
+						$transaction = $transactionsResult['transactions'][0];
+						$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
+						$refundTransactionRequest = new RefundTransactionRequest();
+						$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
+						$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+						$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
+					}
 				}
 			}
 			//
