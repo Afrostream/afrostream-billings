@@ -35,6 +35,14 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
+			if($provider == NULL) {
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
+			$db_subscription = $providerSubscriptionsHandlerInstance->doFillSubscription($db_subscription);
 			config::getLogger()->addInfo("subscription getting for subscriptionBillingUuid=".$subscriptionBillingUuid." successfully done");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting a subscription for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();

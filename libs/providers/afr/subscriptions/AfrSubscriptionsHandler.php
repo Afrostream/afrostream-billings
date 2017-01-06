@@ -392,7 +392,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($db_subscription));
 	}
 	
-	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
 		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
 			return NULL;

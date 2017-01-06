@@ -96,7 +96,7 @@ class CelerySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($subscription));
 	}
 	
-	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
 		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
 			return NULL;
