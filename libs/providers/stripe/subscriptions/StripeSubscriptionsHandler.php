@@ -441,7 +441,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      *
      * @return string
      */
-    protected function getStatusFromProvider(Subscription $subscription)
+    protected function getStatusFromProvider(Stripe\Subscription $subscription)
     {
         $status = self::getMappedStatus($subscription['status']);
 
@@ -706,7 +706,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      *
      * @return BillingsSubscription
      */
-    protected function getNewBillingSubscription(Provider $provider, User $user, Plan $plan, Subscription $subscription, $subscription_billing_uuid)
+    protected function getNewBillingSubscription(Provider $provider, User $user, Plan $plan, Stripe\Subscription $subscription, $subscription_billing_uuid)
     {
         $billingSubscription = new BillingsSubscription();
         $billingSubscription->setSubscriptionBillingUuid($subscription_billing_uuid);
