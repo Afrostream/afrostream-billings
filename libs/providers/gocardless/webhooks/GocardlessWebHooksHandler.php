@@ -276,6 +276,7 @@ class GocardlessWebHooksHandler {
 					$expireSubscriptionRequest->setOrigin('hook');
 					$expireSubscriptionRequest->setSubscriptionBillingUuid($db_subscription->getSubscriptionBillingUuid());
 					$expireSubscriptionRequest->setExpiresDate($expires_date);
+					$expireSubscriptionRequest->setForceBeforeEndsDate(true);
 					$subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
 				}
 				config::getLogger()->addInfo('Processing gocardless hook payment, action='.$notification_as_array['action'].' done successfully');
