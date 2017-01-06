@@ -61,7 +61,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 		}
 	}
 	
-	private function createOrUpdateChargeFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeChargeTransaction, $updateType) {
+	public function createOrUpdateChargeFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeChargeTransaction, $updateType) {
 		config::getLogger()->addInfo("creating/updating transactions from braintree transaction id=".$braintreeChargeTransaction->id."...");
 		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $braintreeChargeTransaction->id);
 		$subId = NULL;
@@ -152,7 +152,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 		}
 	}
 	
-	private function createOrUpdateRefundFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeRefundTransaction, BillingsTransaction $billingsTransaction, $updateType) {
+	public function createOrUpdateRefundFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeRefundTransaction, BillingsTransaction $billingsTransaction, $updateType) {
 		config::getLogger()->addInfo("creating/updating refund transaction from braintree refund transaction id=".$braintreeRefundTransaction->id."...");
 		$billingsRefundTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $braintreeRefundTransaction->id);
 		if($billingsRefundTransaction == NULL) {

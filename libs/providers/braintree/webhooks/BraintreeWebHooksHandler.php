@@ -3,13 +3,16 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/BraintreeSubscriptionsHandler.php';
-require_once __DIR__ . '/../../../slack/SlackHandler.php';
+require_once __DIR__ . '/../transactions/BraintreeTransactionsHandler.php';
 
 class BraintreeWebHooksHandler {
 	
+	protected $provider = NULL;
+	
 	public function __construct() {
+		$this->provider = ProviderDAO::getProviderByName('braintree');
 	}
-		
+	
 	public function doProcessWebHook(BillingsWebHook $billingsWebHook, $update_type = 'hook') {
 		try {
 			config::getLogger()->addInfo("processing braintree webHook with id=".$billingsWebHook->getId()."...");
@@ -43,15 +46,12 @@ class BraintreeWebHooksHandler {
 				config::getLogger()->addWarning('notification kind : '. $notification->kind. ' is not yet implemented');
 				break;
 		}
-
-		//NC : NO MORE IN REALTIME
-		/*if (in_array($notification->kind, [
-			Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_SUCCESSFULLY,
-			Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_UNSUCCESSFULLY
-		])) {
-			$this->notifyCharge($notification);
-		}*/
-
+		switch($notification->kind) {
+			case Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_SUCCESSFULLY :
+			case Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_UNSUCCESSFULLY :
+				$this->doProcessCharge($notification, $update_type, $updateId);
+				break;
+		}
 		config::getLogger()->addInfo('Processing braintree hook notification done successfully');
 	}
 	
@@ -77,13 +77,6 @@ class BraintreeWebHooksHandler {
 			config::getLogger()->addError("an unknown exception occurred while getting braintree subscription with subscription_provider_uuid=".$subscription_provider_uuid." from api, message=".$e->getMessage());
 			throw $e;
 		}
-		//provider
-		$provider = ProviderDAO::getProviderByName('braintree');
-		if($provider == NULL) {
-			$msg = "provider named 'braintree' not found";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
 		//plan
 		$plan_uuid = $api_subscription->planId;
 		if($plan_uuid == NULL) {
@@ -91,7 +84,7 @@ class BraintreeWebHooksHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$plan = PlanDAO::getPlanByUuid($provider->getId(), $plan_uuid);
+		$plan = PlanDAO::getPlanByUuid($this->provider->getId(), $plan_uuid);
 		if($plan == NULL) {
 			$msg = "plan with uuid=".$plan_uuid." not found";
 			config::getLogger()->addError($msg);
@@ -101,7 +94,7 @@ class BraintreeWebHooksHandler {
 		//internalPlan
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
 		if($internalPlan == NULL) {
-			$msg = "plan with uuid=".$plan_uuid." for provider ".$provider->getName()." is not linked to an internal plan";
+			$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -110,7 +103,7 @@ class BraintreeWebHooksHandler {
 		$paymentMethod = Braintree\PaymentMethod::find($api_subscription->paymentMethodToken);
 		$customerId = $paymentMethod->customerId;
 		config::getLogger()->addInfo('searching user with userProviderUuid='.$customerId.'...');
-		$user = UserDAO::getUserByUserProviderUuid($provider->getId(), $customerId);
+		$user = UserDAO::getUserByUserProviderUuid($this->provider->getId(), $customerId);
 		if($user == NULL) {
 			$msg = 'searching user with userProviderUuid='.$customerId.' failed, no user found';
 			config::getLogger()->addError($msg);
@@ -119,7 +112,7 @@ class BraintreeWebHooksHandler {
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
-		$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler($provider);
+		$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler($this->provider);
 		try {
 			//START TRANSACTION
 			pg_query("BEGIN");
@@ -131,10 +124,10 @@ class BraintreeWebHooksHandler {
 				//DO NOT CREATE ANYMORE : race condition when creating from API + from the webhook
 				//WAS :
 				//CREATE
-				//$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
+				//$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 			} else {
 				//UPDATE
-				$db_subscription = $braintreeSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
+				$db_subscription = $braintreeSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
 			}
 			//COMMIT
 			pg_query("COMMIT");
@@ -154,35 +147,49 @@ class BraintreeWebHooksHandler {
 		}
 		return(NULL);
 	}
-
-	private function notifyCharge(Braintree\WebhookNotification $notification)
-	{
-		config::getLogger()->addInfo('Notify charge on slack '.$notification->kind.'...');
+	
+	private function doProcessCharge(Braintree\WebhookNotification $notification, $update_type, $updateId) {
+		config::getLogger()->addInfo('Processing braintree hook charge, notification_kind='.$notification->kind.'...');
 		//
 		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
 		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
 		Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
 		Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
-
-		if ($notification->kind == Braintree\WebhookNotification::SUBSCRIPTION_CHARGED_SUCCESSFULLY) {
-			$title = 'braintree charge succeeded';
-			$detail = '%s %s charged for %s';
-		} else {
-			$title = 'braintree charge failed';
-			$detail = '%s %s failed charge for %s';
+		//
+		$subscription_provider_uuid = $notification->subscription->id;
+		config::getLogger()->addInfo('Processing braintree hook charge, subscription_provider_uuid='.$subscription_provider_uuid);
+		//
+		$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($this->provider, subscription_provider_uuid);
+		if($db_subscription == NULL) {
+			$msg = 'searching subscription with subscription_provider_uuid='.$subscription_provider_uuid.' failed, no subscription found';
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-
-		$url = sprintf(getenv('BRAINTREE_TRANSACTION_URL_DETAIL_FORMAT'), getenv('BRAINTREE_MERCHANT_ID'), $notification->subject['subscription']['transactions'][0]['id']);
-		$plan = $notification->subject['subscription']['planId'];
-		$price = $notification->subject['subscription']['price'];
-		$currency = $notification->subject['subscription']['transactions'][0]['currencyIsoCode'];
-
-		$slack = new SlackHandler();
-		$message = sprintf("*%s*\n", $title);
-		$message .= sprintf($detail, $price, $currency, $plan);
-		$message .= "\n<".$url."|View details>";
-
-		$slack->sendMessage(getenv('SLACK_STATS_TRANSACTIONS_CHANNEL'), $message);
+		$user = UserDAO::getUserById($db_subscription->getUserId());
+		if($user == NULL) {
+			$msg = "unknown user with id : ".$db_subscription->getUserId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+		try {
+			//
+			$api_subscription = Braintree\Subscription::find($subscription_provider_uuid);
+			//
+		} catch (Braintree\Exception\NotFound $e) {
+			config::getLogger()->addError("a not found exception occurred while getting braintree subscription with subscription_provider_uuid=".$subscription_provider_uuid." from api, message=".$e->getMessage());
+			throw $e;
+		} catch (Exception $e) {
+			config::getLogger()->addError("an unknown exception occurred while getting braintree subscription with subscription_provider_uuid=".$subscription_provider_uuid." from api, message=".$e->getMessage());
+			throw $e;
+		}
+		if(count($api_subscription->transactions) > 0) {
+			$moreRecentTransaction = $api_subscription->transactions[0];
+			$braintreeTransactionsHandler = new BraintreeTransactionsHandler($this->provider);
+			$db_transaction = $braintreeTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $moreRecentTransaction, $update_type);
+		}
+		//
+		config::getLogger()->addInfo('Processing braintree hook charge, notification_kind='.$notification->kind.' done successfully');
 	}
 	
 }
