@@ -159,7 +159,7 @@ class BraintreeWebHooksHandler {
 		$subscription_provider_uuid = $notification->subscription->id;
 		config::getLogger()->addInfo('Processing braintree hook charge, subscription_provider_uuid='.$subscription_provider_uuid);
 		//
-		$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($this->provider, subscription_provider_uuid);
+		$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($this->provider->getId(), subscription_provider_uuid);
 		if($db_subscription == NULL) {
 			$msg = 'searching subscription with subscription_provider_uuid='.$subscription_provider_uuid.' failed, no subscription found';
 			config::getLogger()->addError($msg);
