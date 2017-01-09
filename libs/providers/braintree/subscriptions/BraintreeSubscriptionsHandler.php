@@ -573,7 +573,6 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				config::getLogger()->addWarning("braintree dbsubscription unknown subStatus=".$subscription->getSubStatus().", gocardless_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;		
 		}
-		//done
 		$subscription->setIsActive($is_active);
 		return($subscription);
 	}

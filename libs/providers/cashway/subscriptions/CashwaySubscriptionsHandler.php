@@ -264,7 +264,12 @@ class CashwaySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				break;
 		}
 		$subscription->setIsActive($is_active);
-		$subscription->setIsCancelable(false);
+		$array_status_expirable = ['active', 'canceled'];
+		if(in_array($subscription->getSubStatus(), $array_status_expirable)) {
+			$subscription->setIsExpirable(true);
+		} else {
+			$subscription->setIsExpirable(false);
+		}
 		return($subscription);
 	}
 	

@@ -431,7 +431,6 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				break;
 		}
 		$subscription->setIsActive($is_active);
-		$subscription->setIsCancelable(false);
 		return($subscription);
 	}
 	

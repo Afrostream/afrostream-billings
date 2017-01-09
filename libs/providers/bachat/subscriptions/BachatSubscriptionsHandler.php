@@ -192,6 +192,12 @@ class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				break;
 		}
 		$subscription->setIsActive($is_active);
+		$array_status_expirable = ['canceled'];
+		if(in_array($subscription->getSubStatus(), $array_status_expirable)) {
+			$subscription->setIsExpirable(true);
+		} else {
+			$subscription->setIsExpirable(false);
+		}
 		return($subscription);
 	}
 	
