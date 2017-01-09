@@ -924,17 +924,17 @@ class InternalPlan implements JsonSerializable {
 			foreach ($toCurrencyArray as $toCurrency) {
 				if($toCurrency != $this->currency) {
 					$amountInCentsInForeignCurrency = intval(round(MoneyUtils::getLatestRate($this->currency.'/'.$toCurrency) * $this->amount_in_cents));
-					$return['CurrencyConversions'][$toCurrency]['amountInCents'] = (string) ($amountInCentsInForeignCurrency);
-					$return['CurrencyConversions'][$toCurrency]['amount'] = (string) number_format((float) $amountInCentsInForeignCurrency/ 100, 2, '.', '');
-					$return['CurrencyConversions'][$toCurrency]['amountInCentsExclTax'] = (string) MoneyUtils::getAmountInCentsExclTax($amountInCentsInForeignCurrency, $this->vatRate);
-					$return['CurrencyConversions'][$toCurrency]['amountExclTax'] = number_format((float) MoneyUtils::getAmountExclTax($amountInCentsInForeignCurrency, $this->vatRate), 5, '.', '');
+					$return['currencyConversions'][$toCurrency]['amountInCents'] = (string) ($amountInCentsInForeignCurrency);
+					$return['currencyConversions'][$toCurrency]['amount'] = (string) number_format((float) $amountInCentsInForeignCurrency/ 100, 2, '.', '');
+					$return['currencyConversions'][$toCurrency]['amountInCentsExclTax'] = (string) MoneyUtils::getAmountInCentsExclTax($amountInCentsInForeignCurrency, $this->vatRate);
+					$return['currencyConversions'][$toCurrency]['amountExclTax'] = number_format((float) MoneyUtils::getAmountExclTax($amountInCentsInForeignCurrency, $this->vatRate), 5, '.', '');
 				}
 			}
 			//anyway current currency is added
-			$return['CurrencyConversions'][$this->currency]['amountInCents'] = $this->amount_in_cents;
-			$return['CurrencyConversions'][$this->currency]['amount'] = (string) number_format((float) $this->amount_in_cents / 100, 2, '.', '');
-			$return['CurrencyConversions'][$this->currency]['amountInCentsExclTax'] = (string) $this->getAmountInCentsExclTax();
-			$return['CurrencyConversions'][$this->currency]['amountExclTax'] = number_format((float) $this->getAmountExclTax(), 5, '.', '');
+			$return['currencyConversions'][$this->currency]['amountInCents'] = $this->amount_in_cents;
+			$return['currencyConversions'][$this->currency]['amount'] = (string) number_format((float) $this->amount_in_cents / 100, 2, '.', '');
+			$return['currencyConversions'][$this->currency]['amountInCentsExclTax'] = (string) $this->getAmountInCentsExclTax();
+			$return['currencyConversions'][$this->currency]['amountExclTax'] = number_format((float) $this->getAmountExclTax(), 5, '.', '');
 		} else 
 			$return['exchangeRates'] = array();//empty
 		return($return);
