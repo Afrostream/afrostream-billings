@@ -130,9 +130,7 @@ class CelerySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				config::getLogger()->addWarning("celery dbsubscription unknown subStatus=".$subscription->getSubStatus().", celery_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;		
 		}
-		//done
 		$subscription->setIsActive($is_active);
-		$subscription->setIsCancelable(false);
 		return($subscription);
 	}
 	

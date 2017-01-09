@@ -143,9 +143,9 @@ class OrangeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				config::getLogger()->addWarning("orange dbsubscription unknown subStatus=".$subscription->getSubStatus().", orange_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;
 		}
-		//done
 		$subscription->setIsActive($is_active);
 		$subscription->setIsCancelable(false);
+		$subscription->setIsExpirable(false);
 		return($subscription);
 	}
 	

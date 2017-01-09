@@ -804,7 +804,6 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				config::getLogger()->addWarning("gocardless dbsubscription unknown subStatus=".$subscription->getSubStatus().", gocardless_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;		
 		}
-		//done
 		$subscription->setIsActive($is_active);
 		return($subscription);
 	}

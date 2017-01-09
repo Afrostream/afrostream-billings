@@ -144,9 +144,9 @@ class BouyguesSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				config::getLogger()->addWarning("bouygues dbsubscription unknown subStatus=".$subscription->getSubStatus().", bouygues_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;
 		}
-		//done
 		$subscription->setIsActive($is_active);
 		$subscription->setIsCancelable(false);
+		$subscription->setIsExpirable(false);
 		return($subscription);
 	}
 	

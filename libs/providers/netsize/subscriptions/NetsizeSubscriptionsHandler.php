@@ -609,8 +609,13 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				config::getLogger()->addWarning("netsize dbsubscription unknown subStatus=".$subscription->getSubStatus().", netsize_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;
 		}
-		//done
 		$subscription->setIsActive($is_active);
+		$array_status_expirable = ['canceled'];
+		if(in_array($subscription->getSubStatus(), $array_status_expirable)) {
+			$subscription->setIsExpirable(true);
+		} else {
+			$subscription->setIsExpirable(false);
+		}
 		return($subscription);
 	}
 	

@@ -51,16 +51,11 @@ class ProviderSubscriptionsHandler {
 				$subscription->setIsCancelable(false);
 			}
 		}
-		//<-- DEFAULT
-		//--> SPECIFIC
-		/*$provider = ProviderDAO::getProviderById($subscription->getProviderId());
-		if($provider == NULL) {
-			$msg = "unknown provider with id : ".$subscription->getProviderId();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		$array_status_expirable = ['future', 'active', 'canceled'];
+		if(in_array($subscription->getSubStatus(), $array_status_expirable)) {
+			$subscription->setIsExpirable(true);
 		}
-		ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider->getName())->doFillSubscription($subscription);*/
-		//<-- SPECIFIC
+		//<-- DEFAULT
 		return($subscription);
 	}
 	

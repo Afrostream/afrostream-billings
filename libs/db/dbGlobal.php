@@ -1907,8 +1907,9 @@ class BillingsSubscription implements JsonSerializable {
 	private $billingsSubscriptionOpts = NULL;
 	//
 	private $in_trial = false;
-	private $is_cancelable = true;
+	private $is_cancelable = false;
 	private $is_reactivable = false;
+	private $is_expirable = false;
 	//
 	private $billinginfoid;
 
@@ -2098,6 +2099,14 @@ class BillingsSubscription implements JsonSerializable {
 		$this->billinginfoid = $id;
 	}
 	
+	public function setIsExpirable($boolean) {
+		$this->is_expirable = (boolean) $boolean;
+	}
+	
+	public function getIsExpirable() {
+		return($this->is_expirable);
+	}
+	
 	public function getBillingInfoId() {
 		return($this->billinginfoid);
 	}
@@ -2110,6 +2119,7 @@ class BillingsSubscription implements JsonSerializable {
 			'inTrial' => ($this->in_trial) ? 'yes' : 'no',
 			'isCancelable' => ($this->is_cancelable) ? 'yes' : 'no',
 			'isReactivable' => ($this->is_reactivable) ? 'yes' : 'no',
+			'isExpirable' => ($this->is_expirable) ? 'yes' : 'no',
 			'user' =>	((UserDAO::getUserById($this->userid)->jsonSerialize())),
 			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
 			'creationDate' => dbGlobal::toISODate($this->creation_date),

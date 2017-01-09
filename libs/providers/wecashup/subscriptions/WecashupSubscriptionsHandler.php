@@ -465,8 +465,13 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				config::getLogger()->addWarning("wecashup dbsubscription unknown subStatus=".$subscription->getSubStatus().", wecashup_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;
 		}
-		//done
 		$subscription->setIsActive($is_active);
+		$array_status_expirable = ['active', 'canceled'];
+		if(in_array($subscription->getSubStatus(), $array_status_expirable)) {
+			$subscription->setIsExpirable(true);
+		} else {
+			$subscription->setIsExpirable(false);
+		}
 		return($subscription);
 	}
 	
