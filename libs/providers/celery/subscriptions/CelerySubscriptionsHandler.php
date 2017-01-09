@@ -44,16 +44,26 @@ class CelerySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			{
 				//nothing todo : already done or in process
 			} else {
+				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+					$msg = "cannot expire and refund a ".$this->provider->getName()." subscription";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_UNSUPPORTED);
+				}
 				//
 				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
 				if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
 					if($subscription->getSubPeriodEndsDate() > $expiresDate) {
-						if($expireSubscriptionRequest->getIsForced() == false) {
-							$msg = "cannot expire a subscription that has not ended yet";
+						if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+							$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
 							config::getLogger()->addError($msg);
-							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
 						}
+					}
+				}
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
+					if($subscription->getSubCanceledDate() == NULL) {
+						$subscription->setSubCanceledDate($expiresDate);
 					}
 				}
 				$subscription->setSubExpiresDate($expiresDate);
@@ -61,6 +71,7 @@ class CelerySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
 					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
 					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT
@@ -85,7 +96,7 @@ class CelerySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($subscription));
 	}
 	
-	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
 		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
 			return NULL;

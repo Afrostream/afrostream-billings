@@ -24,7 +24,7 @@ class ProviderSubscriptionsHandler {
 		return($subscriptions);
 	}
 	
-	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
 		if($subscription == NULL) {
 			return NULL;
 		}
@@ -64,7 +64,7 @@ class ProviderSubscriptionsHandler {
 		return($subscription);
 	}
 	
-	protected function doFillSubscriptions($subscriptions) {
+	public function doFillSubscriptions($subscriptions) {
 		foreach ($subscriptions as $subscription) {
 			$this->doFillSubscription($subscription);
 		}
@@ -192,7 +192,7 @@ class ProviderSubscriptionsHandler {
 	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
 		$msg = "unsupported feature for provider named : ".$this->provider->getName();
 		config::getLogger()->addError($msg);
-		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
@@ -473,7 +473,7 @@ class ProviderSubscriptionsHandler {
 		}
 	}
 	
-	private function hasFutureSubscription(User $user, BillingsSubscription $currentBillingsSubscription) {
+	protected function hasFutureSubscription(User $user, BillingsSubscription $currentBillingsSubscription) {
 		$subscriptionsHandler = new SubscriptionsHandler();
 		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid());
 		if(count($subscriptions) > 0) {

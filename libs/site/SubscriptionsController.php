@@ -272,7 +272,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function cancel(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
@@ -306,7 +306,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function renew(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
@@ -340,7 +340,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function reactivate(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
@@ -374,7 +374,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function updateInternalPlan(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
@@ -416,8 +416,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function expire(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
-			$subscriptionBillingUuid = NULL;
+			$data = json_decode($request->getBody(), true);
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
 				$msg = "field 'subscriptionBillingUuid' is missing";
@@ -425,11 +424,26 @@ class SubscriptionsController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
-			//
+			if(!isset($data['isRefundEnabled'])) {
+				//exception
+				$msg = "field 'isRefundEnabled' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$isRefundEnabled = $data['isRefundEnabled'] == 'true' ? true : false;
+			if(!isset($data['forceBeforeEndsDate'])) {
+				//exception
+				$msg = "field 'forceBeforeEndsDate' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$forceBeforeEndsDate = $data['forceBeforeEndsDate'] == 'true' ? true : false;
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$expireSubscriptionRequest = new ExpireSubscriptionRequest();
 			$expireSubscriptionRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
 			$expireSubscriptionRequest->setOrigin('api');
+			$expireSubscriptionRequest->setIsRefundEnabled($isRefundEnabled);
+			$expireSubscriptionRequest->setForceBeforeEndsDate($forceBeforeEndsDate);
 			$subscription = $subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));

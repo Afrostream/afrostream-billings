@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/subscriptions/ProviderSubscriptionsHandler.php';
 require_once __DIR__ . '/../recurly/subscriptions/RecurlySubscriptionsHandler.php';
 require_once __DIR__ . '/../gocardless/subscriptions/GocardlessSubscriptionsHandler.php';
 require_once __DIR__ . '/../celery/subscriptions/CelerySubscriptionsHandler.php';
@@ -13,6 +14,13 @@ require_once __DIR__ . '/../stripe/subscriptions/StripeSubscriptionsHandler.php'
 require_once __DIR__ . '/../braintree/subscriptions/BraintreeSubscriptionsHandler.php';
 require_once __DIR__ . '/../netsize/subscriptions/NetsizeSubscriptionsHandler.php';
 require_once __DIR__ . '/../wecashup/subscriptions/WecashupSubscriptionsHandler.php';
+require_once __DIR__ . '/transactions/ProviderTransactionsHandler.php';
+require_once __DIR__ . '/../recurly/transactions/RecurlyTransactionsHandler.php';
+require_once __DIR__ . '/../gocardless/transactions/GocardlessTransactionsHandler.php';
+require_once __DIR__ . '/../stripe/transactions/StripeTransactionsHandler.php';
+require_once __DIR__ . '/../braintree/transactions/BraintreeTransactionsHandler.php';
+require_once __DIR__ . '/../wecashup/transactions/WecashupTransactionsHandler.php';
+
 
 class ProviderHandlersBuilder {
 	
@@ -56,12 +64,35 @@ class ProviderHandlersBuilder {
 				$providerSubscriptionsHandlerInstance = new WecashupSubscriptionsHandler($provider);
 				break;
 			default:
-				$msg = "unknown provider named : ".$provider->getName();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				$providerSubscriptionsHandlerInstance = new ProviderSubscriptionsHandler($provider);
 				break;
 		}
 		return($providerSubscriptionsHandlerInstance);
+	}
+	
+	public static function getProviderTransactionsHandlerInstance(Provider $provider) {
+		$providerTransactionsHandlerInstance = NULL;
+		switch($provider->getName()) {
+			case 'recurly' :
+				$providerTransactionsHandlerInstance = new RecurlyTransactionsHandler($provider);
+				break;
+			case 'gocardless' :
+				$providerTransactionsHandlerInstance = new GocardlessTransactionsHandler($provider);
+				break;
+			case 'stripe':
+				$providerTransactionsHandlerInstance = new StripeTransactionsHandler($provider);
+				break;
+			case 'braintree' :
+				$providerTransactionsHandlerInstance = new BraintreeTransactionsHandler($provider);
+				break;
+			case 'wecashup' :
+				$providerTransactionsHandlerInstance = new WecashupTransactionsHandler($provider);
+				break;
+			default:
+				$providerTransactionsHandlerInstance = new ProviderTransactionsHandler($provider);
+				break;
+		}
+		return($providerTransactionsHandlerInstance);
 	}
 	
 }

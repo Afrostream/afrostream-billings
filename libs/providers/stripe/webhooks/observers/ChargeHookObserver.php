@@ -72,7 +72,7 @@ class ChargeHookObserver implements HookInterface
 	        	$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 	        }
 	        config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' sent to Handler...');
-	        $stripeTransactionsHandler = new StripeTransactionsHandler();
+	        $stripeTransactionsHandler = new StripeTransactionsHandler($provider);
 	        $stripeTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment, 'hook');
 	        config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' sent to Handler done successfully');
         } else {

@@ -4,12 +4,10 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../client/WecashupClient.php';
+require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.php';
 
-class WecashupTransactionsHandler {
-
-	public function __construct() {
-	}
-	
+class WecashupTransactionsHandler extends ProviderTransactionsHandler {
+		
 	public function createOrUpdateRefundFromProvider(User $user, UserOpts $userOpts, WecashupCustomerResponse $wecashupCustomerResponse = NULL, WecashupTransactionResponse $wecashupTransactionResponse, BillingsTransaction $billingsTransaction = NULL, $updateType) {
 		config::getLogger()->addInfo("creating/updating refund transaction from wecashup refund transaction id=".$wecashupTransactionResponse->getTransactionUid()."...");
 		$billingsRefundTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($user->getProviderId(), $wecashupTransactionResponse->getTransactionUid());

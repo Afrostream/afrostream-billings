@@ -6,7 +6,7 @@ class ExpireSubscriptionRequest extends ActionRequest {
 	
 	private $subscriptionBillingUuid = NULL;
 	private $expiresDate = NULL;
-	private $isForced = false;
+	private $forceBeforeEndsDate = false;
 	private $isRefundEnabled = false;
 	
 	public function __construct() {
@@ -34,12 +34,12 @@ class ExpireSubscriptionRequest extends ActionRequest {
 		return($this->expiresDate);
 	}
 	
-	public function setIsForced($isForced) {
-		$this->isForced = $isForced;
+	public function setForceBeforeEndsDate($forceBeforeEndsDate) {
+		$this->forceBeforeEndsDate = $forceBeforeEndsDate;
 	}
 	
-	public function getIsForced() {
-		return($this->isForced);
+	public function getForceBeforeEndsDate() {
+		return($this->forceBeforeEndsDate);
 	}
 	
 	public function setIsRefundEnabled($isRefundEnabled) {
@@ -47,7 +47,7 @@ class ExpireSubscriptionRequest extends ActionRequest {
 	}
 	
 	public function getIsRefundEnabled() {
-		return($this->$isRefundEnabled);
+		return($this->isRefundEnabled);
 	}
 	
 }

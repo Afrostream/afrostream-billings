@@ -276,6 +276,7 @@ class GocardlessWebHooksHandler {
 					$expireSubscriptionRequest->setOrigin('hook');
 					$expireSubscriptionRequest->setSubscriptionBillingUuid($db_subscription->getSubscriptionBillingUuid());
 					$expireSubscriptionRequest->setExpiresDate($expires_date);
+					$expireSubscriptionRequest->setForceBeforeEndsDate(true);
 					$subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
 				}
 				config::getLogger()->addInfo('Processing gocardless hook payment, action='.$notification_as_array['action'].' done successfully');
@@ -340,7 +341,7 @@ class GocardlessWebHooksHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler();
+		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler($provider);
 		$gocardlessTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment, 'hook');
 		config::getLogger()->addInfo('Processing gocardless hook payment for backup, action='.$notification_as_array['action'].' done successfully');
 	}
@@ -408,7 +409,7 @@ class GocardlessWebHooksHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler();
+		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler($provider);
 		$gocardlessTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment, 'hook');
 		config::getLogger()->addInfo('Processing gocardless hook refund for backup, action='.$notification_as_array['action'].' done successfully');
 	}

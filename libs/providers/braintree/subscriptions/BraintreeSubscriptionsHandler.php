@@ -4,8 +4,11 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
+require_once __DIR__ . '/../../global/ProviderHandlersBuilder.php';
 require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.php';
 require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
+require_once __DIR__ . '/../../global/requests/RefundTransactionRequest.php';
 
 class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
@@ -408,12 +411,21 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 						}
 					}
 				}
-				$db_subscription->setSubStatus($subscriptionStatus);
-				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-				$db_subscription->setSubCanceledDate($subCanceledDate);
-				$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
-				$db_subscription->setSubExpiresDate($subExpiresDate);
-				$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+				//NC : cannot replace status when 'expired'
+				if($db_subscription->getSubStatus() != 'expired') {
+					$db_subscription->setSubStatus($subscriptionStatus);
+					$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
+				}
+				//NC : cannot replace canceledDate if already set 
+				if($db_subscription->getSubCanceledDate() == NULL) {
+					$db_subscription->setSubCanceledDate($subCanceledDate);
+					$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
+				}
+				//NC : cannot replace expiredDate if already set
+				if($db_subscription->getSubExpiresDate() == NULL) {
+					$db_subscription->setSubExpiresDate($subExpiresDate);
+					$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+				}
 				break;
 			case Braintree\Subscription::EXPIRED :
 				$db_subscription->setSubStatus('expired');
@@ -422,7 +434,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
 				break;
 			case Braintree\Subscription::PAST_DUE :
-				$db_subscription->setSubStatus('active');//TODO : check
+				$db_subscription->setSubStatus('active');
 				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
 				break;
 			case Braintree\Subscription::PENDING :
@@ -527,7 +539,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($subscription));
 	}
 	
-	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
 		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
 			return NULL;
@@ -645,16 +657,35 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//
 				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
-				if($subscription->getSubStatus() != "canceled") {
-					$msg = "cannot expire a subscription that has not been canceled";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
+					if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+						if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+							$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
+						}
+					}
 				}
-				if($subscription->getSubPeriodEndsDate() > $expiresDate) {
-					if($expireSubscriptionRequest->getIsForced() == false) {
-						$msg = "cannot expire a subscription that has not ended yet";
-						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				if(in_array($expireSubscriptionRequest->getOrigin(), ['api', 'hook'])) {
+					if($subscription->getSubStatus() == "canceled") {
+						//already canceled, nothing can be done in braintree side
+					} else {
+						//
+						Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
+						Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
+						Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
+						Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+						//
+						$result = Braintree\Subscription::cancel($subscription->getSubUid());
+						if (!$result->success) {
+							$msg = 'a braintree api error occurred : ';
+							$errorString = $result->message;
+							foreach($result->errors->deepAll() as $error) {
+								$errorString.= '; Code=' . $error->code . ", msg=" . $error->message;
+							}
+							throw new Exception($msg.$errorString);
+						}
+						$subscription->setSubCanceledDate($expiresDate);
 					}
 				}
 				$subscription->setSubExpiresDate($expiresDate);
@@ -662,6 +693,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
 					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
 					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT
@@ -669,6 +701,17 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				} catch(Exception $e) {
 					pg_query("ROLLBACK");
 					throw $e;
+				}
+				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase']);
+					if(count($transactionsResult['transactions']) == 1) {
+						$transaction = $transactionsResult['transactions'][0];
+						$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
+						$refundTransactionRequest = new RefundTransactionRequest();
+						$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
+						$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+						$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
+					}
 				}
 			}
 			//

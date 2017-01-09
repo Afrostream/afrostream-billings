@@ -148,7 +148,7 @@ class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($db_subscription));
 	}
 	
-	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
 		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
 			return NULL;
@@ -323,20 +323,25 @@ class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			{
 				//nothing todo : already done or in process
 			} else {
+				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+					$msg = "cannot expire and refund a ".$this->provider->getName()." subscription";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_UNSUPPORTED);
+				}
 				//
 				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
 				if($subscription->getSubStatus() != "canceled") {
 					//exception
-					$msg = "cannot expire a subscription that has not been canceled";
+					$msg = "cannot expire a ".$this->provider->getName()." subscription that has not been canceled";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				if($subscription->getSubPeriodEndsDate() > $expiresDate) {
-					if($expireSubscriptionRequest->getIsForced() == false) {
-						$msg = "cannot expire a subscription that has not ended yet";
+					if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+						$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
 						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
 					}
 				}
 				$subscription->setSubExpiresDate($expiresDate);

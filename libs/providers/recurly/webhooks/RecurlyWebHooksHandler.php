@@ -213,7 +213,7 @@ class RecurlyWebHooksHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		$recurlyTransactionsHandler = new RecurlyTransactionsHandler();
+		$recurlyTransactionsHandler = new RecurlyTransactionsHandler($provider);
 		$recurlyTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment, 'hook');
 		config::getLogger()->addInfo('Processing recurly hook payment, notification_type='.$notification->type.' done successfully');
 	}
@@ -255,7 +255,7 @@ class RecurlyWebHooksHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		$recurlyTransactionsHandler = new RecurlyTransactionsHandler();
+		$recurlyTransactionsHandler = new RecurlyTransactionsHandler($provider);
 		if(isset($api_refund->original_transaction)) {
 			$recurlyTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_refund->original_transaction->get(), 'hook');
 		} else {

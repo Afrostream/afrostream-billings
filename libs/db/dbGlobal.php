@@ -3903,7 +3903,7 @@ class BillingsTransactionType extends Enum implements JsonSerializable {
 	}
 }
 
-class BillingsTransaction {
+class BillingsTransaction implements JsonSerializable {
 	
 	private $_id;
 	private $transactionLinkId;
@@ -4084,6 +4084,25 @@ class BillingsTransaction {
 	public function setUpdateType($updateType) {
 		$this->updateType = $updateType;
 	}
+	
+	public function jsonSerialize() {
+		$return = [
+				'transactionBillingUuid' => $this->transactionBillingUuid,
+				'transactionProviderUuid' => $this->transactionProviderUuid,
+				'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
+				'transactionCreationDate' => dbGlobal::toISODate($this->transactionCreationDate),
+				'creationDate' => dbGlobal::toISODate($this->creationDate),
+				'updatedDate' => dbGlobal::toISODate($this->updatedDate),
+				'transactionStatus' => $this->transactionStatus,
+				'transactionType' => $this->transactionType,
+				'currency' => $this->currency,
+				'amountInCents' => $this->amountInCents,
+				'amount' => (string) number_format((float) $this->amountInCents / 100, 2, ',', ''),//Forced to French Locale
+				'transactionOpts' => (BillingsTransactionOptsDAO::getBillingsTransactionOptByTransactionId($this->_id)->jsonSerialize()),
+				'linkedTransactions' => BillingsTransactionDAO::getBillingsTransactionsByTransactionLinkId($this->_id)
+		];
+		return($return);
+	}
 }
 
 class BillingsTransactionDAO {
@@ -4220,6 +4239,111 @@ EOL;
 		// free result
 		pg_free_result($result);
 	
+		return($out);
+	}
+	
+	public static function getBillingsTransactionByTransactionBillingUuid($transactionBillingUuid) {
+		$query = "SELECT ".self::$sfields." FROM billing_transactions WHERE transaction_billing_uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($transactionBillingUuid));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingsTransactionFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getBillingsTransactionsByTransactionLinkId($transactionLinkId) {
+		$query = "SELECT ".self::$sfields." FROM billing_transactions WHERE transactionlinkid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($transactionLinkId));
+		
+		$out = array();
+		
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getBillingsTransactionFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function getBillingsTransactions($limit = 0,
+			$offset = 0,
+			DateTime $afterTransactionCreationDate = NULL,
+			$subId = NULL,
+			$transaction_type_array = NULL,
+			$order = 'descending') {
+		$params = array();
+		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_transactions";
+		$where = "";
+		if(isset($subId)) {
+			$params[] = $subId;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "subid = $".(count($params));
+		}
+		if(isset($afterTransactionCreationDate)) {
+			$afterTransactionCreationDateSQL = NULL;
+			if($order == 'descending') {
+				$afterTransactionCreationDateSQL = "transaction_creation_date < ".dbGlobal::toISODate($afterTransactionCreationDate);
+			} else {
+				$afterTransactionCreationDateSQL = "transaction_creation_date > ".dbGlobal::toISODate($afterTransactionCreationDate);
+			}
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= $afterTransactionCreationDateSQL;
+		}
+		if(isset($transaction_type_array) && count($transaction_type_array) > 0) {
+			$firstLoop = true;
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "transaction_type in (";
+			foreach($transaction_type_array as $transaction_type) {
+				$params[] = $transaction_type;
+				if($firstLoop) {
+					$firstLoop = false;
+					$where.= "$".(count($params));
+				} else {
+					$where.= ", $".(count($params));
+				}
+			}
+			$where.= ")";
+		}
+		$query.= $where;
+		if($order == 'descending') {
+			$query.= " ORDER BY transaction_creation_date DESC";
+		} else {
+			$query.= " ORDER BY transaction_creation_date ASC";
+		}
+		if($limit > 0) { $query.= " LIMIT ".$limit; }
+		if($offset > 0) { $query.= " OFFSET ".$offset; }
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+		$out = array();
+		$out['total_counter'] = 0;
+		$out['transactions'] = array();
+		$out['last_transaction_creation_date'] = NULL;
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out['total_counter'] = $row['total_counter'];
+			$out['transactions'][] = self::getBillingsTransactionFromRow($row);
+			$out['last_transaction_creation_date'] = $row['transaction_creation_date'];
+		}
+		// free result
+		pg_free_result($result);
+
 		return($out);
 	}
 	

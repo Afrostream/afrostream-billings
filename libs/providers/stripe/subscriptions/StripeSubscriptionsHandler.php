@@ -4,10 +4,11 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
+require_once __DIR__ . '/../../global/ProviderHandlersBuilder.php';
 require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.php';
 require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
-
-use \Stripe\Subscription;
+require_once __DIR__ . '/../../global/requests/RefundTransactionRequest.php';
 
 class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 {
@@ -440,7 +441,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      *
      * @return string
      */
-    protected function getStatusFromProvider(Subscription $subscription)
+    protected function getStatusFromProvider(Stripe\Subscription $subscription)
     {
         $status = self::getMappedStatus($subscription['status']);
 
@@ -705,7 +706,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      *
      * @return BillingsSubscription
      */
-    protected function getNewBillingSubscription(Provider $provider, User $user, Plan $plan, Subscription $subscription, $subscription_billing_uuid)
+    protected function getNewBillingSubscription(Provider $provider, User $user, Plan $plan, Stripe\Subscription $subscription, $subscription_billing_uuid)
     {
         $billingSubscription = new BillingsSubscription();
         $billingSubscription->setSubscriptionBillingUuid($subscription_billing_uuid);
@@ -741,11 +742,35 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     			//
     			$expiresDate = $expireSubscriptionRequest->getExpiresDate();
     			//
-    			if($subscription->getSubPeriodEndsDate() > $expiresDate) {
-    				if($expireSubscriptionRequest->getIsForced() == false) {
-	    				$msg = "cannot expire a subscription that has not ended yet";
-	    				config::getLogger()->addError($msg);
-	    				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    			if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
+	    			if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+	    				if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+		    				$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
+		    				config::getLogger()->addError($msg);
+		    				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
+	    				}
+	    			}
+    			}
+    			if($expireSubscriptionRequest->getOrigin() == 'api') {
+    				$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
+    				if($internalPlan == NULL) {
+    					$msg = "plan with id=".$subscription->getPlanId()." for provider ".$this->provider->getName()." is not linked to an internal plan";
+    					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    				}
+    				if($internalPlan->getCycle() == PlanCycle::auto) {
+    					$user = UserDAO::getUserById($subscription->getUserId());
+    					if($user == NULL) {
+    						$msg = $msg = "unknown user with id : ".$subscription->getUserId();
+    						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    					}
+    					$providerSubscription = $this->getSubscription($subscription->getSubUid(), $user);
+    					$providerSubscription->cancel();
+    					$providerSubscription->save();
+    				}
+    			}
+    			if(in_array($expireSubscriptionRequest->getOrigin(), ['api', 'hook'])) {
+    				if($subscription->getSubCanceledDate() == NULL) {
+    					$subscription->setSubCanceledDate($expiresDate);
     				}
     			}
     			$subscription->setSubExpiresDate($expiresDate);
@@ -753,6 +778,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     			try {
     				//START TRANSACTION
     				pg_query("BEGIN");
+    				BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
     				BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
     				BillingsSubscriptionDAO::updateSubStatus($subscription);
     				//COMMIT
@@ -760,6 +786,17 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     			} catch(Exception $e) {
     				pg_query("ROLLBACK");
     				throw $e;
+    			}
+    		}
+    		if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+    			$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase']);
+    			if(count($transactionsResult['transactions']) == 1) {
+    				$transaction = $transactionsResult['transactions'][0];
+					$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
+					$refundTransactionRequest = new RefundTransactionRequest();
+					$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
+					$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+					$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
     			}
     		}
     		//
