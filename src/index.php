@@ -11,6 +11,7 @@ require_once __DIR__ . '/../libs/site/WebHooksController.php';
 require_once __DIR__ . '/../libs/site/InternalCouponsCampaignsController.php';
 require_once __DIR__ . '/../libs/site/ContextsController.php';
 require_once __DIR__ . '/../libs/site/TransactionsController.php';
+require_once __DIR__ . '/../libs/site/UtilsController.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -1429,6 +1430,13 @@ $app->get("/alive", function ($request, $response, $args) {
 	$response = $response->withHeader('Content-Type', 'application/json');
 	$response->getBody()->write($json);
 	return($response);
+});
+
+//utils
+
+$app->get("/utils/currency/quotes/{fromCurrency}/{toCurrencies}", function ($request, $response, $args) {
+	$utilsController = new UtilsController();
+	return($utilsController->getCurrencyQuote($request, $response, $args));
 });
 
 $app->run();
