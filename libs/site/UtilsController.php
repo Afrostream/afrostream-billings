@@ -9,7 +9,7 @@ use \Slim\Http\Response;
 
 class UtilsController extends BillingsController {
 	
-	public function getCurrencyQuote(Request $request, Response $response, array $args) {
+	public function getCurrencyQuotes(Request $request, Response $response, array $args) {
 		try {
 			$data = $request->getQueryParams();
 			if(!isset($args['fromCurrency'])) {

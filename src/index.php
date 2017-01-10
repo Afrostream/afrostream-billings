@@ -1436,7 +1436,7 @@ $app->get("/alive", function ($request, $response, $args) {
 
 $app->get("/utils/currency/quotes/{fromCurrency}/{toCurrencies}", function ($request, $response, $args) {
 	$utilsController = new UtilsController();
-	return($utilsController->getCurrencyQuote($request, $response, $args));
+	return($utilsController->getCurrencyQuotes($request, $response, $args));
 });
 
 $app->run();
