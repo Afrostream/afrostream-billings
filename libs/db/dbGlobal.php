@@ -936,7 +936,7 @@ class InternalPlan implements JsonSerializable {
 			$return['currencyConversions'][$this->currency]['amountInCentsExclTax'] = (string) $this->getAmountInCentsExclTax();
 			$return['currencyConversions'][$this->currency]['amountExclTax'] = number_format((float) $this->getAmountExclTax(), 5, '.', '');
 		} else 
-			$return['exchangeRates'] = array();//empty
+			$return['currencyConversions'] = array();//empty
 		return($return);
 	}
 

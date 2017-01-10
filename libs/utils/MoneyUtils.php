@@ -11,7 +11,7 @@ class MoneyUtils {
 	
 	private static function getSwapInstance() {
 		if(self::$swapInstance == NULL) {
-			self::$swapInstance = (new Builder(['cache_ttl' => 3600]))
+			self::$swapInstance = (new Builder(['cache_ttl' => getEnv('CURRENCY_CONVERSION_CACHE_TTL')]))
 			->add('central_bank_of_czech_republic')
 			->add('central_bank_of_republic_turkey')
 			//->add('currency_layer', ['access_key' => 'secret', 'enterprise' => false])
