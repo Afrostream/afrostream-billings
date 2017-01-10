@@ -1434,7 +1434,36 @@ $app->get("/alive", function ($request, $response, $args) {
 
 //utils
 
-$app->get("/utils/currency/quotes/{fromCurrency}/{toCurrencies}", function ($request, $response, $args) {
+/**
+* @api {get} /billings/utils/currency/quotes/:fromCurrency/:toCurrencies Request Currency Quotes Information
+* @apiDescription It returns the toCurrencies quotes for the fromCurrency given.
+* @apiParam {String} :fromCurrency the currency source.
+* @apiParam {String} :toCurrencies the currency quotes wanted separated by a ";".
+*
+* @apiExample {curl} Example usage:
+*     curl -i http://localhost/billings/utils/currency/quotes/XOF/EUR;USD
+* @apiSuccess {json} Curency Quotes Information
+*
+* @apiSuccessExample Success-Response:
+* 		HTTP/1.1 200 OK
+*		{
+*			"status": "done",
+*			"statusMessage": "success",
+*			"statusCode": 0,
+*			"response": {
+*				"currencyQuotes": {
+* 					"currency": "XOF",
+* 					"quotes": {
+*   				"EUR": "0.0015",
+*   				"USD": "0.0016"
+*   				}
+*				}
+*			}
+*		}
+*
+**/
+
+$app->get("/billings/utils/currency/quotes/{fromCurrency}/{toCurrencies}", function ($request, $response, $args) {
 	$utilsController = new UtilsController();
 	return($utilsController->getCurrencyQuotes($request, $response, $args));
 });
