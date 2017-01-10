@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../utils/utils.php';
+require_once __DIR__ . '/../utils/MoneyUtils.php';
 
 use MyCLabs\Enum\Enum;
 
@@ -822,23 +823,15 @@ class InternalPlan implements JsonSerializable {
 	}
 	
 	public function getAmountInCentsExclTax() {
-		if($this->vatRate == NULL) {
-			return($this->amount_in_cents);
-		} else {
-			return(intval(round($this->amount_in_cents / (1 + $this->vatRate / 100))));
-		}
+		return(MoneyUtils::getAmountInCentsExclTax($this->amount_in_cents, $this->vatRate));
 	}
 	
 	public function getAmountExclTax() {
-		if($this->vatRate == NULL) {
-			return($this->amount_in_cents / 100);
-		} else {
-			return(($this->amount_in_cents / (1 + $this->vatRate / 100)) / 100);
-		}
+		return(MoneyUtils::getAmountExclTax($this->amount_in_cents, $this->vatRate));
 	}
 	
 	public function getAmount() {
-		return((float) ($this->amount_in_cents / 100));
+		return(MoneyUtils::getAmount($this->amount_in_cents));
 	}
 	
 	public function setThumbId($thumbId) {
@@ -925,6 +918,25 @@ class InternalPlan implements JsonSerializable {
 			//
 			$return['providerPlansByPaymentMethodType'] = $providerPlansByPaymentMethodTypeArray;
 		}
+		//CurrencyConversions
+		if(getEnv('CURRENCY_CONVERSION_ENABLED') == 1) {
+			$toCurrencyArray = explode(';', getEnv('CURRENCY_CONVERSION_INTERNALPLAN_CURRENCY_TARGETS'));
+			foreach ($toCurrencyArray as $toCurrency) {
+				if($toCurrency != $this->currency) {
+					$amountInCentsInForeignCurrency = intval(round(MoneyUtils::getLatestRate($this->currency.'/'.$toCurrency) * $this->amount_in_cents));
+					$return['currencyConversions'][$toCurrency]['amountInCents'] = (string) ($amountInCentsInForeignCurrency);
+					$return['currencyConversions'][$toCurrency]['amount'] = (string) number_format((float) $amountInCentsInForeignCurrency/ 100, 2, '.', '');
+					$return['currencyConversions'][$toCurrency]['amountInCentsExclTax'] = (string) MoneyUtils::getAmountInCentsExclTax($amountInCentsInForeignCurrency, $this->vatRate);
+					$return['currencyConversions'][$toCurrency]['amountExclTax'] = number_format((float) MoneyUtils::getAmountExclTax($amountInCentsInForeignCurrency, $this->vatRate), 5, '.', '');
+				}
+			}
+			//anyway current currency is added
+			$return['currencyConversions'][$this->currency]['amountInCents'] = $this->amount_in_cents;
+			$return['currencyConversions'][$this->currency]['amount'] = (string) number_format((float) $this->amount_in_cents / 100, 2, '.', '');
+			$return['currencyConversions'][$this->currency]['amountInCentsExclTax'] = (string) $this->getAmountInCentsExclTax();
+			$return['currencyConversions'][$this->currency]['amountExclTax'] = number_format((float) $this->getAmountExclTax(), 5, '.', '');
+		} else 
+			$return['currencyConversions'] = array();//empty
 		return($return);
 	}
 

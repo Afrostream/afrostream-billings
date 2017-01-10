@@ -411,6 +411,20 @@ if(getEnv('WECASHUP_API_URL') === false) {
 	putEnv('WECASHUP_API_URL=https://www.wecashup.com/api/v1.0/merchants');
 }
 
+#MONEY
+
+if(getEnv('CURRENCY_CONVERSION_ENABLED') === false) {
+	putEnv('CURRENCY_CONVERSION_ENABLED=1');
+}
+
+if(getEnv('CURRENCY_CONVERSION_CACHE_TTL') === false) {
+	putEnv('CURRENCY_CONVERSION_CACHE_TTL=21600');//21600s = 6 hours by default
+}
+
+if(getEnv('CURRENCY_CONVERSION_INTERNALPLAN_CURRENCY_TARGETS') === false) {
+	putEnv('CURRENCY_CONVERSION_INTERNALPLAN_CURRENCY_TARGETS=EUR;USD');
+}
+
 #logger, #db_conn, ...
 
 class config {
