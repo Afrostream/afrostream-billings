@@ -45,11 +45,18 @@ class ChargeHookObserver implements HookInterface
         
         $metadata = $api_payment->metadata->__toArray();
         $hasToBeProcessed = false;
+        $hasToBeIgnored = false;
+        if(array_key_exists('AfrIgnore', $metadata)) {
+        	$afrIgnore = $metadata['AfrIgnore'];
+        	if($afrIgnore == 'true') {
+        		$hasToBeIgnored = true;
+        	}
+        }
         $isRecurlyTransaction = false;
         if(array_key_exists('recurlyTransactionId', $metadata)) {
         	$isRecurlyTransaction = true;
         }
-        $hasToBeProcessed = !$isRecurlyTransaction;
+        $hasToBeProcessed = !$hasToBeIgnored && !$isRecurlyTransaction;
         if($hasToBeProcessed) {
 	        $api_customer = NULL;
 	        $user = NULL;
@@ -65,7 +72,7 @@ class ChargeHookObserver implements HookInterface
 	        	$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 	        }
 	        config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' sent to Handler...');
-	        $stripeTransactionsHandler = new StripeTransactionsHandler();
+	        $stripeTransactionsHandler = new StripeTransactionsHandler($provider);
 	        $stripeTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment, 'hook');
 	        config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' sent to Handler done successfully');
         } else {
@@ -75,3 +82,5 @@ class ChargeHookObserver implements HookInterface
     }
 
 }
+
+?>

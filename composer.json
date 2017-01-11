@@ -2,7 +2,8 @@
 	"name": "afrostream/billings",
 	"description": "add providers api support",
 	"require": {
-		"ext-soap": "*",		
+		"ext-soap": "*",
+		"ext-apcu" : "*",		
 		"recurly/recurly-client": "^2.4",
 		"monolog/monolog": "^1.17",
 		"gocardless/gocardless-pro": "^0.9.2",
@@ -16,7 +17,13 @@
 		"stripe/stripe-php": "^3.13",
 		"braintree/braintree_php": "^3.13",
 		"paypal/rest-api-sdk-php": "^1.7",
-		"aws/aws-sdk-php": "^3.19"
+		"aws/aws-sdk-php": "^3.19",
+		"domnikl/statsd": "^2.4",
+		"chartmogul/chartmogul-php": "^1.0",
+		"cache/apcu-adapter": "^0.2.2",
+		"florianv/swap": "^3.0",
+		"php-http/message": "^1.4",
+		"php-http/guzzle6-adapter": "^1.1"
 	},
 	"authors": [
 		{

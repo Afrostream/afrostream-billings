@@ -4,12 +4,10 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
-require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 
-class CashwaySubscriptionsHandler extends SubscriptionsHandler {
-	
-	public function __construct() {
-	}
+class CashwaySubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
@@ -126,6 +124,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 	
 	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
 		$api_subscription = new BillingsSubscription();
+		$api_subscription->setCreationDate(new DateTime());
 		$api_subscription->setSubUid($sub_uuid);
 		$api_subscription->setSubStatus('future');
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
@@ -167,7 +166,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setUpdateType($update_type);
 		//
 		$db_subscription->setUpdateId($updateId);
-		$db_subscription->setDeleted('false');
+		$db_subscription->setDeleted(false);
 		//?COUPON? JUST TEST IF READY TO USE (all other case seen before)
 		$internalCoupon = NULL;
 		$userInternalCoupon = NULL;
@@ -223,12 +222,13 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 		$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("cashway dbsubscription creation for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
-	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
-			return;
+			return NULL;
 		}
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
@@ -264,11 +264,17 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 				break;
 		}
 		$subscription->setIsActive($is_active);
-		$subscription->setIsCancelable(false);
+		$array_status_expirable = ['active', 'canceled'];
+		if(in_array($subscription->getSubStatus(), $array_status_expirable)) {
+			$subscription->setIsExpirable(true);
+		} else {
+			$subscription->setIsExpirable(false);
+		}
+		return($subscription);
 	}
 	
 	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
-		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()."...");
+		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->getSubUid().", id=".$db_subscription->getId()."...");
 		//UPDATE
 		$db_subscription_before_update = clone $db_subscription;
 		//
@@ -346,35 +352,59 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 		//
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateId($db_subscription);
-		//$db_subscription->setDeleted('false');//STATIC
+		//$db_subscription->setDeleted(false);//STATIC
 		//
 		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
-		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->uuid.", id=".$db_subscription->getId()." done successfully");
-		return($db_subscription);
+		config::getLogger()->addInfo("cashway dbsubscription update for userid=".$user->getId().", cashway_subscription_uuid=".$api_subscription->getSubUid().", id=".$db_subscription->getId()." done successfully");
+		return($this->doFillSubscription($db_subscription));
 	}
 	
-	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("cashway subscription expiring...");
 			if(
-					$subscription->getSubStatus() == "expired"
+				$subscription->getSubStatus() == "expired"
 			)
 			{
 				//nothing todo : already done or in process
 			} else {
-				//
-				if($subscription->getSubPeriodEndsDate() <= $expires_date) {
-					$subscription->setSubExpiresDate($expires_date);
-					$subscription->setSubStatus("expired");
-				} else {
-					$msg = "cannot expire a subscription that has not ended yet";
+				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+					$msg = "cannot expire and refund a ".$this->provider->getName()." subscription";
 					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_UNSUPPORTED);
 				}
+				//
+				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
+				//
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
+					if(!in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
+						//exception
+						$msg = "cannot expire a ".$this->provider->getName()." subscription that has not started or has not been canceled";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+				}
+				if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
+					if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+						if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+							$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
+						}
+					}
+				}
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
+					if($subscription->getSubCanceledDate() == NULL) {
+						$subscription->setSubCanceledDate($expiresDate);
+					}
+				}
+				$subscription->setSubExpiresDate($expiresDate);
+				$subscription->setSubStatus("expired");
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
 					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
 					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT
@@ -387,7 +417,6 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 			//
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("cashway subscription expiring done successfully for cashway_subscription_uuid=".$subscription->getSubUid());
-			return($subscription);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while expiring a cashway subscription for cashway_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("cashway subscription expiring failed : ".$msg);
@@ -397,6 +426,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError("cashway subscription expiring failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		return($this->doFillSubscription($subscription));
 	}
 	
 	public function doDeleteSubscription(BillingsSubscription $subscription, $is_a_request = true) {
@@ -424,7 +454,6 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 			//
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("cashway subscription deleting done successfully for cashway_subscription_uuid=".$subscription->getSubUid());
-			return($subscription);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while deleting a cashway subscription for cashway_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("cashway subscription deleting failed : ".$msg);
@@ -434,6 +463,7 @@ class CashwaySubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError("cashway subscription deleting failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		return($this->doFillSubscription($subscription));
 	}
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {

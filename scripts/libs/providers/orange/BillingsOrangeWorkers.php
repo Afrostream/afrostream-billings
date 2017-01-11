@@ -1,37 +1,35 @@
 <?php
 
+require_once __DIR__ . '/../../../../config/config.php';
+require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php';
 
 class BillingsOrangeWorkers extends BillingsWorkers {
 	
+	private $provider = NULL;
+	private $processingType = 'subs_refresh';
+	
 	public function __construct() {
 		parent::__construct();
+		$this->provider = ProviderDAO::getProviderByName('orange');
 	}
 	
 	public function doRefreshSubscriptions() {
+		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$provider_name = "orange";
-			
-			$provider = ProviderDAO::getProviderByName($provider_name);
-		
-			if($provider == NULL) {
-				$msg = "unknown provider named : ".$provider_name;
-				ScriptsConfig::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($provider->getId(), 'subs_refresh', $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("refreshing orange subscriptions bypassed - already done today -");
 				return;
 			}
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.hit');
 				
 			ScriptsConfig::getLogger()->addInfo("refreshing orange subscriptions...");
 				
-			$processingLog = ProcessingLogDAO::addProcessingLog($provider->getId(), 'subs_refresh');
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingType);
 			//
 			$limit = 100;
 			//will select all day strictly before today
@@ -44,7 +42,7 @@ class BillingsOrangeWorkers extends BillingsWorkers {
 			$lastId = NULL;
 			$totalCounter = NULL;
 			do {
-				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, $offset, $provider->getId(), $sub_period_ends_date, $status_array, $lastId);
+				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $this->provider->getId(), $sub_period_ends_date, $status_array, NULL, NULL, $lastId);
 				if(is_null($totalCounter)) {$totalCounter = $endingBillingsSubscriptions['total_counter'];}
 				$idx+= count($endingBillingsSubscriptions['subscriptions']);
 				$lastId = $endingBillingsSubscriptions['lastId'];
@@ -64,7 +62,9 @@ class BillingsOrangeWorkers extends BillingsWorkers {
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			ScriptsConfig::getLogger()->addInfo("refreshing orange subscriptions done successfully");
 			$processingLog = NULL;
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.success');
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.error');
 			$msg = "an error occurred while refreshing orange subscriptions, message=".$e->getMessage();
 			ScriptsConfig::getLogger()->addError($msg);
 			if(isset($processingLog)) {
@@ -72,6 +72,8 @@ class BillingsOrangeWorkers extends BillingsWorkers {
 				$processingLog->setMessage($msg);
 			}
 		} finally {
+			$timingInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.timing', $timingInMillis);
 			if(isset($processingLog)) {
 				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			}
@@ -83,13 +85,13 @@ class BillingsOrangeWorkers extends BillingsWorkers {
 		try {
 			//
 			ScriptsConfig::getLogger()->addInfo("refreshing orange subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()."...");
+			$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
 			try {
 				pg_query("BEGIN");
-				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($subscription->getId(), "refresh_renew");
 				$subscriptionsHandler = new SubscriptionsHandler();
 				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch (BillingsException $e) {
@@ -120,7 +122,7 @@ class BillingsOrangeWorkers extends BillingsWorkers {
 			throw $e;
 		} finally {
 			if(isset($billingsSubscriptionActionLog)) {
-				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
+				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 			}
 		}
 	}

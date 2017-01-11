@@ -46,37 +46,6 @@ class WebHooksController extends BillingsController {
 			
 			$post_data = file_get_contents('php://input');
 			
-			//Have to send it to other services (exception has to be catched)
-			try {
-				$urls = getenv('RECURLY_WH_REPOST_URLS');
-				$tok = strtok($urls, ";");
-				while($tok !== false) {
-					//
-					$url = $tok;
-					config::getLogger()->addInfo('Reposting the webhook to url='.$url.'...');
-					$curl_options = array(
-							CURLOPT_URL => $url,
-							CURLOPT_CUSTOMREQUEST => 'POST',
-							CURLOPT_POSTFIELDS => $post_data,
-							CURLOPT_HTTPHEADER => array(
-									'Content-Length: ' . strlen($post_data)
-							),
-							CURLOPT_RETURNTRANSFER => true,
-							CURLOPT_HEADER  => false
-					);
-					$CURL = curl_init();
-					curl_setopt_array($CURL, $curl_options);
-					$content = curl_exec($CURL);
-					$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
-					curl_close($CURL);
-					config::getLogger()->addInfo('Reposting the webhook to url='.$url.' done, httpCode='.$httpCode);
-					//done
-					$tok = strtok(";");
-				}
-			} catch(Exception $e) {
-				config::getLogger()->addError('Reposting the webhook to url='.$url.' failed, but continuing anyway, message='.$e->getMessage());
-			}
-			
 			$webHooksHander = new WebHooksHander();
 			
 			config::getLogger()->addInfo('Saving recurly webhook...');
@@ -129,6 +98,7 @@ class WebHooksController extends BillingsController {
 
 		try {
 			$post_data = file_get_contents('php://input');
+			
 			$webHooksHander = new WebHooksHander();
 
 			config::getLogger()->addInfo('Saving stripe webhook...');
@@ -397,6 +367,56 @@ class WebHooksController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e, 500));
 		}
 		config::getLogger()->addInfo('Receiving netsize webhook done successfully');
+	}
+	
+	public function wecashupWebHooksPosting(Request $request, Response $response, array $args) {
+
+		config::getLogger()->addInfo('Receiving wecashup webhook...');
+		
+		$validated = false;
+		
+		$post_data = file_get_contents('php://input');
+		parse_str($post_data, $post_data_as_array);
+		
+		$received_transaction_merchant_secret = NULL;
+		if(array_key_exists('merchant_secret', $post_data_as_array)) {
+			$received_transaction_merchant_secret = $post_data_as_array['merchant_secret'];
+		}
+		if(getEnv('WECASHUP_MERCHANT_SECRET') === $received_transaction_merchant_secret) {
+			$validated = true;
+		}
+		
+		if (!$validated) {
+			config::getLogger()->addError('Receiving wecashup webhook failed, Unauthorized access');
+			header('WWW-Authenticate: Basic realm="My Realm"');
+			header('HTTP/1.0 401 Unauthorized');
+			die ("Not authorized");
+		}
+		
+		try {
+			config::getLogger()->addInfo('Treating wecashup webhook...');
+				
+			$webHooksHander = new WebHooksHander();
+				
+			config::getLogger()->addInfo('Saving wecashup webhook...');
+			$billingsWebHook = $webHooksHander->doSaveWebHook('wecashup', $post_data);
+			config::getLogger()->addInfo('Saving wecashup webhook done successfully');
+		
+			config::getLogger()->addInfo('Processing wecashup webhook, id='.$billingsWebHook->getId().'...');
+			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
+			config::getLogger()->addInfo('Processing wecashup webhook done successfully, id='.$billingsWebHook->getId());
+		
+			config::getLogger()->addInfo('Treating wecashup webhook done successfully, id='.$billingsWebHook->getId());
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while treating a wecashup webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnBillingsExceptionAsJson($response, $e, 500));
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while treating a wecashup webhook, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnExceptionAsJson($response, $e, 500));
+		}
+		config::getLogger()->addInfo('Receiving wecashup webhook done successfully');
 	}
 	
 }

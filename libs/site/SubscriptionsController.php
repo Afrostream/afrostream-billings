@@ -4,8 +4,10 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../users/UsersHandler.php';
 require_once __DIR__ . '/../subscriptions/SubscriptionsFilteredHandler.php';
 require_once __DIR__ . '/BillingsController.php';
+require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/utils.php';
+require_once __DIR__ . '/../providers/global/requests/ExpireSubscriptionRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -108,6 +110,7 @@ class SubscriptionsController extends BillingsController {
 	}
 	
 	public function create(Request $request, Response $response, array $args) {
+		$starttime = microtime(true);
 		try {
 			$data = json_decode($request->getBody(), true);
 			if(!isset($data['userBillingUuid'])) {
@@ -150,19 +153,28 @@ class SubscriptionsController extends BillingsController {
 			}
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$subscription = $subscriptionsHandler->doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, $billing_info_array, $sub_opts);
+			BillingStatsd::inc('route.api.providers.all.subscriptions.create.success');
 			return($this->returnObjectAsJson($response, 'subscription', $subscription));
 		} catch(BillingsException $e) {
+			BillingStatsd::inc('route.api.providers.all.subscriptions.create.error');
+			BillingStatsd::inc('route.api.providers.all.subscriptions.create.infos.error.code.'.$e->getCode());
 			$msg = "an exception occurred while creating a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnBillingsExceptionAsJson($response, $e));
 			//
 		} catch(Exception $e) {
+			BillingStatsd::inc('route.api.providers.all.subscriptions.create.error');
+			BillingStatsd::inc('route.api.providers.all.subscriptions.create.infos.error.code.0');
 			$msg = "an unknown exception occurred while creating an subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));
 			//
+		} finally {
+			BillingStatsd::inc('route.api.providers.all.subscriptions.create.hit');
+			$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
+			BillingStatsd::timing('route.api.providers.all.subscriptions.create.responsetime', $responseTimeInMillis);
 		}
 	}
 	
@@ -260,7 +272,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function cancel(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
@@ -294,7 +306,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function renew(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
@@ -328,7 +340,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function reactivate(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
@@ -362,7 +374,7 @@ class SubscriptionsController extends BillingsController {
 	
 	public function updateInternalPlan(Request $request, Response $response, array $args) {
 		try {
-			$data = $request->getQueryParams();
+			$data = json_decode($request->getBody(), true);
 			$subscriptionBillingUuid = NULL;
 			if(!isset($args['subscriptionBillingUuid'])) {
 				//exception
@@ -395,6 +407,57 @@ class SubscriptionsController extends BillingsController {
 			//
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while reactivating a subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function expire(Request $request, Response $response, array $args) {
+		try {
+			$data = json_decode($request->getBody(), true);
+			if(!isset($args['subscriptionBillingUuid'])) {
+				//exception
+				$msg = "field 'subscriptionBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
+			if(!isset($data['isRefundEnabled'])) {
+				//exception
+				$msg = "field 'isRefundEnabled' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$isRefundEnabled = $data['isRefundEnabled'] == 'true' ? true : false;
+			if(!isset($data['forceBeforeEndsDate'])) {
+				//exception
+				$msg = "field 'forceBeforeEndsDate' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$forceBeforeEndsDate = $data['forceBeforeEndsDate'] == 'true' ? true : false;
+			$subscriptionsHandler = new SubscriptionsFilteredHandler();
+			$expireSubscriptionRequest = new ExpireSubscriptionRequest();
+			$expireSubscriptionRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
+			$expireSubscriptionRequest->setOrigin('api');
+			$expireSubscriptionRequest->setIsRefundEnabled($isRefundEnabled);
+			$expireSubscriptionRequest->setForceBeforeEndsDate($forceBeforeEndsDate);
+			$subscription = $subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
+			if($subscription == NULL) {
+				return($this->returnNotFoundAsJson($response));
+			} else {
+				return($this->returnObjectAsJson($response, 'subscription', $subscription));
+			}
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while expiring a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while expiring a subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));

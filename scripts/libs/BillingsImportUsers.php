@@ -80,7 +80,7 @@ class BillingsImportUsers {
 				$dbSubscription->setSubPeriodEndsDate(DateTime::createFromFormat(DateTime::ISO8601, '2016-09-01T00:00:00+0100'));
 				$dbSubscription->setUpdateType('import');
 				$dbSubscription->setUpdateId(0);
-				$dbSubscription->setDeleted('false');
+				$dbSubscription->setDeleted(false);
 				//
 				$dbSubscription = BillingsSubscriptionDAO::addBillingsSubscription($dbSubscription);
 				ScriptsConfig::getLogger()->addInfo("importing a celery user...id=".$afrUser->getId().", creating a subscription done, subscriptionBillingUuid=".$dbSubscription->getSubscriptionBillingUuid());

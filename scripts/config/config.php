@@ -145,6 +145,12 @@ if(getEnv('AWS_FOLDER_SUBSCRIPTIONS') === false) {
 	putEnv('AWS_FOLDER_SUBSCRIPTIONS=subscriptions');
 }
 
+#AWS_FOLDER_CSVS
+
+if(getEnv('AWS_FOLDER_CSVS') === false) {
+	putEnv('AWS_FOLDER_CSVS=csvs');
+}
+
 #AWS_REGION
 
 if(getEnv('AWS_REGION') === false) {
@@ -229,6 +235,16 @@ if(getEnv('EXPORTS_MONTHLY_FIRST_DAY_OF_MONTH') === false) {
 
 if(getEnv('EXPORTS_MONTHLY_NUMBER_OF_MONTHS') === false) {
 	putEnv('EXPORTS_MONTHLY_NUMBER_OF_MONTHS=1');
+}
+
+#CHARTMOGUL
+
+if(getEnv('CHARTMOGUL_API_ACCOUNT_TOKEN') === false) {
+	putEnv('CHARTMOGUL_API_ACCOUNT_TOKEN=2ae202120bda414f28aac7621df6f423');
+}
+
+if(getEnv('CHARTMOGUL_API_SECRET_KEY') === false) {
+	putEnv('CHARTMOGUL_API_SECRET_KEY=7f7d1e2011fc11860adcfb30492a8e3f');
 }
 
 #logger, #db_conn, ...

@@ -1,10 +1,12 @@
 <?php
+
 require_once __DIR__ . '/../../../../../config/config.php';
 require_once __DIR__ . '/../../../../utils/utils.php';
 require_once __DIR__ . '/../../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../../db/dbGlobal.php';
-require_once __DIR__.'/HookInterface.php';
+require_once __DIR__ . '/HookInterface.php';
 require_once __DIR__ . '/../../subscriptions/StripeSubscriptionsHandler.php';
+require_once __DIR__ . '/../../../global/ProviderHandlersBuilder.php';
 
 use \Stripe\Event;
 
@@ -14,12 +16,9 @@ use \Stripe\Event;
 class UpdateSubscription implements HookInterface
 {
     const REQUESTED_HOOK_TYPE = 'customer.subscription.updated';
-
-    protected $subscriptionHandler;
-
+	
     public function __construct()
     {
-        $this->subscriptionHandler = new SubscriptionsHandler();
     }
 
     public function event(Event $event, Provider $provider)
@@ -37,19 +36,19 @@ class UpdateSubscription implements HookInterface
         $billingSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $subscription['id']);
 
         if (empty($billingSubscription)) {
-            config::getLogger()->addInfo(sprintf('STRIPE - customer.subscription.updated : unable to find subscription %s for provider %s', $subscription['id'], $provider->getId()));
+            config::getLogger()->addInfo(sprintf('STRIPE - '.self::REQUESTED_HOOK_TYPE.' : unable to find subscription %s for provider %s', $subscription['id'], $provider->getId()));
             return null;
         }
 
         $newProviderPlan = PlanDAO::getPlanByUuid($provider->getId(), $subscription['plan']['id']);
         if (empty($newProviderPlan)) {
-            config::getLogger()->addInfo(sprintf('STRIPE - customer.subscription.updated : unable to find subscription plan %s for provider %s', $subscription['plan']['id'], $provider->getId()));
+            config::getLogger()->addInfo(sprintf('STRIPE - '.self::REQUESTED_HOOK_TYPE.' : unable to find subscription plan %s for provider %s', $subscription['plan']['id'], $provider->getId()));
             return null;
         }
 
         $status = StripeSubscriptionsHandler::getMappedStatus($subscription['status']);
         if (empty($status)) {
-            config::getLogger()->addInfo(sprintf('STRIPE - customer.subscription.updated : unknown subscription status %s', $subscription['status']));
+            config::getLogger()->addInfo(sprintf('STRIPE - '.self::REQUESTED_HOOK_TYPE.' : unknown subscription status %s', $subscription['status']));
             return null;
         }
 
@@ -68,11 +67,13 @@ class UpdateSubscription implements HookInterface
 
         $billingSubscription = BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
 
-        $this->subscriptionHandler->doSendSubscriptionEvent($oldSubscription, $billingSubscription);
+        $providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
+        
+        $providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($oldSubscription, $billingSubscription);
 
-        config::getLogger()->addInfo('STRIPE - customer.subscription.updated : update subscription '.$billingSubscription->getId());
+        config::getLogger()->addInfo('STRIPE - '.self::REQUESTED_HOOK_TYPE.' : update subscription '.$billingSubscription->getId());
     }
-
+    
     /**
      * Return date with the given timestamp
      *
@@ -81,10 +82,13 @@ class UpdateSubscription implements HookInterface
      * @return null|string
      */
     protected function createDate($timestamp) {
-        if (empty($timestamp)) {
-            return null;
-        }
-
-        return new \DateTime(date('c', $timestamp));
+    	if (empty($timestamp)) {
+    		return null;
+    	}
+    
+    	return new \DateTime(date('c', $timestamp));
     }
+	
 }
+
+?>

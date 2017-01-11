@@ -3,15 +3,15 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.php';
 
-class StripeTransactionsHandler {
+class StripeTransactionsHandler extends ProviderTransactionsHandler {
 	
-	private $provider = NULL;
 	const STRIPE_LIMIT = 50;
 	
-	public function __construct() {
+	public function __construct($provider) {
+		parent::__construct($provider);
 		\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
-		$this->provider = ProviderDAO::getProviderByName('stripe');
 	}
 	
 	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL, $updateType) {
@@ -43,11 +43,18 @@ class StripeTransactionsHandler {
 						config::getLogger()->addInfo("updating stripe transaction id=".$stripeChargeTransaction->id."...");
 						$metadata = $stripeChargeTransaction->metadata->__toArray();
 						$hasToBeProcessed = false;
+						$hasToBeIgnored = false;
+						if(array_key_exists('AfrIgnore', $metadata)) {
+							$afrIgnore = $metadata['AfrIgnore'];
+							if($afrIgnore == 'true') {
+								$hasToBeIgnored = true;
+							}
+						}
 						$isRecurlyTransaction = false;
 						if(array_key_exists('recurlyTransactionId', $metadata)) {
 							$isRecurlyTransaction = true;
 						}
-						$hasToBeProcessed = !$isRecurlyTransaction;
+						$hasToBeProcessed = !$hasToBeIgnored && !$isRecurlyTransaction;
 						if($hasToBeProcessed) {
 							$this->createOrUpdateChargeFromProvider($user, $userOpts, $stripeCustomer, $stripeChargeTransaction, $updateType);
 						} else {
@@ -134,11 +141,17 @@ class StripeTransactionsHandler {
 						$subscription_billing_uuid = $metadata['AfrSubscriptionBillingUuid'];
 						$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscription_billing_uuid);
 						if($subscription == NULL) {
-							$msg = "AfrSubscriptionBillingUuid=".$subscription_billing_uuid." in metadata cannot be found";
-							config::getLogger()->addError($msg);
-							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);						
+							if($stripeChargeTransaction->status != 'failed') {
+								$msg = "AfrSubscriptionBillingUuid=".$subscription_billing_uuid." in metadata cannot be found";
+								config::getLogger()->addError($msg);
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							} else {
+								$msg = "AfrSubscriptionBillingUuid=".$subscription_billing_uuid." in metadata cannot be found but has been ignored since subscription was not created";
+								config::getLogger()->addInfo($msg);								
+							}
+						} else {
+							$subId = $subscription->getId();
 						}
-						$subId = $subscription->getId();
 					} else {
 						$msg = "'AfrSubscriptionBillingUuid' field is missing in metadata";
 						config::getLogger()->addError($msg);
@@ -220,9 +233,9 @@ class StripeTransactionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);					
 				}
 			} else {
-				$msg = "no invoice linked to the transaction, so subscription cannot be found";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				$msg = "no invoice linked to the transaction, so transaction cannot be linked to a subscription";
+				config::getLogger()->addInfo($msg);
+				//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
 			}
 			//should not happen
 			if($userId == NULL) {
@@ -373,11 +386,18 @@ class StripeTransactionsHandler {
 			}
 			$metadata = $stripeChargeTransaction->metadata->__toArray();
 			$hasToBeProcessed = false;
+			$hasToBeIgnored = false;
+			if(array_key_exists('AfrIgnore', $metadata)) {
+				$afrIgnore = $metadata['AfrIgnore'];
+				if($afrIgnore == 'true') {
+					$hasToBeIgnored = true;
+				}
+			}
 			$isRecurlyTransaction = false;
 			if(array_key_exists('recurlyTransactionId', $metadata)) {
 				$isRecurlyTransaction = true;
 			}
-			$hasToBeProcessed = !$isRecurlyTransaction;
+			$hasToBeProcessed = !$hasToBeIgnored && !$isRecurlyTransaction;
 			if($hasToBeProcessed) {
 				$this->createOrUpdateChargeFromProvider(NULL, NULL, NULL, $stripeChargeTransaction, $updateType);
 			} else {
@@ -392,6 +412,32 @@ class StripeTransactionsHandler {
 			config::getLogger()->addError("updating stripe transaction failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
+	}
+	
+	public function doRefundTransaction(BillingsTransaction $transaction, RefundTransactionRequest $refundTransactionRequest) {
+		try {
+			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
+			
+			$api_refund = \Stripe\Refund::create(["charge" => $transaction->getTransactionProviderUuid()]);
+			//reload payment, in order to be up to date
+			$api_payment = \Stripe\Charge::retrieve($transaction->getTransactionProviderUuid());
+			//
+			$user = UserDAO::getUserById($transaction->getUserId());
+			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+			$stripeCustomer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
+			$transaction = $this->createOrUpdateChargeFromProvider($user, $userOpts, $stripeCustomer, $api_payment, $refundTransactionRequest->getOrigin());
+			//
+			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("refunding a ".$this->provider->getName()." transaction failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("refunding a ".$this->provider->getName()." transaction failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
+		}
+		return($transaction);
 	}
 	
 }

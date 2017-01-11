@@ -37,7 +37,8 @@ class NetsizeWebHooksHandler {
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while processing netsize webHook with id=".$billingsWebHook->getId().", message=".$e->getMessage();
 			config::getLogger()->addError("processing netsize webHook with id=".$billingsWebHook->getId()." failed : ". $msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			//HACK : no more errors returned to netsize
+			//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 	}
 	
@@ -109,7 +110,7 @@ class NetsizeWebHooksHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
-			$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
+			$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler($provider);
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
@@ -141,11 +142,18 @@ class NetsizeWebHooksHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
 		}
-		//http://stackoverflow.com/questions/4411340/php-datetimecreatefromformat-doesnt-parse-iso-8601-date-time
-		//https://bugs.php.net/bug.php?id=51950
-		$expirationDate = DateTime::createFromFormat('Y-m-d\TH:i:s.uO', $expirationDateStr);
+		//PHP cannot parse such dates (ex: '2016-05-16T08:29:07.9497653Z') - 7 digits for microseconds so here is a quick workaround -
+		$expirationDateStr = substr($expirationDateStr, 0, strrpos($expirationDateStr, '.'));
+		$expirationDate = DateTime::createFromFormat('Y-m-d\TH:i:s', $expirationDateStr, new DateTimeZone(config::$timezone));
 		if($expirationDate === false) {
 			$msg = "expiration-date date : ".$expirationDateStr." cannot be parsed";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//provider
+		$provider = ProviderDAO::getProviderByName('netsize');
+		if($provider == NULL) {
+			$msg = "provider named 'netsize' not found";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -156,7 +164,9 @@ class NetsizeWebHooksHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$subscriptionsHandler = new SubscriptionsHandler();
-		$subscriptionsHandler->doRenewSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), NULL, $expirationDate);
+		//NC : For the moment, Netsize renewing does not support to force $end_date, so we are not using $expirationDate.
+		//WAS : $subscriptionsHandler->doRenewSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), NULL, $expirationDate);
+		$subscriptionsHandler->doRenewSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), NULL, NULL);
 		config::getLogger()->addInfo('Processing netsize hook subscription, notification_name='.$notificationNode->getName().' done successfully');
 	}
 	

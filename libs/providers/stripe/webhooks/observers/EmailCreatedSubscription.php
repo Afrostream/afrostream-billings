@@ -1,10 +1,11 @@
 <?php
+
 require_once __DIR__ . '/../../../../../config/config.php';
 require_once __DIR__ . '/../../../../utils/utils.php';
 require_once __DIR__ . '/../../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../../db/dbGlobal.php';
-require_once __DIR__.'/HookInterface.php';
-require_once __DIR__.'/../EmailTrait.php';
+require_once __DIR__ . '/HookInterface.php';
+require_once __DIR__ . '/../EmailTrait.php';
 
 use Stripe\Event;
 
@@ -45,7 +46,7 @@ class EmailCreatedSubscription implements HookInterface
         $billingSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $subscription['id']);
 
         if (empty($billingSubscription)) {
-            config::getLogger()->addInfo(sprintf('STRIPE - customer.subscription.created : unable to find subscription %s for provider %s', $subscription['id'], $provider->getId()));
+            config::getLogger()->addInfo(sprintf('STRIPE - '.self::REQUESTED_HOOK_TYPE.' : unable to find subscription %s for provider %s', $subscription['id'], $provider->getId()));
             return null;
         }
 
@@ -57,6 +58,8 @@ class EmailCreatedSubscription implements HookInterface
 
         $this->sendMail($this->sendGridTemplateId, $userMail, $substitutions);
 
-        config::getLogger()->addInfo('STRIPE - customer.subscription.created : email customer '.$userMail);
+        config::getLogger()->addInfo('STRIPE - '.self::REQUESTED_HOOK_TYPE.' : email customer '.$userMail);
     }
 }
+
+?>

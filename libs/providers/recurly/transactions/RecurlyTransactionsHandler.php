@@ -3,11 +3,9 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.php';
 
-class RecurlyTransactionsHandler {
-	
-	public function __construct() {
-	}
+class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 	
 	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL, $updateType) {
 		try {
@@ -84,6 +82,11 @@ class RecurlyTransactionsHandler {
 		$country = NULL;
 		if(isset($recurlyAccount->billing_info)) {
 			$country = $recurlyAccount->billing_info->get()->country;
+		}
+		if($country == NULL) {
+			if(isset($billingsTransaction)) {
+				$country = $billingsTransaction->getCountry();
+			}
 		}
 		$subId = NULL;
 		if($recurlyTransaction->source == 'subscription') {
@@ -168,6 +171,11 @@ class RecurlyTransactionsHandler {
 		$country = NULL;
 		if(isset($recurlyAccount->billing_info)) {
 			$country = $recurlyAccount->billing_info->get()->country;
+		}
+		if($country == NULL) {
+			if(isset($billingsTransaction)) {
+				$country = $billingsTransaction->getCountry();
+			}
 		}
 		$subId = NULL;
 		if($recurlyRefundTransaction->source == 'subscription') {
@@ -276,6 +284,43 @@ class RecurlyTransactionsHandler {
 				break;				
 		}
 		return($billingTransactionType);
+	}
+	
+	public function doRefundTransaction(BillingsTransaction $transaction, RefundTransactionRequest $refundTransactionRequest) {
+		try {
+			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
+			//
+			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
+			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			//
+			$api_payment = Recurly_Transaction::get($transaction->getTransactionProviderUuid());
+			$api_invoice = $api_payment->invoice->get();
+			//@see : https://dev.recurly.com/docs/line-item-refunds
+			$line_items = $api_invoice->line_items;
+			$adjustments = array_map(
+					function($line_item) { return $line_item->toRefundAttributes(); }, 
+					$api_invoice->line_items
+			);
+			$refund_invoice = $api_invoice->refund($adjustments, 'transaction');
+			//reload payment, in order to be up to date
+			$api_payment = Recurly_Transaction::get($transaction->getTransactionProviderUuid());
+			//
+			$user = UserDAO::getUserById($transaction->getUserId());
+			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+			$recurlyAccount = Recurly_Account::get($user->getUserProviderUuid());
+			$transaction = $this->createOrUpdateChargeFromProvider($user, $userOpts, $recurlyAccount, $api_payment, $refundTransactionRequest->getOrigin());
+			//
+			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("refunding a ".$this->provider->getName()." transaction failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("refunding a ".$this->provider->getName()." transaction failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
+		}
+		return($transaction);
 	}
 	
 }
