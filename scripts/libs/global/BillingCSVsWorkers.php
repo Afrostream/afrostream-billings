@@ -97,6 +97,7 @@ class BillingCSVsWorkers extends BillingsWorkers {
 						$idx = 0;
 						$lastId = NULL;
 						$totalCounter = NULL;
+						$firstLoop = true;
 						do {
 							$result = dbGlobal::loadSqlResult($fields[2], $limit, $offset);
 							$offset = $offset + $limit;
@@ -105,6 +106,10 @@ class BillingCSVsWorkers extends BillingsWorkers {
 							$lastId = $result['lastId'];
 							//
 							foreach($result['rows'] as $row) {
+								if($firstLoop == true) {
+									$firstLoop = false;
+									fputcsv($csv_file_res, array_slice($result['field_names'], 2));  
+								}
 								fputcsv($csv_file_res, array_slice($row, 2));
 							}
 						} while ($idx < $totalCounter && count($result['rows']) > 0);
