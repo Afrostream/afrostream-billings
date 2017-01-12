@@ -25,7 +25,13 @@ class dbGlobal {
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getReadOnlyDbConn(), $query, $params);
+		$fieldNames = array();
+		$i = pg_num_fields($result);
+		for($j = 0; $j < $i; $j++) {
+			$fieldNames[] = pg_field_name($result, $j);
+		}
 		$out = array();
+		$out['field_names'] = $fieldNames;
 		$out['total_counter'] = 0;
 		$out['rows'] = array();
 		$out['lastId'] = NULL;

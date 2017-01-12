@@ -106,7 +106,7 @@ class BillingBouyguesStats extends BillingStats {
 						" : total=".$data->getSubsTotal().
 						", new=".$data->getSubsNew().
 						", expired=".$data->getSubsExpired());
-			}else {
+			} else {
 				ScriptsConfig::getLogger()->addInfo("retrieved stats for provider ".$this->provider->getName().
 						" - date=".$startingDay->format("Ymd"). " bypassed, no data");
 			}
