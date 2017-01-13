@@ -25,29 +25,40 @@ class BillingBouyguesStats extends BillingStats {
 			$filenameDate->add($moreOneDay);
 			//
 			$filename = "EPC_QUOT_SVOD_VAS_". $filenameDate->format("Ymd").".csv";
-			$url = "sftp://".getEnv('BOUYGUES_SFTP_STATS_USER')."@".getEnv('BOUYGUES_SFTP_STATS_HOST').":".getEnv('BOUYGUES_SFTP_STATS_PORT');
+			$url = getEnv('BOUYGUES_FTP_STATS_PROTOCOL')."://".getEnv('BOUYGUES_FTP_STATS_USER');
+			if(strlen(getEnv('BOUYGUES_FTP_STATS_PWD')) > 0) {
+				$url.= ":".getEnv('BOUYGUES_FTP_STATS_PWD');
+			}
+			$url.= "@".getEnv('BOUYGUES_FTP_STATS_HOST').":".getEnv('BOUYGUES_FTP_STATS_PORT');
 			$url.= "/out/".$filename;
 			//
 			$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_RETURNTRANSFER => true);
-			if(	null !== (getEnv('BOUYGUES_PROXY_HOST'))
-				&&
-				null !== (getEnv('BOUYGUES_PROXY_PORT'))
-			) {
-				$curl_options[CURLOPT_HTTPPROXYTUNNEL] = true;
-				$curl_options[CURLOPT_PROXY] = getEnv('BOUYGUES_PROXY_HOST');
-				$curl_options[CURLOPT_PROXYPORT] = getEnv('BOUYGUES_PROXY_PORT');
+			if(getEnv('BOUYGUES_FTP_STATS_PROXY_ENABLED') == 1) {
+				if(	null !== (getEnv('BOUYGUES_PROXY_HOST'))
+					&&
+					null !== (getEnv('BOUYGUES_PROXY_PORT'))
+				) {
+					$curl_options[CURLOPT_HTTPPROXYTUNNEL] = true;
+					$curl_options[CURLOPT_PROXY] = getEnv('BOUYGUES_PROXY_HOST');
+					$curl_options[CURLOPT_PROXYPORT] = getEnv('BOUYGUES_PROXY_PORT');
+				}
+				if(	null !== (getEnv('BOUYGUES_PROXY_USER'))
+					&&
+					null !== (getEnv('BOUYGUES_PROXY_PWD'))
+				) {
+					$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
+				}
 			}
-			if(	null !== (getEnv('BOUYGUES_PROXY_USER'))
-				&&
-				null !== (getEnv('BOUYGUES_PROXY_PWD'))
-			) {
-				$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
+			if(getEnv('BOUYGUES_FTP_STATS_PROTOCOL') == 'ftp') {
+				$curl_options[CURLOPT_PROTOCOLS] = CURLPROTO_FTP;
+			} else if(getEnv('BOUYGUES_FTP_STATS_PROTOCOL') == 'sftp') {
+				$curl_options[CURLOPT_PROTOCOLS] = CURLPROTO_SFTP;
+				$curl_options[CURLOPT_SSH_PRIVATE_KEYFILE] = getEnv('BOUYGUES_FTP_STATS_PRIVATE_KEY_FILE');
+			} else {
+				throw new Exception("protocol ".getEnv('BOUYGUES_FTP_STATS_PROTOCOL')." is not supported");
 			}
-			//
-			$curl_options[CURLOPT_PROTOCOLS] = CURLPROTO_SFTP;
-			$curl_options[CURLOPT_SSH_PRIVATE_KEYFILE] = getEnv('BOUYGUES_SFTP_STATS_PRIVATE_KEY_FILE');
 			$curl_options[CURLOPT_VERBOSE] = true;
 			$CURL = curl_init();
 			curl_setopt_array($CURL, $curl_options);
@@ -95,7 +106,7 @@ class BillingBouyguesStats extends BillingStats {
 						" : total=".$data->getSubsTotal().
 						", new=".$data->getSubsNew().
 						", expired=".$data->getSubsExpired());
-			}else {
+			} else {
 				ScriptsConfig::getLogger()->addInfo("retrieved stats for provider ".$this->provider->getName().
 						" - date=".$startingDay->format("Ymd"). " bypassed, no data");
 			}
