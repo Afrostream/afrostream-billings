@@ -145,7 +145,7 @@ class dbStats {
 		$date_start_str = dbGlobal::toISODate($date_start);
 		$date_end->setTimezone(new DateTimeZone(config::$timezone));
 		$date_end_str = dbGlobal::toISODate($date_end);
-		$query = "SELECT BU._id as userid, (CASE WHEN length(BUO.value) = 0 THEN 'unknown@domain.com' ELSE BUO.value END) as email, BIPL.name as internal_plan_name, BP.name as provider_name FROM billing_subscriptions BS";
+		$query = "SELECT BU._id as userid, (CASE WHEN length(BUO.value) = 0 OR BUO.value IS NULL THEN 'unknown@domain.com' ELSE BUO.value END) as email, BIPL.name as internal_plan_name, BP.name as provider_name FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)";
 		$query.= " INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)";
 		$query.= " INNER JOIN billing_internal_plans BIPL ON (BIPLL.internal_plan_id = BIPL._id)";
@@ -180,7 +180,7 @@ class dbStats {
 		$date_start_str = dbGlobal::toISODate($date_start);
 		$date_end->setTimezone(new DateTimeZone(config::$timezone));
 		$date_end_str = dbGlobal::toISODate($date_end);
-		$query = "SELECT BU._id as userid, (CASE WHEN length(BUO.value) = 0 THEN 'unknown@domain.com' ELSE BUO.value END) as email, BIPL.name as internal_plan_name, BP.name as provider_name,";
+		$query = "SELECT BU._id as userid, (CASE WHEN length(BUO.value) = 0 OR BUO.value IS NULL THEN 'unknown@domain.com' ELSE BUO.value END) as email, BIPL.name as internal_plan_name, BP.name as provider_name,";
 		$query.= " BS.sub_activated_date as sub_activated_date FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)";
 		$query.= " INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)";
