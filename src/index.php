@@ -12,6 +12,7 @@ require_once __DIR__ . '/../libs/site/InternalCouponsCampaignsController.php';
 require_once __DIR__ . '/../libs/site/ContextsController.php';
 require_once __DIR__ . '/../libs/site/TransactionsController.php';
 require_once __DIR__ . '/../libs/site/UtilsController.php';
+require_once __DIR__ . '/../libs/site/PartnerOrdersController.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -1466,6 +1467,13 @@ $app->get("/alive", function ($request, $response, $args) {
 $app->get("/billings/utils/currency/quotes/{fromCurrency}/{toCurrencies}", function ($request, $response, $args) {
 	$utilsController = new UtilsController();
 	return($utilsController->getCurrencyQuotes($request, $response, $args));
+});
+
+//partnerOrders
+
+$app->post("/billings/api/partnerorders/", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->create($request, $response, $args));
 });
 
 $app->run();

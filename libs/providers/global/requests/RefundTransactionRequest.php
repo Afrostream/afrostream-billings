@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/ActionRequest.php';
+require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class RefundTransactionRequest extends ActionRequest {
 	

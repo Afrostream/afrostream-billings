@@ -6223,6 +6223,65 @@ class BillingPartnerOrder implements JsonSerializable {
 	
 }
 
+class BillingPartnerOrderDAO {
+	
+	private static $sfields = "_id, partner_order_uuid, partnerid, type, name, processing_status, creation_date, updated_date";
+	
+	private static function getBillingPartnerOrderFromRow($row) {
+		$out = new BillingPartnerOrder();
+		$out->setId($row["_id"]);
+		$out->setPartnerOrderBillingUuid($row["partner_order_uuid"]);
+		$out->setPartnerId($row["partnerid"]);
+		$out->setType("type");
+		$out->setName($row["name"]);
+		$out->setProcessingStatus($row["processing_status"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		$out->setUpdatedDate($row["updated_date"] == NULL ? NULL : new DateTime($row["updated_date"]));
+		return($out);
+	}
+	
+	public static function getBillingPartnerOrderById($id) {
+		$out = NULL;
+		$query = "SELECT ".self::$sfields." FROM billing_partners_orders WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingPartnerOrderFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		return($out);
+	}
+	
+	public static function getBillingPartnerOrderByPartnerOrderUuid($uuid) {
+		$out = NULL;
+		$query = "SELECT ".self::$sfields." FROM billing_partners_orders WHERE partner_order_uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($uuid));
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingPartnerOrderFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		return($out);
+	}
+	
+	public static function addBillingPartnerOrder(BillingPartnerOrder $billingPartnerOrder) {
+		$query = "INSERT INTO billing_partners_orders (partner_order_uuid, partnerid, type, name)";
+		$query.= " VALUES ($1, $2, $3, $4) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($billingPartnerOrder->getPartnerOrderBillingUuid(),
+						$billingPartnerOrder->getPartnerId(),
+						$billingPartnerOrder->getType(),
+						$billingPartnerOrder->getName()));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		return(self::getBillingPartnerOrderById($row[0]));
+	}
+	
+}
+
 class BillingPartnerOrderProcessingLog {
 
 	private $_id;

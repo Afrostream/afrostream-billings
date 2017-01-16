@@ -5,6 +5,7 @@ require_once __DIR__ . '/../BillingOrderTool.php';
 
 class BillingLogistaOrderTool extends BillingOrderTool {
 	
+	
 }
 
 ?>

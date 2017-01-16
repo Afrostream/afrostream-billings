@@ -15,7 +15,7 @@ class BillingOrderToolFactory {
 				$out = new BillingLogistaOrderTool($partner);
 				break;
 			default :
-				
+				throw new Exception("no Billing Order Tool found for partner : ".$partner->getName());
 				break;
 		}
 		return($out);
