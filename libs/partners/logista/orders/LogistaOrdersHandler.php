@@ -21,6 +21,10 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 		return(parent::doAddInternalCouponsCampaignToPartnerOrder($billingPartnerOrder, $billingInternalCouponsCampaign, $addInternalCouponsCampaignToPartnerOrderRequest));
 	}
 	
+	public function doBookPartnerOrder(BillingPartnerOrder $billingPartnerOrder,
+			BookPartnerOrderRequest $bookPartnerOrderRequest) {
+		return(parent::doBookPartnerOrder($billingPartnerOrder, $bookPartnerOrderRequest));
+	}
 }
 
 ?>

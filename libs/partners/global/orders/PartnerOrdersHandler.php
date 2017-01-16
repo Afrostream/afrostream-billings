@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../PartnerHandlersBuilder.php';
 require_once __DIR__ . '/../requests/CreatePartnerOrderRequest.php';
+require_once __DIR__ . '/../requests/BookPartnerOrderRequest.php';
 
 class PartnerOrdersHandler {
 	
@@ -59,6 +60,38 @@ class PartnerOrdersHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($billingPartnerOrder);	
+	}
+	
+	public function doBookPartnerOrder(BillingPartnerOrder $billingPartnerOrder,
+			BookPartnerOrderRequest $bookPartnerOrderRequest) {
+		try {
+			config::getLogger()->addInfo("booking a ".$this->partner->getName()." partnerOrder...");
+			$billingPartnerOrderInternalCouponsCampaignLinks = BillingPartnerOrderInternalCouponsCampaignLinkDAO::getBillingPartnerOrderInternalCouponsCampaignLinksByPartnerOrderId($billingPartnerOrder->getId());
+			foreach ($billingPartnerOrderInternalCouponsCampaignLinks as $billingPartnerOrderInternalCouponsCampaignLink) {
+				$tobookCounter = $billingPartnerOrderInternalCouponsCampaignLink->getWishedCounter() - $billingPartnerOrderInternalCouponsCampaignLink->getBookedCounter();
+				config::getLogger()->addInfo("tobookCounter=".$tobookCounter);
+				if($tobookCounter > 0) {
+					config::getLogger()->addInfo("tobookCounter=".$tobookCounter."...");
+					BillingInternalCouponDAO::bookBillingInternalCoupons($billingPartnerOrderInternalCouponsCampaignLink, $tobookCounter);
+					config::getLogger()->addInfo("tobookCounter=".$tobookCounter." done");
+					//
+					$bookedCounter = BillingInternalCouponDAO::getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($billingPartnerOrderInternalCouponsCampaignLink->getInternalCouponsCampaignsId(), $billingPartnerOrderInternalCouponsCampaignLink->getId());
+					//
+					$billingPartnerOrderInternalCouponsCampaignLink->setBookedCounter($bookedCounter);
+					$billingPartnerOrderInternalCouponsCampaignLink = BillingPartnerOrderInternalCouponsCampaignLinkDAO::updateBookedCounter($billingPartnerOrderInternalCouponsCampaignLink);
+				}
+			}
+			config::getLogger()->addInfo("booking a ".$this->partner->getName()." partnerOrder done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while booking a ".$this->partner->getName()." partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("booking a ".$this->partner->getName()."partnerOrder failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while booking a ".$this->partner->getName()." partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("booking a ".$this->partner->getName()." partnerOrder failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($billingPartnerOrder);
 	}
 	
 }

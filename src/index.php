@@ -1488,6 +1488,11 @@ $app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/addinternalcoup
 	return($partnerOrdersController->addInternalCouponsCampaignToPartnerOrder($request, $response, $args));
 });
 
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/book", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->book($request, $response, $args));
+});
+
 $app->run();
 
 ?>

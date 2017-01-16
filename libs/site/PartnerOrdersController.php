@@ -6,6 +6,7 @@ require_once __DIR__ . '/../orders/OrdersHandler.php';
 require_once __DIR__ . '/../partners/global/requests/CreatePartnerOrderRequest.php';
 require_once __DIR__ . '/../partners/global/requests/GetPartnerOrderRequest.php';
 require_once __DIR__ . '/../partners/global/requests/AddInternalCouponsCampaignToPartnerOrderRequest.php';
+require_once __DIR__ . '/../partners/global/requests/BookPartnerOrderRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -130,6 +131,37 @@ class PartnerOrdersController extends BillingsController {
 			//
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while adding an internalCouponsCampaign to a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function book(Request $request, Response $response, array $args) {
+		try {
+			if(!isset($args['partnerOrderBillingUuid'])) {
+				//exception
+				$msg = "field 'partnerOrderBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$partnerOrderBillingUuid = $args["partnerOrderBillingUuid"];
+			//
+			$ordersHandler = new OrdersHandler();
+			$bookPartnerOrderRequest = new BookPartnerOrderRequest();
+			$bookPartnerOrderRequest->setOrigin('api');
+			$bookPartnerOrderRequest->setPartnerOrderBillingUuid($partnerOrderBillingUuid);
+			$partnerOrder = $ordersHandler->doBookPartnerOrder($bookPartnerOrderRequest);
+			return($this->returnObjectAsJson($response, 'partnerOrder', $partnerOrder));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while booking a partnerOrder, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while booking a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));

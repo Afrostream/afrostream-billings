@@ -5160,10 +5160,18 @@ EOL;
 		return(self::getBillingInternalCouponById($billingInternalCoupon->getId()));
 	}
 	
-	public static function getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($internalcouponscampaignsid) {
+	public static function getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($internalcouponscampaignsid, $partnersordersinternalcouponscampaignslinkid = NULL) {
 		$query = "SELECT count(*) as counter FROM billing_internal_coupons BIC";
 		$query.= " WHERE BIC.internalcouponscampaignsid = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($internalcouponscampaignsid));
+		$params = array();
+		$params[] = $internalcouponscampaignsid;
+		
+		if(isset($partnersordersinternalcouponscampaignslinkid)) {
+			$params[] = $partnersordersinternalcouponscampaignslinkid;
+			$query.= " AND partnersordersinternalcouponscampaignslinkid = $2";
+		}
+		
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 	
 		$out = 0;
 	
@@ -5174,6 +5182,53 @@ EOL;
 		pg_free_result($result);
 	
 		return($out);
+	}
+	
+	public static function getBillingInternalCouponsByInternalCouponsCampaignsId($internalcouponscampaignsid, $partnersordersinternalcouponscampaignslinkid = NULL) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons BIC";
+		$query.= " WHERE BIC.internalcouponscampaignsid = $1";
+		$params = array();
+		$params[] = $internalcouponscampaignsid;
+	
+		if(isset($partnersordersinternalcouponscampaignslinkid)) {
+			$params[] = $partnersordersinternalcouponscampaignslinkid;
+			$query.= " AND partnersordersinternalcouponscampaignslinkid = $2";
+		}
+	
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+	
+		$out = array();
+	
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getBillingInternalCouponFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function bookBillingInternalCoupons(BillingPartnerOrderInternalCouponsCampaignLink $billingPartnerOrderInternalCouponsCampaignLink, $limit) {
+		$query = "UPDATE billing_internal_coupons SET updated_date = CURRENT_TIMESTAMP, partnersordersinternalcouponscampaignslinkid = $1 WHERE";
+		$query.= "_id IN (";
+		$query.= " SELECT _id FROM billing_internal_coupons WHERE internalcouponscampaignsid = $2 AND partnersordersinternalcouponscampaignslinkid IS NULL AND coupon_status = 'waiting'";
+		$query.= " ORDER BY _id ASC LIMIT $3";
+		$query.= ")";
+		config::getLogger()->addInfo("QUERY=".$query);
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingPartnerOrderInternalCouponsCampaignLink->getId(),
+						$billingPartnerOrderInternalCouponsCampaignLink->getInternalCouponsCampaignsId(),
+						$limit));
+		// free result
+		pg_free_result($result);
+		/*$query = "UPDATE billing_internal_coupons SET updated_date = CURRENT_TIMESTAMP, partnersordersinternalcouponscampaignslinkid = $1 WHERE";
+		$query.= " internalcouponscampaignsid = $2 AND partnersordersinternalcouponscampaignslinkid IS NULL AND coupon_status = 'waiting'";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingPartnerOrderInternalCouponsCampaignLink->getId(),
+						$billingPartnerOrderInternalCouponsCampaignLink->getInternalCouponsCampaignsId()
+						));
+		// free result
+		pg_free_result($result);*/
 	}
 	
 }
@@ -6217,7 +6272,8 @@ class BillingPartnerOrder implements JsonSerializable {
 				'processingStatus' => $this->processingStatus,
 				'creationDate' => dbGlobal::toISODate($this->creationDate),
 				'updatedDate' => dbGlobal::toISODate($this->updatedDate),
-				'partner' => BillingPartnerDAO::getPartnerById($this->partnerId)				
+				'partner' => BillingPartnerDAO::getPartnerById($this->partnerId),
+				'internalCouponsCampaignLink' => BillingPartnerOrderInternalCouponsCampaignLinkDAO::getBillingPartnerOrderInternalCouponsCampaignLinksByPartnerOrderId($this->_id)
 		];
 	}
 	
@@ -6395,7 +6451,7 @@ class BillingPartnerOrderProcessingLogDAO {
 	
 }
 
-class BillingPartnerOrderInternalCouponsCampaignLink {
+class BillingPartnerOrderInternalCouponsCampaignLink implements JsonSerializable {
 	
 	private $_id;
 	private $partnerOrderId;
@@ -6442,6 +6498,16 @@ class BillingPartnerOrderInternalCouponsCampaignLink {
 	public function getBookedCounter() {
 		return($this->bookedCounter);
 	}
+	
+	public function jsonSerialize() {
+		return[
+				'internalCouponsCampaign' => BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($this->internalCouponsCampaignsId),
+				'whishedCounter' => $this->wishedCounter,
+				'bookedCounter' => $this->bookedCounter,
+				'internalCoupons' => BillingInternalCouponDAO::getBillingInternalCouponsByInternalCouponsCampaignsId($this->internalCouponsCampaignsId, $this->_id)
+		];
+	}
+	
 	
 }
 
@@ -6502,6 +6568,16 @@ class BillingPartnerOrderInternalCouponsCampaignLinkDAO {
 		// free result
 		pg_free_result($result);
 		return(self::getBillingPartnerOrderInternalCouponsCampaignLinkById($row[0]));
+	}
+	
+	public static function updateBookedCounter(BillingPartnerOrderInternalCouponsCampaignLink $billingPartnerOrderInternalCouponsCampaignLink) {
+		$query = "UPDATE billing_partners_orders_internal_coupons_campaigns_links SET booked_counter = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingPartnerOrderInternalCouponsCampaignLink->getBookedCounter(),
+						$billingPartnerOrderInternalCouponsCampaignLink->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingPartnerOrderInternalCouponsCampaignLinkById($billingPartnerOrderInternalCouponsCampaignLink->getId()));
 	}
 	
 }

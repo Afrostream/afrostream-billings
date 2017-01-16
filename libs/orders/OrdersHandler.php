@@ -75,6 +75,11 @@ class OrdersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			if($billingPartnerOrder->getProcessingStatus() != 'waiting') {
+				$msg = "partnerOrder processingStatus : ".$billingPartnerOrder->getProcessingStatus().", only 'waiting' status supported for this action";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			}
 			$partnerOrdersHandlerInstance = PartnerHandlersBuilder::getPartnerOrdersHandlerInstance($partner);
 			$billingPartnerOrder = $partnerOrdersHandlerInstance->doAddInternalCouponsCampaignToPartnerOrder($billingPartnerOrder, 
 					$internalCouponsCampaign, 
@@ -87,6 +92,43 @@ class OrdersHandler {
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while adding an internalCouponsCampaign to a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("adding an internalCouponsCampaign to a partnerOrder failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($billingPartnerOrder);
+	}
+	
+	public function doBookPartnerOrder(BookPartnerOrderRequest $bookPartnerOrderRequest) {
+		$billingPartnerOrder = NULL;
+		try {
+			config::getLogger()->addInfo("booking a partnerOrder...");
+			$billingPartnerOrder = BillingPartnerOrderDAO::getBillingPartnerOrderByPartnerOrderUuid($bookPartnerOrderRequest->getPartnerOrderBillingUuid());
+			if($billingPartnerOrder == NULL) {
+				$msg = "unknown partnerOrderBillingUuid : ".$bookPartnerOrderRequest->getPartnerOrderBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$partner = BillingPartnerDAO::getPartnerById($billingPartnerOrder->getPartnerId());
+			if($partner == NULL) {
+				$msg = "unknown partner with id : ".$billingPartnerOrder->getPartnerId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($billingPartnerOrder->getProcessingStatus() != 'waiting') {
+				$msg = "partnerOrder processingStatus : ".$billingPartnerOrder->getProcessingStatus().", only 'waiting' status supported for this action";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$partnerOrdersHandlerInstance = PartnerHandlersBuilder::getPartnerOrdersHandlerInstance($partner);
+			$billingPartnerOrder = $partnerOrdersHandlerInstance->doBookPartnerOrder($billingPartnerOrder, 
+					$bookPartnerOrderRequest);
+			config::getLogger()->addInfo("booking a partnerOrder done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while booking a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("booking a partnerOrder failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while booking a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("booking a partnerOrder failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($billingPartnerOrder);
