@@ -10,6 +10,24 @@ class OrdersHandler {
 	public function __construct() {
 	}
 	
+	public function doGetOnePartnerOrder(GetPartnerOrderRequest $getPartnerOrderRequest) {
+		$billingPartnerOrder = NULL;
+		try {
+			config::getLogger()->addInfo("getting a partnerOrder...");
+			$billingPartnerOrder = BillingPartnerOrderDAO::getBillingPartnerOrderByPartnerOrderUuid($getPartnerOrderRequest->getPartnerOrderBillingUuid());
+			config::getLogger()->addInfo("getting a partnerOrder done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while getting a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("getting a partnerOrder failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("getting a partnerOrder failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($billingPartnerOrder);
+	}
+	
 	public function doCreatePartnerOrder(CreatePartnerOrderRequest $createPartnerOrderRequest) {
 		$billingPartnerOrder = NULL;
 		try {
@@ -34,6 +52,46 @@ class OrdersHandler {
 		}
 		return($billingPartnerOrder);
 	}
+	
+	public function doAddInternalCouponsCampaignToPartnerOrder(AddInternalCouponsCampaignToPartnerOrderRequest $addInternalCouponsCampaignToPartnerOrderRequest) {
+		$billingPartnerOrder = NULL;
+		try {
+			config::getLogger()->addInfo("adding an internalCouponsCampaign to a partnerOrder...");
+			$billingPartnerOrder = BillingPartnerOrderDAO::getBillingPartnerOrderByPartnerOrderUuid($addInternalCouponsCampaignToPartnerOrderRequest->getPartnerOrderBillingUuid());
+			if($billingPartnerOrder == NULL) {
+				$msg = "unknown partnerOrderBillingUuid : ".$addInternalCouponsCampaignToPartnerOrderRequest->getPartnerOrderBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($addInternalCouponsCampaignToPartnerOrderRequest->getInternalCouponsCampaignBillingUuid());
+			if($internalCouponsCampaign == NULL) {
+				$msg = "unknown internalCouponsCampaignBillingUuid : ".$addInternalCouponsCampaignToPartnerOrderRequest->getInternalCouponsCampaignBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			}
+			$partner = BillingPartnerDAO::getPartnerById($billingPartnerOrder->getPartnerId());
+			if($partner == NULL) {
+				$msg = "unknown partner with id : ".$billingPartnerOrder->getPartnerId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$partnerOrdersHandlerInstance = PartnerHandlersBuilder::getPartnerOrdersHandlerInstance($partner);
+			$billingPartnerOrder = $partnerOrdersHandlerInstance->doAddInternalCouponsCampaignToPartnerOrder($billingPartnerOrder, 
+					$internalCouponsCampaign, 
+					$addInternalCouponsCampaignToPartnerOrderRequest);
+			config::getLogger()->addInfo("adding an internalCouponsCampaign to a partnerOrder done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while adding an internalCouponsCampaign to a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("adding an internalCouponsCampaign to a partnerOrder failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while adding an internalCouponsCampaign to a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("adding an internalCouponsCampaign to a partnerOrder failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($billingPartnerOrder);
+	}
+	
 }
 
 ?>

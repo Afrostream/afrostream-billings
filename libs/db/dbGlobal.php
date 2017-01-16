@@ -6491,4 +6491,17 @@ class BillingPartnerOrderInternalCouponsCampaignLinkDAO {
 		return($out);
 	}
 	
+	public static function addBillingPartnerOrderInternalCouponsCampaignLink(BillingPartnerOrderInternalCouponsCampaignLink $billingPartnerOrderInternalCouponsCampaignLink) {
+		$query = "INSERT INTO billing_partners_orders_internal_coupons_campaigns_links (partnerorderid, internalcouponscampaignsid, wished_counter)";
+		$query.= " VALUES ($1, $2, $3) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($billingPartnerOrderInternalCouponsCampaignLink->getPartnerOrderId(),
+						$billingPartnerOrderInternalCouponsCampaignLink->getInternalCouponsCampaignsId(),
+						$billingPartnerOrderInternalCouponsCampaignLink->getWishedCounter()));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		return(self::getBillingPartnerOrderInternalCouponsCampaignLinkById($row[0]));
+	}
+	
 }

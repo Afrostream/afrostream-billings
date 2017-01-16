@@ -1332,14 +1332,14 @@ $app->post("/billings/api/contexts/", function ($request, $response, $args) {
 	
 $app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/addinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
 	$contextsController = new ContextsController();
-	return($contextsController->AddInternalPlanToContext($request, $response, $args));
+	return($contextsController->addInternalPlanToContext($request, $response, $args));
 });
 	
 //actions to context : removeinternalplan
 
 $app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/removeinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
 	$contextsController = new ContextsController();
-	return($contextsController->RemoveInternalPlanFromContext($request, $response, $args));
+	return($contextsController->removeInternalPlanFromContext($request, $response, $args));
 });
 
 //actions to context : moveinternalplan
@@ -1471,9 +1471,21 @@ $app->get("/billings/utils/currency/quotes/{fromCurrency}/{toCurrencies}", funct
 
 //partnerOrders
 
+$app->get("/billings/api/partnerorders/{partnerOrderBillingUuid}", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->getOne($request, $response, $args));
+});
+
 $app->post("/billings/api/partnerorders/", function ($request, $response, $args) {
 	$partnerOrdersController = new PartnerOrdersController();
 	return($partnerOrdersController->create($request, $response, $args));
+});
+
+//actions to partnerOrders : addInternalCouponsCampaign
+	
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/addinternalcouponscampaign/{internalCouponsCampaignBillingUuid}/{wishedCouponsCounter}", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->addInternalCouponsCampaignToPartnerOrder($request, $response, $args));
 });
 
 $app->run();

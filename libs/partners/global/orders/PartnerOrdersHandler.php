@@ -13,7 +13,7 @@ class PartnerOrdersHandler {
 	public function __construct(BillingPartner $partner) {
 		$this->partner = $partner;
 	}	
-
+	
 	public function doCreatePartnerOrder(CreatePartnerOrderRequest $createPartnerOrderRequest) {
 		$billingPartnerOrder = NULL;
 		try {
@@ -35,6 +35,30 @@ class PartnerOrdersHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($billingPartnerOrder);
+	}
+	
+	public function doAddInternalCouponsCampaignToPartnerOrder(BillingPartnerOrder $billingPartnerOrder, 
+			BillingInternalCouponsCampaign $billingInternalCouponsCampaign, 
+			AddInternalCouponsCampaignToPartnerOrderRequest $addInternalCouponsCampaignToPartnerOrderRequest) {
+		try {
+			config::getLogger()->addInfo("adding an internalCouponsCampaign to a ".$this->partner->getName()." partnerOrder...");
+			$billingPartnerOrderInternalCouponsCampaignLink = new BillingPartnerOrderInternalCouponsCampaignLink();
+			$billingPartnerOrderInternalCouponsCampaignLink->setPartnerOrderId($billingPartnerOrder->getId());
+			$billingPartnerOrderInternalCouponsCampaignLink->setInternalCouponsCampaignsId($billingInternalCouponsCampaign->getId());
+			$billingPartnerOrderInternalCouponsCampaignLink->setWishedCounter($addInternalCouponsCampaignToPartnerOrderRequest->getWishedCouponsCounter());
+			$billingPartnerOrderInternalCouponsCampaignLink = BillingPartnerOrderInternalCouponsCampaignLinkDAO::addBillingPartnerOrderInternalCouponsCampaignLink($billingPartnerOrderInternalCouponsCampaignLink);
+			$billingPartnerOrder = BillingPartnerOrderDAO::getBillingPartnerOrderById($billingPartnerOrder->getId());
+			config::getLogger()->addInfo("adding an internalCouponsCampaign to a ".$this->partner->getName()." partnerOrder done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while adding an internalCouponsCampaign to a ".$this->partner->getName()." partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("adding an internalCouponsCampaign to a ".$this->partner->getName()."partnerOrder failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while adding an internalCouponsCampaign to a ".$this->partner->getName()." partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("adding an internalCouponsCampaign to a ".$this->partner->getName()." partnerOrder failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($billingPartnerOrder);	
 	}
 	
 }
