@@ -134,6 +134,43 @@ class OrdersHandler {
 		return($billingPartnerOrder);
 	}
 	
+	public function doReadyPartnerOrder(ReadyPartnerOrderRequest $readyPartnerOrderRequest) {
+		$billingPartnerOrder = NULL;
+		try {
+			config::getLogger()->addInfo("putting ready a partnerOrder...");
+			$billingPartnerOrder = BillingPartnerOrderDAO::getBillingPartnerOrderByPartnerOrderUuid($readyPartnerOrderRequest->getPartnerOrderBillingUuid());
+			if($billingPartnerOrder == NULL) {
+				$msg = "unknown partnerOrderBillingUuid : ".$readyPartnerOrderRequest->getPartnerOrderBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$partner = BillingPartnerDAO::getPartnerById($billingPartnerOrder->getPartnerId());
+			if($partner == NULL) {
+				$msg = "unknown partner with id : ".$billingPartnerOrder->getPartnerId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($billingPartnerOrder->getProcessingStatus() != 'waiting') {
+				$msg = "partnerOrder processingStatus : ".$billingPartnerOrder->getProcessingStatus().", only 'waiting' status supported for this action";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$partnerOrdersHandlerInstance = PartnerHandlersBuilder::getPartnerOrdersHandlerInstance($partner);
+			$billingPartnerOrder = $partnerOrdersHandlerInstance->doReadyPartnerOrder($billingPartnerOrder,
+					$readyPartnerOrderRequest);
+			config::getLogger()->addInfo("putting ready a partnerOrder done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while putting ready a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("putting ready a partnerOrder failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while putting ready a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("putting ready a partnerOrder failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($billingPartnerOrder);
+	}
+	
 	public function doProcessPartnerOrder(ProcessPartnerOrderRequest $processPartnerOrderRequest) {
 		$billingPartnerOrder = NULL;
 		try {
@@ -150,7 +187,7 @@ class OrdersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if($billingPartnerOrder->getProcessingStatus() != 'waiting') {
+			if($billingPartnerOrder->getProcessingStatus() != 'pending') {
 				$msg = "partnerOrder processingStatus : ".$billingPartnerOrder->getProcessingStatus().", only 'waiting' status supported for this action";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);

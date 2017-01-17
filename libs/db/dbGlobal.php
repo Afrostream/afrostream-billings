@@ -6329,6 +6329,16 @@ class BillingPartnerOrderDAO {
 		return(self::getBillingPartnerOrderById($row[0]));
 	}
 	
+	public static function updateProcessingStatus(BillingPartnerOrder $billingPartnerOrder) {
+		$query = "UPDATE billing_partners_orders SET updated_date = CURRENT_TIMESTAMP, processing_status = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingPartnerOrder->getProcessingStatus(),
+						$billingPartnerOrder->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingPartnerOrderById($billingPartnerOrder->getId()));
+	}
+	
 }
 
 class BillingPartnerOrderProcessingLog {

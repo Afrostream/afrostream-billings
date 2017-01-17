@@ -26,12 +26,16 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 		return(parent::doBookPartnerOrder($billingPartnerOrder, $bookPartnerOrderRequest));
 	}
 	
+	public function doReadyPartnerOrder(BillingPartnerOrder $billingPartnerOrder,
+			ReadyPartnerOrderRequest $readyPartnerOrderRequest) {
+		return(parent::doReadyPartnerOrder($billingPartnerOrder, $readyPartnerOrderRequest));
+	}
+	
 	public function doProcessPartnerOrder(BillingPartnerOrder $billingPartnerOrder,
 			ProcessPartnerOrderRequest $processPartnerOrderRequest) {
 		try {
 		 	config::getLogger()->addInfo("processing a ".$this->partner->getName()." partnerOrder...");
 		 	//TODO
-		 	$billingPartnerOrder = BillingPartnerOrderDAO::getBillingPartnerOrderById($billingPartnerOrder->getId());
 		 	config::getLogger()->addInfo("processing a ".$this->partner->getName()." partnerOrder done successfully");
 		 } catch(BillingsException $e) {
 			$msg = "a billings exception occurred while processing a ".$this->partner->getName()." partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();

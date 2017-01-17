@@ -1497,6 +1497,13 @@ $app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/book", function
 	return($partnerOrdersController->book($request, $response, $args));
 });
 
+//partnerOrders, actions : ready : name has to be changed... : mark here that order is ready to process
+	
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/ready", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->ready($request, $response, $args));
+});
+
 //partnerOrders, actions : process
 
 $app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/process", function ($request, $response, $args) {
