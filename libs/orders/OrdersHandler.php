@@ -134,6 +134,43 @@ class OrdersHandler {
 		return($billingPartnerOrder);
 	}
 	
+	public function doProcessPartnerOrder(ProcessPartnerOrderRequest $processPartnerOrderRequest) {
+		$billingPartnerOrder = NULL;
+		try {
+			config::getLogger()->addInfo("processing a partnerOrder...");
+			$billingPartnerOrder = BillingPartnerOrderDAO::getBillingPartnerOrderByPartnerOrderUuid($processPartnerOrderRequest->getPartnerOrderBillingUuid());
+			if($billingPartnerOrder == NULL) {
+				$msg = "unknown partnerOrderBillingUuid : ".$processPartnerOrderRequest->getPartnerOrderBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$partner = BillingPartnerDAO::getPartnerById($billingPartnerOrder->getPartnerId());
+			if($partner == NULL) {
+				$msg = "unknown partner with id : ".$billingPartnerOrder->getPartnerId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($billingPartnerOrder->getProcessingStatus() != 'waiting') {
+				$msg = "partnerOrder processingStatus : ".$billingPartnerOrder->getProcessingStatus().", only 'waiting' status supported for this action";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$partnerOrdersHandlerInstance = PartnerHandlersBuilder::getPartnerOrdersHandlerInstance($partner);
+			$billingPartnerOrder = $partnerOrdersHandlerInstance->doProcessPartnerOrder($billingPartnerOrder,
+					$processPartnerOrderRequest);
+			config::getLogger()->addInfo("processing a partnerOrder done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while processing a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("processing a partnerOrder failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while processing a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("processing a partnerOrder failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($billingPartnerOrder);
+	}
+	
 }
 
 ?>

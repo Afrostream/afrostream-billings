@@ -7,6 +7,7 @@ require_once __DIR__ . '/../partners/global/requests/CreatePartnerOrderRequest.p
 require_once __DIR__ . '/../partners/global/requests/GetPartnerOrderRequest.php';
 require_once __DIR__ . '/../partners/global/requests/AddInternalCouponsCampaignToPartnerOrderRequest.php';
 require_once __DIR__ . '/../partners/global/requests/BookPartnerOrderRequest.php';
+require_once __DIR__ . '/../partners/global/requests/ProcessPartnerOrderRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -168,6 +169,37 @@ class PartnerOrdersController extends BillingsController {
 			//
 		}
 	}
+	
+	public function process(Request $request, Response $response, array $args) {
+		try {
+			if(!isset($args['partnerOrderBillingUuid'])) {
+				//exception
+				$msg = "field 'partnerOrderBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$partnerOrderBillingUuid = $args["partnerOrderBillingUuid"];
+			//
+			$ordersHandler = new OrdersHandler();
+			$processPartnerOrderRequest = new ProcessPartnerOrderRequest();
+			$processPartnerOrderRequest->setOrigin('api');
+			$processPartnerOrderRequest->setPartnerOrderBillingUuid($partnerOrderBillingUuid);
+			$partnerOrder = $ordersHandler->doProcessPartnerOrder($processPartnerOrderRequest);
+			return($this->returnObjectAsJson($response, 'partnerOrder', $partnerOrder));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while processing a partnerOrder, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while processing a partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}	
 	
 }
 

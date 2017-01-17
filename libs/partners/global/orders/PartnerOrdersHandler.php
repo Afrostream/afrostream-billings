@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../PartnerHandlersBuilder.php';
 require_once __DIR__ . '/../requests/CreatePartnerOrderRequest.php';
 require_once __DIR__ . '/../requests/BookPartnerOrderRequest.php';
+require_once __DIR__ . '/../requests/ProcessPartnerOrderRequest.php';
 
 class PartnerOrdersHandler {
 	
@@ -99,6 +100,13 @@ class PartnerOrdersHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($billingPartnerOrder);
+	}
+	
+	public function doProcessPartnerOrder(BillingPartnerOrder $billingPartnerOrder,
+			ProcessPartnerOrderRequest $processPartnerOrderRequest) {
+		$msg = "unsupported feature for partner named : ".$this->partner->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}
 	
 }

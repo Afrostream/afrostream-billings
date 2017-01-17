@@ -1469,28 +1469,39 @@ $app->get("/billings/utils/currency/quotes/{fromCurrency}/{toCurrencies}", funct
 	return($utilsController->getCurrencyQuotes($request, $response, $args));
 });
 
-//partnerOrders
+//partnerOrders : get
 
 $app->get("/billings/api/partnerorders/{partnerOrderBillingUuid}", function ($request, $response, $args) {
 	$partnerOrdersController = new PartnerOrdersController();
 	return($partnerOrdersController->getOne($request, $response, $args));
 });
 
+//partnerOrders : create
+
 $app->post("/billings/api/partnerorders/", function ($request, $response, $args) {
 	$partnerOrdersController = new PartnerOrdersController();
 	return($partnerOrdersController->create($request, $response, $args));
 });
 
-//actions to partnerOrders : addInternalCouponsCampaign
-	
+//partnerOrders, actions : addInternalCouponsCampaign
+
 $app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/addinternalcouponscampaign/{internalCouponsCampaignBillingUuid}/{wishedCouponsCounter}", function ($request, $response, $args) {
 	$partnerOrdersController = new PartnerOrdersController();
 	return($partnerOrdersController->addInternalCouponsCampaignToPartnerOrder($request, $response, $args));
 });
 
+//partnerOrders, actions : book
+
 $app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/book", function ($request, $response, $args) {
 	$partnerOrdersController = new PartnerOrdersController();
 	return($partnerOrdersController->book($request, $response, $args));
+});
+
+//partnerOrders, actions : process
+
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/process", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->process($request, $response, $args));
 });
 
 $app->run();
