@@ -5208,27 +5208,20 @@ EOL;
 		return($out);
 	}
 	
-	public static function bookBillingInternalCoupons(BillingPartnerOrderInternalCouponsCampaignLink $billingPartnerOrderInternalCouponsCampaignLink, $limit) {
-		$query = "UPDATE billing_internal_coupons SET updated_date = CURRENT_TIMESTAMP, partnersordersinternalcouponscampaignslinkid = $1 WHERE";
-		$query.= "_id IN (";
-		$query.= " SELECT _id FROM billing_internal_coupons WHERE internalcouponscampaignsid = $2 AND partnersordersinternalcouponscampaignslinkid IS NULL AND coupon_status = 'waiting'";
-		$query.= " ORDER BY _id ASC LIMIT $3";
-		$query.= ")";
-		config::getLogger()->addInfo("QUERY=".$query);
-		$result = pg_query_params(config::getDbConn(), $query,
-				array(	$billingPartnerOrderInternalCouponsCampaignLink->getId(),
-						$billingPartnerOrderInternalCouponsCampaignLink->getInternalCouponsCampaignsId(),
-						$limit));
-		// free result
-		pg_free_result($result);
-		/*$query = "UPDATE billing_internal_coupons SET updated_date = CURRENT_TIMESTAMP, partnersordersinternalcouponscampaignslinkid = $1 WHERE";
-		$query.= " internalcouponscampaignsid = $2 AND partnersordersinternalcouponscampaignslinkid IS NULL AND coupon_status = 'waiting'";
-		$result = pg_query_params(config::getDbConn(), $query,
-				array(	$billingPartnerOrderInternalCouponsCampaignLink->getId(),
-						$billingPartnerOrderInternalCouponsCampaignLink->getInternalCouponsCampaignsId()
-						));
-		// free result
-		pg_free_result($result);*/
+	public static function bookBillingInternalCoupons(BillingPartnerOrderInternalCouponsCampaignLink $billingPartnerOrderInternalCouponsCampaignLink, $tobookCounter) {
+		if($tobookCounter > 0) {
+			$query = "UPDATE billing_internal_coupons SET updated_date = CURRENT_TIMESTAMP, partnersordersinternalcouponscampaignslinkid = $1 WHERE";
+			$query.= " _id IN (";
+			$query.= " SELECT _id FROM billing_internal_coupons WHERE internalcouponscampaignsid = $2 AND partnersordersinternalcouponscampaignslinkid IS NULL AND coupon_status = 'waiting'";
+			$query.= " ORDER BY _id ASC LIMIT $3";
+			$query.= ")";
+			$result = pg_query_params(config::getDbConn(), $query,
+					array(	$billingPartnerOrderInternalCouponsCampaignLink->getId(),
+							$billingPartnerOrderInternalCouponsCampaignLink->getInternalCouponsCampaignsId(),
+							$tobookCounter));
+			// free result
+			pg_free_result($result);
+		}
 	}
 	
 }

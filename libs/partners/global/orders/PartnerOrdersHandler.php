@@ -66,21 +66,28 @@ class PartnerOrdersHandler {
 			BookPartnerOrderRequest $bookPartnerOrderRequest) {
 		try {
 			config::getLogger()->addInfo("booking a ".$this->partner->getName()." partnerOrder...");
-			$billingPartnerOrderInternalCouponsCampaignLinks = BillingPartnerOrderInternalCouponsCampaignLinkDAO::getBillingPartnerOrderInternalCouponsCampaignLinksByPartnerOrderId($billingPartnerOrder->getId());
-			foreach ($billingPartnerOrderInternalCouponsCampaignLinks as $billingPartnerOrderInternalCouponsCampaignLink) {
-				$tobookCounter = $billingPartnerOrderInternalCouponsCampaignLink->getWishedCounter() - $billingPartnerOrderInternalCouponsCampaignLink->getBookedCounter();
-				config::getLogger()->addInfo("tobookCounter=".$tobookCounter);
-				if($tobookCounter > 0) {
-					config::getLogger()->addInfo("tobookCounter=".$tobookCounter."...");
-					BillingInternalCouponDAO::bookBillingInternalCoupons($billingPartnerOrderInternalCouponsCampaignLink, $tobookCounter);
-					config::getLogger()->addInfo("tobookCounter=".$tobookCounter." done");
-					//
-					$bookedCounter = BillingInternalCouponDAO::getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($billingPartnerOrderInternalCouponsCampaignLink->getInternalCouponsCampaignsId(), $billingPartnerOrderInternalCouponsCampaignLink->getId());
-					//
-					$billingPartnerOrderInternalCouponsCampaignLink->setBookedCounter($bookedCounter);
-					$billingPartnerOrderInternalCouponsCampaignLink = BillingPartnerOrderInternalCouponsCampaignLinkDAO::updateBookedCounter($billingPartnerOrderInternalCouponsCampaignLink);
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				$billingPartnerOrderInternalCouponsCampaignLinks = BillingPartnerOrderInternalCouponsCampaignLinkDAO::getBillingPartnerOrderInternalCouponsCampaignLinksByPartnerOrderId($billingPartnerOrder->getId());
+				foreach ($billingPartnerOrderInternalCouponsCampaignLinks as $billingPartnerOrderInternalCouponsCampaignLink) {
+					$tobookCounter = $billingPartnerOrderInternalCouponsCampaignLink->getWishedCounter() - $billingPartnerOrderInternalCouponsCampaignLink->getBookedCounter();
+					if($tobookCounter > 0) {
+						BillingInternalCouponDAO::bookBillingInternalCoupons($billingPartnerOrderInternalCouponsCampaignLink, $tobookCounter);
+						//
+						$bookedCounter = BillingInternalCouponDAO::getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($billingPartnerOrderInternalCouponsCampaignLink->getInternalCouponsCampaignsId(), $billingPartnerOrderInternalCouponsCampaignLink->getId());
+						//
+						$billingPartnerOrderInternalCouponsCampaignLink->setBookedCounter($bookedCounter);
+						$billingPartnerOrderInternalCouponsCampaignLink = BillingPartnerOrderInternalCouponsCampaignLinkDAO::updateBookedCounter($billingPartnerOrderInternalCouponsCampaignLink);
+					}
 				}
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
 			}
+			$billingPartnerOrder = BillingPartnerOrderDAO::getBillingPartnerOrderById($billingPartnerOrder->getId());
 			config::getLogger()->addInfo("booking a ".$this->partner->getName()." partnerOrder done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while booking a ".$this->partner->getName()." partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
