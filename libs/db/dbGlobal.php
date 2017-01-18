@@ -5312,7 +5312,7 @@ EOL;
 			$params[] = $partnersordersinternalcouponscampaignslinkid;
 			$query.= " AND partnersordersinternalcouponscampaignslinkid = $2";
 		}
-	
+		$query.= " ORDER BY BIC._id ASC";
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 	
 		$out = array();

@@ -111,7 +111,7 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 		$result = array();
 		$indice = 1;
 		$size = 0;
-		$sizeLimit = 2;
+		$sizeLimit = getEnv('PARTNER_ORDERS_LOGISTA_FILE_SIZE_LIMIT');
 		$currentCounter = 0;
 		$csvDelimiter = ';';
 		$csvEnclosure = chr(0);
@@ -127,13 +127,13 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 					throw new Exception('csv file cannot be opened');
 				}
 				//add to result
-				$result['AFST055'.'_'.$billingPartnerOrder->getId().'_'.$indice.'.txt'] = $current_csv_file_path;
+				$result[getEnv('PARTNER_ORDERS_LOGISTA_OPERATORID').'_'.$billingPartnerOrder->getId().'_'.$indice.'.txt'] = $current_csv_file_path;
 				//fill header line
 				$headerfields = array();
 				$headerfields[] = 'E';//TYPE_ENREG
 				$headerfields[] = $billingPartnerOrder->getId();//NUM_CMD
 				$headerfields[] = $indice;//INDICE
-				$headerfields[] = ceil($totalCounter / $sizeLimit);//NB_FIC_CMD
+				$headerfields[] = ($sizeLimit > 0) ? ceil($totalCounter / $sizeLimit) : 1;//NB_FIC_CMD
 				$headerfields[] = $totalCounter;//NB_CODES
 				$headerfields[] = $now_as_str;//DATE_CREAT
 				$headerfields[] = $now_as_str;//DATE_ENVOI
@@ -142,7 +142,7 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 				$bodyFields = array();
 				$bodyFields[] = 'C';
 				$bodyFields[] = $internalCouponsCampaignOpts->getOpt('internalEAN');//CODE_ARTICLE (EAN)
-				$bodyFields[] = min($sizeLimit, $totalCounter - $currentCounter);//QUANTITE
+				$bodyFields[] = ($sizeLimit > 0) ? min($sizeLimit, $totalCounter - $currentCounter) : $totalCounter;//QUANTITE
 				fputcsv($current_csv_file_res, $bodyFields, $csvDelimiter, $csvEnclosure);
 			}
 			//fill current file
@@ -155,13 +155,19 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 			//done
 			$size++;
 			$currentCounter++;
-			if($size == $sizeLimit) {
+			if($sizeLimit > 0 && $size == $sizeLimit) {
 				fclose($current_csv_file_res);
 				$current_csv_file_res = NULL;
 				$current_csv_file_path = NULL;
 				$size = 0;
 				$indice++;
 			}
+		}
+		//close last file if any :
+		if($current_csv_file_res != NULL) {
+			fclose($current_csv_file_res);
+			$current_csv_file_res = NULL;
+			$current_csv_file_path = NULL;
 		}
 		return($result);
 	}
@@ -170,21 +176,69 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 			BillingPartnerOrderInternalCouponsCampaignLink $billingPartnerOrderInternalCouponsCampaignLink,
 			array $partnerOrderCSVs, 
 			ProcessPartnerOrderRequest $processPartnerOrderRequest) {
+		//Init openPGP
+		$key = OpenPGP_Message::parse(OpenPGP::unarmor(file_get_contents(getEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE')), "PGP PUBLIC KEY BLOCK"));
+		//Init S3
 		$s3 = S3Client::factory(array(
 				'region' => getEnv('AWS_REGION'),
 				'version' => getEnv('AWS_VERSION')));
 		$bucket = getEnv('AWS_BUCKET_BILLINGS_EXPORTS');
 		$partnerOrderCSVBaseKey = getEnv('AWS_ENV').'/'.'partners'.'/'.$this->partner->getName().'/'.'orders'.'/'.$billingPartnerOrder->getId().'-'.time();
 		foreach ($partnerOrderCSVs as $partnerOrderCSVName => $partnerOrderCSVPath) {
+			//ENCRYPT FILE
+			$partnerOrderCSVEncryptedPath = NULL;
+			if(($partnerOrderCSVEncryptedPath = tempnam('', 'tmp')) === false) {
+				throw new Exception('encrypted csv file cannot be created');
+			}
+			//see : https://github.com/singpolyma/openpgp-php/issues/19
+			$data = new OpenPGP_LiteralDataPacket(file_get_contents($partnerOrderCSVPath), array('format' => 'u', 'filename' => $partnerOrderCSVName));
+			$encrypted = OpenPGP_Crypt_Symmetric::encrypt($key, new OpenPGP_Message(array($data)));
+			if(file_put_contents($partnerOrderCSVEncryptedPath, OpenPGP::enarmor($encrypted->to_bytes(), "PGP MESSAGE")) === false) {
+				throw new Exception('encrypted csv file cannot be filled');
+			}
+			//var_dump($enc);
+			//$enc = wordwrap($enc, 64, "\n", 1);
+			//
 			$partnerOrderCSVKey = $partnerOrderCSVBaseKey.'/'.$partnerOrderCSVName;
-			//UPLOAD NEW FILE
+			//UPLOAD NEW FILE TO AMAZON
 			$s3->putObject(array(
 					'Bucket' => $bucket,
 					'Key' => $partnerOrderCSVKey,
-					'SourceFile' => $partnerOrderCSVPath
+					'SourceFile' => $partnerOrderCSVEncryptedPath
 			));
+			//UPLOAD NEW FILE TO FTP
+			$url = "ftp://".getEnv('PARTNER_ORDERS_LOGISTA_FTP_USER');
+			$url.= ":".getEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD');
+			$url.= "@".getEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST').":".getEnv('PARTNER_ORDERS_LOGISTA_FTP_PORT');
+			$url.= "/".getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_OUT')."/".$partnerOrderCSVName;
+			//
+			$fp = fopen($partnerOrderCSVEncryptedPath, 'r');
+			$curl_options = array(
+					CURLOPT_URL => $url,
+					CURLOPT_UPLOAD => true,
+					CURLOPT_INFILE => $fp,
+					CURLOPT_INFILESIZE => filesize($partnerOrderCSVEncryptedPath)
+			);
+			$curl_options[CURLOPT_PROTOCOLS] = CURLPROTO_FTP;
+			$curl_options[CURLOPT_VERBOSE] = true;
+			$CURL = curl_init();
+			curl_setopt_array($CURL, $curl_options);
+			//
+			$result = curl_exec($CURL);
+			$curl_error_message = curl_error($CURL);
+			$curl_error_code = curl_errno($CURL);
+			curl_close($CURL);
+			fclose($fp);
+			$fp = NULL;
+			if($result == false) {
+				//Exception
+				throw new Exception("curl exception, error_message=".$curl_error_message.", error_code=".$curl_error_code);
+			}
 			//done
 			unlink($partnerOrderCSVPath);
+			$partnerOrderCSVPath = NULL;
+			unlink($partnerOrderCSVEncryptedPath);
+			$partnerOrderCSVEncryptedPath = NULL;
 		}
 	}
 	
