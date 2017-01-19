@@ -24,7 +24,7 @@ class PartnerOrdersHandler {
 			$billingPartnerOrder->setPartnerOrderBillingUuid(guid());
 			$billingPartnerOrder->setPartnerId($this->partner->getId());
 			$billingPartnerOrder->setType($createPartnerOrderRequest->getPartnerOrderType());
-			$billingPartnerOrder->setName($createPartnerOrderRequest->getPartnerName());
+			$billingPartnerOrder->setName($createPartnerOrderRequest->getPartnerOrderName());
 			$billingPartnerOrder = BillingPartnerOrderDAO::addBillingPartnerOrder($billingPartnerOrder);
 			config::getLogger()->addInfo("creating a ".$this->partner->getName()." partnerOrder done successfully");
 		} catch(BillingsException $e) {

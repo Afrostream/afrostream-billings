@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 class CreatePartnerOrderRequest extends ActionRequest {
 	
 	private $partnerName;
+	private $partnerOrderName;
 	private $partnerOrderType;
 	
 	public function __construct() {
@@ -17,6 +18,14 @@ class CreatePartnerOrderRequest extends ActionRequest {
 	
 	public function getPartnerName() {
 		return($this->partnerName);
+	}
+	
+	public function setPartnerOrderName($str) {
+		$this->partnerOrderName = $str;
+	}
+	
+	public function getPartnerOrderName() {
+		return($this->partnerOrderName);
 	}
 	
 	public function setPartnerOrderType($str) {

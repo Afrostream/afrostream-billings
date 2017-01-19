@@ -75,6 +75,7 @@ class PartnerOrdersController extends BillingsController {
 			$createPartnerOrderRequest = new CreatePartnerOrderRequest();
 			$createPartnerOrderRequest->setOrigin('api');
 			$createPartnerOrderRequest->setPartnerName($partnerName);
+			$createPartnerOrderRequest->setPartnerOrderName($partnerOrderName);
 			$createPartnerOrderRequest->setPartnerOrderType($partnerOrderType);
 			$partnerOrder = $ordersHandler->doCreatePartnerOrder($createPartnerOrderRequest);
 			return($this->returnObjectAsJson($response, 'partnerOrder', $partnerOrder));
