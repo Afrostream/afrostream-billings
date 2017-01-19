@@ -143,7 +143,7 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 					throw new Exception('csv file cannot be opened');
 				}
 				//add to result
-				$result[getEnv('PARTNER_ORDERS_LOGISTA_OPERATORID').'_'.$billingPartnerOrder->getId().'_'.$indice.'.txt'] = $current_csv_file_path;
+				$result[getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_PREFIX').getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID').'_'.$billingPartnerOrder->getId().'_'.$indice.'.txt'] = $current_csv_file_path;
 				//fill header line
 				$headerfields = array();
 				$headerfields[] = 'E';//TYPE_ENREG
