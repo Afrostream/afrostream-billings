@@ -190,23 +190,27 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 			if(($partnerOrderCSVEncryptedPath = tempnam('', 'tmp')) === false) {
 				throw new Exception('encrypted csv file cannot be created');
 			}
-			//see : https://github.com/singpolyma/openpgp-php/issues/19
+			//see : https://github.com/singpolyma/openpgp-php/issues/19 for a sample
 			$data = new OpenPGP_LiteralDataPacket(file_get_contents($partnerOrderCSVPath), array('format' => 'u', 'filename' => $partnerOrderCSVName));
 			$encrypted = OpenPGP_Crypt_Symmetric::encrypt($key, new OpenPGP_Message(array($data)));
 			if(file_put_contents($partnerOrderCSVEncryptedPath, OpenPGP::enarmor($encrypted->to_bytes(), "PGP MESSAGE")) === false) {
 				throw new Exception('encrypted csv file cannot be filled');
 			}
-			//var_dump($enc);
-			//$enc = wordwrap($enc, 64, "\n", 1);
-			//
 			$partnerOrderCSVKey = $partnerOrderCSVBaseKey.'/'.$partnerOrderCSVName;
-			//UPLOAD NEW FILE TO AMAZON
+			$partnerOrderCSVEncryptedKey = $partnerOrderCSVBaseKey.'/'.'encrypted'.'/'.$partnerOrderCSVName;
+			//UPLOAD ORIGINAL FILE TO AMAZON
 			$s3->putObject(array(
 					'Bucket' => $bucket,
 					'Key' => $partnerOrderCSVKey,
+					'SourceFile' => $partnerOrderCSVPath
+			));
+			//UPLOAD ENCRYPTED FILE TO AMAZON
+			$s3->putObject(array(
+					'Bucket' => $bucket,
+					'Key' => $partnerOrderCSVEncryptedKey,
 					'SourceFile' => $partnerOrderCSVEncryptedPath
 			));
-			//UPLOAD NEW FILE TO FTP
+			//UPLOAD ENCRYPTED FILE TO FTP
 			$url = "ftp://".getEnv('PARTNER_ORDERS_LOGISTA_FTP_USER');
 			$url.= ":".getEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD');
 			$url.= "@".getEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST').":".getEnv('PARTNER_ORDERS_LOGISTA_FTP_PORT');
