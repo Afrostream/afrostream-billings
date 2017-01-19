@@ -1,6 +1,6 @@
 <?php
 
-class StockReportLoader {
+class LogistaStockReportLoader {
 	
 	private $stockReportFilePath;
 	private $csvDelimiter = ';';

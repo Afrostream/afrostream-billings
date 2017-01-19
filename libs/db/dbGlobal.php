@@ -4567,6 +4567,7 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 	private $coupon_type;
 	private $emails_enabled = false;
 	private $expires_date;
+	private $partnerid;
 	
 	public function setId($id) {
 		$this->_id = $id;
@@ -4718,6 +4719,14 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 		return($this->expires_date);
 	}
 	
+	public function setPartnerId($partnerId) {
+		$this->partnerid = $partnerId;
+	}
+	
+	public function getPartnerId() {
+		return($this->partnerid);
+	}
+	
 	public function jsonSerialize() {
 		$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($this->_id);
 		$providers = array();
@@ -4779,7 +4788,7 @@ class BillingInternalCouponsCampaignDAO {
 		_id, internal_coupons_campaigns_uuid, creation_date, name, description, prefix,
 		discount_type, amount_in_cents, currency, percent, discount_duration,
 		discount_duration_unit, discount_duration_length, generated_mode, generated_code_length,
- 		total_number, coupon_type, emails_enabled, expires_date
+ 		total_number, coupon_type, emails_enabled, expires_date, partnerid
 EOL;
 	
 	private static function getBillingInternalCouponsCampaignFromRow($row) {
@@ -4803,6 +4812,7 @@ EOL;
 		$out->setCouponType(new CouponCampaignType($row['coupon_type']));
 		$out->setEmailsEnabled($row["emails_enabled"] == 't' ? true : false);
 		$out->setExpiresDate($row["expires_date"] == NULL ? NULL : new DateTime($row["expires_date"]));
+		$out->setPartnerId($row["partnerid"]);
 		return($out);
 	}
 	
@@ -5062,6 +5072,8 @@ class BillingInternalCoupon implements JsonSerializable {
 	private $updatedDate;
 	private $redeemedDate;
 	private $expiresDate;
+	private $soldStatus;
+	private $soldDate;
 	//
 	private $partnersOrdersInternalCouponsCampaignsLinkId;
 	
@@ -5137,6 +5149,22 @@ class BillingInternalCoupon implements JsonSerializable {
 		return($this->expiresDate);
 	}
 	
+	public function setSoldStatus($soldStatus) {
+		$this->soldStatus = $soldStatus;
+	}
+	
+	public function getSoldStatus() {
+		return($this->soldStatus);
+	}
+	
+	public function setSoldDate($date) {
+		$this->soldDate = $date;
+	}
+	
+	public function getSoldDate() {
+		return($this->soldDate);
+	}
+	
 	public function setPartnersOrdersInternalCouponsCampaignsLinkId($id) {
 		$this->partnersOrdersInternalCouponsCampaignsLinkId = $id;
 	}
@@ -5184,7 +5212,9 @@ class BillingInternalCoupon implements JsonSerializable {
 class BillingInternalCouponDAO {
 	
 	private static $sfields =<<<EOL
-	_id, internalcouponscampaignsid, coupon_billing_uuid, code, coupon_status, creation_date, updated_date, redeemed_date, expires_date, partnersordersinternalcouponscampaignslinkid
+		_id, internalcouponscampaignsid, coupon_billing_uuid, code, coupon_status, 
+		creation_date, updated_date, redeemed_date, expires_date, sold_status, sold_date, 
+		partnersordersinternalcouponscampaignslinkid
 EOL;
 
 	private static function getBillingInternalCouponFromRow($row) {
@@ -5198,6 +5228,8 @@ EOL;
 		$out->setUpdatedDate($row["updated_date"] == NULL ? NULL : new DateTime($row["updated_date"]));
 		$out->setRedeemedDate($row["redeemed_date"] == NULL ? NULL : new DateTime($row["redeemed_date"]));
 		$out->setExpiresDate($row["expires_date"] == NULL ? NULL : new DateTime($row["expires_date"]));
+		$out->setSoldStatus($row["sold_status"]);
+		$out->setSoldDate($row["sold_date"] == NULL ? NULL : new DateTime($row["sold_date"]));
 		$out->setPartnersOrdersInternalCouponsCampaignsLinkId($row["partnersordersinternalcouponscampaignslinkid"]);
 		return($out);
 	}
@@ -5340,6 +5372,26 @@ EOL;
 			// free result
 			pg_free_result($result);
 		}
+	}
+	
+	public static function updateSoldStatus(BillingInternalCoupon $billingInternalCoupon) {
+		$query = "UPDATE billing_internal_coupons SET updated_date = CURRENT_TIMESTAMP, sold_status = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCoupon->getSoldStatus(),
+						$billingInternalCoupon->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponById($billingInternalCoupon->getId()));
+	}
+	
+	public static function updateSoldDate(BillingInternalCoupon $billingInternalCoupon) {
+		$query = "UPDATE billing_internal_coupons SET updated_date = CURRENT_TIMESTAMP, sold_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($billingInternalCoupon->getSoldDate()),
+						$billingInternalCoupon->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponById($billingInternalCoupon->getId()));
 	}
 	
 }
