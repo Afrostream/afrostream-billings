@@ -337,11 +337,11 @@ class dbStats {
 	 * A coupon is activated when it status is 'redeemed'
 	 *
 	 * @param DateTime $dateStart
-	 * @param Datetime $dateEnd
+	 * @param DateTime $dateEnd
 	 *
 	 * @return array
 	 */
-	public static function getCouponsActivation(DateTime $dateStart, Datetime $dateEnd)
+	public static function getCouponsActivation(DateTime $dateStart, DateTime $dateEnd)
 	{
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
@@ -383,11 +383,11 @@ EOL;
 	 * The coupon must belongs to cashway provider and his status is 'pending'
 	 *
 	 * @param DateTime $dateStart
-	 * @param Datetime $dateEnd
+	 * @param DateTime $dateEnd
 	 *
 	 * @return array
 	 */
-	public static function getCouponsCashwayGenerated(DateTime $dateStart, Datetime $dateEnd)
+	public static function getCouponsCashwayGenerated(DateTime $dateStart, DateTime $dateEnd)
 	{
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
@@ -428,7 +428,7 @@ EOL;
 		return $out;
 	}
 	
-	public static function getCouponsAfrGenerated(DateTime $dateStart, Datetime $dateEnd, CouponCampaignType $couponCampaignType)
+	public static function getCouponsAfrGenerated(DateTime $dateStart, DateTime $dateEnd, CouponCampaignType $couponCampaignType)
 	{
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
@@ -469,7 +469,7 @@ EOL;
 		return $out;		
 	}
 	
-	public static function getTransactions(DateTime $dateStart, Datetime $dateEnd, array $transactionTypes, array $transactionStatus) {
+	public static function getTransactions(DateTime $dateStart, DateTime $dateEnd, array $transactionTypes, array $transactionStatus) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
@@ -524,7 +524,7 @@ EOL;
 		return $out;
 	}
 	
-	public static function getNumberOfTransactions(DateTime $dateStart, Datetime $dateEnd, array $transactionTypes, array $transactionStatus) {
+	public static function getNumberOfTransactions(DateTime $dateStart, DateTime $dateEnd, array $transactionTypes, array $transactionStatus) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));

@@ -2681,8 +2681,8 @@ class BillingsWebHookLogDAO {
 		$out->setId($row["_id"]);
 		$out->setWebHookId($row["webhookid"]);
 		$out->setProcessingStatus($row["processing_status"]);
-		$out->setStartedDate($row["started_date"]);
-		$out->setEndedDate($row["ended_date"]);
+		$out->setStartedDate($row["started_date"] == NULL ? NULL : new DateTime($row["started_date"]));
+		$out->setEndedDate($row["ended_date"] == NULL ? NULL : new DateTime($row["ended_date"]));
 		$out->setMessage($row["message"]);
 		return($out);
 	}
@@ -2759,7 +2759,7 @@ class BillingsWebHookLog {
 		return($this->started_date);
 	}
 
-	public function setStartedDate($date) {
+	public function setStartedDate(DateTime $date) {
 		$this->started_date = $date;
 	}
 
@@ -2767,7 +2767,7 @@ class BillingsWebHookLog {
 		return($this->ended_date);
 	}
 
-	public function setEndedDate($date) {
+	public function setEndedDate(DateTime $date = NULL) {
 		$this->ended_date = $date;
 	}
 
@@ -2828,7 +2828,7 @@ class BillingsSubscriptionActionLog {
 		return($this->started_date);
 	}
 	
-	public function setStartedDate($date) {
+	public function setStartedDate(DateTime $date) {
 		$this->started_date = $date;
 	}
 	
@@ -2836,7 +2836,7 @@ class BillingsSubscriptionActionLog {
 		return($this->ended_date);
 	}
 	
-	public function setEndedDate($date) {
+	public function setEndedDate(DateTime $date = NULL) {
 		$this->ended_date = $date;
 	}
 	
@@ -2869,8 +2869,8 @@ class BillingsSubscriptionActionLogDAO {
 		$out->setProcessingStatus($row["processing_status"]);
 		$out->setProcessingStatusCode($row["processing_status_code"]);
 		$out->setActionType($row["action_type"]);
-		$out->setStartedDate($row["started_date"]);
-		$out->setEndedDate($row["ended_date"]);
+		$out->setStartedDate($row["started_date"] == NULL ? NULL : new DateTime($row["started_date"]));
+		$out->setEndedDate($row["ended_date"] == NULL ? NULL : new DateTime($row["ended_date"]));
 		$out->setMessage($row["message"]);
 		return($out);
 	}
@@ -2960,7 +2960,7 @@ class ProcessingLog {
 		return($this->started_date);
 	}
 	
-	public function setStartedDate($date) {
+	public function setStartedDate(DateTime $date) {
 		$this->started_date = $date;
 	}
 	
@@ -2968,7 +2968,7 @@ class ProcessingLog {
 		return($this->ended_date);
 	}
 	
-	public function setEndedDate($date) {
+	public function setEndedDate(DateTime $date = NULL) {
 		$this->ended_date = $date;
 	}
 	
@@ -2992,8 +2992,8 @@ class ProcessingLogDAO {
 		$out->setProviderId($row["providerid"]);
 		$out->setProcessingType($row["processing_type"]);
 		$out->setProcessingStatus($row["processing_status"]);
-		$out->setStartedDate($row["started_date"]);
-		$out->setEndedDate($row["ended_date"]);
+		$out->setStartedDate($row["started_date"] == NULL ? NULL : new DateTime($row["started_date"]));
+		$out->setEndedDate($row["ended_date"] == NULL ? NULL : new DateTime($row["ended_date"]));
 		$out->setMessage($row["message"]);
 		return($out);
 	}
@@ -3032,7 +3032,7 @@ class ProcessingLogDAO {
 		return($out);
 	}
 	
-	public static function getProcessingLogByDay($providerid = NULL, $processing_type, Datetime $day) {
+	public static function getProcessingLogByDay($providerid = NULL, $processing_type, DateTime $day) {
 		$dayStr = dbGlobal::toISODate($day);
 		$params = array();
 		$query = "SELECT ".self::$sfields." FROM billing_processing_logs WHERE processing_type = $1";
@@ -6527,8 +6527,8 @@ class BillingPartnerOrderProcessingLogDAO {
 		$out->setId($row["_id"]);
 		$out->setPartnerOrderId($row["partnerorderid"]);
 		$out->setProcessingStatus($row["processing_status"]);
-		$out->setStartedDate($row["started_date"]);
-		$out->setEndedDate($row["ended_date"]);
+		$out->setStartedDate($row["started_date"] == NULL ? NULL : new DateTime($row["started_date"]));
+		$out->setEndedDate($row["ended_date"] == NULL ? NULL : new DateTime($row["ended_date"]));
 		$out->setMessage($row["message"]);
 		return($out);
 	}

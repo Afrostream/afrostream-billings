@@ -35,11 +35,13 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 	
 	public function doProcessPartnerOrder(BillingPartnerOrder $billingPartnerOrder,
 			ProcessPartnerOrderRequest $processPartnerOrderRequest) {
+		$billingPartnerOrderProcessingLog  = NULL;
 		try {
 		 	config::getLogger()->addInfo("processing a ".$this->partner->getName()." partnerOrder...");
-		 	//TODO : processingStatus = 'processing'
-		 	//TODO : processingLOG
-		 	//TODO : Get Coupons
+		 	$billingPartnerOrderProcessingLog = BillingPartnerOrderProcessingLogDAO::addBillingPartnerOrderProcessingLog($billingPartnerOrder->getId());
+		 	$billingPartnerOrder->setProcessingStatus('processing');
+		 	BillingPartnerOrderDAO::updateProcessingStatus($billingPartnerOrder);
+		 	//Get Coupons
 		 	$billingPartnerOrderInternalCouponsCampaignLinks = BillingPartnerOrderInternalCouponsCampaignLinkDAO::getBillingPartnerOrderInternalCouponsCampaignLinksByPartnerOrderId($billingPartnerOrder->getId());
 		 	if(count($billingPartnerOrderInternalCouponsCampaignLinks) == 0) {
 		 		//Exception
@@ -50,27 +52,41 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 		 		throw new BillingsException(new ExceptionType(ExceptionType::internal), "only one campaign can be linked to the partnerOrder");
 		 	}
 		 	$billingPartnerOrderInternalCouponsCampaignLink = $billingPartnerOrderInternalCouponsCampaignLinks[0];
-		 	//Generate CSVs
+		 	//Generate locally CSVs
 		 	$partnerOrderCSVs = $this->generatePartnerOrderCSVs($billingPartnerOrder, $billingPartnerOrderInternalCouponsCampaignLink, $processPartnerOrderRequest);
-		 	//Generate CSVs
-		 	//then encrypt CSVs
-		 	//PUT the readable CSVs and the encrypted CSVs on AMAZON
+		 	//Upload CSVs
 		 	$this->uploadPartnerOrderCSVs($billingPartnerOrder, $billingPartnerOrderInternalCouponsCampaignLink, $partnerOrderCSVs, $processPartnerOrderRequest);
-		 	//PUT encrypted CSVs ON FTP
-		 	//TODO : processingStatus = 'done'
 		 	//Done
+		 	$billingPartnerOrder->setProcessingStatus('processed');
+		 	BillingPartnerOrderDAO::updateProcessingStatus($billingPartnerOrder);
+		 	$billingPartnerOrderProcessingLog->setProcessingStatus('processed');
+		 	BillingPartnerOrderProcessingLogDAO::updateBillingPartnerOrderProcessingLogProcessingStatus($billingPartnerOrderProcessingLog);
 		 	config::getLogger()->addInfo("processing a ".$this->partner->getName()." partnerOrder done successfully");
+		 	$billingPartnerOrderProcessingLog = NULL;
 		 } catch(BillingsException $e) {
-			$msg = "a billings exception occurred while processing a ".$this->partner->getName()." partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
+		 	$billingPartnerOrder->setProcessingStatus('error');
+		 	BillingPartnerOrderDAO::updateProcessingStatus($billingPartnerOrder);
+		 	if(isset($billingPartnerOrderProcessingLog)) {
+		 		$billingPartnerOrderProcessingLog->setProcessingStatus('error');
+		 		$billingPartnerOrderProcessingLog->setMessage($e->getMessage());
+		 	}
+		 	$msg = "a billings exception occurred while processing a ".$this->partner->getName()." partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("processing a ".$this->partner->getName()."partnerOrder failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
+			$billingPartnerOrder->setProcessingStatus('error');
+			BillingPartnerOrderDAO::updateProcessingStatus($billingPartnerOrder);
+			if(isset($billingPartnerOrderProcessingLog)) {
+				$billingPartnerOrderProcessingLog->setProcessingStatus('error');
+				$billingPartnerOrderProcessingLog->setMessage($e->getMessage());
+			}
 			$msg = "an unknown exception occurred while processing a ".$this->partner->getName()." partnerOrder, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("processing a ".$this->partner->getName()." partnerOrder failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		} finally {
-			//TODO : processingStatus has to be SET
-			//TODO : processingLOG
+			if(isset($billingPartnerOrderProcessingLog)) {
+				BillingPartnerOrderProcessingLogDAO::updateBillingPartnerOrderProcessingLogProcessingStatus($billingPartnerOrderProcessingLog);
+			}
 		}
 		return($billingPartnerOrder);
 	}
@@ -183,7 +199,7 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 				'region' => getEnv('AWS_REGION'),
 				'version' => getEnv('AWS_VERSION')));
 		$bucket = getEnv('AWS_BUCKET_BILLINGS_EXPORTS');
-		$partnerOrderCSVBaseKey = getEnv('AWS_ENV').'/'.'partners'.'/'.$this->partner->getName().'/'.'orders'.'/'.$billingPartnerOrder->getId().'-'.time();
+		$partnerOrderCSVBaseKey = getEnv('AWS_ENV').'/'.'partners'.'/'.$this->partner->getName().'/'.'orders'.'/'.$billingPartnerOrder->getId().'/'.time();
 		foreach ($partnerOrderCSVs as $partnerOrderCSVName => $partnerOrderCSVPath) {
 			//ENCRYPT FILE
 			$partnerOrderCSVEncryptedPath = NULL;
