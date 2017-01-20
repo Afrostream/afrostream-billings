@@ -48,6 +48,7 @@ class LogistaSalesReportLoader {
 		if($productionDate === false) {
 			throw new Exception("Header record cannot be loaded, production date cannot be parsed : ".$fields[1]);
 		}
+		$productionDate->setTime(0, 0, 0);
 		$this->productionDate = $productionDate;
 	}
 	

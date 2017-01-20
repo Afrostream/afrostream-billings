@@ -5074,6 +5074,7 @@ class BillingInternalCoupon implements JsonSerializable {
 	private $expiresDate;
 	private $soldStatus;
 	private $soldDate;
+	private $stockDate;
 	//
 	private $partnersOrdersInternalCouponsCampaignsLinkId;
 	
@@ -5165,6 +5166,14 @@ class BillingInternalCoupon implements JsonSerializable {
 		return($this->soldDate);
 	}
 	
+	public function setStockDate($date) {
+		$this->stockDate = $date;
+	}
+	
+	public function getStockDate() {
+		return($this->stockDate);
+	}
+	
 	public function setPartnersOrdersInternalCouponsCampaignsLinkId($id) {
 		$this->partnersOrdersInternalCouponsCampaignsLinkId = $id;
 	}
@@ -5213,7 +5222,7 @@ class BillingInternalCouponDAO {
 	
 	private static $sfields =<<<EOL
 		_id, internalcouponscampaignsid, coupon_billing_uuid, code, coupon_status, 
-		creation_date, updated_date, redeemed_date, expires_date, sold_status, sold_date, 
+		creation_date, updated_date, redeemed_date, expires_date, sold_status, sold_date, stock_date,  
 		partnersordersinternalcouponscampaignslinkid
 EOL;
 
@@ -5230,6 +5239,7 @@ EOL;
 		$out->setExpiresDate($row["expires_date"] == NULL ? NULL : new DateTime($row["expires_date"]));
 		$out->setSoldStatus($row["sold_status"]);
 		$out->setSoldDate($row["sold_date"] == NULL ? NULL : new DateTime($row["sold_date"]));
+		$out->setStockDate($row["stock_date"] == NULL ? NULL : new DateTime($row["stock_date"]));
 		$out->setPartnersOrdersInternalCouponsCampaignsLinkId($row["partnersordersinternalcouponscampaignslinkid"]);
 		return($out);
 	}
@@ -5388,6 +5398,16 @@ EOL;
 		$query = "UPDATE billing_internal_coupons SET updated_date = CURRENT_TIMESTAMP, sold_date = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	dbGlobal::toISODate($billingInternalCoupon->getSoldDate()),
+						$billingInternalCoupon->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponById($billingInternalCoupon->getId()));
+	}
+	
+	public static function updateStockDate(BillingInternalCoupon $billingInternalCoupon) {
+		$query = "UPDATE billing_internal_coupons SET updated_date = CURRENT_TIMESTAMP, stock_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($billingInternalCoupon->getStockDate()),
 						$billingInternalCoupon->getId()));
 		// free result
 		pg_free_result($result);

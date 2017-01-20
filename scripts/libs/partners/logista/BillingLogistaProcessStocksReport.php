@@ -16,14 +16,14 @@ class BillingLogistaProcessStocksReport {
 		$stocksRecords = $logistaStocksReportLoader->getStocksRecords();
 		foreach($stocksRecords as $stocksRecord) {
 			try {
-				$this->doProcessStocksRecord($stocksRecord);
+				$this->doProcessStocksRecord($stocksRecord, $logistaStocksReportLoader->getStocksDate());
 			} catch(Exception $e) {
 				ScriptsConfig::getLogger()->addError("an error occurred while processing stocks record, message=".$e->getMessage());
 			}
 		}
 	}
 	
-	private function doProcessStocksRecord(StocksRecord $stocksRecord) {
+	private function doProcessStocksRecord(StocksRecord $stocksRecord, DateTime $stockDate) {
 		$billingInternalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($stocksRecord->getSerialNumber());
 		if($billingInternalCoupon == NULL) {
 			throw new Exception("no internal coupon found with id = ".$stocksRecord->getSerialNumber());
@@ -36,41 +36,11 @@ class BillingLogistaProcessStocksReport {
 			throw new Exception("internal coupon campaign does not belong to the partner with id = ".$this->partner->getId());
 		}
 		//ok
-		$billingInternalCouponOpts = BillingInternalCouponOptsDAO::getBillingInternalCouponOptsByInternalCouponId($billingInternalCoupon->getId());
-		$current_internal_coupon_opts_array = $billingInternalCouponOpts->getOpts();
 		try {
 			//START TRANSACTION
 			pg_query("BEGIN");
-			/*$billingInternalCoupon->setSoldStatus('sold');
-			$billingInternalCoupon = BillingInternalCouponDAO::updateSoldStatus($billingInternalCoupon);
-			$billingInternalCoupon->setSoldDate($saleRecord->getSaleDate());
-			$billingInternalCoupon = BillingInternalCouponDAO::updateSoldDate($billingInternalCoupon);
-			//HAD OTHERS DATA AVAILABLE IN SALERECORD AS OPTS IN INTERNALCOUPON
-			if(array_key_exists('logistaCustomerId', $current_internal_coupon_opts_array)) {
-				BillingInternalCouponOptsDAO::updateBillingInternalCouponOptsKey($billingInternalCoupon->getId(), 'logistaCustomerId', $saleRecord->getCustomerId());
-			} else {
-				BillingInternalCouponOptsDAO::addBillingInternalCouponsOptsKey($billingInternalCoupon->getId(), 'logistaCustomerId', $saleRecord->getCustomerId());
-			}
-			if(array_key_exists('logistaShopId', $current_internal_coupon_opts_array)) {
-				BillingInternalCouponOptsDAO::updateBillingInternalCouponOptsKey($billingInternalCoupon->getId(), 'logistaShopId', $saleRecord->getShopId());
-			} else {
-				BillingInternalCouponOptsDAO::addBillingInternalCouponsOptsKey($billingInternalCoupon->getId(), 'logistaShopId', $saleRecord->getShopId());
-			}			
-			if(array_key_exists('logistaZipCode', $current_internal_coupon_opts_array)) {
-				BillingInternalCouponOptsDAO::updateBillingInternalCouponOptsKey($billingInternalCoupon->getId(), 'logistaZipCode', $saleRecord->getZipCode());
-			} else {
-				BillingInternalCouponOptsDAO::addBillingInternalCouponsOptsKey($billingInternalCoupon->getId(), 'logistaZipCode', $saleRecord->getZipCode());
-			}
-			if(array_key_exists('logistaCountry', $current_internal_coupon_opts_array)) {
-				BillingInternalCouponOptsDAO::updateBillingInternalCouponOptsKey($billingInternalCoupon->getId(), 'logistaCountry', $saleRecord->getCountry());
-			} else {
-				BillingInternalCouponOptsDAO::addBillingInternalCouponsOptsKey($billingInternalCoupon->getId(), 'logistaCountry', $saleRecord->getCountry());
-			}
-			if(array_key_exists('logistaTimezoneDiff', $current_internal_coupon_opts_array)) {
-				BillingInternalCouponOptsDAO::updateBillingInternalCouponOptsKey($billingInternalCoupon->getId(), 'logistaTimezoneDiff', $saleRecord->getTimezoneDiff());
-			} else {
-				BillingInternalCouponOptsDAO::addBillingInternalCouponsOptsKey($billingInternalCoupon->getId(), 'logistaTimezoneDiff', $saleRecord->getTimezoneDiff());
-			}*/
+			$billingInternalCoupon->setStockDate($stockDate);
+			$billingInternalCoupon = BillingInternalCouponDAO::updateStockDate($billingInternalCoupon);
 			//COMMIT
 			pg_query("COMMIT");
 		} catch(Exception $e) {

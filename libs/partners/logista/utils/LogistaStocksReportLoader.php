@@ -48,6 +48,7 @@ class LogistaStocksReportLoader {
 		if($stocksDate === false) {
 			throw new Exception("Header record cannot be loaded, stocks date cannot be parsed : ".$fields[1]);
 		}
+		$stocksDate->setTime(0, 0, 0);
 		$this->stocksDate = $stocksDate;
 	}
 	
@@ -105,6 +106,10 @@ class LogistaStocksReportLoader {
 	
 	public function getStocksRecords() {
 		return($this->stocksRecords);
+	}
+	
+	public function getStocksDate() {
+		return($this->stocksDate);
 	}
 	
 }
