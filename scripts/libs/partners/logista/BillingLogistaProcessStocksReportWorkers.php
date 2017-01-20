@@ -41,11 +41,11 @@ class BillingLogistaProcessStocksReportWorkers extends BillingsWorkers {
 			]));
 			$fromLogistaDirFiles = $filesystem->listContents(getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_IN'), false);
 			ScriptsConfig::getLogger()->addError("listSize : ".count($fromLogistaDirFiles));
-			$stocksReportBaseBame = getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME').'_'.getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID').'_'.'stocks'.'_';
+			$stocksReportBasename = getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME').'_'.getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID').'_'.'stocks'.'_';
 			foreach($fromLogistaDirFiles as $fromLogistaDirFile) {
 				$filename = $fromLogistaDirFile['basename'];
 				ScriptsConfig::getLogger()->addError(var_export($fromLogistaDirFile, true));
-				if(substr($filename, 0, strlen($stocksReportBaseBame)) === $stocksReportBaseBame) {
+				if(substr($filename, 0, strlen($stocksReportBasename)) === $stocksReportBasename) {
 					$this->doProcessStocksReport($fromLogistaDirFile);
 				}
 			}

@@ -5,22 +5,22 @@ use League\Flysystem\Adapter\Ftp;
 
 require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
-require_once __DIR__ . '/BillingLogistaProcessSalesReport.php';
+require_once __DIR__ . '/BillingLogistaProcessIncidentsReport.php';
 
-class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
+class BillingLogistaProcessIncidentsReportWorkers extends BillingsWorkers {
 	
-	private $processingType = 'logista_sales_reporting';
+	private $processingType = 'logista_incidents_reporting';
 
 	protected $partner;
-	protected $billingLogistaProcessSalesReport;
+	protected $billingLogistaProcessIncidentsReport;
 
 	public function __construct() {
 		parent::__construct();
 		$this->partner = BillingPartnerDAO::getPartnerByName('logista');
-		$this->billingLogistaProcessSalesReport = new BillingLogistaProcessSalesReport($this->partner);
+		$this->billingLogistaProcessIncidentsReport = new BillingLogistaProcessIncidentsReport($this->partner);
 	}
 	
-	public function doProcessSalesReports() {
+	public function doProcessIncidentsReports() {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
@@ -41,12 +41,12 @@ class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
 			]));
 			$fromLogistaDirFiles = $filesystem->listContents(getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_IN'), false);
 			ScriptsConfig::getLogger()->addError("listSize : ".count($fromLogistaDirFiles));
-			$salesReportBasename = getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME').'_'.getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID').'_'.'sales'.'_';
+			$incidentsReportBasename = getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME').'_'.getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID').'_'.'incidents'.'_';
 			foreach($fromLogistaDirFiles as $fromLogistaDirFile) {
 				$filename = $fromLogistaDirFile['basename'];
 				ScriptsConfig::getLogger()->addError(var_export($fromLogistaDirFile, true));
-				if(substr($filename, 0, strlen($salesReportBasename)) === $salesReportBasename) {
-					$this->doProcessSalesReport($fromLogistaDirFile);
+				if(substr($filename, 0, strlen($incidentsReportBasename)) === $incidentsReportBasename) {
+					$this->doProcessIncidentsReport($fromLogistaDirFile);
 				}
 			}
 			//DONE
@@ -72,7 +72,7 @@ class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
 		}
 	}
 	
-	private function doProcessSalesReport(array $fromLogistaDirFile) {
+	private function doProcessIncidentsReport(array $fromLogistaDirFile) {
 		$filesystem = new Filesystem(new Ftp([
 				'host' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST'),
 				'username' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_USER'),
@@ -88,20 +88,21 @@ class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
 		$contents = stream_get_contents($stream);
 		fclose($stream);
 		$stream = NULL;
-		$sales_report_file_path = NULL;
-		if(($sales_report_file_path = tempnam('', 'tmp')) === false) {
+		$incidents_report_file_path = NULL;
+		if(($incidents_report_file_path = tempnam('', 'tmp')) === false) {
 			throw new Exception('file cannot be created');
 		}
-		$sales_report_file_res = NULL;
-		if(($sales_report_file_res = fopen($sales_report_file_path, 'w')) === false) {
+		$incidents_report_file_res = NULL;
+		if(($incidents_report_file_res = fopen($incidents_report_file_path, 'w')) === false) {
 			throw new Exception('file cannot be opened for writing');
 		}
-		fwrite($sales_report_file_res, $contents);
-		fclose($sales_report_file_res);
-		$sales_report_file_res = NULL;
-		$this->billingLogistaProcessSalesReport->doProcess($sales_report_file_path);
-		unlink($sales_report_file_path);
-		$sales_report_file_path = NULL;
+		fwrite($incidents_report_file_res, $contents);
+		fclose($incidents_report_file_res);
+		$incidents_report_file_res = NULL;
+		$logistaIncidentsResponseReport = $this->billingLogistaProcessIncidentsReport->doProcess($incidents_report_file_path);
+		unlink($incidents_report_file_path);
+		$incidents_report_file_path = NULL;
+		//TODO : save it in a file and upload it in the FTP
 		//done
 		if($filesystem->rename($toProcessingPath, $toProcessedPath) != true) {
 			throw new Exception("file cannot be moved");

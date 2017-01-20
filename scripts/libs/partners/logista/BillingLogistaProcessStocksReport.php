@@ -13,20 +13,20 @@ class BillingLogistaProcessStocksReport {
 	
 	public function doProcess($stocksReportFilePath) {
 		$logistaStocksReportLoader = new LogistaStocksReportLoader($stocksReportFilePath);
-		$stocksRecords = $logistaStocksReportLoader->getStocksRecords();
-		foreach($stocksRecords as $stocksRecord) {
+		$stockRecords = $logistaStocksReportLoader->getStockRecords();
+		foreach($stockRecords as $stockRecord) {
 			try {
-				$this->doProcessStocksRecord($stocksRecord, $logistaStocksReportLoader->getStocksDate());
+				$this->doProcessStockRecord($stockRecord, $logistaStocksReportLoader->getStocksDate());
 			} catch(Exception $e) {
 				ScriptsConfig::getLogger()->addError("an error occurred while processing stocks record, message=".$e->getMessage());
 			}
 		}
 	}
 	
-	private function doProcessStocksRecord(StocksRecord $stocksRecord, DateTime $stockDate) {
-		$billingInternalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($stocksRecord->getSerialNumber());
+	private function doProcessStockRecord(StockRecord $stockRecord, DateTime $stockDate) {
+		$billingInternalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($stockRecord->getSerialNumber());
 		if($billingInternalCoupon == NULL) {
-			throw new Exception("no internal coupon found with id = ".$stocksRecord->getSerialNumber());
+			throw new Exception("no internal coupon found with id = ".$stockRecord->getSerialNumber());
 		}//Some checks before proccessing...
 		$billingInternalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($billingInternalCoupon->getInternalCouponsCampaignsId());
 		if($billingInternalCouponsCampaign == NULL) {

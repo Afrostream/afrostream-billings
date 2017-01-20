@@ -6,7 +6,7 @@ class LogistaStocksReportLoader {
 	private $csvDelimiter = ';';
 	//From line 1, RecordType = D
 	private $stocksDate;
-	private $stocksRecords = array();
+	private $stockRecords = array();
 	//From lastLine, RecordType = E
 	private $hasChecksumRecord = false;
 	private $numberOfRecords;
@@ -58,7 +58,7 @@ class LogistaStocksReportLoader {
 		}
 		$recordType = $fields[0];
 		if($recordType == 'M') {
-			$this->loadStocksRecord($fields);
+			$this->loadStockRecord($fields);
 		} else if($recordType == 'E') {
 			$this->loadChecksumRecord($fields);
 		} else {
@@ -66,21 +66,21 @@ class LogistaStocksReportLoader {
 		}
 	}
 	
-	private function loadStocksRecord(array $fields) {
+	private function loadStockRecord(array $fields) {
 		if(count($fields) < 2) {
-			throw new Exception("Stocks record cannot be loaded, number of fields expected is >= 2, number of fields is : ".count($fields));
+			throw new Exception("Stock record cannot be loaded, number of fields expected is >= 2, number of fields is : ".count($fields));
 		}
 		$recordType = $fields[0];
 		if($recordType != 'M') {
 			throw new Exception("Line record is not a stocks record type");
 		}
-		$stocksRecord = new StocksRecord();
-		$stocksRecord->setSerialNumber($fields[1]);
+		$stockRecord = new StockRecord();
+		$stockRecord->setSerialNumber($fields[1]);
 		if(count($fields) > 2) {
-			$stocksRecord->setEAN($fields[2]);
+			$stockRecord->setEAN($fields[2]);
 		}
 		//done
-		$this->stocksRecords[] = $stocksRecord;
+		$this->stockRecords[] = $stockRecord;
 	}
 	
 	private function loadChecksumRecord(array $fields) {
@@ -99,13 +99,13 @@ class LogistaStocksReportLoader {
 		if(!$this->hasChecksumRecord) {
 			throw new Exception("No checksum record found");
 		}
-		if(count($this->stocksRecords) != $this->numberOfRecords) {
+		if(count($this->stockRecords) != $this->numberOfRecords) {
 			throw new Exception("Number of records differ, checksum says : ".$this->numberOfRecords.", found : ".count($this->stockRecords));
 		}
 	}
 	
-	public function getStocksRecords() {
-		return($this->stocksRecords);
+	public function getStockRecords() {
+		return($this->stockRecords);
 	}
 	
 	public function getStocksDate() {
@@ -114,7 +114,7 @@ class LogistaStocksReportLoader {
 	
 }
 
-class StocksRecord {
+class StockRecord {
 	
 	private $serialNumber;
 	private $ean;
