@@ -41,7 +41,7 @@ class LogistaSalesReportLoader {
 			throw new Exception("Header record cannot be loaded, number of fields expected is >= 2, number of fields is : ".count($fields));
 		}
 		$recordType = $fields[0];
-		if($recordType != 'E') {
+		if($recordType != 'D') {
 			throw new Exception("Line record is not a header record type");
 		}
 		$productionDate = DateTime::createFromFormat('Ymd', $fields[1], new DateTimeZone(config::$timezone));

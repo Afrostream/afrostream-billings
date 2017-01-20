@@ -5462,13 +5462,13 @@ class BillingInternalCouponOptsDAO {
 	
 	public static function addBillingInternalCouponOpts(BillingInternalCouponOpts $billingInternalCouponOpts) {
 		foreach ($billingInternalCouponOpts->getOpts() as $k => $v) {
-			if(isset($v) && is_scalar($v)) {
+			if(is_null($v) || is_scalar($v)) {
 				$query = "INSERT INTO billing_internal_coupons_opts (internalcouponsid, key, value)";
 				$query.= " VALUES ($1, $2, $3) RETURNING _id";
 				$result = pg_query_params(config::getDbConn(), $query,
 						array($billingInternalCouponOpts->getInternalCouponId(),
 								trim($k),
-								trim($v)));
+								($v == NULL) ? NULL : trim($v)));
 				// free result
 				pg_free_result($result);
 			}
@@ -5477,9 +5477,9 @@ class BillingInternalCouponOptsDAO {
 	}
 
 	public static function updateBillingInternalCouponOptsKey($internalcouponsid, $key, $value) {
-		if(is_scalar($value)) {
+		if(is_null($value) || is_scalar($value)) {
 			$query = "UPDATE billing_internal_coupons_opts SET value = $3 WHERE internalcouponsid = $1 AND key = $2 AND deleted = false";
-			$result = pg_query_params(config::getDbConn(), $query, array($internalcouponsid, $key, trim($value)));
+			$result = pg_query_params(config::getDbConn(), $query, array($internalcouponsid, $key, ($value == NULL) ? NULL : trim($value)));
 			// free result
 			pg_free_result($result);
 		}
@@ -5493,13 +5493,13 @@ class BillingInternalCouponOptsDAO {
 	}
 
 	public static function addBillingInternalCouponsOptsKey($internalcouponsid, $key, $value) {
-		if(is_scalar($value)) {
+		if(is_null($value) || is_scalar($value)) {
 			$query = "INSERT INTO billing_internal_coupons_opts (internalcouponsid, key, value)";
 			$query.= " VALUES ($1, $2, $3) RETURNING _id";
 			$result = pg_query_params(config::getDbConn(), $query,
 					array($internalcouponsid,
 							trim($key),
-							trim($value)));
+							($value == NULL) ? NULL : trim($value)));
 			// free result
 			pg_free_result($result);
 		}

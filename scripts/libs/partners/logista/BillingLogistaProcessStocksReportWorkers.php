@@ -5,22 +5,22 @@ use League\Flysystem\Adapter\Ftp;
 
 require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
-require_once __DIR__ . '/BillingLogistaProcessSalesReport.php';
+require_once __DIR__ . '/BillingLogistaProcessStocksReport.php';
 
-class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
+class BillingLogistaProcessStocksReportWorkers extends BillingsWorkers {
 	
-	private $processingType = 'logista_sales_reporting';
+	private $processingType = 'logista_stocks_reporting';
 
 	protected $partner;
-	protected $billingLogistaProcessSalesReport;
+	protected $billingLogistaProcessStocksReport;
 
 	public function __construct() {
 		parent::__construct();
 		$this->partner = BillingPartnerDAO::getPartnerByName('logista');
-		$this->billingLogistaProcessSalesReport = new BillingLogistaProcessSalesReport($this->partner);
+		$this->billingLogistaProcessStocksReport = new BillingLogistaProcessStocksReport($this->partner);
 	}
 	
-	public function doProcessSalesReports() {
+	public function doProcessStocksReports() {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
@@ -41,12 +41,12 @@ class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
 			]));
 			$fromLogistaDirFiles = $filesystem->listContents(getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_IN'), false);
 			ScriptsConfig::getLogger()->addError("listSize : ".count($fromLogistaDirFiles));
-			$salesReportBaseBame = getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME').'_'.getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID').'_'.'sales'.'_';
+			$stocksReportBaseBame = getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME').'_'.getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID').'_'.'stocks'.'_';
 			foreach($fromLogistaDirFiles as $fromLogistaDirFile) {
 				$filename = $fromLogistaDirFile['basename'];
 				ScriptsConfig::getLogger()->addError(var_export($fromLogistaDirFile, true));
-				if(substr($filename, 0, strlen($salesReportBaseBame)) === $salesReportBaseBame) {
-					$this->doProcessSalesReport($fromLogistaDirFile);
+				if(substr($filename, 0, strlen($stocksReportBaseBame)) === $stocksReportBaseBame) {
+					$this->doProcessStocksReport($fromLogistaDirFile);
 				}
 			}
 			//DONE
@@ -72,7 +72,7 @@ class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
 		}
 	}
 	
-	private function doProcessSalesReport(array $fromLogistaDirFile) {
+	private function doProcessStocksReport(array $fromLogistaDirFile) {
 		$filesystem = new Filesystem(new Ftp([
 				'host' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST'),
 				'username' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_USER'),
@@ -88,20 +88,20 @@ class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
 		$contents = stream_get_contents($stream);
 		fclose($stream);
 		$stream = NULL;
-		$sales_report_file_path = NULL;
-		if(($sales_report_file_path = tempnam('', 'tmp')) === false) {
+		$stocks_report_file_path = NULL;
+		if(($stocks_report_file_path = tempnam('', 'tmp')) === false) {
 			throw new Exception('file cannot be created');
 		}
-		$sales_report_file_res = NULL;
-		if(($sales_report_file_res = fopen($sales_report_file_path, 'w')) === false) {
+		$stocks_report_file_res = NULL;
+		if(($stocks_report_file_res = fopen($stocks_report_file_path, 'w')) === false) {
 			throw new Exception('file cannot be opened for writing');
 		}
-		fwrite($sales_report_file_res, $contents);
-		fclose($sales_report_file_res);
-		$sales_report_file_res = NULL;
-		$this->billingLogistaProcessSalesReport->doProcess($sales_report_file_path);
-		unlink($sales_report_file_path);
-		$sales_report_file_path = NULL;
+		fwrite($stocks_report_file_res, $contents);
+		fclose($stocks_report_file_res);
+		$stocks_report_file_res = NULL;
+		$this->billingLogistaProcessStocksReport->doProcess($stocks_report_file_path);
+		unlink($stocks_report_file_path);
+		$stocks_report_file_path = NULL;
 		//done
 		if($filesystem->rename($toProcessingPath, $toProcessedPath) != true) {
 			throw new Exception("file cannot be moved");

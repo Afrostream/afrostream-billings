@@ -1,29 +1,29 @@
 <?php
 
-class LogistaStockReportLoader {
+class LogistaStocksReportLoader {
 	
-	private $stockReportFilePath;
+	private $stocksReportFilePath;
 	private $csvDelimiter = ';';
 	//From line 1, RecordType = D
-	private $stockDate;
-	private $stockRecords = array();
+	private $stocksDate;
+	private $stocksRecords = array();
 	//From lastLine, RecordType = E
 	private $hasChecksumRecord = false;
 	private $numberOfRecords;
 	
-	public function __construct($stockReportFilePath) {
-		$this->stockReportFilePath = $stockReportFilePath;
+	public function __construct($stocksReportFilePath) {
+		$this->stocksReportFilePath = $stocksReportFilePath;
 		$this->loadFile();
 		$this->checkConsistency();
 	}
 	
 	private function loadFile() {
-		$stockReportFileRes = NULL;
-		if(($stockReportFileRes = fopen($this->stockReportFilePath, 'r')) === false) {
+		$stocksReportFileRes = NULL;
+		if(($stocksReportFileRes = fopen($this->stocksReportFilePath, 'r')) === false) {
 			throw new Exception("file cannot be opened for reading");
 		}
 		$lineNumber = 0;
-		while(($fields = fgetcsv($stockReportFileRes, NULL, $this->csvDelimiter)) !== false) {
+		while(($fields = fgetcsv($stocksReportFileRes, NULL, $this->csvDelimiter)) !== false) {
 			if($lineNumber == 0) {
 				$this->loadHeaderRecord($fields);
 			} else {
@@ -32,8 +32,8 @@ class LogistaStockReportLoader {
 			//done
 			$lineNumber++;
 		}
-		fclose($stockReportFileRes);
-		$stockReportFileRes = NULL;
+		fclose($stocksReportFileRes);
+		$stocksReportFileRes = NULL;
 	}
 	
 	private function loadHeaderRecord(array $fields) {
@@ -41,14 +41,14 @@ class LogistaStockReportLoader {
 			throw new Exception("Header record cannot be loaded, number of fields expected is >= 2, number of fields is : ".count($fields));
 		}
 		$recordType = $fields[0];
-		if($recordType != 'E') {
+		if($recordType != 'D') {
 			throw new Exception("Line record is not a header record type");
 		}
-		$stockDate = DateTime::createFromFormat('Ymd', $fields[1], new DateTimeZone(config::$timezone));
-		if($stockDate === false) {
-			throw new Exception("Header record cannot be loaded, stock date cannot be parsed : ".$fields[1]);
+		$stocksDate = DateTime::createFromFormat('Ymd', $fields[1], new DateTimeZone(config::$timezone));
+		if($stocksDate === false) {
+			throw new Exception("Header record cannot be loaded, stocks date cannot be parsed : ".$fields[1]);
 		}
-		$this->stockDate = $stockDate;
+		$this->stocksDate = $stocksDate;
 	}
 	
 	private function loadLineRecord(array $fields) {
@@ -57,7 +57,7 @@ class LogistaStockReportLoader {
 		}
 		$recordType = $fields[0];
 		if($recordType == 'M') {
-			$this->loadStockRecord($fields);
+			$this->loadStocksRecord($fields);
 		} else if($recordType == 'E') {
 			$this->loadChecksumRecord($fields);
 		} else {
@@ -65,21 +65,21 @@ class LogistaStockReportLoader {
 		}
 	}
 	
-	private function loadStockRecord(array $fields) {
+	private function loadStocksRecord(array $fields) {
 		if(count($fields) < 2) {
-			throw new Exception("Stock record cannot be loaded, number of fields expected is >= 2, number of fields is : ".count($fields));
+			throw new Exception("Stocks record cannot be loaded, number of fields expected is >= 2, number of fields is : ".count($fields));
 		}
 		$recordType = $fields[0];
 		if($recordType != 'M') {
-			throw new Exception("Line record is not a stock record type");
+			throw new Exception("Line record is not a stocks record type");
 		}
-		$stockRecord = new StockRecord();
-		$stockRecord->setSerialNumber($fields[1]);
+		$stocksRecord = new StocksRecord();
+		$stocksRecord->setSerialNumber($fields[1]);
 		if(count($fields) > 2) {
-			$stockRecord->setEAN($fields[2]);
+			$stocksRecord->setEAN($fields[2]);
 		}
 		//done
-		$this->stockRecords[] = $stockRecord;
+		$this->stocksRecords[] = $stocksRecord;
 	}
 	
 	private function loadChecksumRecord(array $fields) {
@@ -98,18 +98,18 @@ class LogistaStockReportLoader {
 		if(!$this->hasChecksumRecord) {
 			throw new Exception("No checksum record found");
 		}
-		if(count($this->stockRecords) != $this->numberOfRecords) {
+		if(count($this->stocksRecords) != $this->numberOfRecords) {
 			throw new Exception("Number of records differ, checksum says : ".$this->numberOfRecords.", found : ".count($this->stockRecords));
 		}
 	}
 	
-	public function getStockRecords() {
-		return($this->stockRecords);
+	public function getStocksRecords() {
+		return($this->stocksRecords);
 	}
 	
 }
 
-class StockRecord {
+class StocksRecord {
 	
 	private $serialNumber;
 	private $ean;

@@ -1,9 +1,9 @@
 <?php
 
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
-require_once __DIR__ . '/../../../../libs/partners/logista/utils/LogistaSalesReportLoader.php';
+require_once __DIR__ . '/../../../../libs/partners/logista/utils/LogistaStocksReportLoader.php';
 
-class BillingLogistaProcessSalesReport {
+class BillingLogistaProcessStocksReport {
 	
 	protected $partner;
 	
@@ -11,23 +11,22 @@ class BillingLogistaProcessSalesReport {
 		$this->partner = $partner;
 	}
 	
-	public function doProcess($salesReportFilePath) {
-		$logistaSalesReportLoader = new LogistaSalesReportLoader($salesReportFilePath);
-		$saleRecords = $logistaSalesReportLoader->getSaleRecords();
-		foreach($saleRecords as $saleRecord) {
+	public function doProcess($stocksReportFilePath) {
+		$logistaStocksReportLoader = new LogistaStocksReportLoader($stocksReportFilePath);
+		$stocksRecords = $logistaStocksReportLoader->getStocksRecords();
+		foreach($stocksRecords as $stocksRecord) {
 			try {
-				$this->doProcessSaleRecord($saleRecord);
+				$this->doProcessStocksRecord($stocksRecord);
 			} catch(Exception $e) {
-				ScriptsConfig::getLogger()->addError("an error occurred while processing sale record, message=".$e->getMessage());
+				ScriptsConfig::getLogger()->addError("an error occurred while processing stocks record, message=".$e->getMessage());
 			}
 		}
 	}
 	
-	private function doProcessSaleRecord(SaleRecord $saleRecord) {
-		ScriptsConfig::getLogger()->addError("processing salerecord : ".var_export($saleRecord, true));
-		$billingInternalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($saleRecord->getSerialNumber());
+	private function doProcessStocksRecord(StocksRecord $stocksRecord) {
+		$billingInternalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($stocksRecord->getSerialNumber());
 		if($billingInternalCoupon == NULL) {
-			throw new Exception("no internal coupon found with id = ".$saleRecord->getSerialNumber());
+			throw new Exception("no internal coupon found with id = ".$stocksRecord->getSerialNumber());
 		}//Some checks before proccessing...
 		$billingInternalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($billingInternalCoupon->getInternalCouponsCampaignsId());
 		if($billingInternalCouponsCampaign == NULL) {
@@ -42,7 +41,7 @@ class BillingLogistaProcessSalesReport {
 		try {
 			//START TRANSACTION
 			pg_query("BEGIN");
-			$billingInternalCoupon->setSoldStatus('sold');
+			/*$billingInternalCoupon->setSoldStatus('sold');
 			$billingInternalCoupon = BillingInternalCouponDAO::updateSoldStatus($billingInternalCoupon);
 			$billingInternalCoupon->setSoldDate($saleRecord->getSaleDate());
 			$billingInternalCoupon = BillingInternalCouponDAO::updateSoldDate($billingInternalCoupon);
@@ -71,7 +70,7 @@ class BillingLogistaProcessSalesReport {
 				BillingInternalCouponOptsDAO::updateBillingInternalCouponOptsKey($billingInternalCoupon->getId(), 'logistaTimezoneDiff', $saleRecord->getTimezoneDiff());
 			} else {
 				BillingInternalCouponOptsDAO::addBillingInternalCouponsOptsKey($billingInternalCoupon->getId(), 'logistaTimezoneDiff', $saleRecord->getTimezoneDiff());
-			}
+			}*/
 			//COMMIT
 			pg_query("COMMIT");
 		} catch(Exception $e) {

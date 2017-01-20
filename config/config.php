@@ -504,6 +504,10 @@ if(getEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE') === false) {
 	putEnv('PARTNER_ORDERS_LOGISTA_='.dirname(__FILE__).'/../libs/partners/logista/pgp-public-key/logista-pgp-public-key.txt');
 }
 
+if(getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME=ALTA_STRT');
+}
+
 #logger, #db_conn, ...
 
 class config {
