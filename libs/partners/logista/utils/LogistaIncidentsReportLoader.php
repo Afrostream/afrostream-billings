@@ -129,7 +129,7 @@ class IncidentRecord {
 	}
 	
 	public function getRequestId() {
-		retrurn($this->requestId);
+		return($this->requestId);
 	}
 	
 }

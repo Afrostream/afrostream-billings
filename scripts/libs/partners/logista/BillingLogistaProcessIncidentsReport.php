@@ -50,7 +50,7 @@ class BillingLogistaProcessIncidentsReport {
 			$incidentResponseRecord->setRequestId($incidentRecord->getRequestId());
 			//TODO
 			//$incidentResponseRecord->setResponse(???);
-			//$incidentResponseRecord->setCreditNoteAmount(???);
+			$incidentResponseRecord->setCreditNoteAmount(0);
 			$logistaIncidentsResponseReport->addIncidentResponseRecord($incidentResponseRecord);
 			
 		}

@@ -37,6 +37,7 @@ class LogistaIncidentsResponseReport {
 		foreach ($this->incidentResponseRecords as $incidentResponseRecord) {
 			$serialNumberFields = array();
 			$serialNumberFields[] = $incidentResponseRecord->getRecordType();
+			$serialNumberFields[] = $incidentResponseRecord->getSerialNumber();
 			$serialNumberFields[] = $incidentResponseRecord->getShopId();
 			$serialNumberFields[] = $incidentResponseRecord->getResponse();
 			$serialNumberFields[] = $incidentResponseRecord->getCreditNoteAmount();
@@ -95,7 +96,7 @@ class IncidentResponseRecord {
 		$this->response = $str;	
 	}
 	
-	public function getReponse() {
+	public function getResponse() {
 		return($this->response);
 	}
 	
@@ -112,7 +113,7 @@ class IncidentResponseRecord {
 	}
 	
 	public function getRequestId() {
-		retrurn($this->requestId);
+		return($this->requestId);
 	}
 	
 }
