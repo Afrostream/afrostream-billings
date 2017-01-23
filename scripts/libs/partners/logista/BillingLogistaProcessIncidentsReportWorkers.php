@@ -73,6 +73,8 @@ class BillingLogistaProcessIncidentsReportWorkers extends BillingsWorkers {
 	}
 	
 	private function doProcessIncidentsReport(array $fromLogistaDirFile) {
+		$now = new DateTime();
+		$now->setTimezone(new DateTimeZone(config::$timezone));
 		$filesystem = new Filesystem(new Ftp([
 				'host' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST'),
 				'username' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_USER'),
@@ -81,6 +83,11 @@ class BillingLogistaProcessIncidentsReportWorkers extends BillingsWorkers {
 		$fromPath = $fromLogistaDirFile['dirname'].'/'.$fromLogistaDirFile['basename'];
 		$toProcessingPath = $fromLogistaDirFile['dirname'].'/'.'processing'.'/'.$fromLogistaDirFile['basename'];
 		$toProcessedPath = $fromLogistaDirFile['dirname'].'/'.'processed'.'/'.$fromLogistaDirFile['basename'];
+		$toLOGPath = getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_OUT').'/';
+		$toLOGPath.= getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME');
+		$toLOGPath.= '_'.getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID').'_'.'incidents_response'.'_';
+		$toLOGPath.= $now->format('Ymd').'_'.$now->format('His');
+		$toLOGPath.= '.csv';
 		if($filesystem->rename($fromPath, $toProcessingPath) != true) {
 			throw new Exception("file cannot be moved");
 		}
@@ -101,8 +108,23 @@ class BillingLogistaProcessIncidentsReportWorkers extends BillingsWorkers {
 		$incidents_report_file_res = NULL;
 		$logistaIncidentsResponseReport = $this->billingLogistaProcessIncidentsReport->doProcess($incidents_report_file_path);
 		unlink($incidents_report_file_path);
-		$incidents_report_file_path = NULL;
-		//TODO : save it in a file and upload it in the FTP
+		$incidents_response_report_file_path = NULL;
+		//Save it in a file and upload it in the FTP
+		$incidents_response_report_file_path = NULL;
+		if(($incidents_response_report_file_path = tempnam('', 'tmp')) === false) {
+			throw new Exception('file cannot be created');
+		}
+		$logistaIncidentsResponseReport->saveTo($incidents_response_report_file_path);
+		if(($incidents_response_report_file_res = fopen($incidents_response_report_file_path, 'r')) === false) {
+			throw new Exception('file cannot be opened for reading');
+		}
+		$filesystem->putStream($toLOGPath, $incidents_response_report_file_res);
+		if (is_resource($incidents_response_report_file_res)) {
+			fclose($incidents_response_report_file_res);
+		}
+		$incidents_response_report_file_res = NULL;
+		unlink($incidents_response_report_file_path);
+		$incidents_response_report_file_path = NULL;
 		//done
 		if($filesystem->rename($toProcessingPath, $toProcessedPath) != true) {
 			throw new Exception("file cannot be moved");

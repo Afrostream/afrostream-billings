@@ -16,6 +16,7 @@ class BillingLogistaProcessIncidentsReport {
 	public function doProcess($incidentsReportFilePath) {
 		$logistaIncidentsReportLoader = new LogistaIncidentsReportLoader($incidentsReportFilePath);
 		$logistaIncidentsResponseReport = new LogistaIncidentsResponseReport();
+		$logistaIncidentsResponseReport->setProductionDate(new DateTime());
 		$incidentRecords = $logistaIncidentsReportLoader->getIncidentRecords();
 		foreach($incidentRecords as $incidentRecord) {
 			try {

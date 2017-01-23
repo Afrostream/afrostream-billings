@@ -4,7 +4,16 @@ class LogistaIncidentsResponseReport {
 	
 	private $csvDelimiter = ',';
 	//From line 1
+	private $productionDate;
 	private $incidentResponseRecords = array();
+	
+	public function setProductionDate(DateTime $date) {
+		$this->productionDate = $date;
+	}
+	
+	public function getProductionDate() {
+		return($this->productionDate);
+	}
 	
 	public function addIncidentResponseRecord(IncidentResponseRecord $incidentResponseRecord) {
 		$this->incidentResponseRecords[] = $incidentResponseRecord;
@@ -14,6 +23,39 @@ class LogistaIncidentsResponseReport {
 		return($this->incidentResponseRecords);
 	}
 	
+	public function saveTo($incidents_response_report_file_path) {
+		$incidents_response_report_file_res = NULL;
+		if(($incidents_response_report_file_res = fopen($incidents_response_report_file_path, 'w')) === false) {
+			throw new Exception('file cannot be opened for writing');
+		}
+		//Header Record
+		$headerFields = array();
+		$headerFields[] = 'D';
+		$headerFields[] = $this->productionDate->format('Ymd');
+		fputcsv($incidents_response_report_file_res, $headerFields, $this->csvDelimiter);
+		//Serial Number Records
+		foreach ($this->incidentResponseRecords as $incidentResponseRecord) {
+			$serialNumberFields = array();
+			$serialNumberFields[] = $incidentResponseRecord->getRecordType();
+			$serialNumberFields[] = $incidentResponseRecord->getShopId();
+			$serialNumberFields[] = $incidentResponseRecord->getResponse();
+			$serialNumberFields[] = $incidentResponseRecord->getCreditNoteAmount();
+			$serialNumberFields[] = $incidentResponseRecord->getRequestId();
+			fputcsv($incidents_response_report_file_res, $serialNumberFields, $this->csvDelimiter);
+		}
+		//End File Record
+		$totalAmount = 0;
+		foreach ($this->incidentResponseRecords as $incidentResponseRecord) {
+			$totalAmount += $incidentResponseRecord->getCreditNoteAmount();
+		}
+		$endFileFields = array();
+		$endFileFields[] = 'END';
+		$endFileFields[] = $totalAmount;
+		$endFileFields[] = 'EUR';
+		fputcsv($incidents_response_report_file_res, $endFileFields, $this->csvDelimiter);
+		fclose($incidents_response_report_file_res);
+		$incidents_response_report_file_res = NULL;
+	}
 }
 
 class IncidentResponseRecord {
