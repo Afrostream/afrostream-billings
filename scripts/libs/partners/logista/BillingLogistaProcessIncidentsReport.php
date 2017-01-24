@@ -8,7 +8,6 @@ class BillingLogistaProcessIncidentsReport {
 	
 	protected $partner;
 	
-	
 	public function __construct(BillingPartner $partner) {
 		$this->partner = $partner;
 	}
@@ -22,7 +21,7 @@ class BillingLogistaProcessIncidentsReport {
 			try {
 				$this->doProcessIncidentRecord($incidentRecord, $logistaIncidentsResponseReport);
 			} catch(Exception $e) {
-				ScriptsConfig::getLogger()->addError("an error occurred while processing stocks record, message=".$e->getMessage());
+				ScriptsConfig::getLogger()->addError("an error occurred while processing incident record, message=".$e->getMessage());
 			}
 		}
 		return($logistaIncidentsResponseReport);
@@ -33,15 +32,34 @@ class BillingLogistaProcessIncidentsReport {
 			$billingInternalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($incidentRecord->getSerialNumber());
 			if($billingInternalCoupon == NULL) {
 				throw new Exception("no internal coupon found with id = ".$incidentRecord->getSerialNumber());
-			}//Some checks before proccessing...
-			$billingInternalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($billingInternalCoupon->getInternalCouponsCampaignsId());
-			if($billingInternalCouponsCampaign == NULL) {
-				throw new Exception("no internal coupon campaign found with id = ".$billingInternalCoupon->getInternalCouponsCampaignsId());
 			}
-			if($this->partner->getId() != $billingInternalCouponsCampaign->getPartnerId()) {
-				throw new Exception("internal coupon campaign does not belong to the partner with id = ".$this->partner->getId());
+			$billingInternalCouponActionLog = NULL;
+			try {
+				$billingInternalCouponActionLog = BillingInternalCouponActionLogDAO::addBillingInternalCouponActionLog($billingInternalCoupon->getId(), 'incident_update');
+				//Some checks before proccessing...
+				$billingInternalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($billingInternalCoupon->getInternalCouponsCampaignsId());
+				if($billingInternalCouponsCampaign == NULL) {
+					throw new Exception("no internal coupon campaign found with id = ".$billingInternalCoupon->getInternalCouponsCampaignsId());
+				}
+				if($this->partner->getId() != $billingInternalCouponsCampaign->getPartnerId()) {
+					throw new Exception("internal coupon campaign does not belong to the partner with id = ".$this->partner->getId());
+				}
+				//TODO : how to decide response and creditNoteAmount...
+				$billingInternalCouponActionLog->setProcessingStatus('done');
+				$billingInternalCouponActionLog = BillingInternalCouponActionLogDAO::updateBillingInternalCouponActionLogProcessingStatus($billingInternalCouponActionLog);
+				$billingInternalCouponActionLog = NULL;
+			} catch(Exception $e) {
+				$msg = "an error occurred while processing incident record, message=".$e->getMessage();
+				ScriptsConfig::getLogger()->addError($msg);
+				if(isset($billingInternalCouponActionLog)) {
+					$billingInternalCouponActionLog->setProcessingStatus('error');
+					$billingInternalCouponActionLog->setMessage($msg);
+				}
+			} finally {
+				if(isset($billingInternalCouponActionLog)) {
+					$billingInternalCouponActionLog = BillingInternalCouponActionLogDAO::updateBillingInternalCouponActionLogProcessingStatus($billingInternalCouponActionLog);
+				}
 			}
-			//TODO : how to decide response and creditNoteAmount...
 		} finally {
 			$incidentResponseRecord = new IncidentResponseRecord();
 			$incidentResponseRecord->setRecordType('S');
@@ -52,7 +70,6 @@ class BillingLogistaProcessIncidentsReport {
 			//$incidentResponseRecord->setResponse(???);
 			$incidentResponseRecord->setCreditNoteAmount(0);
 			$logistaIncidentsResponseReport->addIncidentResponseRecord($incidentResponseRecord);
-			
 		}
 	}
 	

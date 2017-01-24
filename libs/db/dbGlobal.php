@@ -6774,3 +6774,137 @@ class BillingPartnerOrderInternalCouponsCampaignLinkDAO {
 	}
 	
 }
+
+class BillingInternalCouponActionLog {
+
+	private $_id;
+	private $internalcouponid;
+	private $processing_status;
+	private $action_type;
+	private $started_date;
+	private $ended_date;
+	private $message;
+	private $processing_status_code = 0;//DEFAULT
+
+	public function getId() {
+		return($this->_id);
+	}
+
+	public function setId($id) {
+		$this->_id = $id;
+	}
+
+	public function setInternalCouponId($id) {
+		$this->internalcouponid = $id;
+	}
+
+	public function getInternalCouponId() {
+		return($this->internalcouponid);
+	}
+
+	public function getProcessingStatus() {
+		return($this->processing_status);
+	}
+
+	public function setProcessingStatus($status) {
+		$this->processing_status = $status;
+	}
+
+	public function getActionType() {
+		return($this->action_type);
+	}
+
+	public function setActionType($action_type) {
+		$this->action_type = $action_type;
+	}
+
+	public function getStartedDate() {
+		return($this->started_date);
+	}
+
+	public function setStartedDate(DateTime $date) {
+		$this->started_date = $date;
+	}
+
+	public function getEndedDate() {
+		return($this->ended_date);
+	}
+
+	public function setEndedDate(DateTime $date = NULL) {
+		$this->ended_date = $date;
+	}
+
+	public function getMessage() {
+		return($this->message);
+	}
+
+	public function setMessage($msg) {
+		$this->message = $msg;
+	}
+
+	public function getProcessingStatusCode() {
+		return($this->processing_status_code);
+	}
+
+	public function setProcessingStatusCode($status_code) {
+		$this->processing_status_code = $status_code;
+	}
+
+}
+
+class BillingInternalCouponActionLogDAO {
+
+	private static $sfields = "_id, internalcouponsid, processing_status, action_type, started_date, ended_date, message, processing_status_code";
+
+	private static function getBillingInternalCouponActionLogFromRow($row) {
+		$out = new BillingInternalCouponActionLog();
+		$out->setId($row["_id"]);
+		$out->setInternalCouponId($row["internalcouponsid"]);
+		$out->setProcessingStatus($row["processing_status"]);
+		$out->setProcessingStatusCode($row["processing_status_code"]);
+		$out->setActionType($row["action_type"]);
+		$out->setStartedDate($row["started_date"] == NULL ? NULL : new DateTime($row["started_date"]));
+		$out->setEndedDate($row["ended_date"] == NULL ? NULL : new DateTime($row["ended_date"]));
+		$out->setMessage($row["message"]);
+		return($out);
+	}
+
+	public static function addBillingInternalCouponActionLog($internalcouponsid, $action_type) {
+		$query = "INSERT INTO billing_internal_coupons_action_logs (internalcouponsid, action_type, processing_status) VALUES ($1, $2, $3) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalcouponsid, $action_type, "running"));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponActionLogById($row[0]));
+	}
+
+	public static function updateBillingInternalCouponActionLogProcessingStatus(BillingInternalCouponActionLog $billingInternalCouponActionLog) {
+		$query = "UPDATE billing_internal_coupons_action_logs SET processing_status = $1, ended_date = CURRENT_TIMESTAMP, message = $2, processing_status_code = $3 WHERE _id = $4";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($billingInternalCouponActionLog->getProcessingStatus(),
+						$billingInternalCouponActionLog->getMessage(),
+						$billingInternalCouponActionLog->getProcessingStatusCode(),
+						$billingInternalCouponActionLog->getId()));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponActionLogById($billingInternalCouponActionLog->getId()));
+	}
+
+	public static function getBillingInternalCouponActionLogById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_action_logs WHERE _id = $1";
+
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+
+		$out = null;
+
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingInternalCouponActionLogFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+	
+}
