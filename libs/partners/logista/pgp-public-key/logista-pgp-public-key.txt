@@ -1,4 +1,4 @@
-pg——BEGIN PGP PUBLIC KEY BLOCK-----
+——BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v2.0.22 (MingW32)
 
 mI0EWHjyTgEEALeNiYfY/Cu6E4EBPDrovqx+lXWEDcY/pbfs+8ZlNo8cv3wsihHx
