@@ -105,6 +105,11 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 		BillingStatsd::inc('route.others.hit');
 		BillingStatsd::timing('route.others.responsetime', $responseTimeInMillis);
 	}
+	//CDN Support
+	// default no-cache header should be :
+	$response = $response->withHeader('Cache-Control', 'max-age=0,private,no-cache,no-store,must-revalidate');
+	$response = $response->withHeader('Pragma', 'no-cache');// http 1.0
+	$response = $response->withHeader('Expires', 'Thu, 01-Jan-1970 00:00:01 GMT');// proxy
 	return $response;
 });
 
