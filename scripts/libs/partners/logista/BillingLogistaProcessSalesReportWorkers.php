@@ -40,12 +40,9 @@ class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
 					'password' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD')
 			]));
 			$fromLogistaDirFiles = $filesystem->listContents(getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_IN'), false);
-			ScriptsConfig::getLogger()->addError("listSize : ".count($fromLogistaDirFiles));
 			$salesReportBasename = getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME').'_'.getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID').'_'.'sales'.'_';
 			foreach($fromLogistaDirFiles as $fromLogistaDirFile) {
-				$filename = $fromLogistaDirFile['basename'];
-				ScriptsConfig::getLogger()->addError(var_export($fromLogistaDirFile, true));
-				if(substr($filename, 0, strlen($salesReportBasename)) === $salesReportBasename) {
+				if(substr($fromLogistaDirFile['basename'], 0, strlen($salesReportBasename)) === $salesReportBasename) {
 					$this->doProcessSalesReport($fromLogistaDirFile);
 				}
 			}
@@ -73,38 +70,44 @@ class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
 	}
 	
 	private function doProcessSalesReport(array $fromLogistaDirFile) {
-		$filesystem = new Filesystem(new Ftp([
-				'host' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST'),
-				'username' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_USER'),
-				'password' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD')
-		]));
-		$fromPath = $fromLogistaDirFile['dirname'].'/'.$fromLogistaDirFile['basename'];
-		$toProcessingPath = $fromLogistaDirFile['dirname'].'/'.'processing'.'/'.$fromLogistaDirFile['basename'];
-		$toProcessedPath = $fromLogistaDirFile['dirname'].'/'.'processed'.'/'.$fromLogistaDirFile['basename'];
-		if($filesystem->rename($fromPath, $toProcessingPath) != true) {
-			throw new Exception("file cannot be moved");
-		}
-		$stream = $filesystem->readStream($toProcessingPath);
-		$contents = stream_get_contents($stream);
-		fclose($stream);
-		$stream = NULL;
-		$sales_report_file_path = NULL;
-		if(($sales_report_file_path = tempnam('', 'tmp')) === false) {
-			throw new Exception('file cannot be created');
-		}
-		$sales_report_file_res = NULL;
-		if(($sales_report_file_res = fopen($sales_report_file_path, 'w')) === false) {
-			throw new Exception('file cannot be opened for writing');
-		}
-		fwrite($sales_report_file_res, $contents);
-		fclose($sales_report_file_res);
-		$sales_report_file_res = NULL;
-		$this->billingLogistaProcessSalesReport->doProcess($sales_report_file_path);
-		unlink($sales_report_file_path);
-		$sales_report_file_path = NULL;
-		//done
-		if($filesystem->rename($toProcessingPath, $toProcessedPath) != true) {
-			throw new Exception("file cannot be moved");
+		try {
+			ScriptsConfig::getLogger()->addInfo("processing sale report file : ".$fromLogistaDirFile['basename']."...");
+			$filesystem = new Filesystem(new Ftp([
+					'host' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST'),
+					'username' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_USER'),
+					'password' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD')
+			]));
+			$fromPath = $fromLogistaDirFile['dirname'].'/'.$fromLogistaDirFile['basename'];
+			$toProcessingPath = $fromLogistaDirFile['dirname'].'/'.'processing'.'/'.$fromLogistaDirFile['basename'];
+			$toProcessedPath = $fromLogistaDirFile['dirname'].'/'.'processed'.'/'.$fromLogistaDirFile['basename'];
+			if($filesystem->rename($fromPath, $toProcessingPath) != true) {
+				throw new Exception("file cannot be moved");
+			}
+			$stream = $filesystem->readStream($toProcessingPath);
+			$contents = stream_get_contents($stream);
+			fclose($stream);
+			$stream = NULL;
+			$sales_report_file_path = NULL;
+			if(($sales_report_file_path = tempnam('', 'tmp')) === false) {
+				throw new Exception('file cannot be created');
+			}
+			$sales_report_file_res = NULL;
+			if(($sales_report_file_res = fopen($sales_report_file_path, 'w')) === false) {
+				throw new Exception('file cannot be opened for writing');
+			}
+			fwrite($sales_report_file_res, $contents);
+			fclose($sales_report_file_res);
+			$sales_report_file_res = NULL;
+			$this->billingLogistaProcessSalesReport->doProcess($sales_report_file_path);
+			unlink($sales_report_file_path);
+			$sales_report_file_path = NULL;
+			//done
+			if($filesystem->rename($toProcessingPath, $toProcessedPath) != true) {
+				throw new Exception("file cannot be moved");
+			}
+			ScriptsConfig::getLogger()->addInfo("processing sale report file : ".$fromLogistaDirFile['basename']." done successfully");
+		} catch(Exception $e) {
+			ScriptsConfig::getLogger()->addError("processing sale report file : ".$fromLogistaDirFile['basename']." failed, message=".$e->getMessage());
 		}
 	}
 	

@@ -40,12 +40,9 @@ class BillingLogistaProcessStocksReportWorkers extends BillingsWorkers {
 					'password' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD')
 			]));
 			$fromLogistaDirFiles = $filesystem->listContents(getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_IN'), false);
-			ScriptsConfig::getLogger()->addError("listSize : ".count($fromLogistaDirFiles));
 			$stocksReportBasename = getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME').'_'.getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID').'_'.'stocks'.'_';
 			foreach($fromLogistaDirFiles as $fromLogistaDirFile) {
-				$filename = $fromLogistaDirFile['basename'];
-				ScriptsConfig::getLogger()->addError(var_export($fromLogistaDirFile, true));
-				if(substr($filename, 0, strlen($stocksReportBasename)) === $stocksReportBasename) {
+				if(substr($fromLogistaDirFile['basename'], 0, strlen($stocksReportBasename)) === $stocksReportBasename) {
 					$this->doProcessStocksReport($fromLogistaDirFile);
 				}
 			}
@@ -73,39 +70,45 @@ class BillingLogistaProcessStocksReportWorkers extends BillingsWorkers {
 	}
 	
 	private function doProcessStocksReport(array $fromLogistaDirFile) {
-		$filesystem = new Filesystem(new Ftp([
-				'host' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST'),
-				'username' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_USER'),
-				'password' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD')
-		]));
-		$fromPath = $fromLogistaDirFile['dirname'].'/'.$fromLogistaDirFile['basename'];
-		$toProcessingPath = $fromLogistaDirFile['dirname'].'/'.'processing'.'/'.$fromLogistaDirFile['basename'];
-		$toProcessedPath = $fromLogistaDirFile['dirname'].'/'.'processed'.'/'.$fromLogistaDirFile['basename'];
-		if($filesystem->rename($fromPath, $toProcessingPath) != true) {
-			throw new Exception("file cannot be moved");
-		}
-		$stream = $filesystem->readStream($toProcessingPath);
-		$contents = stream_get_contents($stream);
-		fclose($stream);
-		$stream = NULL;
-		$stocks_report_file_path = NULL;
-		if(($stocks_report_file_path = tempnam('', 'tmp')) === false) {
-			throw new Exception('file cannot be created');
-		}
-		$stocks_report_file_res = NULL;
-		if(($stocks_report_file_res = fopen($stocks_report_file_path, 'w')) === false) {
-			throw new Exception('file cannot be opened for writing');
-		}
-		fwrite($stocks_report_file_res, $contents);
-		fclose($stocks_report_file_res);
-		$stocks_report_file_res = NULL;
-		$this->billingLogistaProcessStocksReport->doProcess($stocks_report_file_path);
-		unlink($stocks_report_file_path);
-		$stocks_report_file_path = NULL;
-		//done
-		if($filesystem->rename($toProcessingPath, $toProcessedPath) != true) {
-			throw new Exception("file cannot be moved");
-		}
+		try {
+			ScriptsConfig::getLogger()->addInfo("processing stock report file : ".$fromLogistaDirFile['basename']."...");
+			$filesystem = new Filesystem(new Ftp([
+					'host' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST'),
+					'username' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_USER'),
+					'password' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD')
+			]));
+			$fromPath = $fromLogistaDirFile['dirname'].'/'.$fromLogistaDirFile['basename'];
+			$toProcessingPath = $fromLogistaDirFile['dirname'].'/'.'processing'.'/'.$fromLogistaDirFile['basename'];
+			$toProcessedPath = $fromLogistaDirFile['dirname'].'/'.'processed'.'/'.$fromLogistaDirFile['basename'];
+			if($filesystem->rename($fromPath, $toProcessingPath) != true) {
+				throw new Exception("file cannot be moved");
+			}
+			$stream = $filesystem->readStream($toProcessingPath);
+			$contents = stream_get_contents($stream);
+			fclose($stream);
+			$stream = NULL;
+			$stocks_report_file_path = NULL;
+			if(($stocks_report_file_path = tempnam('', 'tmp')) === false) {
+				throw new Exception('file cannot be created');
+			}
+			$stocks_report_file_res = NULL;
+			if(($stocks_report_file_res = fopen($stocks_report_file_path, 'w')) === false) {
+				throw new Exception('file cannot be opened for writing');
+			}
+			fwrite($stocks_report_file_res, $contents);
+			fclose($stocks_report_file_res);
+			$stocks_report_file_res = NULL;
+			$this->billingLogistaProcessStocksReport->doProcess($stocks_report_file_path);
+			unlink($stocks_report_file_path);
+			$stocks_report_file_path = NULL;
+			//done
+			if($filesystem->rename($toProcessingPath, $toProcessedPath) != true) {
+				throw new Exception("file cannot be moved");
+			}
+			ScriptsConfig::getLogger()->addInfo("processing stock report file : ".$fromLogistaDirFile['basename']." done successfully");
+		} catch(Exception $e) {
+			ScriptsConfig::getLogger()->addError("processing stock report file : ".$fromLogistaDirFile['basename']." failed, message=".$e->getMessage());
+		} 
 	}
 	
 }
