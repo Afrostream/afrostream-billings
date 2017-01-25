@@ -209,7 +209,9 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 			//see : https://github.com/singpolyma/openpgp-php/issues/19 for a sample
 			$data = new OpenPGP_LiteralDataPacket(file_get_contents($partnerOrderCSVPath), array('format' => 'u', 'filename' => $partnerOrderCSVName));
 			$encrypted = OpenPGP_Crypt_Symmetric::encrypt($key, new OpenPGP_Message(array($data)));
-			if(file_put_contents($partnerOrderCSVEncryptedPath, OpenPGP::enarmor($encrypted->to_bytes(), "PGP MESSAGE")) === false) {
+			$enc = OpenPGP::enarmor($encrypted->to_bytes(), "PGP MESSAGE");
+			$enc = wordwrap($enc, 64, "\n", 1);
+			if(file_put_contents($partnerOrderCSVEncryptedPath, $enc) === false) {
 				throw new Exception('encrypted csv file cannot be filled');
 			}
 			$partnerOrderCSVKey = $partnerOrderCSVBaseKey.'/'.$partnerOrderCSVName;
