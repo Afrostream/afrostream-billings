@@ -129,7 +129,7 @@ class ContextsController extends BillingsController {
 		}
 	}
 	
-	public function AddInternalPlanToContext(Request $request, Response $response, array $args) {
+	public function addInternalPlanToContext(Request $request, Response $response, array $args) {
 		try {
 			if(!isset($args['internalPlanUuid'])) {
 				//exception
@@ -170,7 +170,7 @@ class ContextsController extends BillingsController {
 		}
 	}
 	
-	public function RemoveInternalPlanFromContext(Request $request, Response $response, array $args) {
+	public function removeInternalPlanFromContext(Request $request, Response $response, array $args) {
 		try {
 			if(!isset($args['internalPlanUuid'])) {
 				//exception

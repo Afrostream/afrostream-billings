@@ -425,6 +425,89 @@ if(getEnv('CURRENCY_CONVERSION_INTERNALPLAN_CURRENCY_TARGETS') === false) {
 	putEnv('CURRENCY_CONVERSION_INTERNALPLAN_CURRENCY_TARGETS=EUR;USD');
 }
 
+#AMAZON
+
+#AWS_ACCESS_KEY_ID
+
+if(getEnv('AWS_ACCESS_KEY_ID') === false) {
+	putEnv('AWS_ACCESS_KEY_ID=');
+}
+
+#AWS_SECRET_ACCESS_KEY
+
+if(getEnv('AWS_SECRET_ACCESS_KEY') === false) {
+	putEnv('AWS_SECRET_ACCESS_KEY=');
+}
+
+#AWS_ENV ( 'staging' / 'production' )
+
+if(getEnv('AWS_ENV') === false) {
+	putEnv('AWS_ENV=staging');
+}
+
+#AWS_BUCKET_BILLINGS
+
+if(getEnv('AWS_BUCKET_BILLINGS_EXPORTS') === false) {
+	putEnv('AWS_BUCKET_BILLINGS_EXPORTS=afrostream-exports-billings');
+}
+
+#AWS_REGION
+
+if(getEnv('AWS_REGION') === false) {
+	putEnv('AWS_REGION=eu-central-1');
+}
+
+#AWS_VERSION
+
+if(getEnv('AWS_VERSION') === false) {
+	putEnv('AWS_VERSION=latest');
+}
+
+#PARTNER_ORDERS
+if(getEnv('PARTNER_ORDERS_LOGISTA_FILE_SIZE_LIMIT') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FILE_SIZE_LIMIT=0');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID=055');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_PREFIX') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_PREFIX=AFST');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_USER') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_USER=logista-staging');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD=6rQOM9PLts');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST=ftp.afrostream.net');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_PORT') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_PORT=21');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_OUT') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_OUT=TOLOG');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_IN') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_IN=FLOG');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_='.dirname(__FILE__).'/../libs/partners/logista/pgp-public-key/logista-pgp-public-key.txt');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME=ALTA_STRT');
+}
+
 #logger, #db_conn, ...
 
 class config {

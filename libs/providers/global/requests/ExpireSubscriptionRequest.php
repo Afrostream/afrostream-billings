@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/ActionRequest.php';
+require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class ExpireSubscriptionRequest extends ActionRequest {
 	
@@ -21,7 +21,7 @@ class ExpireSubscriptionRequest extends ActionRequest {
 		return($this->subscriptionBillingUuid);
 	}
 	
-	public function setExpiresDate(Datetime $date = NULL) {
+	public function setExpiresDate(DateTime $date = NULL) {
 		$this->expiresDate = $date;
 	}
 	

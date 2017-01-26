@@ -12,6 +12,7 @@ require_once __DIR__ . '/../libs/site/InternalCouponsCampaignsController.php';
 require_once __DIR__ . '/../libs/site/ContextsController.php';
 require_once __DIR__ . '/../libs/site/TransactionsController.php';
 require_once __DIR__ . '/../libs/site/UtilsController.php';
+require_once __DIR__ . '/../libs/site/PartnerOrdersController.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -1336,14 +1337,14 @@ $app->post("/billings/api/contexts/", function ($request, $response, $args) {
 	
 $app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/addinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
 	$contextsController = new ContextsController();
-	return($contextsController->AddInternalPlanToContext($request, $response, $args));
+	return($contextsController->addInternalPlanToContext($request, $response, $args));
 });
 	
 //actions to context : removeinternalplan
 
 $app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/removeinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
 	$contextsController = new ContextsController();
-	return($contextsController->RemoveInternalPlanFromContext($request, $response, $args));
+	return($contextsController->removeInternalPlanFromContext($request, $response, $args));
 });
 
 //actions to context : moveinternalplan
@@ -1471,6 +1472,48 @@ $app->get("/alive", function ($request, $response, $args) {
 $app->get("/billings/utils/currency/quotes/{fromCurrency}/{toCurrencies}", function ($request, $response, $args) {
 	$utilsController = new UtilsController();
 	return($utilsController->getCurrencyQuotes($request, $response, $args));
+});
+
+//partnerOrders : get
+
+$app->get("/billings/api/partnerorders/{partnerOrderBillingUuid}", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->getOne($request, $response, $args));
+});
+
+//partnerOrders : create
+
+$app->post("/billings/api/partnerorders/", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->create($request, $response, $args));
+});
+
+//partnerOrders, actions : addInternalCouponsCampaign
+
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/addinternalcouponscampaign/{internalCouponsCampaignBillingUuid}/{wishedCouponsCounter}", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->addInternalCouponsCampaignToPartnerOrder($request, $response, $args));
+});
+
+//partnerOrders, actions : book
+
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/book", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->book($request, $response, $args));
+});
+
+//partnerOrders, actions : ready : name has to be changed... : mark here that order is ready to process
+	
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/ready", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->ready($request, $response, $args));
+});
+
+//partnerOrders, actions : process
+
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/process", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->process($request, $response, $args));
 });
 
 $app->run();
