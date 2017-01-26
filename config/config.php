@@ -501,7 +501,7 @@ if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_IN') === false) {
 }
 
 if(getEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE') === false) {
-	putEnv('PARTNER_ORDERS_LOGISTA_='.dirname(__FILE__).'/../libs/partners/logista/pgp-public-key/logista-pgp-public-key.txt');
+	putEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE='.dirname(__FILE__).'/../libs/partners/logista/pgp-public-key/logista-pgp-public-key.txt');
 }
 
 if(getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME') === false) {
