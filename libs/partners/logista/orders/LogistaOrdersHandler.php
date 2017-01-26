@@ -193,10 +193,10 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 			array $partnerOrderCSVs, 
 			ProcessPartnerOrderRequest $processPartnerOrderRequest) {
 		//Init openPGP
-		//$key = OpenPGP_Message::parse(OpenPGP::unarmor(file_get_contents(getEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE')), "PGP PUBLIC KEY BLOCK"));
+		$key = OpenPGP_Message::parse(OpenPGP::unarmor(file_get_contents(getEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE')), "PGP PUBLIC KEY BLOCK"));
 		//Init gpg
-		$gpg = new GPG();
-		$key = new GPG_Public_Key(file_get_contents(getEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE')));
+		//$gpg = new GPG();
+		//$key = new GPG_Public_Key(file_get_contents(getEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE')));
 		//Init S3
 		$s3 = S3Client::factory(array(
 				'region' => getEnv('AWS_REGION'),
@@ -211,12 +211,12 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 			}
 			//With openPGP
 			//see : https://github.com/singpolyma/openpgp-php/issues/19 for a sample
-			/*$data = new OpenPGP_LiteralDataPacket(file_get_contents($partnerOrderCSVPath), array('format' => 'u', 'filename' => $partnerOrderCSVName));
+			$data = new OpenPGP_LiteralDataPacket(file_get_contents($partnerOrderCSVPath), array('format' => 'u', 'filename' => $partnerOrderCSVName));
 			$encrypted = OpenPGP_Crypt_Symmetric::encrypt($key, new OpenPGP_Message(array($data)));
 			$enc = OpenPGP::enarmor($encrypted->to_bytes(), "PGP MESSAGE");
-			$enc = wordwrap($enc, 64, "\n", 1);*/
+			$enc = wordwrap($enc, 64, "\n", 1);
 			//With GPG
-			$enc = $gpg->encrypt($key, file_get_contents($partnerOrderCSVPath));
+			//$enc = $gpg->encrypt($key, file_get_contents($partnerOrderCSVPath));
 			if(file_put_contents($partnerOrderCSVEncryptedPath, $enc) === false) {
 				throw new Exception('encrypted csv file cannot be filled');
 			}
