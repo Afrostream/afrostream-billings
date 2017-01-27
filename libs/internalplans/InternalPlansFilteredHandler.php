@@ -11,7 +11,7 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 		parent::__construct();
 	}
 	
-	public function doGetInternalPlans($provider_name = NULL, $contextBillingUuid = NULL, $contextCountry = NULL, $isVisible = NULL, $country = NULL, $filtered_array = NULL) {
+	public function doGetInternalPlans($provider_name = NULL, $contextBillingUuid = NULL, $contextCountry = NULL, $isVisible = NULL, $country = NULL, array $filtered_array = NULL) {
 		$contextBillingUuid = $this->selectContextBillingUuid($contextBillingUuid, $filtered_array);
 		$contextCountry = $this->selectContextCountry($contextCountry, $country, $filtered_array);
 		$internalPlans = parent::doGetInternalPlans($provider_name, $contextBillingUuid, $contextCountry, $isVisible, $country);
@@ -36,7 +36,7 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 		return($internalPlansFiltered);
 	}
 	
-	private function selectContextBillingUuid($currentContextBillingUuid = NULL, $filtered_array = NULL) {
+	private function selectContextBillingUuid($currentContextBillingUuid = NULL, array $filtered_array = NULL) {
 		$contextBillingUuid = NULL;
 		if(isset($currentContextBillingUuid)) {
 			$contextBillingUuid = $currentContextBillingUuid;
@@ -111,6 +111,7 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 					$contextBillingUuid = 'common';
 					config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because no userReferenceUuid was given");					
 				}
+				$contextBillingUuid = $this->updateContextBillingUuidSuffix($contextBillingUuid, $filtered_array);
 			} else {
 				config::getLogger()->addInfo("no contextBillingUuid, filter NOT enabled");
 			}
@@ -120,7 +121,7 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 		return($contextBillingUuid);
 	}
 
-	private function selectContextCountry($currentContextCountry = NULL, $currentCountry = NULL, $filtered_array = NULL) {
+	private function selectContextCountry($currentContextCountry = NULL, $currentCountry = NULL, array $filtered_array = NULL) {
 		$contextCountry = NULL;
 		if(isset($currentContextCountry)) {
 			$contextCountry = $currentContextCountry;
@@ -151,7 +152,24 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 		//no FILTER (for the moment)
 		return(false);
 	}
-
+	
+	private function updateContextBillingUuidSuffix($contextBillingUuid, array $filtered_array) {
+		$userAgent = NULL;
+		if(array_key_exists('filterUserAgent', $filtered_array)) {
+			$userAgent = $filtered_array['filterUserAgent'];
+		}
+		if(isset($userAgent)) {
+			if(strpos($userAgent, getEnv('USER_AGENT_AFROSTREAM_ANDROID_APP_PREFIX')) === 0) {
+				//android
+				$contextBillingUuid.= '-'.'android-app';
+			} else if(strpos($userAgent, getEnv('USER_AGENT_AFROSTREAM_IOS_APP_PREFIX')) === 0) {
+				//ios
+				$contextBillingUuid.= '-'.'ios-app';
+			}
+		}
+		return($contextBillingUuid);
+	}
+	
 }
 
 ?>
