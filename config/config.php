@@ -508,6 +508,16 @@ if(getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME') === false) {
 	putEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME=ALTA_STRT');
 }
 
+#Known user-agents
+
+if(getEnv('AFROSTREAM_ANDROID_APP_CLIENT_IDS') === false) {
+	putEnv('AFROSTREAM_ANDROID_APP_CLIENT_IDS=85f700d9-4a80-4913-8223-e0d49fef3a05;');
+}
+
+if(getEnv('AFROSTREAM_IOS_APP_CLIENT_IDS') === false) {
+	putEnv('AFROSTREAM_IOS_APP_CLIENT_IDS=');
+}
+
 #logger, #db_conn, ...
 
 class config {
