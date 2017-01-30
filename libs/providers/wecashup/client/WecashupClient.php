@@ -28,7 +28,7 @@ class WecashupClient {
 		$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
 		curl_close($CURL);
 		config::getLogger()->addInfo("WECASHUP-GETTRANSACTION-RESPONSE=".$content);
-		$wecashupTransactionResponse = NULL;
+		$wecashupTransactionsResponse = NULL;
 		if($httpCode == 200) {
 			$data = json_decode($content, true);
 			$wecashupTransactionsResponse = WecashupTransactionsResponse::getInstance($data);
@@ -78,6 +78,47 @@ class WecashupClient {
 		$wecashupValidateTransactionResponse->setResponseStatus($data['response_status']);
 		$wecashupValidateTransactionResponse->setResponseCode($data['response_code']);
 		return($wecashupValidateTransactionResponse);
+	}
+	
+	public function refundTransaction(WecashupRefundTransactionRequest $wecashupRefundTransactionRequest) {
+		$url = getEnv('WECASHUP_API_URL').'/'.
+				$wecashupRefundTransactionRequest->getMerchantUid().
+				'/transactions/'.
+				$wecashupRefundTransactionRequest->getTransactionUid().
+				'?merchant_public_key='.
+				$wecashupRefundTransactionRequest->getMerchantPublicKey();
+		$fields = array(
+				'merchant_secret' => urlencode($wecashupRefundTransactionRequest->getMerchantSecret()),
+				'transaction_uid' => urlencode($wecashupRefundTransactionRequest->getTransactionUid()),
+				'transaction_type' => 'refund'
+		);
+		$fields_string = '';
+		foreach($fields as $key=>$value) { $fields_string .= $key.'='.$value.'&'; }
+		rtrim($fields_string, '&');
+		
+		config::getLogger()->addInfo("WECASHUP-REFUNDTRANSACTION-REQUEST=".$fields_string);
+		
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_VERBOSE, true);
+		curl_setopt($ch, CURLOPT_URL, $url);
+		curl_setopt($ch, CURLOPT_POST, count($fields));
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		
+		$content = curl_exec($ch);
+		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close($ch);
+		
+		config::getLogger()->addInfo("WECASHUP-REFUNDTRANSACTION-RESPONSE=".$content);
+		
+		$wecashupTransactionsResponse = NULL;
+		if($httpCode == 200) {
+			$data = json_decode($content, true);
+			$wecashupTransactionsResponse = WecashupTransactionsResponse::getInstance($data);
+		} else {
+			throw new Exception("WECASHUP-REFUNDTRANSACTION API CALL, code=".$httpCode." is unexpected...");
+		}
+		return($wecashupTransactionsResponse);
 	}
 	
 }
@@ -501,6 +542,24 @@ class WecashupCustomerResponse {
 	public function __construct() {
 	}
 	
+}
+
+class WecashupRefundTransactionRequest extends WecashupRequest {
+	//
+	private $transactionUid;
+	//
+	public function __construct() {
+		parent::__construct();
+	}
+
+	public function setTransactionUid($transactionUid) {
+		$this->transactionUid = $transactionUid;
+	}
+
+	public function getTransactionUid() {
+		return($this->transactionUid);
+	}
+
 }
 
 ?>
