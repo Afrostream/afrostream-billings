@@ -154,17 +154,18 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 	}
 	
 	private function updateContextBillingUuidSuffix($contextBillingUuid, array $filtered_array) {
-		$userAgent = NULL;
-		if(array_key_exists('filterUserAgent', $filtered_array)) {
-			$userAgent = $filtered_array['filterUserAgent'];
+		$clientId = NULL;
+		if(array_key_exists('filterClientId', $filtered_array)) {
+			$clientId = $filtered_array['filterClientId'];
 		}
-		if(isset($userAgent)) {
-			if(strpos($userAgent, getEnv('USER_AGENT_AFROSTREAM_ANDROID_APP_PREFIX')) === 0) {
-				//android
-				$contextBillingUuid.= '-'.'android-app';
-			} else if(strpos($userAgent, getEnv('USER_AGENT_AFROSTREAM_IOS_APP_PREFIX')) === 0) {
+		if(isset($clientId)) {
+			$androidAppClientIdArray = explode(';', getEnv('AFROSTREAM_ANDROID_APP_CLIENT_IDS'));
+			$iosAppClientIdArray = explode(';', getEnv('AFROSTREAM_IOS_APP_CLIENT_IDS'));
+			if(in_array($clientId, $androidAppClientIdArray)) {
+				$contextBillingUuid.= '-android-app';
+			} else if(in_array($clientId, $iosAppClientIdArray)) {
 				//ios
-				$contextBillingUuid.= '-'.'ios-app';
+				$contextBillingUuid.= '-ios-app';
 			}
 		}
 		return($contextBillingUuid);
