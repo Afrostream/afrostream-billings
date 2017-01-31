@@ -113,7 +113,15 @@ class WecashupTransactionsHandler extends ProviderTransactionsHandler {
 			//
 			$wecashupTransactionRequest = new WecashupTransactionRequest();
 			$wecashupTransactionRequest->setTransactionUid($wecashupRefundTransactionResponse->getTransactionUid());
-			$refundTransaction = $wecashupClient->getTransaction($wecashupTransactionRequest);
+			$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
+			$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
+			if(count($wecashupTransactionsResponseArray) != 1) {
+				//Exception
+				$msg = "transaction with transactionUid=".$wecashupRefundTransactionResponse->getTransactionUid()." was not found";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$refundTransaction = $wecashupTransactionsResponseArray[0];
 			//
 			$this->createOrUpdateRefundFromProvider($user, $userOpts, NULL, $refundTransaction, $transaction, $refundTransactionRequest->getOrigin());	
 			//
