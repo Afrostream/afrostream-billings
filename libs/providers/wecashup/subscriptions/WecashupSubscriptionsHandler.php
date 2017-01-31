@@ -226,11 +226,6 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			{
 				//nothing todo : already done or in process
 			} else {
-				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-					$msg = "cannot expire and refund a ".$this->provider->getName()." subscription";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_UNSUPPORTED);
-				}
 				//
 				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
@@ -268,6 +263,17 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				} catch(Exception $e) {
 					pg_query("ROLLBACK");
 					throw $e;
+				}
+			}
+			if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+				$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase']);
+				if(count($transactionsResult['transactions']) == 1) {
+					$transaction = $transactionsResult['transactions'][0];
+					$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
+					$refundTransactionRequest = new RefundTransactionRequest();
+					$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
+					$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+					$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
 				}
 			}
 			//
