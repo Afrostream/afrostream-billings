@@ -83,9 +83,7 @@ class WecashupClient {
 	public function refundTransaction(WecashupRefundTransactionRequest $wecashupRefundTransactionRequest) {
 		$url = getEnv('WECASHUP_API_URL').'/'.
 				$wecashupRefundTransactionRequest->getMerchantUid().
-				'/transactions/'.
-				$wecashupRefundTransactionRequest->getTransactionUid().
-				'?merchant_public_key='.
+				'/transactions?merchant_public_key='.
 				$wecashupRefundTransactionRequest->getMerchantPublicKey();
 		$fields = array(
 				'merchant_secret' => urlencode($wecashupRefundTransactionRequest->getMerchantSecret()),
@@ -111,14 +109,19 @@ class WecashupClient {
 		
 		config::getLogger()->addInfo("WECASHUP-REFUNDTRANSACTION-RESPONSE=".$content);
 		
-		$wecashupTransactionsResponse = NULL;
-		if($httpCode == 200) {
+		$wecashupRefundTransactionResponse = NULL;
+		if($httpCode == 201) {
 			$data = json_decode($content, true);
-			$wecashupTransactionsResponse = WecashupTransactionsResponse::getInstance($data);
+			if(array_key_exists('response_content', $data)) {
+				$responseContent = $data['response_content'];
+				$wecashupRefundTransactionResponse = WecashupRefundTransactionResponse::getInstance($responseContent);
+			} else {
+				throw new Exception("WECASHUP-REFUNDTRANSACTION API CALL, response_content was not found");
+			}
 		} else {
 			throw new Exception("WECASHUP-REFUNDTRANSACTION API CALL, code=".$httpCode." is unexpected...");
 		}
-		return($wecashupTransactionsResponse);
+		return($wecashupRefundTransactionResponse);
 	}
 	
 }
@@ -560,6 +563,56 @@ class WecashupRefundTransactionRequest extends WecashupRequest {
 		return($this->transactionUid);
 	}
 
+}
+
+class WecashupRefundTransactionResponse {
+	
+	private $transactionToken;
+	private $link;
+	private $transactionUid;
+	private $merchantCallbackUrl;
+	
+	public static function getInstance(array $response) {
+		$out = new WecashupRefundTransactionResponse();
+		$out->setTransactionToken($response["transaction_token"]);
+		$out->setLink($response["link"]);
+		$out->setTransactionUid($response["transaction_uid"]);
+		$out->setMerchantCallbackUrl($response["merchant_callback_url"]);
+		return($out);
+	}
+	
+	public function setTransactionUid($transactionUid) {
+		$this->transactionUid = $transactionUid;
+	}
+	
+	public function getTransactionUid() {
+		return($this->transactionUid);
+	}
+	
+	public function setTransactionToken($transactionToken) {
+		$this->transactionToken = $transactionToken;
+	}
+	
+	public function getTransactionToken() {
+		return($this->transactionToken);
+	}
+	
+	public function setLink($link) {
+		$this->link = $link;
+	}
+	
+	public function getLink() {
+		return($this->link);
+	}
+	
+	public function setMerchantCallbackUrl($url) {
+		$this->merchantCallbackUrl = $url;
+	}
+	
+	public function getMerchantCallbackUrl() {
+		return($this->merchantCallbackUrl);
+	}
+	
 }
 
 ?>
