@@ -284,14 +284,14 @@ class ProviderSubscriptionsHandler {
 	
 	private function selectSendgridTemplateId($event) {
 		$templateNames = array();
-		$defaultTemplateName = 'SUBSCRIPTIONS'.'_'.$event;
+		$defaultTemplateName = 'SUBSCRIPTION'.'_'.$event;
 		$templateNames[] = $defaultTemplateName;
 		//SPECIFIC
 		$specific = NULL;
 		//TODO : later
 		$specificTemplateName = NULL;
 		if(isset($specific)) {
-			$specificTemplateName = 'SUBSCRIPTIONS'.'_'.$specific.'_'.$event;
+			$specificTemplateName = 'SUBSCRIPTION'.'_'.$specific.'_'.$event;
 			$templateNames[] = $specificTemplateName;
 		}
 		$providerTemplateName = $defaultTemplateName.'_'.strtoupper($this->provider->getName());
