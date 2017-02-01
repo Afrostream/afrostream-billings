@@ -462,27 +462,25 @@ class ProviderSubscriptionsHandler {
 			}
 			//DATA SUBSTITUTION <--
 			$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
-			$email = new SendGrid\Email();
-			$email->addTo(!empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL'));
-			$email
-			->setFrom(getEnv('SENDGRID_FROM'))
-			->setFromName(getEnv('SENDGRID_FROM_NAME'))
-			->setSubject(' ')
-			->setText(' ')
-			->setHtml(' ')
-			->setTemplateId($sendgrid_template_id);
+			$personalization = new SendGrid\Personalization();
+			$email = new SendGrid\Email(getEnv('SENDGRID_FROM_NAME'), getEnv('SENDGRID_FROM'));
+			$personalization->addTo(!empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL'));
+			$personalization->setSubject(' ');
+			$personalization->setText(' ');
+			$personalization->setHtml(' ');
+			$email->setTemplateId($sendgrid_template_id);
 			if((null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
-				$email->setBcc(getEnv('SENDGRID_BCC'));
+				$personalization->setBcc(getEnv('SENDGRID_BCC'));
 				foreach($substitions as $var => $val) {
 					$vals = array($val, $val);//Bcc (same value twice (To + Bcc))
-					$email->addSubstitution($var, $vals);
+					$personalization->addSubstitution($var, $vals);
 				}
 			} else {
 				foreach($substitions as $var => $val) {
-					$email->addSubstitution($var, array($val));//once (To)
+					$personalization->addSubstitution($var, array($val));//once (To)
 				}
 			}
-			$sendgrid->send($email);
+			$sendgrid->mail()->send()->post($email);
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");
 		} catch(\SendGrid\Exception $e) {
 			$msg = 'an error occurred while sending email for a new subscription event for subscriptionBillingUuid='.$subscription_after_update->getSubscriptionBillingUuid().', event='.$event.', error_code='.$e->getCode().', error_message=';
