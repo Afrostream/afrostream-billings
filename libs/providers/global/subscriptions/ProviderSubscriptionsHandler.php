@@ -482,6 +482,8 @@ class ProviderSubscriptionsHandler {
 			$mail->setTemplateId($sendgrid_template_id);
 			$mail->setSubject('');
 			$mail->addContent(new SendGrid\Content('text/html', ''));
+			$json_string = json_encode($mail, JSON_PRETTY_PRINT);
+			config::getLogger()->addInfo("mail to be sent : ".$json_string);
 			$response = $sendgrid->client->mail()->send()->post($mail);
 			config::getLogger()->addInfo("mail sent, statusCode=".$response->statusCode());
 			config::getLogger()->addInfo("mail sent, body=".$response->body());
