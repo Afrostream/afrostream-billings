@@ -462,13 +462,11 @@ class ProviderSubscriptionsHandler {
 			}
 			//DATA SUBSTITUTION <--
 			$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
-			$personalization = new SendGrid\Personalization();
+			$mail = new SendGrid\Mail();
 			$email = new SendGrid\Email(getEnv('SENDGRID_FROM_NAME'), getEnv('SENDGRID_FROM'));
+			$mail->setFrom($email);
+			$personalization = new SendGrid\Personalization();
 			$personalization->addTo(!empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL'));
-			$personalization->setSubject(' ');
-			$personalization->setText(' ');
-			$personalization->setHtml(' ');
-			$email->setTemplateId($sendgrid_template_id);
 			if((null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
 				$personalization->setBcc(getEnv('SENDGRID_BCC'));
 				foreach($substitions as $var => $val) {
@@ -480,7 +478,9 @@ class ProviderSubscriptionsHandler {
 					$personalization->addSubstitution($var, array($val));//once (To)
 				}
 			}
-			$sendgrid->mail()->send()->post($email);
+			$mail->addPersonalization($personalization);
+			$mail->setTemplateId($sendgrid_template_id);
+			$sendgrid->mail()->send()->post($mail);
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");
 		} catch(\SendGrid\Exception $e) {
 			$msg = 'an error occurred while sending email for a new subscription event for subscriptionBillingUuid='.$subscription_after_update->getSubscriptionBillingUuid().', event='.$event.', error_code='.$e->getCode().', error_message=';
