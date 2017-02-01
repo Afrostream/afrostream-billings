@@ -480,6 +480,8 @@ class ProviderSubscriptionsHandler {
 			}
 			$mail->addPersonalization($personalization);
 			$mail->setTemplateId($sendgrid_template_id);
+			$mail->setSubject('');
+			$mail->addContent(new SendGrid\Content('text/html', ''));
 			$response = $sendgrid->client->mail()->send()->post($mail);
 			config::getLogger()->addInfo("mail sent, statusCode=".$response->statusCode());
 			config::getLogger()->addInfo("mail sent, body=".$response->body());
