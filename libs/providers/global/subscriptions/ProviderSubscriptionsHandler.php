@@ -214,7 +214,7 @@ class ProviderSubscriptionsHandler {
 			}
 			if($subscription_is_new_event == true) {
 				$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID');
-				$event = "subscription_is_new";
+				$event = "NEW";
 			}
 			//check subscription_is_canceled_event
 			if($subscription_before_update == NULL) {
@@ -232,7 +232,7 @@ class ProviderSubscriptionsHandler {
 			}
 			if($subscription_is_canceled_event == true) {
 				$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
-				$event = "subscription_is_canceled";
+				$event = "CANCEL";
 			}
 			//check subscription_is_expired_event
 			if($subscription_before_update == NULL) {
@@ -250,23 +250,25 @@ class ProviderSubscriptionsHandler {
 			}
 			if($subscription_is_expired_event == true) {
 				if($subscription_after_update->getSubExpiresDate() == $subscription_after_update->getSubCanceledDate()) {
+					$event = "ENDED_FP";
 					$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_FP_ID');//FP = FAILED PAYMENT
 				} else {
+					$event = "ENDED";
 					$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID');
 				}
-				$event = "subscription_is_expired";
 			}
 			$hasEvent = ($event != NULL);
 			if($hasEvent) {
-				$this->doSendEmail($subscription_after_update, $event, $sendgrid_template_id);
+				$this->doSendEmail($subscription_after_update, $event, $this->selectSendgridTemplateId($event));
 				switch ($event) {
-					case 'subscription_is_new' :
+					case 'NEW' :
 						//nothing to do : creation is made only by API calls already traced
 						break;
-					case 'subscription_is_canceled' :
+					case 'CANCEL' :
 						BillingStatsd::inc('route.providers.all.subscriptions.cancel.success');
 						break;
-					case 'subscription_is_expired' :
+					case 'ENDED_FP' :
+					case 'ENDED' :
 						BillingStatsd::inc('route.providers.all.subscriptions.expire.success');
 						break;
 					default :
@@ -278,6 +280,40 @@ class ProviderSubscriptionsHandler {
 		} catch(Exception $e) {
 			config::getLogger()->addError("an error occurred while processing subscription event for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", message=".$e->getMessage());
 		}
+	}
+	
+	private function selectSendgridTemplateId($event) {
+		$templateNames = array();
+		$defaultTemplateName = 'SUBSCRIPTIONS'.'_'.$event;
+		$templateNames[] = $defaultTemplateName;
+		//SPECIFIC
+		$specific = NULL;
+		//TODO : later
+		$specificTemplateName = NULL;
+		if(isset($specific)) {
+			$specificTemplateName = 'SUBSCRIPTIONS'.'_'.$specific.'_'.$event;
+			$templateNames[] = $specificTemplateName;
+		}
+		$providerTemplateName = $defaultTemplateName.'_'.strtoupper($this->provider->getName());
+		$templateNames[] = $providerTemplateName;
+		$specificProviderTemplateName = NULL;
+		if(isset($specificTemplateName)) {
+			$specificProviderTemplateName = $specificTemplateName.'_'.strtoupper($this->provider->getName());
+			$templateNames[] = $specificProviderTemplateName;
+		}
+		//NOW SEARCH TEMPLATE IN DATABASE
+		$billingMailTemplate = NULL;
+		while(($templateName = array_pop($templateNames)) != NULL) {
+			$billingMailTemplate = BillingMailTemplateDAO::getBillingMailTemplateByTemplateName($templateName);
+			if(isset($billingMailTemplate)) {
+				config::getLogger()->addInfo("found template named : ".$templateName);
+				return($billingMailTemplate->getTemplatePartnerUuid());
+			}
+		}
+		$msg = "event by email : no template was found";
+		config::getLogger()->addError($msg);
+		//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		return(NULL);
 	}
 	
 	private function doSendEmail($subscription_after_update, $event, $sendgrid_template_id) {
@@ -308,7 +344,7 @@ class ProviderSubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if($event == "subscription_is_expired") {
+			if(in_array($event, ['ENDED', 'ENDED_FP'])) {
 				if($this->hasFutureSubscription($user, $subscription_after_update)) {
 					config::getLogger()->addInfo("event by email : ignored - has a future subscription - for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event);
 					return;
