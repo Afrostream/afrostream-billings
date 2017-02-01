@@ -480,7 +480,10 @@ class ProviderSubscriptionsHandler {
 			}
 			$mail->addPersonalization($personalization);
 			$mail->setTemplateId($sendgrid_template_id);
-			$sendgrid->client->mail()->send()->post($mail);
+			$response = $sendgrid->client->mail()->send()->post($mail);
+			config::getLogger()->addInfo("mail sent, statusCode=".$response->statusCode());
+			config::getLogger()->addInfo("mail sent, body=".$response->body());
+			config::getLogger()->addInfo("mail sent, headers=".$response->headers());
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");
 		} catch(\SendGrid\Exception $e) {
 			$msg = 'an error occurred while sending email for a new subscription event for subscriptionBillingUuid='.$subscription_after_update->getSubscriptionBillingUuid().', event='.$event.', error_code='.$e->getCode().', error_message=';
