@@ -470,12 +470,12 @@ class ProviderSubscriptionsHandler {
 			if((null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
 				$personalization->addBcc(new SendGrid\Email(NULL, getEnv('SENDGRID_BCC')));
 				foreach($substitions as $var => $val) {
-					$vals = array(strval($val), strval($val));//Bcc (same value twice (To + Bcc))
+					$vals = array($val."", $val."");//Bcc (same value twice (To + Bcc))
 					$personalization->addSubstitution($var, $vals);
 				}
 			} else {
 				foreach($substitions as $var => $val) {
-					$personalization->addSubstitution($var, array(strval($val)));//once (To)
+					$personalization->addSubstitution($var, array($val.""));//once (To)
 				}
 			}
 			$mail->addPersonalization($personalization);
