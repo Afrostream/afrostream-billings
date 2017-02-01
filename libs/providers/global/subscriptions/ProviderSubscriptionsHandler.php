@@ -466,9 +466,9 @@ class ProviderSubscriptionsHandler {
 			$email = new SendGrid\Email(getEnv('SENDGRID_FROM_NAME'), getEnv('SENDGRID_FROM'));
 			$mail->setFrom($email);
 			$personalization = new SendGrid\Personalization();
-			$personalization->addTo(!empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL'));
+			$personalization->addTo(new SendGrid\Email(NULL, !empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL')));
 			if((null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
-				$personalization->setBcc(getEnv('SENDGRID_BCC'));
+				$personalization->addBcc(new SendGrid\Email(NULL, getEnv('SENDGRID_BCC')));
 				foreach($substitions as $var => $val) {
 					$vals = array($val, $val);//Bcc (same value twice (To + Bcc))
 					$personalization->addSubstitution($var, $vals);
