@@ -193,73 +193,36 @@ class ProviderSubscriptionsHandler {
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
 		try {
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid()."...");
-			$subscription_is_new_event = false;
-			$subscription_is_canceled_event = false;
-			$subscription_is_expired_event = false;
-			$sendgrid_template_id = NULL;
 			$event = NULL;
 			//check subscription_is_new_event
-			if($subscription_before_update == NULL) {
-				if($subscription_after_update->getSubStatus() == 'active') {
-					$subscription_is_new_event = true;
-				}
-			} else {
-				if(
-						($subscription_before_update->getSubStatus() != 'active')
-						&&
-						($subscription_after_update->getSubStatus() == 'active')
-						)	{
-							$subscription_is_new_event = true;
-						}
+			$switchEvent = NULL;
+			switch($subscription_after_update->getSubStatus()) {
+				case 'active' :
+					$switchEvent = 'NEW';
+					break;
+				case 'canceled' :
+					$switchEvent = 'CANCEL';
+					break;
+				case 'expired' :
+					if($subscription_after_update->getSubExpiresDate() == $subscription_after_update->getSubCanceledDate()) {
+						$switchEvent = 'ENDED_FP';
+					} else {
+						$switchEvent = 'ENDED';
+					}
+					break;
+				case 'future' :
+					$switchEvent = 'FUTURE';
+					break;
 			}
-			if($subscription_is_new_event == true) {
-				$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID');
-				$event = "NEW";
-			}
-			//check subscription_is_canceled_event
-			if($subscription_before_update == NULL) {
-				if($subscription_after_update->getSubStatus() == 'canceled') {
-					$subscription_is_canceled_event = true;
-				}
-			} else {
-				if(
-						($subscription_before_update->getSubStatus() != 'canceled')
-						&&
-						($subscription_after_update->getSubStatus() == 'canceled')
-						)	{
-							$subscription_is_canceled_event = true;
-						}
-			}
-			if($subscription_is_canceled_event == true) {
-				$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
-				$event = "CANCEL";
-			}
-			//check subscription_is_expired_event
-			if($subscription_before_update == NULL) {
-				if($subscription_after_update->getSubStatus() == 'expired') {
-					$subscription_is_expired_event = true;
-				}
-			} else {
-				if(
-						($subscription_before_update->getSubStatus() != 'expired')
-						&&
-						($subscription_after_update->getSubStatus() == 'expired')
-						)	{
-							$subscription_is_expired_event = true;
-						}
-			}
-			if($subscription_is_expired_event == true) {
-				if($subscription_after_update->getSubExpiresDate() == $subscription_after_update->getSubCanceledDate()) {
-					$event = "ENDED_FP";
-					$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_FP_ID');//FP = FAILED PAYMENT
-				} else {
-					$event = "ENDED";
-					$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID');
+			if(isset($switchEvent)) {
+				//There is only a real event, if object was NULL or SubStatus was different
+				if($subscription_before_update == NULL || $subscription_before_update->getSubStatus() != $subscription_after_update->getSubStatus()) {
+					$event = $switchEvent;
 				}
 			}
 			$hasEvent = ($event != NULL);
 			if($hasEvent) {
-				$this->doSendEmail($subscription_after_update, $event, $this->selectSendgridTemplateId($event));
+				$this->doSendEmail($subscription_after_update, $event, $this->selectSendgridTemplateId($subscription_after_update, $event));
 				switch ($event) {
 					case 'NEW' :
 						//nothing to do : creation is made only by API calls already traced
@@ -271,6 +234,8 @@ class ProviderSubscriptionsHandler {
 					case 'ENDED' :
 						BillingStatsd::inc('route.providers.all.subscriptions.expire.success');
 						break;
+					case 'FUTURE' :
+						BillingStatsd::inc('route.providers.all.subscriptions.future.success');
 					default :
 						//nothing to do
 						break;
@@ -282,13 +247,15 @@ class ProviderSubscriptionsHandler {
 		}
 	}
 	
-	private function selectSendgridTemplateId($event) {
+	private function selectSendgridTemplateId(BillingsSubscription $subscription_after_update, $event) {
 		$templateNames = array();
 		$defaultTemplateName = 'SUBSCRIPTION'.'_'.$event;
 		$templateNames[] = $defaultTemplateName;
 		//SPECIFIC
 		$specific = NULL;
-		//TODO : later
+		if($this->isSponsorshipSubscription($subscription_after_update)) {
+			$specific = 'SPONSORSHIP';
+		}
 		$specificTemplateName = NULL;
 		if(isset($specific)) {
 			$specificTemplateName = 'SUBSCRIPTION'.'_'.$specific.'_'.$event;
@@ -316,7 +283,7 @@ class ProviderSubscriptionsHandler {
 		return(NULL);
 	}
 	
-	private function doSendEmail($subscription_after_update, $event, $sendgrid_template_id) {
+	private function doSendEmail(BillingsSubscription $subscription_after_update, $event, $sendgrid_template_id) {
 		try {
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail...");
 			if(getEnv('EVENT_EMAIL_ACTIVATED') != 1) {
@@ -526,6 +493,28 @@ class ProviderSubscriptionsHandler {
 						return(true);
 					}
 				}
+			}
+		}
+		return(false);
+	}
+	
+	protected function isSponsorshipSubscription(BillingsSubscription $currentBillingsSubscription) {
+		$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($currentBillingsSubscription->getId());
+		if(isset($userInternalCoupon)) {
+			$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($userInternalCoupon->getInternalCouponsId());
+			if($internalCoupon == NULL) {
+				$msg = "no internal coupon found linked to user coupon with uuid=".$userInternalCoupon->getUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+			if($internalCouponsCampaign == NULL) {
+				$msg = "unknown internalCouponsCampaign with id : ".$internalCoupon->getInternalCouponsCampaignsId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($internalCouponsCampaign->getCouponType() == CouponCampaignType::sponsorship) {
+				return(true);
 			}
 		}
 		return(false);
