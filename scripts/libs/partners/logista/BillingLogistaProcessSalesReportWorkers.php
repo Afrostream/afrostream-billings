@@ -40,7 +40,7 @@ class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
 					'password' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD')
 			]));
 			$fromLogistaDirFiles = $filesystem->listContents(getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_IN'), false);
-			$salesReportBasename = getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME').'_'.getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID').'_'.'sales'.'_';
+			$salesReportBasename = getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME').'_'.getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_PREFIX').getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID').'_'.'sales'.'_';
 			foreach($fromLogistaDirFiles as $fromLogistaDirFile) {
 				if(substr($fromLogistaDirFile['basename'], 0, strlen($salesReportBasename)) === $salesReportBasename) {
 					$this->doProcessSalesReport($fromLogistaDirFile);
