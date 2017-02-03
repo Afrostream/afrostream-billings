@@ -153,13 +153,13 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 				$headerfields[] = $totalCounter;//NB_CODES
 				$headerfields[] = $now_as_str;//DATE_CREAT
 				$headerfields[] = $now_as_str;//DATE_ENVOI
-				fputcsv($current_csv_file_res, $headerfields, $csvDelimiter, $csvEnclosure);
+				fputs($current_csv_file_res, implode($csvDelimiter, $headerfields)."\r");
 				//fill body line
 				$bodyFields = array();
 				$bodyFields[] = 'C';
 				$bodyFields[] = $internalCouponsCampaignOpts->getOpt('internalEAN');//CODE_ARTICLE (EAN)
 				$bodyFields[] = ($sizeLimit > 0) ? min($sizeLimit, $totalCounter - $currentCounter) : $totalCounter;//QUANTITE
-				fputcsv($current_csv_file_res, $bodyFields, $csvDelimiter, $csvEnclosure);
+				fputs($current_csv_file_res, implode($csvDelimiter, $bodyFields)."\r");
 			}
 			//fill current file
 			$detailFields = array();
@@ -167,7 +167,7 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 			$detailFields[] = $internalCoupon->getId();//NUM_SERIE
 			$detailFields[] = $internalCoupon->getCode();//CODE_ERECH
 			$detailFields[] = $expiresDate_str;//DATE_VALID
-			fputcsv($current_csv_file_res, $detailFields, $csvDelimiter, $csvEnclosure);
+			fputs($current_csv_file_res, implode($csvDelimiter, $detailFields)."\r");
 			//done
 			$size++;
 			$currentCounter++;
