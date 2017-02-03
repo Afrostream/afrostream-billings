@@ -115,10 +115,15 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 							$attachment->setFilename($filename);
 							$attachment->setContentID($filename);
 							$attachment->setDisposition('attachment');
-							$attachment->setContent(file_get_contents($filepath));
+							$attachment->setContent(base64_encode(file_get_contents($filepath)));
 							$mail->addAttachment($attachment);
 						}
-						$sendgrid->client->mail()->send()->post($mail);
+						$response = $sendgrid->client->mail()->send()->post($mail);
+						if($response->statusCode() != 202) {
+							ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
+							ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
+							ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
+						}
 					}
 				}
 				foreach ($generated_files as $filename => $filepath) {
@@ -180,20 +185,14 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 								$attachment->setFilename($monthyFileName);
 								$attachment->setContentID($monthyFileName);
 								$attachment->setDisposition('attachment');
-								$attachment->setContent(file_get_contents($export_transactions_file_path));
+								$attachment->setContent(base64_encode(file_get_contents($export_transactions_file_path)));
 								$mail->addAttachment($attachment);
-								$sendgrid->client->mail()->send()->post($mail);
-								/*
-								$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
-								$email = new SendGrid\Email();
-								$email->setTos(explode(';', getEnv('EXPORTS_TRANSACTIONS_MONTHLY_EMAIL_TOS')))
-								->setBccs(explode(';', getEnv('EXPORTS_TRANSACTIONS_MONTHLY_EMAIL_BCCS')))
-								->setFrom(getEnv('EXPORTS_EMAIL_FROM'))
-								->setFromName(getEnv('EXPORTS_EMAIL_FROMNAME'))
-								->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Monthly Transactions Export : '.$monthToProcessBeginning->format($monthlyDateFormat))
-								->setText('See File(s) attached')
-								->addAttachment($export_transactions_file_path, $monthyFileName);
-								$sendgrid->send($email);*/
+								$response = $sendgrid->client->mail()->send()->post($mail);
+								if($response->statusCode() != 202) {
+									ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
+									ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
+									ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
+								}
 							}
 						}
 						//

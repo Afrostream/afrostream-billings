@@ -150,7 +150,7 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 				}
 			} else {
 				$msg = "transaction-status/@code ".$getStatusResponse->getTransactionStatusCode()." is unknown";
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::NETSIZE_SUBSCRIPTION_BAD_STATUS);
 			}
 			ScriptsConfig::getLogger()->addInfo("refreshing netsize subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()." done successfully");

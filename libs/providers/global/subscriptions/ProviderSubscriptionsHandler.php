@@ -436,41 +436,23 @@ class ProviderSubscriptionsHandler {
 			$personalization->addTo(new SendGrid\Email(NULL, !empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL')));
 			if((null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
 				$personalization->addBcc(new SendGrid\Email(NULL, getEnv('SENDGRID_BCC')));
-				foreach($substitions as $var => $val) {
-					$vals = array($val."", $val."");//Bcc (same value twice (To + Bcc))
-					$personalization->addSubstitution($var, $vals);
-				}
-			} else {
-				foreach($substitions as $var => $val) {
-					$personalization->addSubstitution($var, array($val.""));//once (To)
-				}
+			}
+			foreach($substitions as $var => $val) {
+				//NC $val."" NOT $val which forces to cast to string because of an issue with numerics : https://github.com/sendgrid/sendgrid-php/issues/350 
+				$personalization->addSubstitution($var, $val."");
 			}
 			$mail->addPersonalization($personalization);
 			$mail->setTemplateId($sendgrid_template_id);
-			$mail->setSubject('Here goes the subject');
-			$mail->addContent(new SendGrid\Content('text/html', '<html></html>'));
-			$json_string = json_encode($mail, JSON_PRETTY_PRINT);
-			config::getLogger()->addInfo("mail to be sent : ".$json_string);
 			$response = $sendgrid->client->mail()->send()->post($mail);
-			config::getLogger()->addInfo("mail sent, statusCode=".$response->statusCode());
-			config::getLogger()->addInfo("mail sent, body=".$response->body());
-			config::getLogger()->addInfo("mail sent, headers=".var_export($response->headers(), true));
-			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");
-		} catch(\SendGrid\Exception $e) {
-			$msg = 'an error occurred while sending email for a new subscription event for subscriptionBillingUuid='.$subscription_after_update->getSubscriptionBillingUuid().', event='.$event.', error_code='.$e->getCode().', error_message=';
-			$firstLoop = true;
-			foreach($e->getErrors() as $er) {
-				if($firstLoop == true) {
-					$firstLoop = false;
-					$msg.= $er;
-				} else {
-					$msg.= ", ".$er;
-				}
+			if($response->statusCode() != 202) {
+				config::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
+				config::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
+				config::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
 			}
-			config::getLogger()->addError($msg);
-			throw $e;
+			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");
 		} catch(Exception $e) {
-			$msg = 'an error occurred while sending email for a new subscription event for subscriptionBillingUuid='.$subscription_after_update->getSubscriptionBillingUuid().', event='.$event.', error_code='.$e->getCode().', error_message=';
+			$msg = 'an error occurred while sending email for a new subscription event for subscriptionBillingUuid=';
+			$msg.= $subscription_after_update->getSubscriptionBillingUuid().', event='.$event.', error_code='.$e->getCode().', error_message='.$e->getMessage();
 			config::getLogger()->addError($msg);
 			throw $e;
 		}

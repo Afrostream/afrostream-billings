@@ -91,19 +91,14 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 							$attachment->setFilename($dailyFileName);
 							$attachment->setContentID($dailyFileName);
 							$attachment->setDisposition('attachment');
-							$attachment->setContent(file_get_contents($export_subscriptions_file_path));
+							$attachment->setContent(base64_encode(file_get_contents($export_subscriptions_file_path)));
 							$mail->addAttachment($attachment);
-							$sendgrid->client->mail()->send()->post($mail);
-							/*$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
-							$email = new SendGrid\Email();
-							$email->setTos(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_DAILY_EMAIL_TOS')))
-							->setBccs(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_DAILY_EMAIL_BCCS')))
-							->setFrom(getEnv('EXPORTS_EMAIL_FROM'))
-							->setFromName(getEnv('EXPORTS_EMAIL_FROMNAME'))
-							->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Daily Chartmogul Afr Subscriptions Export : '.$dayToProcessBeginningOfDay->format($dailyDateFormat))
-							->setText('See File(s) attached')
-							->addAttachment($export_subscriptions_file_path, $dailyFileName);
-							$sendgrid->send($email);*/
+							$response = $sendgrid->client->mail()->send()->post($mail);
+							if($response->statusCode() != 202) {
+								ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
+								ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
+								ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
+							}
 						}
 					}
 					//
@@ -166,19 +161,14 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 								$attachment->setFilename($monthyFileName);
 								$attachment->setContentID($monthyFileName);
 								$attachment->setDisposition('attachment');
-								$attachment->setContent(file_get_contents($export_subscriptions_file_path));
+								$attachment->setContent(base64_encode(file_get_contents($export_subscriptions_file_path)));
 								$mail->addAttachment($attachment);
-								$sendgrid->client->mail()->send()->post($mail);
-								/*$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
-								$email = new SendGrid\Email();
-								$email->setTos(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_MONTHLY_EMAIL_TOS')))
-								->setBccs(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_MONTHLY_EMAIL_BCCS')))
-								->setFrom(getEnv('EXPORTS_EMAIL_FROM'))
-								->setFromName(getEnv('EXPORTS_EMAIL_FROMNAME'))
-								->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Monthly Chartmogul Afr Subscriptions Export : '.$monthToProcessBeginning->format($monthlyDateFormat))
-								->setText('See File(s) attached')
-								->addAttachment($export_subscriptions_file_path, $monthyFileName);
-								$sendgrid->send($email);*/
+								$response = $sendgrid->client->mail()->send()->post($mail);
+								if($response->statusCode() != 202) {
+									ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
+									ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
+									ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
+								}
 							}
 						}
 						//

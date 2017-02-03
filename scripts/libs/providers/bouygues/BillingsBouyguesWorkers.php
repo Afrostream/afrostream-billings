@@ -90,13 +90,13 @@ class BillingsBouyguesWorkers extends BillingsWorkers {
 			$user = UserDAO::getUserById($subscription->getUserId());
 			if($user == NULL) {
 				$msg = "unknown user with id : ".$subscription->getUserId();
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
 			if($providerPlan == NULL) {
 				$msg = "unknown plan with id : ".$subscription->getPlanId();
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$bouyguesTVClient = new BouyguesTVClient($user->getUserProviderUuid());
@@ -136,7 +136,7 @@ class BillingsBouyguesWorkers extends BillingsWorkers {
 				}
 			} else {
 				$msg = "BouyguesSubscription resultMessage not in (SubscribedNotCoupled, NotSubscribedNotCoupled), resultMessage=".$bouyguesSubscription->getResultMessage();
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::BOUYGUES_SUBSCRIPTION_BAD_STATUS);
 			}
 			ScriptsConfig::getLogger()->addInfo("refreshing bouygues subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()." done successfully");
