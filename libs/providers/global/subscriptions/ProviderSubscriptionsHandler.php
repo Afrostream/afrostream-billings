@@ -193,82 +193,49 @@ class ProviderSubscriptionsHandler {
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
 		try {
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid()."...");
-			$subscription_is_new_event = false;
-			$subscription_is_canceled_event = false;
-			$subscription_is_expired_event = false;
-			$sendgrid_template_id = NULL;
 			$event = NULL;
 			//check subscription_is_new_event
-			if($subscription_before_update == NULL) {
-				if($subscription_after_update->getSubStatus() == 'active') {
-					$subscription_is_new_event = true;
+			$switchEvent = NULL;
+			switch($subscription_after_update->getSubStatus()) {
+				case 'active' :
+					$switchEvent = 'NEW';
+					break;
+				case 'canceled' :
+					$switchEvent = 'CANCEL';
+					break;
+				case 'expired' :
+					if($subscription_after_update->getSubExpiresDate() == $subscription_after_update->getSubCanceledDate()) {
+						$switchEvent = 'ENDED_FP';
+					} else {
+						$switchEvent = 'ENDED';
+					}
+					break;
+				case 'future' :
+					$switchEvent = 'FUTURE';
+					break;
+			}
+			if(isset($switchEvent)) {
+				//There is only a real event, if object was NULL or SubStatus was different
+				if($subscription_before_update == NULL || $subscription_before_update->getSubStatus() != $subscription_after_update->getSubStatus()) {
+					$event = $switchEvent;
 				}
-			} else {
-				if(
-						($subscription_before_update->getSubStatus() != 'active')
-						&&
-						($subscription_after_update->getSubStatus() == 'active')
-						)	{
-							$subscription_is_new_event = true;
-						}
-			}
-			if($subscription_is_new_event == true) {
-				$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_NEW_ID');
-				$event = "subscription_is_new";
-			}
-			//check subscription_is_canceled_event
-			if($subscription_before_update == NULL) {
-				if($subscription_after_update->getSubStatus() == 'canceled') {
-					$subscription_is_canceled_event = true;
-				}
-			} else {
-				if(
-						($subscription_before_update->getSubStatus() != 'canceled')
-						&&
-						($subscription_after_update->getSubStatus() == 'canceled')
-						)	{
-							$subscription_is_canceled_event = true;
-						}
-			}
-			if($subscription_is_canceled_event == true) {
-				$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_CANCEL_ID');
-				$event = "subscription_is_canceled";
-			}
-			//check subscription_is_expired_event
-			if($subscription_before_update == NULL) {
-				if($subscription_after_update->getSubStatus() == 'expired') {
-					$subscription_is_expired_event = true;
-				}
-			} else {
-				if(
-						($subscription_before_update->getSubStatus() != 'expired')
-						&&
-						($subscription_after_update->getSubStatus() == 'expired')
-						)	{
-							$subscription_is_expired_event = true;
-						}
-			}
-			if($subscription_is_expired_event == true) {
-				if($subscription_after_update->getSubExpiresDate() == $subscription_after_update->getSubCanceledDate()) {
-					$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_FP_ID');//FP = FAILED PAYMENT
-				} else {
-					$sendgrid_template_id = getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_ID');
-				}
-				$event = "subscription_is_expired";
 			}
 			$hasEvent = ($event != NULL);
 			if($hasEvent) {
-				$this->doSendEmail($subscription_after_update, $event, $sendgrid_template_id);
+				$this->doSendEmail($subscription_after_update, $event, $this->selectSendgridTemplateId($subscription_after_update, $event));
 				switch ($event) {
-					case 'subscription_is_new' :
+					case 'NEW' :
 						//nothing to do : creation is made only by API calls already traced
 						break;
-					case 'subscription_is_canceled' :
+					case 'CANCEL' :
 						BillingStatsd::inc('route.providers.all.subscriptions.cancel.success');
 						break;
-					case 'subscription_is_expired' :
+					case 'ENDED_FP' :
+					case 'ENDED' :
 						BillingStatsd::inc('route.providers.all.subscriptions.expire.success');
 						break;
+					case 'FUTURE' :
+						BillingStatsd::inc('route.providers.all.subscriptions.future.success');
 					default :
 						//nothing to do
 						break;
@@ -280,7 +247,43 @@ class ProviderSubscriptionsHandler {
 		}
 	}
 	
-	private function doSendEmail($subscription_after_update, $event, $sendgrid_template_id) {
+	private function selectSendgridTemplateId(BillingsSubscription $subscription_after_update, $event) {
+		$templateNames = array();
+		$defaultTemplateName = 'SUBSCRIPTION'.'_'.$event;
+		$templateNames[] = $defaultTemplateName;
+		//SPECIFIC
+		$specific = NULL;
+		if($this->isSponsorshipSubscription($subscription_after_update)) {
+			$specific = 'SPONSORSHIP';
+		}
+		$specificTemplateName = NULL;
+		if(isset($specific)) {
+			$specificTemplateName = 'SUBSCRIPTION'.'_'.$specific.'_'.$event;
+			$templateNames[] = $specificTemplateName;
+		}
+		$providerTemplateName = $defaultTemplateName.'_'.strtoupper($this->provider->getName());
+		$templateNames[] = $providerTemplateName;
+		$specificProviderTemplateName = NULL;
+		if(isset($specificTemplateName)) {
+			$specificProviderTemplateName = $specificTemplateName.'_'.strtoupper($this->provider->getName());
+			$templateNames[] = $specificProviderTemplateName;
+		}
+		//NOW SEARCH TEMPLATE IN DATABASE
+		$billingMailTemplate = NULL;
+		while(($templateName = array_pop($templateNames)) != NULL) {
+			$billingMailTemplate = BillingMailTemplateDAO::getBillingMailTemplateByTemplateName($templateName);
+			if(isset($billingMailTemplate)) {
+				config::getLogger()->addInfo("found template named : ".$templateName);
+				return($billingMailTemplate->getTemplatePartnerUuid());
+			}
+		}
+		$msg = "event by email : no template was found";
+		config::getLogger()->addError($msg);
+		//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		return(NULL);
+	}
+	
+	private function doSendEmail(BillingsSubscription $subscription_after_update, $event, $sendgrid_template_id) {
 		try {
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail...");
 			if(getEnv('EVENT_EMAIL_ACTIVATED') != 1) {
@@ -308,7 +311,7 @@ class ProviderSubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if($event == "subscription_is_expired") {
+			if(in_array($event, ['ENDED', 'ENDED_FP'])) {
 				if($this->hasFutureSubscription($user, $subscription_after_update)) {
 					config::getLogger()->addInfo("event by email : ignored - has a future subscription - for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event);
 					return;
@@ -426,43 +429,30 @@ class ProviderSubscriptionsHandler {
 			}
 			//DATA SUBSTITUTION <--
 			$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
-			$email = new SendGrid\Email();
-			$email->addTo(!empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL'));
-			$email
-			->setFrom(getEnv('SENDGRID_FROM'))
-			->setFromName(getEnv('SENDGRID_FROM_NAME'))
-			->setSubject(' ')
-			->setText(' ')
-			->setHtml(' ')
-			->setTemplateId($sendgrid_template_id);
+			$mail = new SendGrid\Mail();
+			$email = new SendGrid\Email(getEnv('SENDGRID_FROM_NAME'), getEnv('SENDGRID_FROM'));
+			$mail->setFrom($email);
+			$personalization = new SendGrid\Personalization();
+			$personalization->addTo(new SendGrid\Email(NULL, !empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL')));
 			if((null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
-				$email->setBcc(getEnv('SENDGRID_BCC'));
-				foreach($substitions as $var => $val) {
-					$vals = array($val, $val);//Bcc (same value twice (To + Bcc))
-					$email->addSubstitution($var, $vals);
-				}
-			} else {
-				foreach($substitions as $var => $val) {
-					$email->addSubstitution($var, array($val));//once (To)
-				}
+				$personalization->addBcc(new SendGrid\Email(NULL, getEnv('SENDGRID_BCC')));
 			}
-			$sendgrid->send($email);
+			foreach($substitions as $var => $val) {
+				//NC $val."" NOT $val which forces to cast to string because of an issue with numerics : https://github.com/sendgrid/sendgrid-php/issues/350 
+				$personalization->addSubstitution($var, $val."");
+			}
+			$mail->addPersonalization($personalization);
+			$mail->setTemplateId($sendgrid_template_id);
+			$response = $sendgrid->client->mail()->send()->post($mail);
+			if($response->statusCode() != 202) {
+				config::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
+				config::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
+				config::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
+			}
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");
-		} catch(\SendGrid\Exception $e) {
-			$msg = 'an error occurred while sending email for a new subscription event for subscriptionBillingUuid='.$subscription_after_update->getSubscriptionBillingUuid().', event='.$event.', error_code='.$e->getCode().', error_message=';
-			$firstLoop = true;
-			foreach($e->getErrors() as $er) {
-				if($firstLoop == true) {
-					$firstLoop = false;
-					$msg.= $er;
-				} else {
-					$msg.= ", ".$er;
-				}
-			}
-			config::getLogger()->addError($msg);
-			throw $e;
 		} catch(Exception $e) {
-			$msg = 'an error occurred while sending email for a new subscription event for subscriptionBillingUuid='.$subscription_after_update->getSubscriptionBillingUuid().', event='.$event.', error_code='.$e->getCode().', error_message=';
+			$msg = 'an error occurred while sending email for a new subscription event for subscriptionBillingUuid=';
+			$msg.= $subscription_after_update->getSubscriptionBillingUuid().', event='.$event.', error_code='.$e->getCode().', error_message='.$e->getMessage();
 			config::getLogger()->addError($msg);
 			throw $e;
 		}
@@ -485,6 +475,28 @@ class ProviderSubscriptionsHandler {
 						return(true);
 					}
 				}
+			}
+		}
+		return(false);
+	}
+	
+	protected function isSponsorshipSubscription(BillingsSubscription $currentBillingsSubscription) {
+		$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($currentBillingsSubscription->getId());
+		if(isset($userInternalCoupon)) {
+			$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($userInternalCoupon->getInternalCouponsId());
+			if($internalCoupon == NULL) {
+				$msg = "no internal coupon found linked to user coupon with uuid=".$userInternalCoupon->getUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+			if($internalCouponsCampaign == NULL) {
+				$msg = "unknown internalCouponsCampaign with id : ".$internalCoupon->getInternalCouponsCampaignsId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($internalCouponsCampaign->getCouponType() == CouponCampaignType::sponsorship) {
+				return(true);
 			}
 		}
 		return(false);

@@ -94,6 +94,50 @@ class WecashupTransactionsHandler extends ProviderTransactionsHandler {
 		}
 		return($billingTransactionStatus);
 	}
+	
+	public function doRefundTransaction(BillingsTransaction $transaction, RefundTransactionRequest $refundTransactionRequest) {
+		try {
+			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
+			$user = UserDAO::getUserById($transaction->getUserId());
+			if($user == NULL) {
+				$msg = "unknown user with id : ".$transaction->getUserId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+			//
+			$wecashupClient = new WecashupClient();
+			$wecashupRefundTransactionRequest = new WecashupRefundTransactionRequest();
+			$wecashupRefundTransactionRequest->setTransactionUid($transaction->getTransactionProviderUuid());
+			$wecashupRefundTransactionResponse = $wecashupClient->refundTransaction($wecashupRefundTransactionRequest);
+			//
+			$wecashupTransactionRequest = new WecashupTransactionRequest();
+			$wecashupTransactionRequest->setTransactionUid($wecashupRefundTransactionResponse->getTransactionUid());
+			$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
+			$wecashupTransactionsResponseArray = $wecashupTransactionsResponse->getWecashupTransactionsResponseArray();
+			if(count($wecashupTransactionsResponseArray) != 1) {
+				//Exception
+				$msg = "transaction with transactionUid=".$wecashupRefundTransactionResponse->getTransactionUid()." was not found";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$refundTransaction = $wecashupTransactionsResponseArray[0];
+			//
+			$this->createOrUpdateRefundFromProvider($user, $userOpts, NULL, $refundTransaction, $transaction, $refundTransactionRequest->getOrigin());	
+			//
+			$transaction = BillingsTransactionDAO::getBillingsTransactionById($transaction->getId());
+			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("refunding a ".$this->provider->getName()." transaction failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("refunding a ".$this->provider->getName()." transaction failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
+		}
+		return($transaction);
+	}
 
 }
 

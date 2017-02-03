@@ -6908,3 +6908,140 @@ class BillingInternalCouponActionLogDAO {
 	}
 	
 }
+
+class BillingMailTemplate {
+	
+	private $_id;
+	private $templateBillingUuid;
+	private $templatePartnerUuid;
+	private $templateName;
+	private $creationDate;
+	private $updatedDate;
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setTemplateBillingUuid($uuid) {
+		$this->templateBillingUuid = $uuid;
+	}
+	
+	public function getTemplateBillingUuid() {
+		return($this->templateBillingUuid);
+	}
+	
+	public function setTemplatePartnerUuid($uuid) {
+		$this->templatePartnerUuid = $uuid;
+	}
+	
+	public function getTemplatePartnerUuid() {
+		return($this->templatePartnerUuid);
+	}
+	
+	public function setTemplateName($str) {
+		$this->templateName = $str;
+	}
+	
+	public function getTemplateName() {
+		return($this->templateName);
+	}
+	
+	public function setCreationDate(DateTime $date) {
+		$this->creationDate = $date;
+	}
+	
+	public function getCreationDate() {
+		return($this->creationDate);
+	}
+	
+	public function setUpdatedDate(DateTime $date) {
+		$this->updatedDate = $date;
+	}
+	
+	public function getUpdatedDate() {
+		return($this->updatedDate);
+	}
+	
+}
+
+class BillingMailTemplateDAO {
+	
+	private static $sfields = "_id, template_billing_uuid, template_partner_uuid, template_name, creation_date, updated_date";
+	
+	private static function getBillingMailTemplateFromRow($row) {
+		$out = new BillingMailTemplate();
+		$out->setId($row["_id"]);
+		$out->setTemplateBillingUuid($row["template_billing_uuid"]);
+		$out->setTemplatePartnerUuid($row["template_partner_uuid"]);
+		$out->setTemplateName($row["template_name"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		$out->setUpdatedDate($row["updated_date"] == NULL ? NULL : new DateTime($row["updated_date"]));
+		return($out);
+	}
+	
+	public static function getBillingMailTemplateById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_mail_templates WHERE _id = $1";
+
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+
+		$out = null;
+
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingMailTemplateFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+
+	public static function getBillingMailTemplateByTemplatePartnerUuid($templatePartnerUuid) {
+		$query = "SELECT ".self::$sfields." FROM billing_mail_templates WHERE template_partner_uuid = $1";
+	
+		$result = pg_query_params(config::getDbConn(), $query, array($templatePartnerUuid));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingMailTemplateFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getBillingMailTemplateByTemplateName($templateName) {
+		$query = "SELECT ".self::$sfields." FROM billing_mail_templates WHERE template_name = $1";
+
+		$result = pg_query_params(config::getDbConn(), $query, array($templateName));
+
+		$out = null;
+
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingMailTemplateFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+
+		return($out);
+	}
+	
+	public static function addBillingMailTemplate(BillingMailTemplate $billingMailTemplate) {
+		$query = "INSERT INTO billing_mail_templates (template_billing_uuid, template_partner_uuid, template_name)";
+		$query.= " VALUES ($1, $2, $3) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($billingMailTemplate->getTemplateBillingUuid(),
+						$billingMailTemplate->getTemplatePartnerUuid(),
+						$billingMailTemplate->getTemplateName()));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		return(self::getBillingMailTemplateById($row[0]));
+	}
+	
+}

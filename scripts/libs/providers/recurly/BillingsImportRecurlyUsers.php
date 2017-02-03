@@ -12,7 +12,7 @@ class BillingsImportRecurlyUsers {
 			$provider = ProviderDAO::getProviderByName('recurly');
 			if($provider == NULL) {
 				$msg = "unknown provider named : ".$provider_name;
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//
