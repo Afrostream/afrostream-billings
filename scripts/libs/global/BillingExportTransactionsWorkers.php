@@ -94,17 +94,31 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 					//ONLY SEND BY EMAIL THE LAST ONE
 					if(getEnv('EXPORTS_DAILY_EMAIL_ACTIVATED') == 1) {
 						$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
-						$email = new SendGrid\Email();
-						$email->setTos(explode(';', getEnv('EXPORTS_TRANSACTIONS_DAILY_EMAIL_TOS')))
-						->setBccs(explode(';', getEnv('EXPORTS_TRANSACTIONS_DAILY_EMAIL_BCCS')))
-						->setFrom(getEnv('EXPORTS_EMAIL_FROM'))
-						->setFromName(getEnv('EXPORTS_EMAIL_FROMNAME'))
-						->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Daily Transactions Export : '.$dayToProcessBeginningOfDay->format($dailyDateFormat))
-						->setText('See File(s) attached');
-						foreach ($generated_files as $filename => $filepath) {
-							$email->addAttachment($filepath, $filename);
+						$mail = new SendGrid\Mail();
+						$email = new SendGrid\Email(getEnv('EXPORTS_EMAIL_FROMNAME'), getEnv('EXPORTS_EMAIL_FROM'));
+						$mail->setFrom($email);
+						$personalization = new SendGrid\Personalization();
+						$to_array = explode(';', getEnv('EXPORTS_TRANSACTIONS_DAILY_EMAIL_TOS'));
+						foreach ($to_array as $to) {
+							$personalization->addTo(new SendGrid\Email(NULL, $to));
 						}
-						$sendgrid->send($email);
+						$bcc_array = explode(';', getEnv('EXPORTS_TRANSACTIONS_DAILY_EMAIL_BCCS'));
+						foreach ($bcc_array as $bcc) {
+							$personalization->addBcc(new SendGrid\Email(NULL, $bcc));
+						}
+						$personalization->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Daily Transactions Export : '.$dayToProcessBeginningOfDay->format($dailyDateFormat));
+						$mail->addPersonalization($personalization);
+						$content = new SendGrid\Content('text/plain', 'See File(s) attached');
+						$mail->addContent($content);
+						foreach ($generated_files as $filename => $filepath) {
+							$attachment = new SendGrid\Attachment();
+							$attachment->setFilename($filename);
+							$attachment->setContentID($filename);
+							$attachment->setDisposition('attachment');
+							$attachment->setContent(file_get_contents($filepath));
+							$mail->addAttachment($attachment);
+						}
+						$sendgrid->client->mail()->send()->post($mail);
 					}
 				}
 				foreach ($generated_files as $filename => $filepath) {
@@ -146,6 +160,31 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 							//ONLY SEND BY EMAIL THE LAST ONE
 							if(getEnv('EXPORTS_MONTHLY_EMAIL_ACTIVATED') == 1) {
 								$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
+								$mail = new SendGrid\Mail();
+								$email = new SendGrid\Email(getEnv('EXPORTS_EMAIL_FROMNAME'), getEnv('EXPORTS_EMAIL_FROM'));
+								$mail->setFrom($email);
+								$personalization = new SendGrid\Personalization();
+								$to_array = explode(';', getEnv('EXPORTS_TRANSACTIONS_MONTHLY_EMAIL_TOS'));
+								foreach ($to_array as $to) {
+									$personalization->addTo(new SendGrid\Email(NULL, $to));
+								}
+								$bcc_array = explode(';', getEnv('EXPORTS_TRANSACTIONS_MONTHLY_EMAIL_BCCS'));
+								foreach ($bcc_array as $bcc) {
+									$personalization->addBcc(new SendGrid\Email(NULL, $bcc));
+								}
+								$personalization->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Monthly Transactions Export : '.$monthToProcessBeginning->format($monthlyDateFormat));
+								$mail->addPersonalization($personalization);
+								$content = new SendGrid\Content('text/plain', 'See File(s) attached');
+								$mail->addContent($content);
+								$attachment = new SendGrid\Attachment();
+								$attachment->setFilename($monthyFileName);
+								$attachment->setContentID($monthyFileName);
+								$attachment->setDisposition('attachment');
+								$attachment->setContent(file_get_contents($export_transactions_file_path));
+								$mail->addAttachment($attachment);
+								$sendgrid->client->mail()->send()->post($mail);
+								/*
+								$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
 								$email = new SendGrid\Email();
 								$email->setTos(explode(';', getEnv('EXPORTS_TRANSACTIONS_MONTHLY_EMAIL_TOS')))
 								->setBccs(explode(';', getEnv('EXPORTS_TRANSACTIONS_MONTHLY_EMAIL_BCCS')))
@@ -154,7 +193,7 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 								->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Monthly Transactions Export : '.$monthToProcessBeginning->format($monthlyDateFormat))
 								->setText('See File(s) attached')
 								->addAttachment($export_transactions_file_path, $monthyFileName);
-								$sendgrid->send($email);
+								$sendgrid->send($email);*/
 							}
 						}
 						//

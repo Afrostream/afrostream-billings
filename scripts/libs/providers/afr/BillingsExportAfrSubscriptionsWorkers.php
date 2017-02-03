@@ -71,6 +71,30 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 						//ONLY SEND BY EMAIL THE LAST ONE
 						if(getEnv('EXPORTS_DAILY_EMAIL_ACTIVATED') == 1) {
 							$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
+							$mail = new SendGrid\Mail();
+							$email = new SendGrid\Email(getEnv('EXPORTS_EMAIL_FROMNAME'), getEnv('EXPORTS_EMAIL_FROM'));
+							$mail->setFrom($email);
+							$personalization = new SendGrid\Personalization();
+							$to_array = explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_DAILY_EMAIL_TOS'));
+							foreach ($to_array as $to) {
+								$personalization->addTo(new SendGrid\Email(NULL, $to));
+							}
+							$bcc_array = explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_DAILY_EMAIL_BCCS'));
+							foreach ($bcc_array as $bcc) {
+								$personalization->addBcc(new SendGrid\Email(NULL, $bcc));
+							}
+							$personalization->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Daily Chartmogul Afr Subscriptions Export : '.$dayToProcessBeginningOfDay->format($dailyDateFormat));
+							$mail->addPersonalization($personalization);
+							$content = new SendGrid\Content('text/plain', 'See File(s) attached');
+							$mail->addContent($content);
+							$attachment = new SendGrid\Attachment();
+							$attachment->setFilename($dailyFileName);
+							$attachment->setContentID($dailyFileName);
+							$attachment->setDisposition('attachment');
+							$attachment->setContent(file_get_contents($export_subscriptions_file_path));
+							$mail->addAttachment($attachment);
+							$sendgrid->client->mail()->send()->post($mail);
+							/*$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
 							$email = new SendGrid\Email();
 							$email->setTos(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_DAILY_EMAIL_TOS')))
 							->setBccs(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_DAILY_EMAIL_BCCS')))
@@ -79,7 +103,7 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 							->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Daily Chartmogul Afr Subscriptions Export : '.$dayToProcessBeginningOfDay->format($dailyDateFormat))
 							->setText('See File(s) attached')
 							->addAttachment($export_subscriptions_file_path, $dailyFileName);
-							$sendgrid->send($email);
+							$sendgrid->send($email);*/
 						}
 					}
 					//
@@ -122,6 +146,30 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 							//ONLY SEND BY EMAIL THE LAST ONE
 							if(getEnv('EXPORTS_MONTHLY_EMAIL_ACTIVATED') == 1) {
 								$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
+								$mail = new SendGrid\Mail();
+								$email = new SendGrid\Email(getEnv('EXPORTS_EMAIL_FROMNAME'), getEnv('EXPORTS_EMAIL_FROM'));
+								$mail->setFrom($email);
+								$personalization = new SendGrid\Personalization();
+								$to_array = explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_MONTHLY_EMAIL_TOS'));
+								foreach ($to_array as $to) {
+									$personalization->addTo(new SendGrid\Email(NULL, $to));
+								}
+								$bcc_array = explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_MONTHLY_EMAIL_BCCS'));
+								foreach ($bcc_array as $bcc) {
+									$personalization->addBcc(new SendGrid\Email(NULL, $bcc));
+								}
+								$personalization->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Monthly Chartmogul Afr Subscriptions Export : '.$monthToProcessBeginning->format($monthlyDateFormat));
+								$mail->addPersonalization($personalization);
+								$content = new SendGrid\Content('text/plain', 'See File(s) attached');
+								$mail->addContent($content);
+								$attachment = new SendGrid\Attachment();
+								$attachment->setFilename($monthyFileName);
+								$attachment->setContentID($monthyFileName);
+								$attachment->setDisposition('attachment');
+								$attachment->setContent(file_get_contents($export_subscriptions_file_path));
+								$mail->addAttachment($attachment);
+								$sendgrid->client->mail()->send()->post($mail);
+								/*$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
 								$email = new SendGrid\Email();
 								$email->setTos(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_MONTHLY_EMAIL_TOS')))
 								->setBccs(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_MONTHLY_EMAIL_BCCS')))
@@ -130,7 +178,7 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 								->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Monthly Chartmogul Afr Subscriptions Export : '.$monthToProcessBeginning->format($monthlyDateFormat))
 								->setText('See File(s) attached')
 								->addAttachment($export_subscriptions_file_path, $monthyFileName);
-								$sendgrid->send($email);
+								$sendgrid->send($email);*/
 							}
 						}
 						//
