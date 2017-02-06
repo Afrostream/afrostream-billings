@@ -32,7 +32,7 @@ class LogistaIncidentsResponseReport {
 		$headerFields = array();
 		$headerFields[] = 'D';
 		$headerFields[] = $this->productionDate->format('Ymd');
-		fputs($incidents_response_report_file_res, implode($this->csvDelimiter, $headerFields)."\r");
+		fputs($incidents_response_report_file_res, implode($this->csvDelimiter, $headerFields)."\r\n");
 		//Serial Number Records
 		foreach ($this->incidentResponseRecords as $incidentResponseRecord) {
 			$serialNumberFields = array();
@@ -42,7 +42,7 @@ class LogistaIncidentsResponseReport {
 			$serialNumberFields[] = $incidentResponseRecord->getResponse();
 			$serialNumberFields[] = $incidentResponseRecord->getCreditNoteAmount();
 			$serialNumberFields[] = $incidentResponseRecord->getRequestId();
-			fputs($incidents_response_report_file_res, implode($this->csvDelimiter, $serialNumberFields)."\r");
+			fputs($incidents_response_report_file_res, implode($this->csvDelimiter, $serialNumberFields)."\r\n");
 		}
 		//End File Record
 		$totalAmount = 0;
@@ -53,7 +53,7 @@ class LogistaIncidentsResponseReport {
 		$endFileFields[] = 'END';
 		$endFileFields[] = $totalAmount;
 		$endFileFields[] = 'EUR';
-		fputs($incidents_response_report_file_res, implode($this->csvDelimiter, $endFileFields)."\r");
+		fputs($incidents_response_report_file_res, implode($this->csvDelimiter, $endFileFields)."\r\n");
 		fclose($incidents_response_report_file_res);
 		$incidents_response_report_file_res = NULL;
 	}
