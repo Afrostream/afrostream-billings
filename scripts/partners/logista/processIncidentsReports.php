@@ -8,7 +8,7 @@ require_once __DIR__ . '/../../libs/partners/logista/BillingLogistaProcessIncide
  * Tool
  */
 
-print_r("starting tool to process logista sales reports...\n");
+print_r("starting tool to process logista incidents reports...\n");
 
 foreach ($argv as $arg) {
     $e=explode("=",$arg);
