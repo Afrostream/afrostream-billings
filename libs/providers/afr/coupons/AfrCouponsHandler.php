@@ -58,8 +58,9 @@ class AfrCouponsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$separator = $this->getSeparator($internalCouponsCampaign);
 			//
-			$couponCode = strtoupper($internalCouponsCampaign->getPrefix()."-".$this->getRandomString($internalCouponsCampaign->getGeneratedCodeLength()));
+			$couponCode = strtoupper($internalCouponsCampaign->getPrefix().$separator.$this->getRandomString($internalCouponsCampaign->getGeneratedCodeLength()));
 			
 			switch ($internalCouponsCampaign->getCouponType()) {
 				case CouponCampaignType::standard :
@@ -185,6 +186,19 @@ class AfrCouponsHandler {
 		}
 
 		return $strReturnString;
+	}
+	
+	protected function getSeparator(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$partner = NULL;
+		if($billingInternalCouponsCampaign->getPartnerId() != NULL) {
+			$partner = BillingPartnerDAO::getPartnerById($billingInternalCouponsCampaign->getPartnerId());
+		}
+		if($partner != NULL) {
+			if($partner->getName() == 'logista') {
+				return("");//logista = alphanumeric only
+			}
+		}
+		return("-");
 	}
 	
 	protected function sendMails(User $user, 
