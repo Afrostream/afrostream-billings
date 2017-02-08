@@ -15,13 +15,24 @@ require_once __DIR__ . '/../providers/netsize/users/NetsizeUsersHandler.php';
 require_once __DIR__ . '/../providers/wecashup/users/WecashupUsersHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/utils.php';
+require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
+require_once __DIR__ . '/../providers/global/requests/GetUserRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CreateUserRequest.php';
 
 class UsersHandler {
 	
 	public function __construct() {
 	}
 	
-	public function doGetUserByUserBillingUuid($userBillingUuid) {
+	public function doGetUser(GetUserRequest $getUserRequest) {
+		if($getUserRequest->getUserBillingUuid() != NULL) {
+			return($this->doGetUserByUserBillingUuid($getUserRequest->getUserBillingUuid()));
+		} else {
+			return($this->doGetUserByUserReferenceUuid($getUserRequest->getProviderName(), $getUserRequest->getUserReferenceUuid()));
+		}
+	}
+	
+	protected function doGetUserByUserBillingUuid($userBillingUuid) {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting, userBillingUuid=".$userBillingUuid."....");
@@ -41,34 +52,34 @@ class UsersHandler {
 		return($db_user);
 	}
 	
-	public function doGetUser($provider_name, $user_reference_uuid) {
+	protected function doGetUserByUserReferenceUuid($providerName, $userReferenceUuid) {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting...");
-			$provider = ProviderDAO::getProviderByName($provider_name);
+			$provider = ProviderDAO::getProviderByName($providerName);
 			
 			if($provider == NULL) {
-				$msg = "unknown provider named : ".$provider_name;
+				$msg = "unknown provider named : ".$providerName;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//
-			$db_users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid, $provider->getId());
+			$db_users = UserDAO::getUsersByUserReferenceUuid($userReferenceUuid, $provider->getId());
 			$count_users = count($db_users);
 			if($count_users == 1) {
 				$db_user = $db_users[0];
 			} else if($count_users > 1) {
-				$msg = "multiple users with userReferenceUuid=".$user_reference_uuid." exist for provider : ".$provider->getName();
+				$msg = "multiple users with userReferenceUuid=".$userReferenceUuid." exist for provider : ".$provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			config::getLogger()->addInfo("user getting done successfully");
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while getting an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while getting an user for userReferenceUuid=".$userReferenceUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user getting failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while getting an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while getting an user for userReferenceUuid=".$userReferenceUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user getting failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -93,50 +104,50 @@ class UsersHandler {
 		return($db_users);		
 	}
 	
-	public function doGetOrCreateUser($provider_name, $user_reference_uuid, $user_provider_uuid, array $user_opts_array) {
+	public function doGetOrCreateUser(CreateUserRequest $createUserRequest) {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting/creating...");
-			checkUserOptsArray($user_opts_array, $provider_name);
-			$provider = ProviderDAO::getProviderByName($provider_name);
+			checkUserOptsArray($createUserRequest->getUserOpts(), $createUserRequest->getProviderName());
+			$provider = ProviderDAO::getProviderByName($createUserRequest->getProviderName());
 				
 			if($provider == NULL) {
-				$msg = "unknown provider named : ".$provider_name;
+				$msg = "unknown provider named : ".$createUserRequest->getProviderName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//
-			if($user_reference_uuid == 'generate') {
-				$user_reference_uuid = 'generated_'.guid();
+			if($createUserRequest->getUserReferenceUuid() == 'generate') {
+				$createUserRequest->setUserReferenceUuid('generated_'.guid());
 			}
 			//as usual
 			$db_tmp_user = NULL;
-			$db_users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid, $provider->getId());
+			$db_users = UserDAO::getUsersByUserReferenceUuid($createUserRequest->getUserReferenceUuid(), $provider->getId());
 			$count_users = count($db_users);
 			if($count_users == 1) {
 				$db_tmp_user = $db_users[0];
 			} else if($count_users > 1) {
-				$msg = "multiple users with userReferenceUuid=".$user_reference_uuid." exist for provider : ".$provider->getName();
+				$msg = "multiple users with userReferenceUuid=".$createUserRequest->getUserReferenceUuid()." exist for provider : ".$provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if($user_provider_uuid == NULL) {
+			if($createUserRequest->getUserProviderUuid() == NULL) {
 				$db_user = $db_tmp_user;
 			} else {
 				//HACK STAGING NETSIZE
 				if(getEnv('BILLINGS_ENV') == 'staging') {
-					if($provider_name == 'netsize') {
-						$user_provider_uuid.= '_'.guid();
+					if($provider->getName() == 'netsize') {
+						$createUserRequest->setUserProviderUuid($createUserRequest->getUserProviderUuid().'_'.guid());
 					}
 				}
 				//check
 				if($db_tmp_user == NULL) {
 					//nothing to do
 				} else {
-					if($db_tmp_user->getUserProviderUuid() == $user_provider_uuid) {
+					if($db_tmp_user->getUserProviderUuid() == $createUserRequest->getUserProviderUuid()) {
 						$db_user = $db_tmp_user;
 					} else {
-						$msg = "another user with userReferenceUuid=".$user_reference_uuid." exist for provider : ".$provider->getName();
+						$msg = "another user with userReferenceUuid=".$createUserRequest->getUserReferenceUuid()." exist for provider : ".$provider->getName();
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
@@ -144,13 +155,13 @@ class UsersHandler {
 				//
 				if($db_user == NULL) {
 					//check : Does this user_provider_uuid already exist in the Database ?
-					$db_tmp_user = UserDAO::getUserByUserProviderUuid($provider->getId(), $user_provider_uuid);
+					$db_tmp_user = UserDAO::getUserByUserProviderUuid($provider->getId(), $createUserRequest->getUserProviderUuid());
 					if($db_tmp_user == NULL) {
 						//nothing to do
 					} else {
-						if($db_tmp_user->getUserReferenceUuid() != $user_reference_uuid) {
+						if($db_tmp_user->getUserReferenceUuid() != $createUserRequest->getUserReferenceUuid()) {
 							//Exception
-							$msg = "userProviderUuid=".$user_provider_uuid." is already linked to another userReferenceUuid";
+							$msg = "userProviderUuid=".$createUserRequest->getUserProviderUuid()." is already linked to another userReferenceUuid";
 							config::getLogger()->addError($msg);
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 						}
@@ -161,7 +172,7 @@ class UsersHandler {
 				}
 			}
 			if($db_user == NULL) {
-				$db_user = $this->doCreateUser($provider_name, $user_reference_uuid, $user_provider_uuid, $user_opts_array);
+				$db_user = $this->doCreateUser($createUserRequest);
 			} else {
 				//update user_opts
 				try {
@@ -171,10 +182,10 @@ class UsersHandler {
 					//DELETE USER_OPTS
 					UserOptsDAO::deleteUserOptsByUserId($db_user->getId());
 					//RECREATE USER_OPTS
-					$user_opts = new UserOpts();
-					$user_opts->setUserId($db_user->getId());
-					$user_opts->setOpts($user_opts_array);
-					$user_opts = UserOptsDAO::addUserOpts($user_opts);
+					$userOpts = new UserOpts();
+					$userOpts->setUserId($db_user->getId());
+					$userOpts->setOpts($createUserRequest->getUserOpts());
+					$userOpts = UserOptsDAO::addUserOpts($userOpts);
 					//COMMIT
 					pg_query("COMMIT");
 				} catch(Exception $e) {
@@ -184,102 +195,49 @@ class UsersHandler {
 			}
 			config::getLogger()->addInfo("user getting/creating done successfully, userid=".$db_user->getId());
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while getting/creating an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while getting/creating an user for userReferenceUuid=".$createUserRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user creation failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while getting/creating an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while getting/creating an user for userReferenceUuid=".$createUserRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user creation failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_user);
 	}
 	
-	private function doCreateUser($provider_name, $user_reference_uuid, $user_provider_uuid, array $user_opts_array) {
+	private function doCreateUser(CreateUserRequest $createUserRequest) {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user creating...");
-			checkUserOptsArray($user_opts_array, $provider_name);
-			$provider = ProviderDAO::getProviderByName($provider_name);
+			checkUserOptsArray($createUserRequest->getUserOpts(), $createUserRequest->getProviderName());
+			$provider = ProviderDAO::getProviderByName($createUserRequest->getProviderName());
 			
 			if($provider == NULL) {
-				$msg = "unknown provider named : ".$provider_name;
+				$msg = "unknown provider named : ".$createUserRequest->getProviderName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//user creation provider side
-			$user_billing_uuid = guid();
-			switch($provider->getName()) {
-				case 'recurly' :
-					$recurlyUsersHandler = new RecurlyUsersHandler();
-					$user_provider_uuid = $recurlyUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				case 'gocardless' :
-					$gocardlessUsersHandler = new GocardlessUsersHandler();
-					$user_provider_uuid = $gocardlessUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				case 'celery' :
-					$celeryUsersHandler = new CeleryUsersHandler();
-					$user_provider_uuid = $celeryUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				case 'bachat' :
-					$bachatUsersHandler = new BachatUsersHandler();
-					$user_provider_uuid = $bachatUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				case 'afr' :
-					$afrUsersHandler = new AfrUsersHandler();
-					$user_provider_uuid = $afrUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				case 'cashway' :
-					$cashwayUsersHandler = new CashwayUsersHandler();
-					$user_provider_uuid = $cashwayUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				case 'orange' :
-					$orangeUsersHandler = new OrangeUsersHandler();
-					$user_provider_uuid = $orangeUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				case 'bouygues' :
-					$bouyguesUsersHandler = new BouyguesUsersHandler();
-					$user_provider_uuid = $bouyguesUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				case 'stripe':
-					$stripeUserHandler = new StripeUsersHandler();
-					$user_provider_uuid = $stripeUserHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				case 'braintree' :
-					$braintreeUsersHandler = new BraintreeUsersHandler();
-					$user_provider_uuid = $braintreeUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				case 'netsize' :
-					$netsizeUsersHandler = new NetsizeUsersHandler();
-					$user_provider_uuid = $netsizeUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				case 'wecashup' :
-					$wecashupUsersHandler = new WecashupUsersHandler();
-					$user_provider_uuid = $wecashupUsersHandler->doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, $user_opts_array);
-					break;
-				default:
-					$msg = "unsupported feature for provider named : ".$provider_name;
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-			}
+			$userBillingUuid = guid();
+			$providerUsersHandler = ProviderHandlersBuilder::getProviderUsersHandlerInstance($provider);
+			$userProviderUuid = $providerUsersHandler->doCreateUser($createUserRequest);
 			//user created provider side, save it in billings database
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				//USER
 				$db_user = new User();
-				$db_user->setUserBillingUuid($user_billing_uuid);
+				$db_user->setUserBillingUuid($userBillingUuid);
 				$db_user->setProviderId($provider->getId());
-				$db_user->setUserReferenceUuid($user_reference_uuid);
-				$db_user->setUserProviderUuid($user_provider_uuid);
+				$db_user->setUserReferenceUuid($createUserRequest->getUserReferenceUuid());
+				$db_user->setUserProviderUuid($userProviderUuid);
 				$db_user = UserDAO::addUser($db_user);
 				//USER_OPTS
-				$user_opts = new UserOpts();
-				$user_opts->setUserId($db_user->getId());
-				$user_opts->setOpts($user_opts_array);
-				$user_opts = UserOptsDAO::addUserOpts($user_opts);
+				$userOpts = new UserOpts();
+				$userOpts->setUserId($db_user->getId());
+				$userOpts->setOpts($createUserRequest->getUserOpts());
+				$userOpts = UserOptsDAO::addUserOpts($userOpts);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch(Exception $e) {
@@ -288,11 +246,11 @@ class UsersHandler {
 			}
 			config::getLogger()->addInfo("user creating done successfully, userid=".$db_user->getId());
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while creating an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while creating an user for userReferenceUuid=".$createUserRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user creation failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while creating an user for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while creating an user for userReferenceUuid=".$createUserRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user creating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -344,23 +302,8 @@ class UsersHandler {
 			$db_user_opts = UserOptsDAO::getUserOptsByUserId($db_user->getId());
 			$db_user = UserDAO::getUserById($db_user->getId());
 			//user creation provider side
-			switch($provider->getName()) {
-				case 'recurly' :
-					$recurlyUsersHandler = new RecurlyUsersHandler();
-					$recurlyUsersHandler->doUpdateUserOpts($db_user->getUserProviderUuid(), $db_user_opts->getOpts());
-					break;
-				case 'gocardless' :
-					$gocardlessUsersHandler = new GocardlessUsersHandler();
-					$gocardlessUsersHandler->doUpdateUserOpts($db_user->getUserProviderUuid(), $db_user_opts->getOpts());
-					break;
-				case 'braintree' :
-					$braintreeUsersHandler = new BraintreeUsersHandler();
-					$braintreeUsersHandler->doUpdateUserOpts($db_user->getUserProviderUuid(), $db_user_opts->getOpts());
-					break;
-				default:
-					//nothing to do
-					break;
-			}			
+			$providerUsersHandler = ProviderHandlersBuilder::getProviderUsersHandlerInstance($provider);
+			$providerUsersHandler->doUpdateUserOpts($db_user->getUserProviderUuid(), $db_user_opts->getOpts());		
 			config::getLogger()->addInfo("user opts updating done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while updating user Opts, error_code=".$e->getCode().", error_message=".$e->getMessage();

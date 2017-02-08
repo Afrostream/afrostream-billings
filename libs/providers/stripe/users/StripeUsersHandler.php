@@ -3,12 +3,14 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../global/users/ProviderUsersHandler.php';
 
-class StripeUsersHandler
+class StripeUsersHandler extends ProviderUsersHandler
 {
-    public function __construct()
-    {
-        \Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+    
+	public function __construct($provider) {
+    	parent::__construct($provider);
+    	\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
     }
 
     public function doCreateUser($userReferenceUuid, $user_billing_uuid, $userProviderUuid, array $userOpts)

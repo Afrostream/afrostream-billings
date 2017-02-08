@@ -3,11 +3,9 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../global/users/ProviderUsersHandler.php';
 
-class WecashupUsersHandler {
-	  
-	public function __construct() {
-	}
+class WecashupUsersHandler extends ProviderUsersHandler {
 	
 	public function doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, array $user_opts_array) {
 		try {
