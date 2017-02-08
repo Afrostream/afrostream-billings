@@ -262,7 +262,7 @@ class AfrCouponsHandler {
 			$userMail = getenv('SENDGRID_TO_IFNULL');
 		}
 
-		$bcc  = getenv('SENDGRID_BCC');
+		$bcc = getenv('SENDGRID_BCC');
 		$template = NULL;
 		switch($internalCouponsCampaign->getCouponType()) {
 			case CouponCampaignType::sponsorship :
@@ -274,20 +274,26 @@ class AfrCouponsHandler {
 		}
 
 		$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
-		$email = new SendGrid\Email();
-
-		$email->addTo($userMail);
-		$email->setFrom(getenv('SENDGRID_FROM'))
-			->setFromName(getenv('SENDGRID_FROM_NAME'))
-			->setSubject(' ')
-			->setText(' ')
-			->setHtml(' ')
-			->setTemplateId($template)
-			->setSubstitutions($substitutions);
+		$mail = new SendGrid\Mail();
+		$email = new SendGrid\Email(getEnv('SENDGRID_FROM_NAME'), getEnv('SENDGRID_FROM'));
+		$mail->setFrom($email);
+		$personalization = new SendGrid\Personalization();
+		$personalization->addTo(new SendGrid\Email(NULL, $userMail));
 		if (!empty($bcc)) {
-			$email->setBcc($bcc);
+			$personalization->addBcc(new SendGrid\Email(NULL, $bcc));
 		}
-		$sendgrid->send($email);
+		foreach($substitutions as $var => $val) {
+			//NC $val."" NOT $val which forces to cast to string because of an issue with numerics : https://github.com/sendgrid/sendgrid-php/issues/350
+			$personalization->addSubstitution($var, $val."");
+		}
+		$mail->addPersonalization($personalization);
+		$mail->setTemplateId($template);
+		$response = $sendgrid->client->mail()->send()->post($mail);
+		if($response->statusCode() != 202) {
+			config::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
+			config::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
+			config::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
+		}
 	}
 	
 	protected function sendMailToRecipient($userMail, array $substitutions, BillingInternalCouponsCampaign $internalCouponsCampaign)
@@ -299,7 +305,7 @@ class AfrCouponsHandler {
 			$userMail = getenv('SENDGRID_TO_IFNULL');
 		}
 
-		$bcc  = getenv('SENDGRID_BCC');
+		$bcc = getenv('SENDGRID_BCC');
 		$template = NULL;
 		switch($internalCouponsCampaign->getCouponType()) {
 			case CouponCampaignType::sponsorship :
@@ -311,21 +317,26 @@ class AfrCouponsHandler {
 		}
 
 		$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
-		$email = new SendGrid\Email();
-
-		$email->addTo($userMail);
-		$email->setFrom(getenv('SENDGRID_FROM'))
-			->setFromName(getenv('SENDGRID_FROM_NAME'))
-			->setSubject(' ')
-			->setText(' ')
-			->setHtml(' ')
-			->setTemplateId($template)
-			->setSubstitutions($substitutions);
+		$mail = new SendGrid\Mail();
+		$email = new SendGrid\Email(getEnv('SENDGRID_FROM_NAME'), getEnv('SENDGRID_FROM'));
+		$mail->setFrom($email);
+		$personalization = new SendGrid\Personalization();
+		$personalization->addTo(new SendGrid\Email(NULL, $userMail));
 		if (!empty($bcc)) {
-			$email->setBcc($bcc);
+			$personalization->addBcc(new SendGrid\Email(NULL, $bcc));
 		}
-
-		$sendgrid->send($email);
+		foreach($substitutions as $var => $val) {
+			//NC $val."" NOT $val which forces to cast to string because of an issue with numerics : https://github.com/sendgrid/sendgrid-php/issues/350
+			$personalization->addSubstitution($var, $val."");
+		}
+		$mail->addPersonalization($personalization);
+		$mail->setTemplateId($template);
+		$response = $sendgrid->client->mail()->send()->post($mail);
+		if($response->statusCode() != 202) {
+			config::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
+			config::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
+			config::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
+		}
 	}
 	
 	/**
