@@ -346,36 +346,36 @@ class ProviderSubscriptionsHandler {
 			//DATA <--
 			//DATA SUBSTITUTION -->
 			setlocale(LC_MONETARY, 'fr_FR.utf8');//TODO : Forced to French Locale for "," in floats...
-			$substitions = array();
+			$substitutions = array();
 			//user
-			$substitions['%userreferenceuuid%'] = $user->getUserReferenceUuid();
-			$substitions['%userbillinguuid%'] = $user->getUserBillingUuid();
+			$substitutions['%userreferenceuuid%'] = $user->getUserReferenceUuid();
+			$substitutions['%userbillinguuid%'] = $user->getUserBillingUuid();
 			//provider : nothing
 			//providerPlan : nothing
 			//internalPlan :
-			$substitions['%internalplanname%'] = $internalPlan->getName();
-			$substitions['%internalplandesc%'] = $internalPlan->getDescription();
-			$substitions['%amountincents%'] = $internalPlan->getAmountInCents();
+			$substitutions['%internalplanname%'] = $internalPlan->getName();
+			$substitutions['%internalplandesc%'] = $internalPlan->getDescription();
+			$substitutions['%amountincents%'] = $internalPlan->getAmountInCents();
 			$amountInMoney = new Money((integer) $internalPlan->getAmountInCents(), new Currency($internalPlan->getCurrency()));
-			$substitions['%amount%'] = money_format('%!.2n', (float) ($amountInMoney->getAmount() / 100));
-			$substitions['%amountincentsexcltax%'] = $internalPlan->getAmountInCentsExclTax();
+			$substitutions['%amount%'] = money_format('%!.2n', (float) ($amountInMoney->getAmount() / 100));
+			$substitutions['%amountincentsexcltax%'] = $internalPlan->getAmountInCentsExclTax();
 			$amountExclTaxInMoney = new Money((integer) $internalPlan->getAmountInCentsExclTax(), new Currency($internalPlan->getCurrency()));
-			$substitions['%amountexcltax%'] = money_format('%!.2n', (float) ($amountExclTaxInMoney->getAmount() / 100));
+			$substitutions['%amountexcltax%'] = money_format('%!.2n', (float) ($amountExclTaxInMoney->getAmount() / 100));
 			if($internalPlan->getVatRate() == NULL) {
-				$substitions['%vat%'] = 'N/A';
+				$substitutions['%vat%'] = 'N/A';
 			} else {
-				$substitions['%vat%'] = number_format($internalPlan->getVatRate(), 2, ',', '').'%';
+				$substitutions['%vat%'] = number_format($internalPlan->getVatRate(), 2, ',', '').'%';
 			}
-			$substitions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
+			$substitutions['%amountincentstax%'] = $internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax();
 			$amountTaxInMoney = new Money((integer) ($internalPlan->getAmountInCents() - $internalPlan->getAmountInCentsExclTax()), new Currency($internalPlan->getCurrency()));
-			$substitions['%amounttax%'] = money_format('%!.2n', (float) ($amountTaxInMoney->getAmount() / 100));
-			$substitions['%currency%'] = $internalPlan->getCurrencyForDisplay();
-			$substitions['%cycle%'] = $internalPlan->getCycle();
-			$substitions['%periodunit%'] = $internalPlan->getPeriodUnit();
-			$substitions['%periodlength%'] = $internalPlan->getPeriodLength();
+			$substitutions['%amounttax%'] = money_format('%!.2n', (float) ($amountTaxInMoney->getAmount() / 100));
+			$substitutions['%currency%'] = $internalPlan->getCurrencyForDisplay();
+			$substitutions['%cycle%'] = $internalPlan->getCycle();
+			$substitutions['%periodunit%'] = $internalPlan->getPeriodUnit();
+			$substitutions['%periodlength%'] = $internalPlan->getPeriodLength();
 			//user : nothing
 			//userOpts
-			$substitions['%email%'] = ($emailTo == NULL ? '' : $emailTo);
+			$substitutions['%email%'] = ($emailTo == NULL ? '' : $emailTo);
 			$firstname = '';
 			if(array_key_exists('firstName', $userOpts->getOpts())) {
 				$firstname = $userOpts->getOpts()['firstName'];
@@ -383,7 +383,7 @@ class ProviderSubscriptionsHandler {
 			if($firstname == 'firstNameValue') {
 				$firstname = '';
 			}
-			$substitions['%firstname%'] = $firstname;
+			$substitutions['%firstname%'] = $firstname;
 			$lastname = '';
 			if(array_key_exists('lastName', $userOpts->getOpts())) {
 				$lastname = $userOpts->getOpts()['lastName'];
@@ -391,23 +391,23 @@ class ProviderSubscriptionsHandler {
 			if($lastname == 'lastNameValue') {
 				$lastname = '';
 			}
-			$substitions['%lastname%'] = $lastname;
+			$substitutions['%lastname%'] = $lastname;
 			$username = $firstname;
 			if($username == '') {
 				if(!empty($emailTo)) {
 					$username = explode('@', $emailTo)[0];
 				}
 			}
-			$substitions['%username%'] = $username;
+			$substitutions['%username%'] = $username;
 			$fullname = trim($firstname." ".$lastname);
-			$substitions['%fullname%'] = $fullname;
+			$substitutions['%fullname%'] = $fullname;
 			//subscription
-			$substitions['%subscriptionbillinguuid%'] = $subscription_after_update->getSubscriptionBillingUuid();
+			$substitutions['%subscriptionbillinguuid%'] = $subscription_after_update->getSubscriptionBillingUuid();
 			//Coupon
-			$substitions['%couponCode%'] = '';
-			$substitions['%couponAmountForDisplay%'] = '';
-			$substitions['%couponDetails%'] = '';
-			$substitions['%couponAppliedSentence%'] = '';
+			$substitutions['%couponCode%'] = '';
+			$substitutions['%couponAmountForDisplay%'] = '';
+			$substitutions['%couponDetails%'] = '';
+			$substitutions['%couponAppliedSentence%'] = '';
 			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() == 'promo') {
 				$couponAmountForDisplay = '';
 				switch($internalCouponsCampaign->getDiscountType()) {
@@ -420,12 +420,12 @@ class ProviderSubscriptionsHandler {
 						$couponAmountForDisplay = $couponAmountForDisplay.' '.dbGlobal::getCurrencyForDisplay($internalCouponsCampaign->getCurrency());
 						break;
 				}
-				$substitions['%couponCode%'] = $userInternalCoupon->getCode();
-				$substitions['%couponAmountForDisplay%'] = $couponAmountForDisplay;
-				$substitions['%couponDetails%'] = $internalCouponsCampaign->getDescription();
+				$substitutions['%couponCode%'] = $userInternalCoupon->getCode();
+				$substitutions['%couponAmountForDisplay%'] = $couponAmountForDisplay;
+				$substitutions['%couponDetails%'] = $internalCouponsCampaign->getDescription();
 				$couponAppliedSentence = getEnv('SENDGRID_VAR_couponAppliedSentence');
-				$couponAppliedSentence = str_replace(array_keys($substitions), array_values($substitions), $couponAppliedSentence);
-				$substitions['%couponAppliedSentence%'] = $couponAppliedSentence;
+				$couponAppliedSentence = str_replace(array_keys($substitutions), array_values($substitutions), $couponAppliedSentence);
+				$substitutions['%couponAppliedSentence%'] = $couponAppliedSentence;
 			}
 			//DATA SUBSTITUTION <--
 			$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));
@@ -437,7 +437,7 @@ class ProviderSubscriptionsHandler {
 			if((null !== (getEnv('SENDGRID_BCC'))) && ('' !== (getEnv('SENDGRID_BCC')))) {
 				$personalization->addBcc(new SendGrid\Email(NULL, getEnv('SENDGRID_BCC')));
 			}
-			foreach($substitions as $var => $val) {
+			foreach($substitutions as $var => $val) {
 				//NC $val."" NOT $val which forces to cast to string because of an issue with numerics : https://github.com/sendgrid/sendgrid-php/issues/350 
 				$personalization->addSubstitution($var, $val."");
 			}

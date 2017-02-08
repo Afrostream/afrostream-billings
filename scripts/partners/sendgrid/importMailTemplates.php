@@ -26,6 +26,10 @@ $sendgrid = new \SendGrid(getEnv('SENDGRID_API_KEY'));
 
 $response = $sendgrid->client->templates()->get();
 
+print_r("sendgrid response, statusCode=".$response->statusCode()."\n");
+print_r("sendgrid response, body=".$response->body()."\n");
+print_r("sendgrid response, headers=".var_export($response->headers(), true)."\n");
+
 $body_as_array = json_decode($response->body(), true); 
 
 $templates = $body_as_array['templates'];
