@@ -7,20 +7,22 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../global/users/ProviderUsersHandler.php';
+require_once __DIR__ . '/../../global/requests/CreateUserRequest.php';
 
 class GocardlessUsersHandler extends ProviderUsersHandler {
 	
-	public function doCreateUser($user_reference_uuid, $user_billing_uuid, $user_provider_uuid, array $user_opts_array) {
+	public function doCreateUser(CreateUserRequest $createUserRequest) {
 		try {
-			config::getLogger()->addInfo("gocardless user creation...");
-			if(isset($user_provider_uuid)) {
+			config::getLogger()->addInfo($this->provider->getName()." user creation...");
+			$customer = NULL;
+			if($createUserRequest->getUserProviderUuid() != NULL) {
 				//
 				$client = new Client(array(
 						'access_token' => getEnv('GOCARDLESS_API_KEY'),
 						'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//
-				$customer = $client->customers()->get($user_provider_uuid);
+				$customer = $client->customers()->get($createUserRequest->getUserProviderUuid());
 			} else {
 				//
 				$client = new Client(array(
@@ -28,30 +30,30 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//
-				checkUserOptsArray($user_opts_array, 'gocardless');
+				checkUserOptsArray($createUserRequest->getUserOpts(), $this->provider->getName());
 				//
 				$customer = $client->customers()->create(
 						['params' => 
 								[
-								'email' => $user_opts_array['email'],
-								'given_name' => $user_opts_array['firstName'], 
-								'family_name' => $user_opts_array['lastName']
+								'email' => $createUserRequest->getUserOpts()['email'],
+								'given_name' => $createUserRequest->getUserOpts()['firstName'], 
+								'family_name' => $createUserRequest->getUserOpts()['lastName']
 								]
 						]);
 			}
 			$user_provider_uuid = $customer->id;
-			config::getLogger()->addInfo("gocardless user creation done successfully, user_provider_uuid=".$user_provider_uuid);
+			config::getLogger()->addInfo($this->provider->getName()." user creation done successfully, user_provider_uuid=".$user_provider_uuid);
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while creating a gocardless user for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("gocardless user creation failed : ".$msg);
+			$msg = "a billings exception occurred while creating a ".$this->provider->getName()." user for user_reference_uuid=".$createUserRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." user creation failed : ".$msg);
 			throw $e;
 		} catch (GoCardlessProException $e) {
-			$msg = "a GoCardlessProException occurred while creating a gocardless user for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("gocardless user creation failed : ".$msg);
+			$msg = "a GoCardlessProException occurred while creating a ".$this->provider->getName()." user for user_reference_uuid=".$createUserRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." user creation failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while creating a gocardless user for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("gocardless user creation failed : ".$msg);
+			$msg = "an unknown exception occurred while creating a ".$this->provider->getName()." user for user_reference_uuid=".$createUserRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." user creation failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
 		return($user_provider_uuid);

@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../global/users/ProviderUsersHandler.php';
+require_once __DIR__ . '/../../global/requests/CreateUserRequest.php';
 
 class BouyguesUsersHandler extends ProviderUsersHandler {
 	
