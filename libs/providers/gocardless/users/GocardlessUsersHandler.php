@@ -8,6 +8,8 @@ require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../global/users/ProviderUsersHandler.php';
 require_once __DIR__ . '/../../global/requests/CreateUserRequest.php';
+require_once __DIR__ . '/../../global/requests/UpdateUserRequest.php';
+require_once __DIR__ . '/../../global/requests/UpdateUsersRequest.php';
 
 class GocardlessUsersHandler extends ProviderUsersHandler {
 	
@@ -59,18 +61,18 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 		return($user_provider_uuid);
 	}
 	
-	public function doUpdateUserOpts($user_provider_uuid, array $user_opts_array) {
+	public function doUpdateUserOpts(UpdateUserRequest $updateUserRequest) {
 		try {
 			config::getLogger()->addInfo("gocardless user data updating...");
 			//
-			checkUserOptsArray($user_opts_array, 'gocardless');
+			checkUserOptsArray($updateUserRequest->getUserOpts(), $this->provider->getName());
 			//
 			$client = new Client(array(
 					'access_token' => getEnv('GOCARDLESS_API_KEY'),
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 			));
 			//
-			$client->customers()->update($user_provider_uuid,
+			$client->customers()->update($updateUserRequest->getUserProviderUuid(),
 					['params' =>
 							[
 									'email' => $user_opts_array['email'],
@@ -78,17 +80,17 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 									'family_name' => $user_opts_array['lastName']
 							]
 					]);
-			config::getLogger()->addInfo("gocardless user data updating done successfully, user_provider_uuid=".$user_provider_uuid);
+			config::getLogger()->addInfo("gocardless user data updating done successfully, user_provider_uuid=".$updateUserRequest->getUserProviderUuid());
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while updating gocardless user data for user_provider_uuid=".$user_provider_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while updating gocardless user data for user_provider_uuid=".$updateUserRequest->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless user data updating failed : ".$msg);
 			throw $e;
 		} catch (GoCardlessProException $e) {
-			$msg = "a GoCardlessProException occurred while updating gocardless user data for user_provider_uuid=".$user_provider_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a GoCardlessProException occurred while updating gocardless user data for user_provider_uuid=".$updateUserRequest->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless user data updating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while updating gocardless user data for user_provider_uuid=".$user_provider_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while updating gocardless user data for user_provider_uuid=".$updateUserRequest->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("gocardless user data updating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}

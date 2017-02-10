@@ -17,7 +17,10 @@ require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/utils.php';
 require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
 require_once __DIR__ . '/../providers/global/requests/GetUserRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetUsersRequest.php';
 require_once __DIR__ . '/../providers/global/requests/CreateUserRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateUserRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateUsersRequest.php';
 
 class UsersHandler {
 	
@@ -86,18 +89,18 @@ class UsersHandler {
 		return($db_user);
 	}
 	
-	public function doGetUsers($user_reference_uuid) {
+	public function doGetUsers(GetUsersRequest $getUsersRequest) {
 		$db_users = NULL;
 		try {
-			config::getLogger()->addInfo("users getting for userReferenceUuid=".$user_reference_uuid."...");
-			$db_users = UserDAO::getUsersByUserReferenceUuid($user_reference_uuid);
-			config::getLogger()->addInfo("users getting for userReferenceUuid=".$user_reference_uuid." done successfully");
+			config::getLogger()->addInfo("users getting for userReferenceUuid=".$getUsersRequest->getUserReferenceUuid()."...");
+			$db_users = UserDAO::getUsersByUserReferenceUuid($getUsersRequest->getUserReferenceUuid());
+			config::getLogger()->addInfo("users getting for userReferenceUuid=".$getUsersRequest->getUserReferenceUuid()." done successfully");
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while getting users for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while getting users for userReferenceUuid=".$getUsersRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user getting failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while getting users for userReferenceUuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while getting users for userReferenceUuid=".$getUsersRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("user getting failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -206,7 +209,7 @@ class UsersHandler {
 		return($db_user);
 	}
 	
-	private function doCreateUser(CreateUserRequest $createUserRequest) {
+	protected function doCreateUser(CreateUserRequest $createUserRequest) {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user creating...");
@@ -219,7 +222,7 @@ class UsersHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//user creation provider side
-			$userBillingUuid = guid();
+			$createUserRequest->setUserBillingUuid(guid());
 			$providerUsersHandler = ProviderHandlersBuilder::getProviderUsersHandlerInstance($provider);
 			$userProviderUuid = $providerUsersHandler->doCreateUser($createUserRequest);
 			//user created provider side, save it in billings database
@@ -228,7 +231,7 @@ class UsersHandler {
 				pg_query("BEGIN");
 				//USER
 				$db_user = new User();
-				$db_user->setUserBillingUuid($userBillingUuid);
+				$db_user->setUserBillingUuid($createUserRequest->getUserBillingUuid());
 				$db_user->setProviderId($provider->getId());
 				$db_user->setUserReferenceUuid($createUserRequest->getUserReferenceUuid());
 				$db_user->setUserProviderUuid($userProviderUuid);
@@ -257,13 +260,13 @@ class UsersHandler {
 		return($db_user);
 	}
 	
-	public function doUpdateUserOpts($userBillingUuid, array $user_opts_array) {
+	public function doUpdateUserOpts(UpdateUserRequest $updateUserRequest) {
 		$db_user = NULL;
 		try {
-			config::getLogger()->addInfo("user opts updating...");
-			$db_user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
+			config::getLogger()->addInfo("userOpts updating...");
+			$db_user = UserDAO::getUserByUserBillingUuid($updateUserRequest->getUserBillingUuid());
 			if($db_user == NULL) {
-				$msg = "unknown userBillingUuid : ".$userBillingUuid;
+				$msg = "unknown userBillingUuid : ".$updateUserRequest->getUserBillingUuid();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -273,13 +276,13 @@ class UsersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			checkUserOptsValues($user_opts_array, $provider->getName());
+			checkUserOptsValues($updateUserRequest->getUserOpts(), $provider->getName());
 			$db_user_opts = UserOptsDAO::getUserOptsByUserId($db_user->getId());
 			$current_user_opts_array = $db_user_opts->getOpts();
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
-				foreach ($user_opts_array as $key => $value) {
+				foreach ($updateUserRequest->getUserOpts() as $key => $value) {
 					if(array_key_exists($key, $current_user_opts_array)) {
 						//UPDATE OR DELETE
 						if(isset($value)) {
@@ -303,15 +306,17 @@ class UsersHandler {
 			$db_user = UserDAO::getUserById($db_user->getId());
 			//user creation provider side
 			$providerUsersHandler = ProviderHandlersBuilder::getProviderUsersHandlerInstance($provider);
-			$providerUsersHandler->doUpdateUserOpts($db_user->getUserProviderUuid(), $db_user_opts->getOpts());		
-			config::getLogger()->addInfo("user opts updating done successfully");
+			$updateUserRequest->setUserProviderUuid($db_user->getUserProviderUuid());
+			$updateUserRequest->setUserOpts($db_user_opts->getOpts());
+			$providerUsersHandler->doUpdateUserOpts($updateUserRequest);		
+			config::getLogger()->addInfo("userOpts updating done successfully");
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while updating user Opts, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("updating user Opts failed : ".$msg);
+			$msg = "a billings exception occurred while updating userOpts, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("updating userOpts failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while updating user Opts, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("updating user Opts failed : ".$msg);
+			$msg = "an unknown exception occurred while updating userOpts, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("updating userOpts failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_user);

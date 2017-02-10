@@ -4,8 +4,10 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../users/UsersHandler.php';
 require_once __DIR__ .'/BillingsController.php';
 require_once __DIR__ . '/../providers/global/requests/GetUserRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetUsersRequest.php';
 require_once __DIR__ . '/../providers/global/requests/CreateUserRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateUserRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateUsersRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -146,7 +148,11 @@ class UsersController extends BillingsController {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$user_opts_array = $data['userOpts'];
-				$user = $usersHandler->doUpdateUserOpts($userBillingUuid, $user_opts_array);
+				$updateUserRequest = new UpdateUserRequest();
+				$updateUserRequest->setOrigin('api');
+				$updateUserRequest->setUserBillingUuid($userBillingUuid);
+				$updateUserRequest->setUserOpts($user_opts_array);
+				$user = $usersHandler->doUpdateUserOpts($updateUserRequest);
 			}
 			if($user == NULL) {
 				//NO UPDATE, JUST SEND BACK THE CURRENT USER
@@ -192,18 +198,28 @@ class UsersController extends BillingsController {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$user_opts_array = $data['userOpts'];
-				$users_to_update = $usersHandler->doGetUsers($userReferenceUuid);
+				$getUsersRequest = new GetUsersRequest();
+				$getUsersRequest->setOrigin('api');
+				$getUsersRequest->setUserReferenceUuid($userReferenceUuid);
+				$users_to_update = $usersHandler->doGetUsers($getUsersRequest);
 				if(count($users_to_update) == 0) {
 					return($this->returnNotFoundAsJson($response));
 				}
 				$users = array();
 				foreach($users_to_update as $user) {
-					$users[] = $usersHandler->doUpdateUserOpts($user->getUserBillingUuid(), $user_opts_array);
+					$updateUserRequest = new UpdateUserRequest();
+					$updateUserRequest->setOrigin('api');
+					$updateUserRequest->setUserBillingUuid($user->getUserBillingUuid());
+					$updateUserRequest->setUserOpts($user_opts_array);
+					$users[] = $usersHandler->doUpdateUserOpts($updateUserRequest);
 				}
 			}
 			if($users == NULL) {
 				//NO UPDATE, JUST SEND BACK THE CURRENT USER
-				$users = $usersHandler->doGetUsers($userReferenceUuid);
+				$getUsersRequest = new GetUsersRequest();
+				$getUsersRequest->setOrigin('api');
+				$getUsersRequest->setUserReferenceUuid($userReferenceUuid);
+				$users = $usersHandler->doGetUsers($getUsersRequest);
 			}
 			return($this->returnObjectAsJson($response, 'users', $users));
 		} catch(BillingsException $e) {

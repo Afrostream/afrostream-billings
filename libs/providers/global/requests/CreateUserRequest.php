@@ -8,6 +8,8 @@ class CreateUserRequest extends ActionRequest {
 	protected $userReferenceUuid;
 	protected $userProviderUuid;
 	protected $userOpts;
+	//
+	protected $userBillingUuid;
 	
 	public function __construct() {
 		parent::__construct();
@@ -43,6 +45,14 @@ class CreateUserRequest extends ActionRequest {
 	
 	public function getUserOpts() {
 		return($this->userOpts);
+	}
+	
+	public function setUserBillingUuid($userBillingUuid) {
+		$this->userBillingUuid = $userBillingUuid;
+	}
+	
+	public function getUserBillingUuid() {
+		return($this->userBillingUuid);
 	}
 	
 }
