@@ -12,7 +12,7 @@ class NetsizeUsersHandler extends ProviderUsersHandler {
 		try {
 			config::getLogger()->addInfo($this->provider->getName()." user creation...");
 			if($createUserRequest->getUserProviderUuid() != NULL) {
-				//TODO : transactionId may be in $user_opts_array, maybe should we check it later
+				//TODO : transactionId may be in $createUserRequest->getUserOpts(), maybe should we check it later
 				//REMOVE CHECK
 				/*$netsizeClient = new NetsizeClient();
 				$getStatusRequest = new GetStatusRequest();

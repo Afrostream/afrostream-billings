@@ -75,9 +75,9 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 			$client->customers()->update($updateUserRequest->getUserProviderUuid(),
 					['params' =>
 							[
-									'email' => $user_opts_array['email'],
-									'given_name' => $user_opts_array['firstName'],
-									'family_name' => $user_opts_array['lastName']
+									'email' => $updateUserRequest->getUserOpts()['email'],
+									'given_name' => $updateUserRequest->getUserOpts()['firstName'],
+									'family_name' => $updateUserRequest->getUserOpts()['lastName']
 							]
 					]);
 			config::getLogger()->addInfo("gocardless user data updating done successfully, user_provider_uuid=".$updateUserRequest->getUserProviderUuid());

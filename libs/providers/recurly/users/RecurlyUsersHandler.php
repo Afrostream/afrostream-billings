@@ -22,7 +22,7 @@ class RecurlyUsersHandler extends ProviderUsersHandler {
 				$account = Recurly_Account::get($createUserRequest->getUserProviderUuid());
 			} else {
 				//
-				checkUserOptsArray($user_opts_array, $this->provider->getName());
+				checkUserOptsArray($createUserRequest->getUserOpts(), $this->provider->getName());
 				//
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
