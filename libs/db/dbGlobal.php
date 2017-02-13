@@ -500,7 +500,7 @@ class InternalPlanDAO {
 	public static function init() {
 		InternalPlanDAO::$sfields = "BIP._id, BIP.internal_plan_uuid, BIP.name, BIP.description,".
 			" BIP.amount_in_cents, BIP.currency, BIP.cycle, BIP.period_unit, BIP.period_length, BIP.thumbid, BIP.vat_rate,".
-			" BIP.trial_enabled, BIP.trial_period_length, BIP.trial_period_unit, BIP.is_visible";
+			" BIP.trial_enabled, BIP.trial_period_length, BIP.trial_period_unit, BIP.is_visible, BIP.details";
 	}
 	
 	private static function getInternalPlanFromRow($row) {
@@ -520,6 +520,7 @@ class InternalPlanDAO {
 		$out->setTrialPeriodLength($row["trial_period_length"]);
 		$out->setTrialPeriodUnit($row["trial_period_unit"] == NULL ? NULL : new TrialPeriodUnit($row["trial_period_unit"]));
 		$out->setIsVisible($row["is_visible"] == 't' ? true : false);
+		$out->setDetails(json_decode($row["details"], true));
 		return($out);
 	}
 	
@@ -735,6 +736,7 @@ class InternalPlan implements JsonSerializable {
 	private $trialPeriodLength;
 	private $trialPeriodUnit;
 	private $isVisible;
+	private $details;
 
 	public function getId() {
 		return($this->_id);
@@ -880,12 +882,21 @@ class InternalPlan implements JsonSerializable {
 		return($this->isVisible);
 	}
 	
+	public function setDetails($details) {
+		$this->details =$details;
+	}
+	
+	public function getDetails() {
+		return($this->details);
+	}
+	
 	public function jsonSerialize() {
 		$return =
 			[
 				'internalPlanUuid' => $this->internal_plan_uuid,
 				'name' => $this->name,
 				'description' => $this->description,
+				'details' => $this->details,
 				'amountInCents' => $this->amount_in_cents,
 				'amount' => (string) number_format((float) $this->amount_in_cents / 100, 2, ',', ''),//Forced to French Locale
 				'amountInCentsExclTax' => (string) $this->getAmountInCentsExclTax(),
