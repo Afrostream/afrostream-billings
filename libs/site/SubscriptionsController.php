@@ -8,6 +8,8 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/utils.php';
 require_once __DIR__ . '/../providers/global/requests/ExpireSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetUserRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetUsersRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -72,7 +74,10 @@ class SubscriptionsController extends BillingsController {
 			$usersHandler = new UsersHandler();
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			if(isset($userReferenceUuid)) {
-				$users = $usersHandler->doGetUsers($userReferenceUuid);
+				$getUsersRequest = new GetUsersRequest();
+				$getUsersRequest->setOrigin('api');
+				$getUsersRequest->setUserReferenceUuid($userReferenceUuid);
+				$users = $usersHandler->doGetUsers($getUsersRequest);
 				if(count($users) == 0) {
 					return($this->returnNotFoundAsJson($response));
 				}
@@ -81,7 +86,10 @@ class SubscriptionsController extends BillingsController {
 					$subscriptions = array_merge($subscriptions, $current_subscriptions);
 				}
 			} else if(isset($userBillingUuid)) {
-				$user = $usersHandler->doGetUserByUserBillingUuid($userBillingUuid);
+				$getUserRequest = new GetUserRequest();
+				$getUserRequest->setOrigin('api');
+				$getUserRequest->setUserBillingUuid($userBillingUuid);
+				$user = $usersHandler->doGetUser($getUserRequest);
 				if($user == NULL) {
 					return($this->returnNotFoundAsJson($response));
 				}
@@ -202,7 +210,10 @@ class SubscriptionsController extends BillingsController {
 			$usersHandler = new UsersHandler();
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			if(isset($userReferenceUuid)) {
-				$users = $usersHandler->doGetUsers($userReferenceUuid);
+				$getUsersRequest = new GetUsersRequest();
+				$getUsersRequest->setOrigin('api');
+				$getUsersRequest->setUserReferenceUuid($userReferenceUuid);
+				$users = $usersHandler->doGetUsers($getUsersRequest);
 				if(count($users) == 0) {
 					return($this->returnNotFoundAsJson($response));
 				}
@@ -214,7 +225,10 @@ class SubscriptionsController extends BillingsController {
 					$subscriptions = array_merge($subscriptions, $current_subscriptions);
 				}
 			} else if(isset($userBillingUuid)) {
-				$user = $usersHandler->doGetUserByUserBillingUuid($userBillingUuid);
+				$getUserRequest = new GetUserRequest();
+				$getUserRequest->setOrigin('api');
+				$getUserRequest->setUserBillingUuid($userBillingUuid);
+				$user = $usersHandler->doGetUser($getUserRequest);
 				if($user == NULL) {
 					return($this->returnNotFoundAsJson($response));
 				}

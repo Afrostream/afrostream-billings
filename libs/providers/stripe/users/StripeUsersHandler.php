@@ -3,20 +3,25 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../global/users/ProviderUsersHandler.php';
+require_once __DIR__ . '/../../global/requests/CreateUserRequest.php';
+require_once __DIR__ . '/../../global/requests/UpdateUserRequest.php';
+require_once __DIR__ . '/../../global/requests/UpdateUsersRequest.php';
 
-class StripeUsersHandler
+class StripeUsersHandler extends ProviderUsersHandler
 {
-    public function __construct()
-    {
-        \Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+    
+	public function __construct($provider) {
+    	parent::__construct($provider);
+    	\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
     }
 
-    public function doCreateUser($userReferenceUuid, $user_billing_uuid, $userProviderUuid, array $userOpts)
+    public function doCreateUser(CreateUserRequest $createUserRequest)
     {
-        if ($userProviderUuid) {
-            $user = $this->getUser($userProviderUuid);
+        if ($createUserRequest->getUserProviderUuid() != NULL) {
+            $user = $this->getUser($createUserRequest->getUserProviderUuid());
         } else {
-            $user = $this->createUser($userOpts, $user_billing_uuid);
+            $user = $this->createUser($createUserRequest);
         }
 
         return $user['id'];
@@ -52,22 +57,22 @@ class StripeUsersHandler
      *
      * @return \Stripe\Customer
      */
-    protected function createUser(array $userOpts, $user_billing_uuid)
+    protected function createUser(CreateUserRequest $createUserRequest)
     {
-        checkUserOptsArray($userOpts, 'stripe');
+        checkUserOptsArray($createUserRequest->getUserOpts(), $this->provider->getName());
 
         $customer = \Stripe\Customer::create([
-            'email' => $userOpts['email'],
+            'email' => $createUserRequest->getUserOpts()['email'],
             'metadata' => [
-                'firstName' => $userOpts['firstName'],
-                'lastName' => $userOpts['lastName'],
+                'firstName' => $createUserRequest->getUserOpts()['firstName'],
+                'lastName' => $createUserRequest->getUserOpts()['lastName'],
                 'AfrSource' => 'afrBillingApi',
             	'AfrOrigin' => 'user',
-                'AfrUserBillingUuid' => $user_billing_uuid
+                'AfrUserBillingUuid' => $createUserRequest->getUserBillingUuid()
             ]
         ]);
 
-        $this->log('Create customer : email : %s, firstname: %s, lastname: %s', [$userOpts['email'], $userOpts['firstName'], $userOpts['lastName']]);
+        $this->log('Create customer : email : %s, firstname: %s, lastname: %s', [$createUserRequest->getUserOpts()['email'], $createUserRequest->getUserOpts()['firstName'], $createUserRequest->getUserOpts()['lastName']]);
 
         if (empty($customer['id'])) {
             $this->log('Error on recording user on stripe side');
