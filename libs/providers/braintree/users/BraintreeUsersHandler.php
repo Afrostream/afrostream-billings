@@ -25,7 +25,7 @@ class BraintreeUsersHandler extends ProviderUsersHandler {
 				//
 			} else {
 				//
-				checkUserOptsArray($createUserRequest->getUserOpts(), 'braintree');
+				checkUserOptsArray($createUserRequest->getUserOpts(), $this->provider->getName());
 				//
 				Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
 				Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
@@ -100,12 +100,12 @@ class BraintreeUsersHandler extends ProviderUsersHandler {
 		} catch(Braintree\Exception\NotFound $e) {
 			$msg = "a not found error exception occurred while updating braintree user data for user_provider_uuid=".$updateUserRequest->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("braintree user creation failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);	
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while updating a braintree user data for user_provider_uuid=".$updateUserRequest->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("braintree user data updating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
-		}			
+		}		
 	}
 	
 }

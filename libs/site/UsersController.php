@@ -147,11 +147,11 @@ class UsersController extends BillingsController {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				$user_opts_array = $data['userOpts'];
+				$userOptsArray = $data['userOpts'];
 				$updateUserRequest = new UpdateUserRequest();
 				$updateUserRequest->setOrigin('api');
 				$updateUserRequest->setUserBillingUuid($userBillingUuid);
-				$updateUserRequest->setUserOpts($user_opts_array);
+				$updateUserRequest->setUserOpts($userOptsArray);
 				$user = $usersHandler->doUpdateUserOpts($updateUserRequest);
 			}
 			if($user == NULL) {
@@ -197,7 +197,7 @@ class UsersController extends BillingsController {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				$user_opts_array = $data['userOpts'];
+				$userOptsArray = $data['userOpts'];
 				$getUsersRequest = new GetUsersRequest();
 				$getUsersRequest->setOrigin('api');
 				$getUsersRequest->setUserReferenceUuid($userReferenceUuid);
@@ -210,7 +210,7 @@ class UsersController extends BillingsController {
 					$updateUserRequest = new UpdateUserRequest();
 					$updateUserRequest->setOrigin('api');
 					$updateUserRequest->setUserBillingUuid($user->getUserBillingUuid());
-					$updateUserRequest->setUserOpts($user_opts_array);
+					$updateUserRequest->setUserOpts($userOptsArray);
 					$users[] = $usersHandler->doUpdateUserOpts($updateUserRequest);
 				}
 			}
