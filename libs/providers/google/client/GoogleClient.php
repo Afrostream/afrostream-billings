@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../../../vendor/autoload.php';
+
 class GoogleClient {
 		
 	public function __construct() {
@@ -47,8 +49,8 @@ class GetSubscriptionRequest {
 	
 }
 
-class GetSubscriptionResponse {
+/*class GetSubscriptionResponse {
 	
-}
+}*/
 
 ?>
