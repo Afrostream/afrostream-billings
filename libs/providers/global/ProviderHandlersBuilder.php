@@ -15,6 +15,7 @@ require_once __DIR__ . '/../stripe/subscriptions/StripeSubscriptionsHandler.php'
 require_once __DIR__ . '/../braintree/subscriptions/BraintreeSubscriptionsHandler.php';
 require_once __DIR__ . '/../netsize/subscriptions/NetsizeSubscriptionsHandler.php';
 require_once __DIR__ . '/../wecashup/subscriptions/WecashupSubscriptionsHandler.php';
+require_once __DIR__ . '/../google/subscriptions/GoogleSubscriptionsHandler.php';
 //<-- transactions -->
 require_once __DIR__ . '/transactions/ProviderTransactionsHandler.php';
 require_once __DIR__ . '/../recurly/transactions/RecurlyTransactionsHandler.php';
@@ -36,6 +37,7 @@ require_once __DIR__ . '/../stripe/users/StripeUsersHandler.php';
 require_once __DIR__ . '/../braintree/users/BraintreeUsersHandler.php';
 require_once __DIR__ . '/../netsize/users/NetsizeUsersHandler.php';
 require_once __DIR__ . '/../wecashup/users/WecashupUsersHandler.php';
+require_once __DIR__ . '/../google/users/GoogleUsersHandler.php';
 
 class ProviderHandlersBuilder {
 	
@@ -77,6 +79,9 @@ class ProviderHandlersBuilder {
 				break;
 			case 'wecashup' :
 				$providerSubscriptionsHandlerInstance = new WecashupSubscriptionsHandler($provider);
+				break;
+			case 'google' :
+				$providerSubscriptionsHandlerInstance = new GoogleSubscriptionsHandler($provider);
 				break;
 			default:
 				$providerSubscriptionsHandlerInstance = new ProviderSubscriptionsHandler($provider);
@@ -148,6 +153,9 @@ class ProviderHandlersBuilder {
 				break;
 			case 'wecashup' :
 				$providerUsersHandlerInstance = new WecashupUsersHandler($provider);
+				break;
+			case 'google' :
+				$providerUsersHandlerInstance = new GoogleUsersHandler($provider);
 				break;
 			default:
 				$providerUsersHandlerInstance = new ProviderUsersHandler($provider);

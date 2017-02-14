@@ -518,6 +518,20 @@ if(getEnv('AFROSTREAM_IOS_APP_CLIENT_IDS') === false) {
 	putEnv('AFROSTREAM_IOS_APP_CLIENT_IDS=');
 }
 
+#Google
+
+#Given by google itself
+
+if(getEnv('GOOGLE_APPLICATION_CREDENTIALS') === false) {
+	putenv('GOOGLE_APPLICATION_CREDENTIALS='.__DIR__.'/../libs/providers/google/credentials/afrostream-billing-project-e6f27e14d70a.json');
+}
+
+#
+
+if(getEnv('GOOGLE_PACKAGENAME') === false) {
+	putenv('GOOGLE_PACKAGENAME=tv.afrostream.app');
+}
+
 #logger, #db_conn, ...
 
 class config {

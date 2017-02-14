@@ -13,6 +13,7 @@ require_once __DIR__ . '/../providers/stripe/subscriptions/StripeSubscriptionsHa
 require_once __DIR__ . '/../providers/braintree/subscriptions/BraintreeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/netsize/subscriptions/NetsizeSubscriptionsHandler.php';
 require_once __DIR__ . '/../providers/wecashup/subscriptions/WecashupSubscriptionsHandler.php';
+require_once __DIR__ . '/../providers/google/subscriptions/GoogleSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/BillingsException.php';
 require_once __DIR__ . '/../utils/utils.php';
@@ -186,6 +187,10 @@ class SubscriptionsHandler {
 						$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler($provider);
 						$sub_uuid = $wecashupSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
 						break;
+					case 'google' :
+						$googleSubscriptionsHandler = new GoogleSubscriptionsHandler($provider);
+						$sub_uuid = $googleSubscriptionsHandler->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
+						break;						
 					default:
 						$msg = "unsupported feature for provider named : ".$provider->getName();
 						config::getLogger()->addError($msg);
@@ -248,6 +253,10 @@ class SubscriptionsHandler {
 							break;
 						case 'wecashup' :
 							$currentSubscriptionsHandler = new WecashupSubscriptionsHandler($provider);
+							$db_subscription = $currentSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
+							break;
+						case 'google' :
+							$currentSubscriptionsHandler = new GoogleSubscriptionsHandler($provider);
 							$db_subscription = $currentSubscriptionsHandler->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 							break;
 						default:
