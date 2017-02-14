@@ -3,6 +3,11 @@
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../users/UsersHandler.php';
 require_once __DIR__ .'/BillingsController.php';
+require_once __DIR__ . '/../providers/global/requests/GetUserRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetUsersRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CreateUserRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateUserRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateUsersRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -13,8 +18,8 @@ class UsersController extends BillingsController {
 		try {
 			$data = $request->getQueryParams();
 			$userBillingUuid = NULL;
-			$provider_name = NULL;
-			$user_reference_uuid = NULL;
+			$providerName = NULL;
+			$userReferenceUuuid = NULL;
 			if(isset($args['userBillingUuid'])) {
 				$userBillingUuid = $args['userBillingUuid'];
 			} else {
@@ -30,16 +35,17 @@ class UsersController extends BillingsController {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				$provider_name = $data['providerName'];
-				$user_reference_uuid = $data['userReferenceUuid'];
+				$providerName = $data['providerName'];
+				$userReferenceUuuid = $data['userReferenceUuid'];
 			}
 			//
 			$usersHandler = new UsersHandler();
-			if(isset($userBillingUuid)) {
-				$user = $usersHandler->doGetUserByUserBillingUuid($userBillingUuid);
-			} else {
-				$user = $usersHandler->doGetUser($provider_name, $user_reference_uuid);
-			}
+			$getUserRequest = new GetUserRequest();
+			$getUserRequest->setOrigin('api');
+			$getUserRequest->setUserBillingUuid($userBillingUuid);
+			$getUserRequest->setProviderName($providerName);
+			$getUserRequest->setUserReferenceUuid($userReferenceUuid);
+			$user = $usersHandler->doGetUser($getUserRequest);
 			if($user == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {
@@ -89,16 +95,23 @@ class UsersController extends BillingsController {
 				}
 			}
 			//
-			$provider_name = $data['providerName'];
-			$user_reference_uuid = $data['userReferenceUuid'];
-			$user_opts_array = $data['userOpts'];
-			$user_provider_uuid = NULL;
+			$providerName = $data['providerName'];
+			$userReferenceUuid = $data['userReferenceUuid'];
+			$userOptsArray = $data['userOpts'];
+			$userProviderUuid = NULL;
 			if(isset($data['userProviderUuid'])) {
-				$user_provider_uuid = $data['userProviderUuid'];
+				$userProviderUuid = $data['userProviderUuid'];
 			}
 			//
 			$usersHandler = new UsersHandler();
-			$user = $usersHandler->doGetOrCreateUser($provider_name, $user_reference_uuid, $user_provider_uuid, $user_opts_array);
+			
+			$createUserRequest = new CreateUserRequest();
+			$createUserRequest->setOrigin('api');
+			$createUserRequest->setProviderName($providerName);
+			$createUserRequest->setUserReferenceUuid($userReferenceUuid);
+			$createUserRequest->setUserOpts($userOptsArray);
+			$createUserRequest->setUserProviderUuid($userProviderUuid);
+			$user = $usersHandler->doGetOrCreateUser($createUserRequest);
 			return($this->returnObjectAsJson($response, 'user', $user));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while creating an user, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -134,12 +147,19 @@ class UsersController extends BillingsController {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				$user_opts_array = $data['userOpts'];
-				$user = $usersHandler->doUpdateUserOpts($userBillingUuid, $user_opts_array);
+				$userOptsArray = $data['userOpts'];
+				$updateUserRequest = new UpdateUserRequest();
+				$updateUserRequest->setOrigin('api');
+				$updateUserRequest->setUserBillingUuid($userBillingUuid);
+				$updateUserRequest->setUserOpts($userOptsArray);
+				$user = $usersHandler->doUpdateUserOpts($updateUserRequest);
 			}
 			if($user == NULL) {
 				//NO UPDATE, JUST SEND BACK THE CURRENT USER
-				$user = $usersHandler->doGetUserByUserBillingUuid($userBillingUuid);
+				$getUserRequest = new GetUserRequest();
+				$getUserRequest->setOrigin('api');
+				$getUserRequest->setUserBillingUuid($userBillingUuid);
+				$user = $usersHandler->doGetUser($getUserRequest);
 			}
 			return($this->returnObjectAsJson($response, 'user', $user));
 		} catch(BillingsException $e) {
@@ -177,19 +197,29 @@ class UsersController extends BillingsController {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				$user_opts_array = $data['userOpts'];
-				$users_to_update = $usersHandler->doGetUsers($userReferenceUuid);
+				$userOptsArray = $data['userOpts'];
+				$getUsersRequest = new GetUsersRequest();
+				$getUsersRequest->setOrigin('api');
+				$getUsersRequest->setUserReferenceUuid($userReferenceUuid);
+				$users_to_update = $usersHandler->doGetUsers($getUsersRequest);
 				if(count($users_to_update) == 0) {
 					return($this->returnNotFoundAsJson($response));
 				}
 				$users = array();
 				foreach($users_to_update as $user) {
-					$users[] = $usersHandler->doUpdateUserOpts($user->getUserBillingUuid(), $user_opts_array);
+					$updateUserRequest = new UpdateUserRequest();
+					$updateUserRequest->setOrigin('api');
+					$updateUserRequest->setUserBillingUuid($user->getUserBillingUuid());
+					$updateUserRequest->setUserOpts($userOptsArray);
+					$users[] = $usersHandler->doUpdateUserOpts($updateUserRequest);
 				}
 			}
 			if($users == NULL) {
 				//NO UPDATE, JUST SEND BACK THE CURRENT USER
-				$users = $usersHandler->doGetUsers($userReferenceUuid);
+				$getUsersRequest = new GetUsersRequest();
+				$getUsersRequest->setOrigin('api');
+				$getUsersRequest->setUserReferenceUuid($userReferenceUuid);
+				$users = $usersHandler->doGetUsers($getUsersRequest);
 			}
 			return($this->returnObjectAsJson($response, 'users', $users));
 		} catch(BillingsException $e) {
