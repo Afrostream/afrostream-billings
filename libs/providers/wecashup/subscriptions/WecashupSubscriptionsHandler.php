@@ -100,10 +100,45 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
 		}*/
 		//
+		$now = new DateTime();
 		$api_subscription = new BillingsSubscription();
-		$api_subscription->setCreationDate(new DateTime());
+		$api_subscription->setCreationDate($now);
 		$api_subscription->setSubUid($sub_uuid);
-		$api_subscription->setSubStatus('future');
+		//<-- USUAL
+		//$api_subscription->setSubStatus('future');
+		//-->
+		//<-- HACK
+		$api_subscription->setSubStatus('active');
+		$api_subscription->setSubActivatedDate($now);
+		$start_date = $now;
+		$api_subscription->setSubPeriodStartedDate($start_date);
+		$end_date = NULL;
+		if(isset($start_date)) {
+			switch($internalPlan->getPeriodUnit()) {
+				case PlanPeriodUnit::day :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				case PlanPeriodUnit::month :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				case PlanPeriodUnit::year :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				default :
+					$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
+		}
+		$api_subscription->setSubPeriodEndsDate($end_date);
+		//-->
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
