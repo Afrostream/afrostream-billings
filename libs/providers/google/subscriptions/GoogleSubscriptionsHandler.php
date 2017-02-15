@@ -31,7 +31,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$googleClient = new GoogleClient();
 				$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
 				$googleGetSubscriptionRequest->setSubscriptionId($subscription_provider_uuid);
-				$googleGetSubscriptionRequest->setToken($token);
+				$googleGetSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 				$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
 				config::getLogger()->addError($this->provider->getName()." subscription creation...result=".var_export($api_subscription, true));
 				$sub_uuid = $subscription_provider_uuid;
