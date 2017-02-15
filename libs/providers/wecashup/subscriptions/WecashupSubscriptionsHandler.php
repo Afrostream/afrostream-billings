@@ -291,6 +291,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
 					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
 					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT
