@@ -279,7 +279,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//
 				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
-				if($expireSubscriptionRequest->getOrigin() == 'api') {
+				if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
 					if($subscription->getSubPeriodEndsDate() > $expiresDate) {
 						if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
 							$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
@@ -287,6 +287,8 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
 						}
 					}
+				}
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
 					if($expireSubscriptionRequest->getIsRefundEnabled() != true) {
 						$msg = "cannot expire and NOT refund a ".$this->provider->getName()." subscription";
 						config::getLogger()->addError($msg);

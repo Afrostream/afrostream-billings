@@ -634,6 +634,10 @@ class SubscriptionsHandler {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
+				case 'google' :
+					$currentSubscriptionsHandler = new GoogleSubscriptionsHandler($provider);
+					$db_subscription = $currentSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
+					break;
 				default:
 					$msg = "unsupported feature for provider named : ".$provider->getName();
 					config::getLogger()->addError($msg);
