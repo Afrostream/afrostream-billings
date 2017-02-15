@@ -3,22 +3,42 @@
 require_once __DIR__ . '/../../../../vendor/autoload.php';
 
 class GoogleClient {
-		
+	
 	public function __construct() {
+		
 	}
 	
-	public function getSubscription(GetSubscriptionRequest $getSubscriptionRequest) {
+	public function getSubscription(GoogleGetSubscriptionRequest $getSubscriptionRequest) {
 		$client = new Google_Client();
 		$client->useApplicationDefaultCredentials();
 		$client->addScope(Google_Service_AndroidPublisher::ANDROIDPUBLISHER);
 		$androidPublisher = new Google_Service_AndroidPublisher($client);
 		return($androidPublisher->purchases_subscriptions->get($getSubscriptionRequest->getPackageName(), $getSubscriptionRequest->getSubscriptionId(), $getSubscriptionRequest->getToken()));
 	}
-
+	
+	public function cancelSubscription(GoogleCancelSubscriptionRequest $cancelSubscriptionRequest) {
+		$client = new Google_Client();
+		$client->useApplicationDefaultCredentials();
+		$client->addScope(Google_Service_AndroidPublisher::ANDROIDPUBLISHER);
+		$androidPublisher = new Google_Service_AndroidPublisher($client);
+		return($androidPublisher->purchases_subscriptions->cancel($cancelSubscriptionRequest->getPackageName(), $cancelSubscriptionRequest->getSubscriptionId(), $cancelSubscriptionRequest->getToken()));
+	}
+	
+	public function expireSubscription(GoogleExpireSubscriptionRequest $expireSubscriptionRequest) {
+		$client = new Google_Client();
+		$client->useApplicationDefaultCredentials();
+		$client->addScope(Google_Service_AndroidPublisher::ANDROIDPUBLISHER);
+		$androidPublisher = new Google_Service_AndroidPublisher($client);
+		return($androidPublisher->purchases_subscriptions->revoke($expireSubscriptionRequest->getPackageName(), $expireSubscriptionRequest->getSubscriptionId(), $expireSubscriptionRequest->getToken()));
+	}
 }
 
-class GetSubscriptionRequest {
+class GoogleClientRequest {
 	
+}
+
+class GoogleSubscriptionRequest extends GoogleClientRequest {
+
 	private $packageName;
 	private $subscriptionId;
 	private $token;
@@ -28,7 +48,7 @@ class GetSubscriptionRequest {
 	}
 	
 	public function getPackageName() {
-		return($this->packageName);	
+		return($this->packageName);
 	}
 	
 	public function setSubscriptionId($subscriptionId) {
@@ -49,8 +69,13 @@ class GetSubscriptionRequest {
 	
 }
 
-/*class GetSubscriptionResponse {
-	
-}*/
+class GoogleGetSubscriptionRequest extends GoogleSubscriptionRequest {
+}
+
+class GoogleCancelSubscriptionRequest extends GoogleSubscriptionRequest {
+}
+
+class GoogleExpireSubscriptionRequest extends GoogleSubscriptionRequest {
+}
 
 ?>

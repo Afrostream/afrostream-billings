@@ -29,10 +29,10 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//** in google : user subscription is pre-created **/
 				//
 				$googleClient = new GoogleClient();
-				$getSubscriptionRequest = new GetSubscriptionRequest();
-				$getSubscriptionRequest->setSubscriptionId($subscription_provider_uuid);
-				$getSubscriptionRequest->setToken($token);
-				$api_subscription = $googleClient->getSubscription($getSubscriptionRequest);
+				$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
+				$googleGetSubscriptionRequest->setSubscriptionId($subscription_provider_uuid);
+				$googleGetSubscriptionRequest->setToken($token);
+				$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
 				config::getLogger()->addError($this->provider->getName()." subscription creation...result=".var_export($api_subscription, true));
 				$sub_uuid = $subscription_provider_uuid;
 			} else {
@@ -75,10 +75,10 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$googleClient = new GoogleClient();
-		$getSubscriptionRequest = new GetSubscriptionRequest();
-		$getSubscriptionRequest->setSubscriptionId($sub_uuid);
-		$getSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
-		$api_subscription = $googleClient->getSubscription($getSubscriptionRequest);
+		$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
+		$googleGetSubscriptionRequest->setSubscriptionId($sub_uuid);
+		$googleGetSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
+		$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
@@ -215,6 +215,119 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		//
 		config::getLogger()->addInfo($this->provider->getName()." dbsubscription update for userid=".$user->getId().", ".$this->provider->getName()."_subscription_uuid=".$db_subscription->getSubUid().", id=".$db_subscription->getId()." done successfully");
 		return($this->doFillSubscription($db_subscription));
+	}
+	
+	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+		try {
+			config::getLogger()->addInfo($this->provider->getName()." subscription canceling...");
+			if(
+					$subscription->getSubStatus() == "canceled"
+					||
+					$subscription->getSubStatus() == "expired"
+					)
+			{
+				//nothing todo : already done or in process
+			} else {
+				//
+				if($is_a_request == true) {
+					$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
+					$googleClient = new GoogleClient();
+					$googleCancelSubscriptionRequest = new GoogleCancelSubscriptionRequest();
+					$googleCancelSubscriptionRequest->setSubscriptionId($subscription->getSubUid());
+					$googleCancelSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
+					$api_subscription = $googleClient->cancelSubscription($googleCancelSubscriptionRequest);
+					config::getLogger()->addError($this->provider->getName()." subscription canceling...result=".var_export($api_subscription, true));
+				}
+				$subscription->setSubCanceledDate($cancel_date);
+				$subscription->setSubStatus('canceled');
+				//
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			}
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo($this->provider->getName()." subscription canceling done successfully for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while canceling a ".$this->provider->getName()." subscription for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." subscription canceling failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while canceling a ".$this->provider->getName()." subscription for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." subscription canceling failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($this->doFillSubscription($subscription));
+	}
+	
+	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
+		try {
+			config::getLogger()->addInfo($this->provider->getName()." subscription expiring...");
+			if(
+					$subscription->getSubStatus() == "expired"
+			)
+			{
+				//nothing todo : already done or in process
+			} else {
+				//
+				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
+				//
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
+					if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+						if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+							$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
+						}
+					}
+					if($expireSubscriptionRequest->getIsRefundEnabled() != true) {
+						$msg = "cannot expire and NOT refund a ".$this->provider->getName()." subscription";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_MANDATORY);
+					}
+					$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
+					$googleClient = new GoogleClient();
+					$googleExpireSubscriptionRequest = new GoogleExpireSubscriptionRequest();
+					$googleExpireSubscriptionRequest->setSubscriptionId($subscription->getSubUid());
+					$googleExpireSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
+					$api_subscription = $googleClient->expireSubscription($googleExpireSubscriptionRequest);
+					config::getLogger()->addError($this->provider->getName()." subscription expiring...result=".var_export($api_subscription, true));
+				}
+				$subscription->setSubExpiresDate($expiresDate);
+				$subscription->setSubStatus('expired');
+				//
+				try {
+					//START TRANSACTION
+					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
+					//COMMIT
+					pg_query("COMMIT");
+				} catch(Exception $e) {
+					pg_query("ROLLBACK");
+					throw $e;
+				}
+			}
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo($this->provider->getName()." subscription expiring done successfully for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while expiring a ".$this->provider->getName()." subscription for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." subscription expiring failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while expiring a ".$this->provider->getName()." subscription for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." subscription expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($this->doFillSubscription($subscription));
 	}
 		
 }
