@@ -350,11 +350,17 @@ class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
 					}
 				}
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
+					if($subscription->getSubCanceledDate() == NULL) {
+						$subscription->setSubCanceledDate($expiresDate);
+					}
+				}
 				$subscription->setSubExpiresDate($expiresDate);
 				$subscription->setSubStatus("expired");
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
 					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
 					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT

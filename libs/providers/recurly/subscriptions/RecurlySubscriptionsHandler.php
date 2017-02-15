@@ -561,6 +561,18 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//nothing todo : already done or in process
 			} else {
 				//
+				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
+				//
+				if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
+					if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+						if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+							$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
+						}
+					}
+				}
+				//
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 				//
@@ -571,6 +583,11 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				} else {
 					$api_subscription->terminateWithoutRefund();
 				}
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
+					if($subscription->getSubCanceledDate() == NULL) {
+						$subscription->setSubCanceledDate($expiresDate);
+					}
+				}
 				//
 				$subscription->setSubExpiresDate($expireSubscriptionRequest->getExpiresDate());
 				$subscription->setSubStatus('expired');
@@ -578,6 +595,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
 					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
 					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT
