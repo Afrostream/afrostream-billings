@@ -331,7 +331,50 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		}
 		return($this->doFillSubscription($subscription));
 	}
-		
+	
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		$subscription = parent::doFillSubscription($subscription);
+		if($subscription == NULL) {
+			return NULL;
+		}
+		$is_active = NULL;
+		switch($subscription->getSubStatus()) {
+			case 'active' :
+			case 'canceled' :
+				$now = new DateTime();
+				$periodStartedDate = $subscription->getSubPeriodStartedDate()->setTimezone(new DateTimeZone(config::$timezone));
+				$periodEndsDate = $subscription->getSubPeriodEndsDate()->setTimezone(new DateTimeZone(config::$timezone));
+				$periodEndsDate->setTime(23, 59, 59);
+				$periodeGraceEndsDate = clone $periodEndsDate;
+				$periodeGraceEndsDate->add(new DateInterval("P1D"));//1 full day of grace period
+				//check dates
+				if(
+					($now < $periodeGraceEndsDate)
+						&&
+					($now >= $periodStartedDate)
+				) {
+					//inside the period
+					$is_active = 'yes';
+				} else {
+					//outside the period
+					$is_active = 'no';
+				}
+				break;
+			case 'future' :
+				$is_active = 'no';
+				break;
+			case 'expired' :
+				$is_active = 'no';
+				break;
+			default :
+				$is_active = 'no';
+				config::getLogger()->addWarning("google dbsubscription unknown subStatus=".$subscription->getSubStatus().", google_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
+				break;
+		}
+		$subscription->setIsActive($is_active);
+		return($subscription);
+	}
+	
 }
 
 ?>
