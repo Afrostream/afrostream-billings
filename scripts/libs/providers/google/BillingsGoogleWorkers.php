@@ -96,7 +96,30 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 			$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
 			//
 			$googleSubscriptionsHandler = new GoogleSubscriptionsHandler($this->provider);
-			//TODO : variables are still missing :)
+			$user = UserDAO::getUserById($subscription->getUserId());
+			//check user
+			if($user == NULL) {
+				$msg = "unknown user with id : ".$subscription->getUserId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
+			$plan = PlanDAO::getPlanById($subscription->getPlanId());
+			//check plan
+			if($plan == NULL) {
+				$msg = "unknown plan with id : ".$subscription->getPlanId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			}
+			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
+			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+			//check internalPlan
+			if($internalPlan == NULL) {
+				$msg = "plan with uuid=".$plan->getPlanUuid()." is not linked to an internal plan";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 			$subscription = $googleSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, 
 					$userOpts, 
 					$this->provider, 
@@ -106,8 +129,8 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 					$planOpts, 
 					$api_subscription, 
 					$subscription, 
-					$update_type, 
-					$updateId);
+					'sync', 
+					0);
 			ScriptsConfig::getLogger()->addInfo("refreshing ".$this->provider->getName()." subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()." done successfully");
 			$billingsSubscriptionActionLog = NULL;
 		} catch(BillingsException $e) {
