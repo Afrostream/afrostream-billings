@@ -7,8 +7,6 @@ require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../global/ProviderHandlersBuilder.php';
 require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
 require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.php';
-require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
-require_once __DIR__ . '/../../global/requests/RefundTransactionRequest.php';
 
 class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 {
@@ -279,7 +277,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      * @param BillingsSubscription $billingSubscription
      * @param DateTime             $cancelDate
      */
-    public function doCancelSubscription(BillingsSubscription $billingSubscription, DateTime $cancelDate)
+    public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest)
     {
         if (in_array($billingSubscription->getSubStatus(), ['canceled', 'expired'])) {
         	//nothing todo : already done or in process
@@ -287,7 +285,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 	        // get user
 	        $user = UserDAO::getUserById($billingSubscription->getUserId());
             $internalPlanId = InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($billingSubscription->getPlanId());
-            $internalPlan   = InternalPlanDAO::getInternalPlanById($internalPlanId);
+            $internalPlan = InternalPlanDAO::getInternalPlanById($internalPlanId);
             if ($internalPlan->getCycle() == PlanCycle::auto) {
            		$subscription = $this->getSubscription($billingSubscription->getSubUid(), $user);
              	$this->log('Cancel subscription id %s ', [$subscription['id']]);
@@ -296,7 +294,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             } else {
             	throw new BillingsException(new ExceptionType(ExceptionType::internal), "Subscription with cycle=".$internalPlan->getCycle()." cannot be canceled");
             }
-            $billingSubscription->setSubCanceledDate($cancelDate);
+            $billingSubscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
             $billingSubscription->setSubStatus('canceled');
             try {
             	//START TRANSACTION
@@ -354,40 +352,45 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      *
      * @throws BillingsException
      */
-   public function doReactivateSubscription(BillingsSubscription $billingSubscription)
-   {
-       // fill the subscription to set needed informations
-       $this->doFillSubscription($billingSubscription);
-
-       // always active , nothing to do
-        if ($billingSubscription->getStatus() != 'active') {
-	       try {
-	           // reactivable and canceled but still active, we rollback the canceling
-	           if ($billingSubscription->isReactivable() && $billingSubscription->getSubStatus() == 'canceled' && $billingSubscription->getIsActive() == 'yes') {
-	               $subscription = \Stripe\Subscription::retrieve($billingSubscription->getSubUid());
-	               $subscription->cancel_at_period_end = false;
-	               $subscription->save();
-	           }
-	           $billingSubscription->setSubStatus('active');
-	           $billingSubscription->setSubCanceledDate(NULL);
-	       		try {
+	public function doReactivateSubscription(BillingsSubscription $subscription, ReactivateSubscriptionRequest $reactivateSubscriptionRequest) {
+		try {
+			config::getLogger()->addInfo($this->provider->getName()." subscription reactivating...");
+	   		if($subscription->getSubStatus() == "active") {
+	   			//nothing to do
+	   		} else if ($subscription->getStatus() == "canceled") {
+	   			$api_subscription = \Stripe\Subscription::retrieve($subscription->getSubUid());
+		        $api_subscription->cancel_at_period_end = false;
+		        $api_subscription->save();
+		        //
+		        $subscription->setSubCanceledDate(NULL);
+		        $subscription->setSubStatus('active');
+		       	try {
 					//START TRANSACTION
 					pg_query("BEGIN");
-					BillingsSubscriptionDAO::updateSubCanceledDate($billingSubscription);
-					BillingsSubscriptionDAO::updateSubStatus($billingSubscription);
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT
 					pg_query("COMMIT");
 				} catch(Exception $e) {
 					pg_query("ROLLBACK");
 					throw $e;
 				}
-	       } catch (Exception $e) {
-	           throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage());
-	       }
-       }
-       $billingSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($billingSubscription->getId());
-       return($this->doFillSubscription($billingSubscription));
-   }
+	       	} else {
+	    		$msg = "cannot reactivate subscription with status=".$subscription->getSubStatus();
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+	       	$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+	    } catch(BillingsException $e) {
+	    	$msg = "a billings exception occurred while reactivating a ".$this->provider->getName()." subscription for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+	       	config::getLogger()->addError($this->provider->getName()." subscription reactivating failed : ".$msg);
+	       	throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while reactivating a ".$this->provider->getName()." subscription for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." subscription reactivating failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+       	return($this->doFillSubscription($subscription));
+	}
 
     /**
      * Get internal status from provider status

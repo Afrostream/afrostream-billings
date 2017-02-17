@@ -4,7 +4,8 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/CashwaySubscriptionsHandler.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
-
+require_once __DIR__ . '/../../global/requests/DeleteSubscriptionRequest.php';
+		
 class CashwayWebHooksHandler {
 	
 	public function __construct() {
@@ -152,7 +153,10 @@ class CashwayWebHooksHandler {
 						//
 						$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($userInternalCoupon->getSubId());
 						if(isset($db_subscription)) {
-							$subscriptionsHandler->doDeleteSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), false);
+							$deleteSubscriptionRequest = new DeleteSubscriptionRequest();
+							$deleteSubscriptionRequest->setSubscriptionBillingUuid($db_subscription->getSubscriptionBillingUuid());
+							$deleteSubscriptionRequest->setOrigin('hook');
+							$subscriptionsHandler->doDeleteSubscription($deleteSubscriptionRequest);
 						}
 						//COMMIT
 						pg_query("COMMIT");

@@ -10,6 +10,9 @@ require_once __DIR__ . '/../utils/utils.php';
 require_once __DIR__ . '/../providers/global/requests/ExpireSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetUserRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetUsersRequest.php';
+require_once __DIR__ . '/../providers/global/requests/ReactivateSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CancelSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetSubscriptionRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -29,7 +32,10 @@ class SubscriptionsController extends BillingsController {
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
 			//
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
-			$subscription = $subscriptionsHandler->doGetSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			$getSubscriptionRequest = new GetSubscriptionRequest();
+			$getSubscriptionRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
+			$getSubscriptionRequest->setOrigin('api');
+			$subscription = $subscriptionsHandler->doGetSubscription($getSubscriptionRequest);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {
@@ -297,7 +303,11 @@ class SubscriptionsController extends BillingsController {
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
 			//
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
-			$subscription = $subscriptionsHandler->doCancelSubscriptionByUuid($subscriptionBillingUuid, new DateTime(), true);
+			$cancelSubscriptionRequest = new CancelSubscriptionRequest();
+			$cancelSubscriptionRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
+			$cancelSubscriptionRequest->setOrigin('api');
+			$cancelSubscriptionRequest->setCancelDate(new DateTime());
+			$subscription = $subscriptionsHandler->doCancelSubscription($cancelSubscriptionRequest);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {
@@ -365,7 +375,10 @@ class SubscriptionsController extends BillingsController {
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
 			//
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
-			$subscription = $subscriptionsHandler->doReactivateSubscriptionByUuid($subscriptionBillingUuid);
+			$reactivateSubscriptionRequest = new ReactivateSubscriptionRequest();
+			$reactivateSubscriptionRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
+			$reactivateSubscriptionRequest->setOrigin('api');
+			$subscription = $subscriptionsHandler->doReactivateSubscription($reactivateSubscriptionRequest);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {

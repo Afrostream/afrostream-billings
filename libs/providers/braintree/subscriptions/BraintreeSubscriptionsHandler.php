@@ -7,8 +7,6 @@ require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../global/ProviderHandlersBuilder.php';
 require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
 require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.php';
-require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
-require_once __DIR__ . '/../../global/requests/RefundTransactionRequest.php';
 
 class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
@@ -479,7 +477,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($db_subscription));
 	}
 	
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("braintree subscription canceling...");
 			if(
@@ -506,7 +504,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					throw new Exception($msg.$errorString);
 				}
 				//
-				$subscription->setSubCanceledDate($cancel_date);
+				$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
 				$subscription->setSubStatus('canceled');
 				//
 				try {

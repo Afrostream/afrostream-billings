@@ -4,8 +4,11 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../ProviderHandlersBuilder.php';
-require_once __DIR__ . '/../requests/ExpireSubscriptionRequest.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../requests/ExpireSubscriptionRequest.php';
+require_once __DIR__ . '/../requests/ReactivateSubscriptionRequest.php';
+require_once __DIR__ . '/../requests/CancelSubscriptionRequest.php';
+require_once __DIR__ . '/../requests/DeleteSubscriptionRequest.php';
 
 use Money\Money;
 use Money\Currency;
@@ -185,7 +188,7 @@ class ProviderSubscriptionsHandler {
 	}
 	
 	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
-		$msg = "unsupported feature for provider named : ".$this->provider->getName();
+		$msg = "unsupported feature - expire subscription - for provider named : ".$this->provider->getName();
 		config::getLogger()->addError($msg);
 		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}
@@ -500,6 +503,24 @@ class ProviderSubscriptionsHandler {
 			}
 		}
 		return(false);
+	}
+	
+	public function doReactivateSubscription(BillingsSubscription $subscription, ReactivateSubscriptionRequest $reactivateSubscriptionRequest) {
+		$msg = "unsupported feature - reactivate subscription - for provider named : ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
+		$msg = "unsupported feature - cancel subscription - for provider named : ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
+	public function doDeleteSubscription(BillingsSubscription $subscription, DeleteSubscriptionRequest $deleteSubscriptionRequest) {
+		$msg = "unsupported feature - delete subscription - for provider named : ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}
 	
 }
