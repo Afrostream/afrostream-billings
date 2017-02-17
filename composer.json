@@ -28,7 +28,9 @@
 		"league/flysystem-sftp": "^1.0",
 		"jasonhinkle/php-gpg": "^1.6",
 		"mobiledetect/mobiledetectlib": "^2.8",
-		"sendgrid/sendgrid": "^5.1"
+		"sendgrid/sendgrid": "^5.1",
+		"google/apiclient": "^2.1",
+		"cache/filesystem-adapter": "^0.3.3"
 	},
 	"authors": [
 		{
