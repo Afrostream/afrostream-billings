@@ -36,7 +36,7 @@ class UsersController extends BillingsController {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$providerName = $data['providerName'];
-				$userReferenceUuuid = $data['userReferenceUuid'];
+				$userReferenceUuid = $data['userReferenceUuid'];
 			}
 			//
 			$usersHandler = new UsersHandler();
