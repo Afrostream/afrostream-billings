@@ -429,7 +429,7 @@ class CashwaySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($subscription));
 	}
 	
-	public function doDeleteSubscription(BillingsSubscription $subscription, $is_a_request = true) {
+	public function doDeleteSubscription(BillingsSubscription $subscription, DeleteSubscriptionRequest $deleteSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("cashway subscription deleting...");
 			if(

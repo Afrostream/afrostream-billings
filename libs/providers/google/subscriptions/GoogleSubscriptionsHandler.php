@@ -6,7 +6,6 @@ require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../client/GoogleClient.php';
 require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
-require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 		
 class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
@@ -217,7 +216,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($db_subscription));
 	}
 	
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo($this->provider->getName()." subscription canceling...");
 			if(
@@ -229,7 +228,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//nothing todo : already done or in process
 			} else {
 				//
-				if($is_a_request == true) {
+				if($cancelSubscriptionRequest->getOrigin() == 'api') {
 					$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
 					$googleClient = new GoogleClient();
 					$googleCancelSubscriptionRequest = new GoogleCancelSubscriptionRequest();
@@ -238,7 +237,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					$api_subscription = $googleClient->cancelSubscription($googleCancelSubscriptionRequest);
 					config::getLogger()->addError($this->provider->getName()." subscription canceling...result=".var_export($api_subscription, true));
 				}
-				$subscription->setSubCanceledDate($cancel_date);
+				$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
 				$subscription->setSubStatus('canceled');
 				//
 				try {

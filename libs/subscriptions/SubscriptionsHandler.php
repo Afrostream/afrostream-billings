@@ -18,6 +18,10 @@ require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/BillingsException.php';
 require_once __DIR__ . '/../utils/utils.php';
 require_once __DIR__ . '/../providers/global/requests/ExpireSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/ReactivateSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetSubscriptionsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/DeleteSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
 
 class SubscriptionsHandler {
@@ -25,7 +29,9 @@ class SubscriptionsHandler {
 	public function __construct() {
 	}
 	
-	public function doGetSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid) {
+	//doGetSubscriptionBySubscriptionBillingUuid
+	public function doGetSubscription(GetSubscriptionRequest $getSubscriptionRequest) {
+		$subscriptionBillingUuid = $getSubscriptionRequest->getSubscriptionBillingUuid();
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("subscription getting for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
@@ -575,8 +581,9 @@ class SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	public function doCancelSubscriptionByUuid($subscriptionBillingUuid, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription(CancelSubscriptionRequest $cancelSubscriptionRequest) {
 		$starttime = microtime(true);
+		$subscriptionBillingUuid = $cancelSubscriptionRequest->getSubscriptionBillingUuid();
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
@@ -593,57 +600,9 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$db_subscription_before_update = clone $db_subscription;
-			$currentSubscriptionsHandler = NULL;
-			switch($provider->getName()) {
-				case 'recurly' :
-					$currentSubscriptionsHandler = new RecurlySubscriptionsHandler($provider);
-					$db_subscription = $currentSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
-					break;
-				case 'gocardless' :
-					$currentSubscriptionsHandler = new GocardlessSubscriptionsHandler($provider);
-					$db_subscription = $currentSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
-					break;
-				case 'celery' :
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-				case 'bachat' :
-					$currentSubscriptionsHandler = new BachatSubscriptionsHandler($provider);
-					$db_subscription = $currentSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
-					break;
-				case 'stripe':
-					$currentSubscriptionsHandler = new StripeSubscriptionsHandler($provider);
-					$db_subscription = $currentSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date);
-					break;
-				case 'braintree' :
-					$currentSubscriptionsHandler = new BraintreeSubscriptionsHandler($provider);
-					$db_subscription = $currentSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date);
-					break;
-				case 'netsize' :
-					$currentSubscriptionsHandler = new NetsizeSubscriptionsHandler($provider);
-					$db_subscription = $currentSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
-					break;
-				case 'afr' :
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-				case 'wecashup' :
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-				case 'google' :
-					$currentSubscriptionsHandler = new GoogleSubscriptionsHandler($provider);
-					$db_subscription = $currentSubscriptionsHandler->doCancelSubscription($db_subscription, $cancel_date, $is_a_request);
-					break;
-				default:
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-			}
+			//
+			$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
+			$db_subscription = $providerSubscriptionsHandlerInstance->doCancelSubscription($db_subscription, $cancelSubscriptionRequest);
 			//
 			$currentSubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
@@ -665,7 +624,8 @@ class SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	public function doDeleteSubscriptionByUuid($subscriptionBillingUuid, $is_a_request = true) {
+	public function doDeleteSubscription(DeleteSubscriptionRequest $deleteSubscriptionRequest) {
+		$subscriptionBillingUuid = $deleteSubscriptionRequest->getSubscriptionBillingUuid();
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription deleting for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
@@ -682,18 +642,9 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$db_subscription_before_update = clone $db_subscription;
-			$currentSubscriptionsHandler = NULL;
-			switch($provider->getName()) {
-				case 'cashway' :
-					$currentSubscriptionsHandler = new CashwaySubscriptionsHandler($provider);
-					$db_subscription = $currentSubscriptionsHandler->doDeleteSubscription($db_subscription, $is_a_request);
-					break;
-				default:
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-			}
+			//
+			$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
+			$db_subscription = $providerSubscriptionsHandlerInstance->doDeleteSubscription($db_subscription, $deleteSubscriptionRequest);
 			//
 			$currentSubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 			config::getLogger()->addInfo("dbsubscription deleting for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
@@ -709,7 +660,8 @@ class SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	public function doReactivateSubscriptionByUuid($subscriptionBillingUuid) {
+	public function doReactivateSubscription(ReactivateSubscriptionRequest $reactivateSubscriptionRequest) {
+		$subscriptionBillingUuid = $reactivateSubscriptionRequest->getSubscriptionBillingUuid();
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription reactivating for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
@@ -726,22 +678,9 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$db_subscription_before_update = clone $db_subscription;
-			$currentSubscriptionsHandler = NULL;
-			switch($provider->getName()) {
-				case 'recurly' :
-					$currentSubscriptionsHandler = new RecurlySubscriptionsHandler($provider);
-					$db_subscription = $currentSubscriptionsHandler->doReactivateSubscription($db_subscription);
-					break;
-				case 'stripe':
-					$currentSubscriptionsHandler = new StripeSubscriptionsHandler($provider);
-					$db_subscription = $currentSubscriptionsHandler->doReactivateSubscription($db_subscription);
-					break;
-				default:
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-			}
+			//
+			$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
+			$db_subscription = $providerSubscriptionsHandlerInstance->doReactivateSubscription($db_subscription, $reactivateSubscriptionRequest);
 			//
 			$currentSubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 			config::getLogger()->addInfo("dbsubscription reactivating for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");

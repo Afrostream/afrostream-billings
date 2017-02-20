@@ -175,7 +175,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($db_subscription));
 	}
 	
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("netsize subscription canceling...");
 			$doIt = false;
@@ -232,7 +232,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				}
 			/*}*/
 			if($doIt == true) {
-				$subscription->setSubCanceledDate($cancel_date);
+				$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
 				/*if($is_a_request == true) {
 					$subscription->setSubStatus('requesting_canceled');
 				} else {*/

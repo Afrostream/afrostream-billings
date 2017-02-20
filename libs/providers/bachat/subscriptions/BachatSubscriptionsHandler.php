@@ -8,7 +8,6 @@ require_once __DIR__ . '/../client/soap-wsse.php';
 require_once __DIR__ . '/../client/WSSoapClient.class.php';
 require_once __DIR__ . '/../client/ByTelBAchat.class.php';
 require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
-require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 
 class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
@@ -271,9 +270,9 @@ class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId())));
 	}
 		
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
 		$doIt = false;
-		if($is_a_request == true) {
+		if($cancelSubscriptionRequest->getOrigin() == 'api') {
 			if($subscription->getSubStatus() == "pending_active") {
 				$msg = "cannot cancel because of the current_status=".$subscription->getSubStatus();
 				config::getLogger()->addError($msg);
@@ -299,7 +298,7 @@ class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			}
 		}
 		if($doIt == true) {
-			$subscription->setSubCanceledDate($cancel_date);
+			$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
 			if($is_a_request == true) {
 				$subscription->setSubStatus('requesting_canceled');
 			} else {
