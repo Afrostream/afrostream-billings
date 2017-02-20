@@ -604,7 +604,7 @@ class SubscriptionsHandler {
 			$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
 			$db_subscription = $providerSubscriptionsHandlerInstance->doCancelSubscription($db_subscription, $cancelSubscriptionRequest);
 			//
-			$currentSubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			$providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
 		} catch(BillingsException $e) {
 			BillingStatsd::inc('route.providers.all.subscriptions.cancel.error');
@@ -646,7 +646,7 @@ class SubscriptionsHandler {
 			$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
 			$db_subscription = $providerSubscriptionsHandlerInstance->doDeleteSubscription($db_subscription, $deleteSubscriptionRequest);
 			//
-			$currentSubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			$providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 			config::getLogger()->addInfo("dbsubscription deleting for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while dbsubscription deleting for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -682,7 +682,7 @@ class SubscriptionsHandler {
 			$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
 			$db_subscription = $providerSubscriptionsHandlerInstance->doReactivateSubscription($db_subscription, $reactivateSubscriptionRequest);
 			//
-			$currentSubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			$providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 			config::getLogger()->addInfo("dbsubscription reactivating for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while dbsubscription reactivating for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
