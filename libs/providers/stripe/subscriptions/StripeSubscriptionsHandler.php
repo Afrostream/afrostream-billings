@@ -277,7 +277,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      * @param BillingsSubscription $billingSubscription
      * @param DateTime             $cancelDate
      */
-    public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest)
+    public function doCancelSubscription(BillingsSubscription $billingSubscription, CancelSubscriptionRequest $cancelSubscriptionRequest)
     {
         if (in_array($billingSubscription->getSubStatus(), ['canceled', 'expired'])) {
         	//nothing todo : already done or in process
