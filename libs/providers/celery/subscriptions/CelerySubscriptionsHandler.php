@@ -112,6 +112,12 @@ class CelerySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
 	}
 	
+	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
+		$msg = "unsupported feature - update user subscriptions - for provider named : ".$this->provider->getName();
+		config::getLogger()->addWarning($msg);//Just warn for the moment
+		//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
 }
 
 ?>

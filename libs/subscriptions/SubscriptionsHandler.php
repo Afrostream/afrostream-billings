@@ -1,19 +1,6 @@
 <?php
 
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../providers/celery/subscriptions/CelerySubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/recurly/subscriptions/RecurlySubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/gocardless/subscriptions/GocardlessSubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/bachat/subscriptions/BachatSubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/afr/subscriptions/AfrSubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/cashway/subscriptions/CashwaySubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/orange/subscriptions/OrangeSubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/bouygues/subscriptions/BouyguesSubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/stripe/subscriptions/StripeSubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/braintree/subscriptions/BraintreeSubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/netsize/subscriptions/NetsizeSubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/wecashup/subscriptions/WecashupSubscriptionsHandler.php';
-require_once __DIR__ . '/../providers/google/subscriptions/GoogleSubscriptionsHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/BillingsException.php';
 require_once __DIR__ . '/../utils/utils.php';
@@ -24,6 +11,7 @@ require_once __DIR__ . '/../providers/global/requests/GetSubscriptionsRequest.ph
 require_once __DIR__ . '/../providers/global/requests/DeleteSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/RenewSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateInternalPlanSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
 
 class SubscriptionsHandler {
@@ -31,7 +19,6 @@ class SubscriptionsHandler {
 	public function __construct() {
 	}
 	
-	//doGetSubscriptionBySubscriptionBillingUuid
 	public function doGetSubscription(GetSubscriptionRequest $getSubscriptionRequest) {
 		$subscriptionBillingUuid = $getSubscriptionRequest->getSubscriptionBillingUuid();
 		$db_subscription = NULL;
@@ -183,61 +170,8 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			switch($provider->getName()) {
-				case 'celery' :
-					$subscriptionsHandler = new CelerySubscriptionsHandler($provider);			
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
-				case 'recurly' :
-					$subscriptionsHandler = new RecurlySubscriptionsHandler($provider);
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
-				case 'gocardless' :
-					$subscriptionsHandler = new GocardlessSubscriptionsHandler($provider);
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
-				case 'bachat' :
-					$subscriptionsHandler = new BachatSubscriptionsHandler($provider);
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
-				case 'afr' :
-					$subscriptionsHandler = new AfrSubscriptionsHandler($provider);
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
-				case 'cashway' :
-					$subscriptionsHandler = new CashwaySubscriptionsHandler($provider);
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
-				case 'orange' :
-					$subscriptionsHandler = new OrangeSubscriptionsHandler($provider);
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
-				case 'bouygues' :
-					$subscriptionsHandler = new BouyguesSubscriptionsHandler($provider);
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
-				case 'stripe' :
-					$subscriptionsHandler = new StripeSubscriptionsHandler($provider);
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
-				case 'braintree' :
-					$subscriptionsHandler = new BraintreeSubscriptionsHandler($provider);
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
-				case 'netsize' :
-					$subscriptionsHandler = new NetsizeSubscriptionsHandler($provider);
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
-				case 'wecashup' :
-					$subscriptionsHandler = new WecashupSubscriptionsHandler($provider);
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptions($user);
-					break;
-				default:
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-			}
+			$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
+			$subscriptions = $providerSubscriptionsHandlerInstance->doGetUserSubscriptions($user);
 			$usersRequestsLog = new UsersRequestsLog();
 			$usersRequestsLog->setUserId($user->getId());
 			$usersRequestsLog = UsersRequestsLogDAO::addUsersRequestsLog($usersRequestsLog);
@@ -261,9 +195,7 @@ class SubscriptionsHandler {
 			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid."...");
 			$users = UserDAO::getUsersByUserReferenceUuid($userReferenceUuid);
 			foreach ($users as $user) {
-				$provider = ProviderDAO::getProviderById($user->getProviderId());
-				$currentProviderSubscriptionsHandler = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
-				$subscriptions = array_merge($subscriptions, $currentProviderSubscriptionsHandler->doGetUserSubscriptions($user));
+				$subscriptions = array_merge($subscriptions, $this->doGetUserSubscriptionsByUser($user));
 			}
 			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid." done successfully");
 		} catch(BillingsException $e) {
@@ -291,55 +223,8 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			switch($provider->getName()) {
-				case 'recurly' :
-					$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler($provider);
-					$recurlySubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
-					break;
-				case 'gocardless' :
-					$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler($provider);
-					$gocardlessSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
-					break;
-				case 'celery' :
-					//nothing to do (owned)
-					break;
-				case 'bachat' :
-					//nothing to do (owned)
-					break;
-				case 'afr' :
-					//nothing to do (owned)
-					break;
-				case 'cashway' :
-					//nothing to do (owned)
-					break;
-				case 'orange' :
-					$orangeSubscriptionsHandler = new OrangeSubscriptionsHandler($provider);
-					$orangeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
-					break;
-				case 'bouygues' :
-					$bouyguesSubscriptionsHandler = new BouyguesSubscriptionsHandler($provider);
-					$bouyguesSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
-					break;
-				case 'stripe':
-					$stripeSubscriptionHandler = new StripeSubscriptionsHandler($provider);
-					$stripeSubscriptionHandler->doUpdateUserSubscriptions($user, $userOpts);
-					break;
-				case 'braintree' :
-					$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler($provider);
-					$braintreeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
-					break;
-				case 'netsize' :
-					$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler($provider);
-					$netsizeSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
-					break;
-				case 'wecashup' :
-					$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler($provider);
-					$wecashupSubscriptionsHandler->doUpdateUserSubscriptions($user, $userOpts);
-					break;
-				default:
-					//nothing to do (unknown)
-					break;
-			}
+			$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
+			$providerSubscriptionsHandlerInstance->doUpdateUserSubscriptions($user, $userOpts);
 			config::getLogger()->addInfo("dbsubscriptions updating for userid=".$user->getId()." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while dbsubscriptions updating for userid=".$user->getId().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -352,7 +237,8 @@ class SubscriptionsHandler {
 		}
 	}
 	
-	public function doUpdateUserSubscriptionByUuid($subscriptionBillingUuid) {
+	public function doUpdateUserSubscription(UpdateSubscriptionRequest $updateSubscriptionRequest) {
+		$subscriptionBillingUuid = $updateSubscriptionRequest->getSubscriptionBillingUuid();
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription updating for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
@@ -369,18 +255,12 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$db_subscription_before_update = clone $db_subscription;
-			$currentSubscriptionsHandler = NULL;
-			switch($provider->getName()) {
-				case 'netsize' :
-					$currentSubscriptionsHandler = new NetsizeSubscriptionsHandler($provider);
-					$db_subscription = $currentSubscriptionsHandler->doUpdateUserSubscription($db_subscription);
-					break;
-				default:
-					//nothing to do (unknown)
-					break;
-			}
 			//
-			$currentSubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
+			
+			$db_subscription = $providerSubscriptionsHandlerInstance->doUpdateUserSubscription($db_subscription, $updateSubscriptionRequest);
+			//
+			$providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 			config::getLogger()->addInfo("dbsubscription updating for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while dbsubscription updating for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();

@@ -15,6 +15,7 @@ require_once __DIR__ . '/../providers/global/requests/CancelSubscriptionRequest.
 require_once __DIR__ . '/../providers/global/requests/GetSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/RenewSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateInternalPlanSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateSubscriptionRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -274,8 +275,11 @@ class SubscriptionsController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
-			$subscriptionsHandler = new SubscriptionsFilteredHandler();
-			$subscription = $subscriptionsHandler->doUpdateUserSubscriptionByUuid($subscriptionBillingUuid);
+			$subscriptionsHandler = new SubscriptionsFilteredHandler(); 
+			$updateSubscriptionRequest = new UpdateSubscriptionRequest();
+			$updateSubscriptionRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
+			$updateSubscriptionRequest->setOrigin('api');
+			$subscription = $subscriptionsHandler->doUpdateUserSubscription($updateSubscriptionRequest);
 			return($this->returnObjectAsJson($response, 'subscription', $subscription));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while updating subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
