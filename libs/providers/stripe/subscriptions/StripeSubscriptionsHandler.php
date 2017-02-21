@@ -98,7 +98,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     	if ($internalPlan->getCycle() == PlanCycle::once) {
     		/* EMULATE API */
     		$currentTimeStamp = time();
-    		$api_subscription = new Subscription();
+    		$api_subscription = new \Stripe\Subscription();
     		$api_subscription['id'] = $sub_uuid;
     		$api_subscription['created'] = $currentTimeStamp;
     		$api_subscription['canceled_at'] = NULL;
