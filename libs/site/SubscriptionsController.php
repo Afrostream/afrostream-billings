@@ -13,6 +13,8 @@ require_once __DIR__ . '/../providers/global/requests/GetUsersRequest.php';
 require_once __DIR__ . '/../providers/global/requests/ReactivateSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/CancelSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/RenewSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateInternalPlanSubscriptionRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -341,7 +343,10 @@ class SubscriptionsController extends BillingsController {
 			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
 			//
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
-			$subscription = $subscriptionsHandler->doRenewSubscriptionByUuid($subscriptionBillingUuid);
+			$renewSubscriptionRequest = new RenewSubscriptionRequest();
+			$renewSubscriptionRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
+			$renewSubscriptionRequest->setOrigin('api');
+			$subscription = $subscriptionsHandler->doRenewSubscription($renewSubscriptionRequest);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {
@@ -420,20 +425,24 @@ class SubscriptionsController extends BillingsController {
 			$internalPlanUuid = $args['internalPlanUuid'];
 			//
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
-			$subscription = $subscriptionsHandler->doUpdateInternalPlanByUuid($subscriptionBillingUuid, $internalPlanUuid);
+			$updateInternalPlanSubscriptionRequest = new UpdateInternalPlanSubscriptionRequest();
+			$updateInternalPlanSubscriptionRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
+			$updateInternalPlanSubscriptionRequest->setInternalPlanUuid($internalPlanUuid);
+			$updateInternalPlanSubscriptionRequest->setOrigin('api');
+			$subscription = $subscriptionsHandler->doUpdateInternalPlanSubscription($updateInternalPlanSubscriptionRequest);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {
 				return($this->returnObjectAsJson($response, 'subscription', $subscription));
 			}
 		} catch(BillingsException $e) {
-			$msg = "an exception occurred while reactivating a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an exception occurred while updating a plan for a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnBillingsExceptionAsJson($response, $e));
 			//
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while reactivating a subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while updating a plan for a subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));

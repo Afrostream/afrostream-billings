@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/NetsizeSubscriptionsHandler.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/requests/RenewSubscriptionRequest.php';
 
 class NetsizeWebHooksHandler {
 	
@@ -165,8 +166,12 @@ class NetsizeWebHooksHandler {
 		}
 		$subscriptionsHandler = new SubscriptionsHandler();
 		//NC : For the moment, Netsize renewing does not support to force $end_date, so we are not using $expirationDate.
-		//WAS : $subscriptionsHandler->doRenewSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), NULL, $expirationDate);
-		$subscriptionsHandler->doRenewSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), NULL, NULL);
+		$renewSubscriptionRequest = new RenewSubscriptionRequest();
+		$renewSubscriptionRequest->setSubscriptionBillingUuid($db_subscription->getSubscriptionBillingUuid());
+		$renewSubscriptionRequest->setStartDate(NULL);
+		$renewSubscriptionRequest->setEndDate(NULL);//NC : should be $expirationDate, but date given by Netsize is not good
+		$renewSubscriptionRequest->setOrigin('hook');
+		$subscriptionsHandler->doRenewSubscription($renewSubscriptionRequest);
 		config::getLogger()->addInfo('Processing netsize hook subscription, notification_name='.$notificationNode->getName().' done successfully');
 	}
 	
