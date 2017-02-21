@@ -9,32 +9,6 @@ require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 
 class CelerySubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
-	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
-		
-	}
-	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, $internalPlan, $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {}
-	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, Celery_Subscription $api_subscription, $update_type, $updateId) {}
-	
-	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, Celery_Subscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {}
-	
-	private function getDbSubscriptionByUuid(array $db_subscriptions, $subUuid) {
-		/*foreach ($db_subscriptions as $db_subscription) {
-			if($db_subscription->getSubUid() == $subUuid) {
-				return($db_subscription);
-			}
-		}*/
-	}
-	
-	private function getApiSubscriptionByUuid($api_subscriptions, $subUuid) {
-		/*foreach ($api_subscriptions as $api_subscription) {
-			if($api_subscription->uuid == $subUuid) {
-				return($api_subscription);
-			}
-		}*/
-	}
-
 	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("celery subscription expiring...");
