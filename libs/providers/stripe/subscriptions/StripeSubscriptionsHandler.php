@@ -223,7 +223,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             // subscription not found, so we create it
             if (is_null($billingSubscription)) {
             	$subscription_billing_uuid = guid();
-                $billingSubscription = $this->getNewBillingSubscription($provider, $user, $plan, $subscription, $subscription_billing_uuid);
+                $billingSubscription = $this->getNewBillingSubscription($user, $plan, $subscription, $subscription_billing_uuid);
                 $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider,
                 		$internalPlan, $internalPlanOpts, $plan, $planOpts, 
                 		NULL, NULL, $subscription_billing_uuid, $billingSubscription, 'api', 0);
