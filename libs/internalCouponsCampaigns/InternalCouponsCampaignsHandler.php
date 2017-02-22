@@ -2,10 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
-require_once __DIR__ . '/../providers/recurly/couponsCampaigns/RecurlyCouponsCampaignsHandler.php';
-require_once __DIR__ . '/../providers/stripe/couponsCampaigns/StripeCouponsCampaignsHandler.php';
-require_once __DIR__ . '/../providers/braintree/couponsCampaigns/BraintreeCouponsCampaignsHandler.php';
-require_once __DIR__ . '/../providers/afr/couponsCampaigns/AfrCouponsCampaignsHandler.php';
+require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
 
 class InternalCouponsCampaignsHandler {
 	
@@ -68,33 +65,9 @@ class InternalCouponsCampaignsHandler {
  					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
  				}
 			}
-			//already exist ?
-			//TODO : ???
 			//create provider side
-			$couponsCampaignProviderBillingUuid = NULL;
-			switch($provider->getName()) {
-				case 'afr' :
-					$afrCouponsCampaignsHandler = new AfrCouponsCampaignsHandler();
-					$couponsCampaignProviderBillingUuid = $afrCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
-					break;
-				case 'recurly' :
-					$recurlyCouponsCampaignsHandler = new RecurlyCouponsCampaignsHandler();
-					$couponsCampaignProviderBillingUuid = $recurlyCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
-					break;
-				case 'stripe':
-					$stripeCouponsCampaignsHandler = new StripeCouponsCampaignsHandler();
-					$couponsCampaignProviderBillingUuid = $stripeCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
-					break;
-				case 'braintree':
-					$braintreeCouponsCampaignsHandler = new BraintreeCouponsCampaignsHandler();
-					$couponsCampaignProviderBillingUuid = $braintreeCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
-					break;
-				default:
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-			}
+			$providerCouponsCampaignsHandler = ProviderHandlersBuilder::getProviderCouponsCampaignsHandlerInstance($provider);
+			$couponsCampaignProviderBillingUuid = $providerCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
 			//create it in DB
 			try {
 				//START TRANSACTION

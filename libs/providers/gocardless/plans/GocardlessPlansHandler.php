@@ -1,6 +1,8 @@
 <?php
 
-class GocardlessPlansHandler {
+require_once __DIR__ . '/../../global/plans/ProviderPlansHandler.php';
+
+class GocardlessPlansHandler extends ProviderPlansHandler {
 	
 	public static $supported_currencies = array();
 	public static $supported_cycles = array();
@@ -18,9 +20,6 @@ class GocardlessPlansHandler {
 				(new PlanPeriodUnit(PlanPeriodUnit::month))->getValue() => NULL,
 				(new PlanPeriodUnit(PlanPeriodUnit::year))->getValue() => NULL,
 		);
-	}
-	
-	public function __construct() {
 	}
 	
 	public function createProviderPlan(InternalPlan $internalPlan) {

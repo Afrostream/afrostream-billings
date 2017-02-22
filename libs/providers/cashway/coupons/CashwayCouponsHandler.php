@@ -5,14 +5,12 @@ require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../client/cashway_lib.php';
+require_once __DIR__ . '/../../global/coupons/ProviderCouponsHandler.php';
 
 use CashWay\API;
 
-class CashwayCouponsHandler {
+class CashwayCouponsHandler extends ProviderCouponsHandler {
 	
-	public function __construct() {
-	}
-		
 	public function doCreateCoupon(User $user, 
 			UserOpts $userOpts, 
 			BillingInternalCouponsCampaign $internalCouponsCampaign, 

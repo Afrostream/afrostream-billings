@@ -2,12 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
-require_once __DIR__ . '/../providers/recurly/plans/RecurlyPlansHandler.php';
-require_once __DIR__ . '/../providers/gocardless/plans/GocardlessPlansHandler.php';
-require_once __DIR__ . '/../providers/bachat/plans/BachatPlansHandler.php';
-require_once __DIR__ . '/../providers/afr/plans/AfrPlansHandler.php';
-require_once __DIR__ . '/../providers/stripe/plans/StripePlanHandler.php';
-require_once __DIR__ . '/../providers/cashway/plans/CashwayPlansHandler.php';
+require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
 
 use Money\Currency;
 use Iso3166\Codes;
@@ -202,43 +197,8 @@ class InternalPlansHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//create provider side
-			$provider_plan_uuid = NULL;
-			switch($provider->getName()) {
-				case 'recurly' :
-					$recurlyPlansHandler = new RecurlyPlansHandler();
-					$provider_plan_uuid = $recurlyPlansHandler->createProviderPlan($db_internal_plan);
-					break;
-				case 'gocardless' :
-					$gocardlessPlansHandler = new GocardlessPlansHandler();
-					$provider_plan_uuid = $gocardlessPlansHandler->createProviderPlan($db_internal_plan);
-					break;
-				case 'celery' :
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-				case 'bachat' :
-					$bachatPlansHandler = new BachatPlansHandler();
-					$provider_plan_uuid = $bachatPlansHandler->createProviderPlan($db_internal_plan);
-					break;
-				case 'afr' :
-					$afrPlansHandler = new AfrPlansHandler();
-					$provider_plan_uuid = $afrPlansHandler->createProviderPlan($db_internal_plan);
-					break;
-				case 'stripe':
-					$stripePlanHandler = new StripePlanHandler();
-					$provider_plan_uuid = $stripePlanHandler->createProviderPlan($db_internal_plan);
-					break;
-				case 'cashway' :
-					$cashwayPlansHandler = new CashwayPlansHandler();
-					$provider_plan_uuid = $cashwayPlansHandler->createProviderPlan($db_internal_plan);
-					break;
-				default:
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-			}
+			$providerPlansHandler = ProviderHandlersBuilder::getProviderPlansHandlerInstance($provider);
+			$provider_plan_uuid = $providerPlansHandler->createProviderPlan($db_internal_plan);
 			//create it in DB
 			try {
 				//START TRANSACTION
