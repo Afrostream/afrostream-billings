@@ -12,6 +12,7 @@ require_once __DIR__ . '/../providers/global/requests/DeleteSubscriptionRequest.
 require_once __DIR__ . '/../providers/global/requests/RenewSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateInternalPlanSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetOrCreateSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
 
 class SubscriptionsHandler {
@@ -52,26 +53,26 @@ class SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	public function doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, array $billing_info_array, array $sub_opts_array) {
+	public function doGetOrCreateSubscription(GetOrCreateSubscriptionRequest $getOrCreateSubscriptionRequest) {
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("subscription creating...");
-			$billingInfo = BillingInfo::getInstance($billing_info_array);
+			$billingInfo = BillingInfo::getInstance($getOrCreateSubscriptionRequest->getBillingInfoArray());
 			$billingInfo->setBillingInfoBillingUuid(guid());
 			$subOpts = new BillingsSubscriptionOpts();
-			$subOpts->setOpts($sub_opts_array);
-			$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
+			$subOpts->setOpts($getOrCreateSubscriptionRequest->getSubOptsArray());
+			$user = UserDAO::getUserByUserBillingUuid($getOrCreateSubscriptionRequest->getUserBillingUuid());
 			if($user == NULL) {
-				$msg = "unknown user_billing_uuid : ".$user_billing_uuid;
+				$msg = "unknown user_billing_uuid : ".$getOrCreateSubscriptionRequest->getUserBillingUuid();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 			
-			$internal_plan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid);
+			$internal_plan = InternalPlanDAO::getInternalPlanByUuid($getOrCreateSubscriptionRequest->getInternalPlanUuid());
 			if($internal_plan == NULL) {
-				$msg = "unknown internal_plan_uuid : ".$internal_plan_uuid;
+				$msg = "unknown internal_plan_uuid : ".$getOrCreateSubscriptionRequest->getInternalPlanUuid();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -87,7 +88,7 @@ class SubscriptionsHandler {
 			
 			$provider_plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internal_plan->getId(), $provider->getId());
 			if($provider_plan_id == NULL) {
-				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$provider->getName();
+				$msg = "unknown plan : ".$getOrCreateSubscriptionRequest->getInternalPlanUuid()." for provider : ".$provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -99,23 +100,23 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$provider_plan_opts = PlanOptsDAO::getPlanOptsByPlanId($provider_plan->getId());
-			if(isset($subscription_provider_uuid)) {
+			if($getOrCreateSubscriptionRequest->getSubscriptionProviderUuid() != NULL) {
 				//check : Does this subscription_provider_uuid already exist in the Database ?
-				$db_tmp_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $subscription_provider_uuid);
+				$db_tmp_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $getOrCreateSubscriptionRequest->getSubscriptionProviderUuid());
 				if($db_tmp_subscription == NULL) {
 					//nothing to do
 				} else {
 					//check if it is linked to the right user
 					if($db_tmp_subscription->getUserId() != $user->getId()) {
 						//Exception
-						$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." is already linked to another user_reference_uuid";
+						$msg = "subscription with subscription_provider_uuid=".$getOrCreateSubscriptionRequest->getSubscriptionProviderUuid()." is already linked to another user_reference_uuid";
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					//check if it is linked to the right plan
 					if($db_tmp_subscription->getPlanId() != $provider_plan->getId()) {
 						//Exception
-						$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." is not linked to the plan with provider_plan_uuid=".$provider_plan->getPlanUuid();
+						$msg = "subscription with subscription_provider_uuid=".$getOrCreateSubscriptionRequest->getSubscriptionProviderUuid()." is not linked to the plan with provider_plan_uuid=".$provider_plan->getPlanUuid();
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
@@ -129,7 +130,7 @@ class SubscriptionsHandler {
 				config::getLogger()->addInfo("subscription creating...provider creating...");
 				$subscription_billing_uuid = guid();
 				$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
-				$sub_uuid = $providerSubscriptionsHandlerInstance->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $subscription_provider_uuid, $billingInfo, $subOpts);
+				$sub_uuid = $providerSubscriptionsHandlerInstance->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $getOrCreateSubscriptionRequest->getSubscriptionProviderUuid(), $billingInfo, $subOpts);
 				config::getLogger()->addInfo("subscription creating...provider creating done successfully, provider_subscription_uuid=".$sub_uuid);
 				//subscription created provider side, save it in billings database
 				config::getLogger()->addInfo("subscription creating...database savings...");
@@ -149,11 +150,11 @@ class SubscriptionsHandler {
 			}
 			config::getLogger()->addInfo("subscription creating done successfully, db_subscription_id=".$db_subscription->getId());
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while creating a subscription user for user_billing_uuid=".$user_billing_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while creating a subscription user for user_billing_uuid=".$getOrCreateSubscriptionRequest->getUserBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("subscription creating failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while creating a subscription for user_billing_uuid=".$user_billing_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while creating a subscription for user_billing_uuid=".$getOrCreateSubscriptionRequest->getUserBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("subscription creating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}

@@ -16,6 +16,7 @@ require_once __DIR__ . '/../providers/global/requests/GetSubscriptionRequest.php
 require_once __DIR__ . '/../providers/global/requests/RenewSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateInternalPlanSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetOrCreateSubscriptionRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -169,7 +170,14 @@ class SubscriptionsController extends BillingsController {
 				$subscription_provider_uuid = $data['subscriptionProviderUuid'];
 			}
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
-			$subscription = $subscriptionsHandler->doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, $billing_info_array, $sub_opts);
+			$getOrCreateSubscriptionRequest = new GetOrCreateSubscriptionRequest();
+			$getOrCreateSubscriptionRequest->setUserBillingUuid($user_billing_uuid);
+			$getOrCreateSubscriptionRequest->setInternalPlanUuid($internal_plan_uuid);
+			$getOrCreateSubscriptionRequest->setSubscriptionProviderUuid($subscription_provider_uuid);
+			$getOrCreateSubscriptionRequest->setBillingInfoArray($billing_info_array);
+			$getOrCreateSubscriptionRequest->setSubOptsArray($sub_opts);
+			$getOrCreateSubscriptionRequest->setOrigin('api');
+			$subscription = $subscriptionsHandler->doGetOrCreateSubscription($getOrCreateSubscriptionRequest);
 			BillingStatsd::inc('route.api.providers.all.subscriptions.create.success');
 			return($this->returnObjectAsJson($response, 'subscription', $subscription));
 		} catch(BillingsException $e) {
