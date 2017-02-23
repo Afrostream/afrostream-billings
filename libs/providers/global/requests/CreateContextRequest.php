@@ -4,10 +4,10 @@ require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class CreateContextRequest extends ActionRequest {
 	
-	private $contextBillingUuid = NULL;
-	private $contextCountry = NULL;
-	private $name = NULL;
-	private $description = NULL;
+	protected $contextBillingUuid = NULL;
+	protected $contextCountry = NULL;
+	protected $name = NULL;
+	protected $description = NULL;
 	
 	public function __construct() {
 		parent::__construct();

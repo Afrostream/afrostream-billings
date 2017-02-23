@@ -4,9 +4,9 @@ require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class RenewSubscriptionRequest extends ActionRequest {
 	
-	private $subscriptionBillingUuid = NULL;
-	private $startDate = NULL;
-	private $endDate = NULL;
+	protected $subscriptionBillingUuid = NULL;
+	protected $startDate = NULL;
+	protected $endDate = NULL;
 	
 	public function __construct() {
 		parent::__construct();

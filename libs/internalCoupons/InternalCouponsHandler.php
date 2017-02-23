@@ -2,13 +2,15 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
+require_once __DIR__ . '/../providers/global/requests/GetInternalCouponRequest.php';
 
 class InternalCouponsHandler {
 	
 	public function __construct() {
 	}
 	
-	public function doGetInternalCouponByCode($code) {
+	public function doGetInternalCoupon(GetInternalCouponRequest $getInternalCouponRequest) {
+		$code = $getInternalCouponRequest->getCouponCode();
 		$internal_coupon = NULL;
 		try {
 			config::getLogger()->addInfo("internalCoupon getting, code=".$code."....");

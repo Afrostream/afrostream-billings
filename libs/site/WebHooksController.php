@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ .'/BillingsController.php';
+require_once __DIR__ . '/BillingsController.php';
 require_once __DIR__ . '/../webhooks/WebHooksHandler.php';
 require_once __DIR__ . '/../providers/cashway/client/cashway_lib.php';
 require_once __DIR__ . '/../providers/cashway/client/compat.php';

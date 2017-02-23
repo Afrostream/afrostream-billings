@@ -97,7 +97,10 @@ class ContextsHandler {
 		return($db_context);
 	}
 	
-	public function doAddInternalPlanToContext($contextBillingUuid, $contextCountry, $internalPlanUuid) {
+	public function doAddInternalPlanToContext(AddInternalPlanToContextRequest $addInternalPlanToContextRequest) {
+		$contextBillingUuid = $addInternalPlanToContextRequest->getContextBillingUuid();
+		$contextCountry = $addInternalPlanToContextRequest->getContextCountry();
+		$internalPlanUuid = $addInternalPlanToContextRequest->getInternalPlanUuid();
 		$context = NULL;
 		try {
 			if(!Codes::isValid($contextCountry)) {
@@ -148,7 +151,10 @@ class ContextsHandler {
 		return($context);
 	}
 	
-	public function doRemoveInternalPlanFromContext($contextBillingUuid, $contextCountry, $internalPlanUuid) {
+	public function doRemoveInternalPlanFromContext(RemoveInternalPlanFromContextRequest $removeInternalPlanFromContextRequest) {
+		$contextBillingUuid = $removeInternalPlanFromContextRequest->getContextBillingUuid();
+		$contextCountry = $removeInternalPlanFromContextRequest->getContextCountry();
+		$internalPlanUuid = $removeInternalPlanFromContextRequest->getInternalPlanUuid();
 		$context = NULL;
 		try {
 			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
@@ -185,7 +191,11 @@ class ContextsHandler {
 		return($context);
 	}
 	
-	public function doSetInternalPlanIndexInContext($contextBillingUuid, $contextCountry, $internalPlanUuid, $index) {
+	public function doSetInternalPlanIndexInContext(SetInternalPlanIndexInContextRequest $setInternalPlanIndexInContextRequest) {
+		$contextBillingUuid = $setInternalPlanIndexInContextRequest->getContextBillingUuid();
+		$contextCountry = $setInternalPlanIndexInContextRequest->getContextCountry();
+		$internalPlanUuid = $setInternalPlanIndexInContextRequest->getInternalPlanUuid();
+		$index = $setInternalPlanIndexInContextRequest->getIndex();
 		$context = NULL;
 		try {
 			if(!(ctype_digit($index)) || !($index > 0)) {

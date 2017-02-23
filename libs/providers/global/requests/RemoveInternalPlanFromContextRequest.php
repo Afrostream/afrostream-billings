@@ -4,9 +4,9 @@ require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class RemoveInternalPlanFromContextRequest extends ActionRequest {
 	
-	private $contextBillingUuid = NULL;
-	private $contextCountry = NULL;
-	private $internalPlanUuid = NULL;
+	protected $contextBillingUuid = NULL;
+	protected $contextCountry = NULL;
+	protected $internalPlanUuid = NULL;
 	
 	public function __construct() {
 		parent::__construct();

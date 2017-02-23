@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class GetContextsRequest extends ActionRequest {
 	
-	private $contextCountry = NULL;
+	protected $contextCountry = NULL;
 	
 	public function __construct() {
 		parent::__construct();

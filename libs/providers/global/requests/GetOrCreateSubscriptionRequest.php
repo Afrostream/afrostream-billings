@@ -4,11 +4,11 @@ require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class GetOrCreateSubscriptionRequest extends ActionRequest {
 	
-	private $userBillingUuid = NULL;
-	private $internalPlanUuid = NULL;
-	private $subscriptionProviderUuid = NULL;
-	private $billingInfoArray = array();
-	private $subOptsArray = array();
+	protected $userBillingUuid = NULL;
+	protected $internalPlanUuid = NULL;
+	protected $subscriptionProviderUuid = NULL;
+	protected $billingInfoArray = array();
+	protected $subOptsArray = array();
 	
 	public function __construct() {
 		parent::__construct();

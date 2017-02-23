@@ -4,9 +4,6 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../global/users/ProviderUsersHandler.php';
-require_once __DIR__ . '/../../global/requests/CreateUserRequest.php';
-require_once __DIR__ . '/../../global/requests/UpdateUserRequest.php';
-require_once __DIR__ . '/../../global/requests/UpdateUsersRequest.php';
 
 class StripeUsersHandler extends ProviderUsersHandler
 {
@@ -59,20 +56,20 @@ class StripeUsersHandler extends ProviderUsersHandler
      */
     protected function createUser(CreateUserRequest $createUserRequest)
     {
-        checkUserOptsArray($createUserRequest->getUserOpts(), $this->provider->getName());
+        checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName());
 
         $customer = \Stripe\Customer::create([
-            'email' => $createUserRequest->getUserOpts()['email'],
+            'email' => $createUserRequest->getUserOptsArray()['email'],
             'metadata' => [
-                'firstName' => $createUserRequest->getUserOpts()['firstName'],
-                'lastName' => $createUserRequest->getUserOpts()['lastName'],
+                'firstName' => $createUserRequest->getUserOptsArray()['firstName'],
+                'lastName' => $createUserRequest->getUserOptsArray()['lastName'],
                 'AfrSource' => 'afrBillingApi',
             	'AfrOrigin' => 'user',
                 'AfrUserBillingUuid' => $createUserRequest->getUserBillingUuid()
             ]
         ]);
 
-        $this->log('Create customer : email : %s, firstname: %s, lastname: %s', [$createUserRequest->getUserOpts()['email'], $createUserRequest->getUserOpts()['firstName'], $createUserRequest->getUserOpts()['lastName']]);
+        $this->log('Create customer : email : %s, firstname: %s, lastname: %s', [$createUserRequest->getUserOptsArray()['email'], $createUserRequest->getUserOptsArray()['firstName'], $createUserRequest->getUserOptsArray()['lastName']]);
 
         if (empty($customer['id'])) {
             $this->log('Error on recording user on stripe side');

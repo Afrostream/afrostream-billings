@@ -4,9 +4,6 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../global/users/ProviderUsersHandler.php';
-require_once __DIR__ . '/../../global/requests/CreateUserRequest.php';
-require_once __DIR__ . '/../../global/requests/UpdateUserRequest.php';
-require_once __DIR__ . '/../../global/requests/UpdateUsersRequest.php';
 
 class RecurlyUsersHandler extends ProviderUsersHandler {
 	
@@ -22,15 +19,15 @@ class RecurlyUsersHandler extends ProviderUsersHandler {
 				$account = Recurly_Account::get($createUserRequest->getUserProviderUuid());
 			} else {
 				//
-				checkUserOptsArray($createUserRequest->getUserOpts(), $this->provider->getName());
+				checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName());
 				//
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 				//
 				$account = new Recurly_Account(guid());
-				$account->email = $createUserRequest->getUserOpts()['email'];
-				$account->first_name = $createUserRequest->getUserOpts()['firstName'];
-				$account->last_name = $createUserRequest->getUserOpts()['lastName'];
+				$account->email = $createUserRequest->getUserOptsArray()['email'];
+				$account->first_name = $createUserRequest->getUserOptsArray()['firstName'];
+				$account->last_name = $createUserRequest->getUserOptsArray()['lastName'];
 				//
 				$account->create();
 				//
@@ -61,15 +58,15 @@ class RecurlyUsersHandler extends ProviderUsersHandler {
 		try {
 			config::getLogger()->addInfo("recurly user data updating...");
 			//
-			checkUserOptsArray($updateUserRequest->getUserOpts(), $this->provider->getName());
+			checkUserOptsArray($updateUserRequest->getUserOptsArray(), $this->provider->getName());
 			//
 			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 			//
 			$account = Recurly_Account::get($updateUserRequest->getUserProviderUuid());
-			$account->email = $updateUserRequest->getUserOpts()['email'];
-			$account->first_name = $updateUserRequest->getUserOpts()['firstName'];
-			$account->last_name = $updateUserRequest->getUserOpts()['lastName'];
+			$account->email = $updateUserRequest->getUserOptsArray()['email'];
+			$account->first_name = $updateUserRequest->getUserOptsArray()['firstName'];
+			$account->last_name = $updateUserRequest->getUserOptsArray()['lastName'];
 			//
 			$account->update();
 			config::getLogger()->addInfo("recurly user data updating done successfully, user_provider_uuid=".$updateUserRequest->getUserProviderUuid());

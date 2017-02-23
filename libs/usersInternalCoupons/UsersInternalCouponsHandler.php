@@ -3,14 +3,20 @@
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
+require_once __DIR__ . '/../providers/global/requests/GetUsersInternalCouponsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CreateUsersInternalCouponRequest.php';
 
 class UsersInternalCouponsHandler {
 	
 	public function __construct() {
 	}
 	
-	public function doGetList($userBillingUuid, $internalCouponCampaignType = null, $couponsCampaignInternalBillingUuid = null, $recipientIsFilled = null)
-	{
+	public function doGetList(GetUsersInternalCouponsRequest $getUsersInternalCouponsRequest) {
+		$userBillingUuid = $getUsersInternalCouponsRequest->getUserBillingUuid();
+		$internalCouponCampaignType = $getUsersInternalCouponsRequest->getCouponsCampaignType();
+		$couponsCampaignInternalBillingUuid = $getUsersInternalCouponsRequest->getInternalCouponsCampaignBillingUuid();
+		$recipientIsFilled = $getUsersInternalCouponsRequest->getRecipientIsFilled();
+		//
 		$user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
 		if($user == NULL) {
 			$msg = "unknown user_billing_uuid : ".$userBillingUuid;
@@ -36,7 +42,12 @@ class UsersInternalCouponsHandler {
 		return $list;
 	}
 	
-	public function doCreateCoupon($userBillingUuid, $couponsCampaignInternalBillingUuid, $internalPlanUuid = NULL, array $couponOpts) {
+	public function doCreateCoupon(CreateUsersInternalCouponRequest $createUsersInternalCouponRequest) {
+		$userBillingUuid = $createUsersInternalCouponRequest->getUserBillingUuid();
+		$couponsCampaignInternalBillingUuid = $createUsersInternalCouponRequest->getInternalCouponsCampaignBillingUuid();
+		$internalPlanUuid = $createUsersInternalCouponRequest->getInternalPlanUuid();
+		$couponOpts = $createUsersInternalCouponRequest->getCouponOptsArray();
+		//
 		$db_coupon = NULL;
 		try {
 			config::getLogger()->addInfo("user coupon creating....");
