@@ -1,18 +1,6 @@
 <?php
 
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../providers/celery/users/CeleryUsersHandler.php';
-require_once __DIR__ . '/../providers/recurly/users/RecurlyUsersHandler.php';
-require_once __DIR__ . '/../providers/gocardless/users/GocardlessUsersHandler.php';
-require_once __DIR__ . '/../providers/bachat/users/BachatUsersHandler.php';
-require_once __DIR__ . '/../providers/afr/users/AfrUsersHandler.php';
-require_once __DIR__ . '/../providers/cashway/users/CashwayUsersHandler.php';
-require_once __DIR__ . '/../providers/orange/users/OrangeUsersHandler.php';
-require_once __DIR__ . '/../providers/bouygues/users/BouyguesUsersHandler.php';
-require_once __DIR__ . '/../providers/stripe/users/StripeUsersHandler.php';
-require_once __DIR__ . '/../providers/braintree/users/BraintreeUsersHandler.php';
-require_once __DIR__ . '/../providers/netsize/users/NetsizeUsersHandler.php';
-require_once __DIR__ . '/../providers/wecashup/users/WecashupUsersHandler.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../utils/utils.php';
 require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
@@ -111,7 +99,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting/creating...");
-			checkUserOptsArray($createUserRequest->getUserOpts(), $createUserRequest->getProviderName());
+			checkUserOptsArray($createUserRequest->getUserOptsArray(), $createUserRequest->getProviderName());
 			$provider = ProviderDAO::getProviderByName($createUserRequest->getProviderName());
 				
 			if($provider == NULL) {
@@ -187,7 +175,7 @@ class UsersHandler {
 					//RECREATE USER_OPTS
 					$userOpts = new UserOpts();
 					$userOpts->setUserId($db_user->getId());
-					$userOpts->setOpts($createUserRequest->getUserOpts());
+					$userOpts->setOpts($createUserRequest->getUserOptsArray());
 					$userOpts = UserOptsDAO::addUserOpts($userOpts);
 					//COMMIT
 					pg_query("COMMIT");
@@ -213,7 +201,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user creating...");
-			checkUserOptsArray($createUserRequest->getUserOpts(), $createUserRequest->getProviderName());
+			checkUserOptsArray($createUserRequest->getUserOptsArray(), $createUserRequest->getProviderName());
 			$provider = ProviderDAO::getProviderByName($createUserRequest->getProviderName());
 			
 			if($provider == NULL) {
@@ -239,7 +227,7 @@ class UsersHandler {
 				//USER_OPTS
 				$userOpts = new UserOpts();
 				$userOpts->setUserId($db_user->getId());
-				$userOpts->setOpts($createUserRequest->getUserOpts());
+				$userOpts->setOpts($createUserRequest->getUserOptsArray());
 				$userOpts = UserOptsDAO::addUserOpts($userOpts);
 				//COMMIT
 				pg_query("COMMIT");
@@ -276,13 +264,13 @@ class UsersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			checkUserOptsValues($updateUserRequest->getUserOpts(), $provider->getName());
+			checkUserOptsValues($updateUserRequest->getUserOptsArray(), $provider->getName());
 			$db_user_opts = UserOptsDAO::getUserOptsByUserId($db_user->getId());
 			$current_user_opts_array = $db_user_opts->getOpts();
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
-				foreach ($updateUserRequest->getUserOpts() as $key => $value) {
+				foreach ($updateUserRequest->getUserOptsArray() as $key => $value) {
 					if(array_key_exists($key, $current_user_opts_array)) {
 						//UPDATE OR DELETE
 						if(isset($value)) {
@@ -307,7 +295,7 @@ class UsersHandler {
 			//user creation provider side
 			$providerUsersHandler = ProviderHandlersBuilder::getProviderUsersHandlerInstance($provider);
 			$updateUserRequest->setUserProviderUuid($db_user->getUserProviderUuid());
-			$updateUserRequest->setUserOpts($db_user_opts->getOpts());
+			$updateUserRequest->setUserOptsArray($db_user_opts->getOpts());
 			$providerUsersHandler->doUpdateUserOpts($updateUserRequest);		
 			config::getLogger()->addInfo("userOpts updating done successfully");
 		} catch(BillingsException $e) {

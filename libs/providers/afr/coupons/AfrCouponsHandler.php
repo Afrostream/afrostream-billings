@@ -5,13 +5,15 @@ require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/coupons/ProviderCouponsHandler.php';
 
 use Money\Money;
 use Money\Currency;
 
-class AfrCouponsHandler {
+class AfrCouponsHandler extends ProviderCouponsHandler {
 	
-	public function __construct() {
+	public function __construct(Provider $provider) {
+		parent::__construct($provider);
 		\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
 	}
 	

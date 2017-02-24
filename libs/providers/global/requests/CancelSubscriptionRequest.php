@@ -4,8 +4,8 @@ require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class CancelSubscriptionRequest extends ActionRequest {
 	
-	private $subscriptionBillingUuid = NULL;
-	private $cancelDate = NULL;
+	protected $subscriptionBillingUuid = NULL;
+	protected $cancelDate = NULL;
 	
 	public function __construct() {
 		parent::__construct();

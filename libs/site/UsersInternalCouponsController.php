@@ -2,7 +2,9 @@
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../usersInternalCoupons/UsersInternalCouponsHandler.php';
-require_once __DIR__ .'/BillingsController.php';
+require_once __DIR__ . '/BillingsController.php';
+require_once __DIR__ . '/../providers/global/requests/GetUsersInternalCouponsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CreateUsersInternalCouponRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -34,7 +36,13 @@ class UsersInternalCouponsController extends BillingsController {
 			$recipientIsFilled = empty($data['recipientIsFilled']) ? true : ($data['recipientIsFilled'] == 'true' ? true : false);
 			
 			$usersInternalCouponsHandler = new UsersInternalCouponsHandler();
-			$listCoupons = $usersInternalCouponsHandler->doGetList($userBillingUuid, $couponsCampaignType, $internalCouponsCampaignBillingUuid, $recipientIsFilled);
+			$getUsersInternalCouponsRequest = new GetUsersInternalCouponsRequest();
+			$getUsersInternalCouponsRequest->setUserBillingUuid($userBillingUuid);
+			$getUsersInternalCouponsRequest->setCouponsCampaignType($couponsCampaignType);
+			$getUsersInternalCouponsRequest->setInternalCouponsCampaignBillingUuid($internalCouponsCampaignBillingUuid);
+			$getUsersInternalCouponsRequest->setRecipientIsFilled($recipientIsFilled);
+			$getUsersInternalCouponsRequest->setOrigin('api');
+			$listCoupons = $usersInternalCouponsHandler->doGetList($getUsersInternalCouponsRequest);
 	
 			return $this->returnObjectAsJson($response, 'coupons', $listCoupons);
 		} catch(Exception $e) {
@@ -68,7 +76,7 @@ class UsersInternalCouponsController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 
-			$couponOpts = array();
+			$couponOptsArray = array();
 			if (isset($data['couponOpts'])) {
 				if(!is_array($data['couponOpts'])) {
 					//exception
@@ -77,13 +85,19 @@ class UsersInternalCouponsController extends BillingsController {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 
-				$couponOpts = $data['couponOpts'];
+				$couponOptsArray = $data['couponOpts'];
 			}
 
 			$userBillingUuid = $data['userBillingUuid'];
 			//
 			$usersInternalCouponsHandler = new UsersInternalCouponsHandler();
-			$coupon = $usersInternalCouponsHandler->doCreateCoupon($userBillingUuid, $internalCouponsCampaignBillingUuid, NULL /* no internalPlanUuid given for the moment */, $couponOpts);
+			$createUsersInternalCouponRequest = new CreateUsersInternalCouponRequest();
+			$createUsersInternalCouponRequest->setUserBillingUuid($userBillingUuid);
+			$createUsersInternalCouponRequest->setInternalCouponsCampaignBillingUuid($internalCouponsCampaignBillingUuid);
+			$createUsersInternalCouponRequest->setInternalPlanUuid(NULL);/* no internalPlanUuid given for the moment */
+			$createUsersInternalCouponRequest->setCouponOptsArray($couponOptsArray);
+			$createUsersInternalCouponRequest->setOrigin('api');
+			$coupon = $usersInternalCouponsHandler->doCreateCoupon($createUsersInternalCouponRequest);
 			return($this->returnObjectAsJson($response, 'coupon', $coupon));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while creating a coupon, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();

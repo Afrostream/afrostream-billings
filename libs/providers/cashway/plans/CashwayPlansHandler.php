@@ -1,6 +1,8 @@
 <?php
 
-class CashwayPlansHandler {
+require_once __DIR__ . '/../../global/plans/ProviderPlansHandler.php';
+
+class CashwayPlansHandler extends ProviderPlansHandler {
 	
 	public static $supported_currencies = array();
 	public static $supported_cycles = array();
@@ -17,9 +19,6 @@ class CashwayPlansHandler {
 				(new PlanPeriodUnit(PlanPeriodUnit::month))->getValue() => NULL,
 				(new PlanPeriodUnit(PlanPeriodUnit::year))->getValue() => NULL
 		);
-	}
-	
-	public function __construct() {
 	}
 	
 	public function createProviderPlan(InternalPlan $internalPlan) {

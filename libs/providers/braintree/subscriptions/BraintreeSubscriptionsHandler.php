@@ -579,9 +579,28 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
 	}
 	
-	public function doUpdateInternalPlan(BillingsSubscription $subscription, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts) {
+	public function doUpdateInternalPlanSubscription(BillingsSubscription $subscription, UpdateInternalPlanSubscriptionRequest $updateInternalPlanSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("braintree subscription updating Plan...");
+			//
+			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid());
+			if($internalPlan == NULL) {
+				$msg = "unknown internalPlanUuid : ".$updateInternalPlanSubscriptionRequest->getInternalPlanUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$providerPlanId = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internalPlan->getId(), $this->provider->getId());
+			if($providerPlanId == NULL) {
+				$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$this->provider->getName();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$providerPlan = PlanDAO::getPlanById($providerPlanId);
+			if($providerPlan == NULL) {
+				$msg = "unknown plan with id : ".$providerPlanId;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			//
 			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
 			Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
@@ -590,7 +609,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			//
 			Braintree\Subscription::update($subscription->getSubUid(), 
 					[
-							'planId' => $plan->getPlanUuid(),
+							'planId' => $providerPlan->getPlanUuid(),
 							'price' => $internalPlan->getAmount(),	//Braintree does not change the price !!!
 							'options' => [
 									prorateCharges => true
@@ -598,7 +617,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					]);
 			
 			//
-			$subscription->setPlanId($plan->getId());
+			$subscription->setPlanId($providerPlan->getId());
 			//
 			try {
 				//START TRANSACTION
@@ -614,7 +633,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addInfo("braintree subscription updating Plan done successfully for braintree_subscription_uuid=".$subscription->getSubUid());
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while updating a Plan braintree subscription for braintree_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("braintree subscription reactivating failed : ".$msg);
+			config::getLogger()->addError("braintree subscription updating Plan failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while updating a Plan braintree subscription for braintree_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();

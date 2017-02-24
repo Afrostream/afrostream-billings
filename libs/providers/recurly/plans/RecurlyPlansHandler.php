@@ -1,9 +1,8 @@
 <?php
 
-class RecurlyPlansHandler {
+require_once __DIR__ . '/../../global/plans/ProviderPlansHandler.php';
 
-	public function __construct() {
-	}
+class RecurlyPlansHandler extends ProviderPlansHandler {
 	
 	public function createProviderPlan(InternalPlan $internalPlan) {
 		$provider_plan_uuid = NULL;

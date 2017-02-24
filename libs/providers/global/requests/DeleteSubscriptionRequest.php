@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class DeleteSubscriptionRequest extends ActionRequest {
 	
-	private $subscriptionBillingUuid = NULL;
+	protected $subscriptionBillingUuid = NULL;
 	
 	public function __construct() {
 		parent::__construct();

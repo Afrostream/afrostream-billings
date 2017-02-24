@@ -2,6 +2,12 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
+require_once __DIR__ . '/../providers/global/requests/GetContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetContextsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CreateContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/SetInternalPlanIndexInContextRequest.php';
 
 use Iso3166\Codes;
 
@@ -10,7 +16,9 @@ class ContextsHandler {
 	public function __construct() {
 	}
 
-	public function doGetContext($contextBillingUuid, $contextCountry) {
+	public function doGetContext(GetContextRequest $getContextRequest) {
+		$contextBillingUuid = $getContextRequest->getContextBillingUuid();
+		$contextCountry = $getContextRequest->getContextCountry();
 		$db_context = NULL;
 		try {
 			config::getLogger()->addInfo("context getting, contextBillingUuid=".$contextBillingUuid.", contextCountry=".$contextCountry."....");
@@ -30,7 +38,8 @@ class ContextsHandler {
 		return($db_context);
 	}
 	
-	public function doGetContexts($contextCountry = NULL) {
+	public function doGetContexts(GetContextsRequest $getContextsRequest) {
+		$contextCountry = $getContextsRequest->getContextCountry();
 		$db_contexts = NULL;
 		try {
 			config::getLogger()->addInfo("contexts getting...");
@@ -48,7 +57,11 @@ class ContextsHandler {
 		return($db_contexts);
 	}
 	
-	public function doCreate($contextBillingUuid, $contextCountry, $name, $description) {
+	public function doCreate(CreateContextRequest $createContextRequest) {
+		$contextBillingUuid = $createContextRequest->getContextBillingUuid();
+		$contextCountry = $createContextRequest->getContextCountry();
+		$name = $createContextRequest->getName();
+		$description = $createContextRequest->getDescription();
 		$db_context = NULL;
 		try {
 			config::getLogger()->addInfo("context creating...");
@@ -84,7 +97,10 @@ class ContextsHandler {
 		return($db_context);
 	}
 	
-	public function doAddInternalPlanToContext($contextBillingUuid, $contextCountry, $internalPlanUuid) {
+	public function doAddInternalPlanToContext(AddInternalPlanToContextRequest $addInternalPlanToContextRequest) {
+		$contextBillingUuid = $addInternalPlanToContextRequest->getContextBillingUuid();
+		$contextCountry = $addInternalPlanToContextRequest->getContextCountry();
+		$internalPlanUuid = $addInternalPlanToContextRequest->getInternalPlanUuid();
 		$context = NULL;
 		try {
 			if(!Codes::isValid($contextCountry)) {
@@ -135,7 +151,10 @@ class ContextsHandler {
 		return($context);
 	}
 	
-	public function doRemoveInternalPlanFromContext($contextBillingUuid, $contextCountry, $internalPlanUuid) {
+	public function doRemoveInternalPlanFromContext(RemoveInternalPlanFromContextRequest $removeInternalPlanFromContextRequest) {
+		$contextBillingUuid = $removeInternalPlanFromContextRequest->getContextBillingUuid();
+		$contextCountry = $removeInternalPlanFromContextRequest->getContextCountry();
+		$internalPlanUuid = $removeInternalPlanFromContextRequest->getInternalPlanUuid();
 		$context = NULL;
 		try {
 			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
@@ -172,7 +191,11 @@ class ContextsHandler {
 		return($context);
 	}
 	
-	public function doSetInternalPlanIndexInContext($contextBillingUuid, $contextCountry, $internalPlanUuid, $index) {
+	public function doSetInternalPlanIndexInContext(SetInternalPlanIndexInContextRequest $setInternalPlanIndexInContextRequest) {
+		$contextBillingUuid = $setInternalPlanIndexInContextRequest->getContextBillingUuid();
+		$contextCountry = $setInternalPlanIndexInContextRequest->getContextCountry();
+		$internalPlanUuid = $setInternalPlanIndexInContextRequest->getInternalPlanUuid();
+		$index = $setInternalPlanIndexInContextRequest->getIndex();
 		$context = NULL;
 		try {
 			if(!(ctype_digit($index)) || !($index > 0)) {

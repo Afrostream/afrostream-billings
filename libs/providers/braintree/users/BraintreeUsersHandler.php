@@ -4,9 +4,6 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../global/users/ProviderUsersHandler.php';
-require_once __DIR__ . '/../../global/requests/CreateUserRequest.php';
-require_once __DIR__ . '/../../global/requests/UpdateUserRequest.php';
-require_once __DIR__ . '/../../global/requests/UpdateUsersRequest.php';
 
 class BraintreeUsersHandler extends ProviderUsersHandler {
 	
@@ -25,7 +22,7 @@ class BraintreeUsersHandler extends ProviderUsersHandler {
 				//
 			} else {
 				//
-				checkUserOptsArray($createUserRequest->getUserOpts(), $this->provider->getName());
+				checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName());
 				//
 				Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
 				Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
@@ -33,9 +30,9 @@ class BraintreeUsersHandler extends ProviderUsersHandler {
 				Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
 				//
 				$attribs = array();
-				$attribs['email'] = $createUserRequest->getUserOpts()['email'];
-				$attribs['firstName'] = $createUserRequest->getUserOpts()['firstName'];
-				$attribs['lastName'] = $createUserRequest->getUserOpts()['lastName'];
+				$attribs['email'] = $createUserRequest->getUserOptsArray()['email'];
+				$attribs['firstName'] = $createUserRequest->getUserOptsArray()['firstName'];
+				$attribs['lastName'] = $createUserRequest->getUserOptsArray()['lastName'];
 				//
 				$result = Braintree\Customer::create($attribs);
 				if ($result->success) {
@@ -71,7 +68,7 @@ class BraintreeUsersHandler extends ProviderUsersHandler {
 		try {
 			config::getLogger()->addInfo("braintree user data updating...");
 			//
-			checkUserOptsArray($updateUserRequest->getUserOpts(), $this->provider->getName());
+			checkUserOptsArray($updateUserRequest->getUserOptsArray(), $this->provider->getName());
 			//
 			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
 			Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
@@ -79,9 +76,9 @@ class BraintreeUsersHandler extends ProviderUsersHandler {
 			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
 			//
 			$attribs = array();
-			$attribs['email'] = $updateUserRequest->getUserOpts()['email'];
-			$attribs['firstName'] = $updateUserRequest->getUserOpts()['firstName'];
-			$attribs['lastName'] = $updateUserRequest->getUserOpts()['lastName'];
+			$attribs['email'] = $updateUserRequest->getUserOptsArray()['email'];
+			$attribs['firstName'] = $updateUserRequest->getUserOptsArray()['firstName'];
+			$attribs['lastName'] = $updateUserRequest->getUserOptsArray()['lastName'];
 			//
 			$result = Braintree\Customer::update($updateUserRequest->getUserProviderUuid(), $attribs);
 			if (!$result->success) {

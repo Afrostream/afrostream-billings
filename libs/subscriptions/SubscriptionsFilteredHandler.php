@@ -10,10 +10,10 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 		parent::__construct();
 	}
 	
-	public function doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, array $billing_info_array, array $sub_opts_array) {
-		$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
+	public function doGetOrCreateSubscription(GetOrCreateSubscriptionRequest $getOrCreateSubscriptionRequest) {
+		$user = UserDAO::getUserByUserBillingUuid($getOrCreateSubscriptionRequest->getUserBillingUuid());
 		if($user == NULL) {
-			$msg = "unknown user_billing_uuid : ".$user_billing_uuid;
+			$msg = "unknown user_billing_uuid : ".$getOrCreateSubscriptionRequest->getUserBillingUuid();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -52,7 +52,7 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 				$sub_opts_array['startsAt'] = dbGlobal::toISODate($lastDate);
 			}
 		}
-		return(parent::doGetOrCreateSubscription($user_billing_uuid, $internal_plan_uuid, $subscription_provider_uuid, $billing_info_array, $sub_opts_array));
+		return(parent::doGetOrCreateSubscription($getOrCreateSubscriptionRequest));
 	}
 	
 	private function haveSubscriptionsWithStatus(array $subscriptions, $status) {

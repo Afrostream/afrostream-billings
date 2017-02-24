@@ -4,9 +4,9 @@ require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class GetUserRequest extends ActionRequest {
 	
-	protected $providerName;
-	protected $userBillingUuid;
-	protected $userReferenceUuid;
+	protected $providerName = NULL;
+	protected $userBillingUuid = NULL;
+	protected $userReferenceUuid = NULL;
 	
 	public function __construct() {
 		parent::__construct();

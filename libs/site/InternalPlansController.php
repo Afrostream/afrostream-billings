@@ -2,7 +2,16 @@
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../internalplans/InternalPlansFilteredHandler.php';
-require_once __DIR__ .'/BillingsController.php';
+require_once __DIR__ . '/BillingsController.php';
+require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToCountryRequest.php';
+require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToProviderRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetInternalPlanRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetInternalPlansRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CreateInternalPlanRequest.php';
+require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromCountryRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateInternalPlanRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -21,7 +30,10 @@ class InternalPlansController extends BillingsController {
 			}
 			$internalPlanUuid = $args['internalPlanUuid'];
 			$internalPlansHandler = new InternalPlansFilteredHandler();
-			$internalPlan = $internalPlansHandler->doGetInternalPlan($internalPlanUuid);
+			$getInternalPlanRequest = new GetInternalPlanRequest();
+			$getInternalPlanRequest->setInternalPlanUuid($internalPlanUuid);
+			$getInternalPlanRequest->setOrigin('api');
+			$internalPlan = $internalPlansHandler->doGetInternalPlan($getInternalPlanRequest);
 			
 			if($internalPlan == NULL) {
 				return($this->returnNotFoundAsJson($response));
@@ -46,9 +58,9 @@ class InternalPlansController extends BillingsController {
 	public function getMulti(Request $request, Response $response, array $args) {
 		try {
 			$data = $request->getQueryParams();
-			$provider_name = NULL;
+			$providerName = NULL;
 			if(isset($data['providerName'])) {
-				$provider_name = $data['providerName'];
+				$providerName = $data['providerName'];
 			}
 			$contextBillingUuid = NULL;
 			if(isset($data['contextBillingUuid'])) {
@@ -65,7 +77,7 @@ class InternalPlansController extends BillingsController {
 					$isVisible = NULL;//empty = ALL
 				}
 			}
-			$filtered_array = array_filter($data, 
+			$filteredArray = array_filter($data, 
 				function($k) {
 					return strpos($k, "filter") === 0;
 				}, ARRAY_FILTER_USE_KEY);
@@ -74,7 +86,15 @@ class InternalPlansController extends BillingsController {
 				$country = $data['country'];
 			}
 			$internalPlansHandler = new InternalPlansFilteredHandler();
-			$internalPlans = $internalPlansHandler->doGetInternalPlans($provider_name, $contextBillingUuid, $contextCountry, $isVisible, $country, $filtered_array);
+			$getInternalPlansRequest = new GetInternalPlansRequest();
+			$getInternalPlansRequest->setProviderName($providerName);
+			$getInternalPlansRequest->setContextBillingUuid($contextBillingUuid);
+			$getInternalPlansRequest->setContextCountry($contextCountry);
+			$getInternalPlansRequest->setIsVisible($isVisible);
+			$getInternalPlansRequest->setCountry($country);
+			$getInternalPlansRequest->setFilteredArray($filteredArray);
+			$getInternalPlansRequest->setOrigin('api');
+			$internalPlans = $internalPlansHandler->doGetInternalPlans($getInternalPlansRequest);
 			return($this->returnObjectAsJson($response, 'internalPlans', $internalPlans));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while getting Internal Plans, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -197,21 +217,22 @@ class InternalPlansController extends BillingsController {
 
 			$internalplan_opts_array = $data['internalPlanOpts'];
 			$internalPlansHandler = new InternalPlansFilteredHandler();
-			$internalPlan = $internalPlansHandler->doCreate(
-					$internalPlanUuid,
-					$name,
-					$description,
-					$amountInCents,
-					$currency,
-					$cycle,
-					$periodUnitStr,
-					$periodLength,
-					$vatRate,
-					$internalplan_opts_array,
-					$trialEnabled,
-					$trialPeriodLength,
-					$trialPeriodUnit
-					);
+			$createInternalPlanRequest = new CreateInternalPlanRequest();
+			$createInternalPlanRequest->setInternalPlanUuid($internalPlanUuid);
+			$createInternalPlanRequest->setName($name);
+			$createInternalPlanRequest->setDescription($description);
+			$createInternalPlanRequest->setAmountInCents($amountInCents);
+			$createInternalPlanRequest->setCurrency($currency);
+			$createInternalPlanRequest->setCycle($cycle);
+			$createInternalPlanRequest->setPeriodUnit($periodUnitStr);
+			$createInternalPlanRequest->setPeriodLength($periodLength);
+			$createInternalPlanRequest->setVatRate($vatRate);
+			$createInternalPlanRequest->setInternalPlanOpts($internalplan_opts_array);
+			$createInternalPlanRequest->setTrialEnabled($trialEnabled);
+			$createInternalPlanRequest->setTrialPeriodLength($trialPeriodLength);
+			$createInternalPlanRequest->setTrialPeriodUnit($trialPeriodUnit);
+			$createInternalPlanRequest->setOrigin('api');
+			$internalPlan = $internalPlansHandler->doCreate($createInternalPlanRequest);
 			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while creating an Internal Plan, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -245,14 +266,12 @@ class InternalPlansController extends BillingsController {
 			}
 			$providerName = $args['providerName'];
 			//
-			$provider = ProviderDAO::getProviderByName($providerName);
-			if($provider == NULL) {
-				$msg = "unknown provider named : ".$providerName;
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
 			$internalPlansHandler = new InternalPlansFilteredHandler();
-			$internalPlan = $internalPlansHandler->doAddToProvider($internalPlanUuid, $provider);
+			$addInternalPlanToProviderRequest = new AddInternalPlanToProviderRequest();
+			$addInternalPlanToProviderRequest->setInternalPlanUuid($internalPlanUuid);
+			$addInternalPlanToProviderRequest->setProviderName($providerName);
+			$addInternalPlanToProviderRequest->setOrigin('api');
+			$internalPlan = $internalPlansHandler->doAddToProvider($addInternalPlanToProviderRequest);
 			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while linking an internal plan to a provider, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -288,12 +307,19 @@ class InternalPlansController extends BillingsController {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				$internalplan_opts_array = $data['internalPlanOpts'];
-				$internalPlan = $internalPlansHandler->doUpdateInternalPlanOpts($internalPlanUuid, $internalplan_opts_array);
+				$internalplanOptsArray = $data['internalPlanOpts'];
+				$updateInternalPlanRequest = new UpdateInternalPlanRequest();
+				$updateInternalPlanRequest->setInternalPlanUuid($internalPlanUuid);
+				$updateInternalPlanRequest->setInternalPlanOpts($internalplanOptsArray);
+				$updateInternalPlanRequest->setOrigin('api');
+				$internalPlan = $internalPlansHandler->doUpdateInternalPlanOpts($updateInternalPlanRequest);
 			}
 			if($internalPlan == NULL) {
 				//NO UPDATE, JUST SEND BACK THE CURRENT INTERNAL_PLAN
-				$internalPlan = $internalPlansHandler->doGetInternalPlan($internalPlanUuid);
+				$getInternalPlanRequest = new GetInternalPlanRequest();
+				$getInternalPlanRequest->setInternalPlanUuid($internalPlanUuid);
+				$getInternalPlanRequest->setOrigin('api');
+				$internalPlan = $internalPlansHandler->doGetInternalPlan($getInternalPlanRequest);
 			}
 			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
 		} catch(BillingsException $e) {
