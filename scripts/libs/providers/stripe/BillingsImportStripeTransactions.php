@@ -83,7 +83,7 @@ class BillingsImportStripeTransactions
     {
     	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe...");
     	$transactionHandler = new TransactionsHandler();
-    	$transactionHandler->doUpdateTransactionByTransactionProviderUuid('stripe', $charge->id);
+    	$transactionHandler->doUpdateTransactionByTransactionProviderUuid('stripe', $charge->id, 'import');
     	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe done successfully");
     }
     
