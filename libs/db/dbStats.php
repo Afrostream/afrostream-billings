@@ -94,15 +94,23 @@ class dbStats {
 		$date->setTimezone(new DateTimeZone(config::$timezone));
 		$date_as_str = dbGlobal::toISODate($date);
 		$params = array();
-		$query = "SELECT BP.name as provider_name, count(*) as counter, count(BSB._id) as counter_returning FROM billing_subscriptions BS";
+		$query = "SELECT BP.name as provider_name, count(*) as counter,";
+		$subQuery = " count((SELECT BSB._id";
+		$subQuery.= " FROM billing_users BUB";
+		$subQuery.= " INNER JOIN billing_subscriptions BSB";
+		$subQuery.= " ON (BSB.userid = BUB._id)";
+		$subQuery.= " WHERE BSB.deleted = false AND BUB.deleted = false";
+		$subQuery.= " AND BU.user_reference_uuid = BUB.user_reference_uuid";
+		$subQuery.= " AND BSB._id < BS._id LIMIT 1))";
+		$subQuery.= " as counter_returning";
+		$query.= $subQuery;
+		$query.= " FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
 		$query.= " INNER JOIN billing_users BU";
 		$query.= " ON (BS.userid = BU._id)";
 		$query.= " LEFT JOIN billing_users_opts BUO";
 		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)";
-		$query.= " LEFT JOIN billing_users BUB ON (BU.user_reference_uuid = BUB.user_reference_uuid)";
-		$query.= " LEFT JOIN billing_subscriptions BSB ON (BSB.userid = BUB._id AND BSB._id < BS._id )";
 		$query.= " WHERE (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " AND";
 		$query.= " date(BS.sub_activated_date AT TIME ZONE 'Europe/Paris') = date('".$date_as_str."')";
@@ -137,7 +145,7 @@ class dbStats {
 		$date_start_str = dbGlobal::toISODate($date_start);
 		$date_end->setTimezone(new DateTimeZone(config::$timezone));
 		$date_end_str = dbGlobal::toISODate($date_end);
-		$query = "SELECT BU._id as userid, (CASE WHEN BUO.value is null THEN 'unknown@domain.com' ELSE BUO.value END) as email, BIPL.name as internal_plan_name, BP.name as provider_name FROM billing_subscriptions BS";
+		$query = "SELECT BU._id as userid, (CASE WHEN length(BUO.value) = 0 OR BUO.value IS NULL THEN 'unknown@domain.com' ELSE BUO.value END) as email, BIPL.name as internal_plan_name, BP.name as provider_name FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)";
 		$query.= " INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)";
 		$query.= " INNER JOIN billing_internal_plans BIPL ON (BIPLL.internal_plan_id = BIPL._id)";
@@ -172,7 +180,7 @@ class dbStats {
 		$date_start_str = dbGlobal::toISODate($date_start);
 		$date_end->setTimezone(new DateTimeZone(config::$timezone));
 		$date_end_str = dbGlobal::toISODate($date_end);
-		$query = "SELECT BU._id as userid, (CASE WHEN BUO.value is null THEN 'unknown@domain.com' ELSE BUO.value END) as email, BIPL.name as internal_plan_name, BP.name as provider_name,";
+		$query = "SELECT BU._id as userid, (CASE WHEN length(BUO.value) = 0 OR BUO.value IS NULL THEN 'unknown@domain.com' ELSE BUO.value END) as email, BIPL.name as internal_plan_name, BP.name as provider_name,";
 		$query.= " BS.sub_activated_date as sub_activated_date FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)";
 		$query.= " INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)";
@@ -329,11 +337,11 @@ class dbStats {
 	 * A coupon is activated when it status is 'redeemed'
 	 *
 	 * @param DateTime $dateStart
-	 * @param Datetime $dateEnd
+	 * @param DateTime $dateEnd
 	 *
 	 * @return array
 	 */
-	public static function getCouponsActivation(DateTime $dateStart, Datetime $dateEnd)
+	public static function getCouponsActivation(DateTime $dateStart, DateTime $dateEnd)
 	{
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
@@ -375,11 +383,11 @@ EOL;
 	 * The coupon must belongs to cashway provider and his status is 'pending'
 	 *
 	 * @param DateTime $dateStart
-	 * @param Datetime $dateEnd
+	 * @param DateTime $dateEnd
 	 *
 	 * @return array
 	 */
-	public static function getCouponsCashwayGenerated(DateTime $dateStart, Datetime $dateEnd)
+	public static function getCouponsCashwayGenerated(DateTime $dateStart, DateTime $dateEnd)
 	{
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
@@ -420,7 +428,7 @@ EOL;
 		return $out;
 	}
 	
-	public static function getCouponsAfrGenerated(DateTime $dateStart, Datetime $dateEnd, CouponCampaignType $couponCampaignType)
+	public static function getCouponsAfrGenerated(DateTime $dateStart, DateTime $dateEnd, CouponCampaignType $couponCampaignType)
 	{
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
@@ -461,7 +469,7 @@ EOL;
 		return $out;		
 	}
 	
-	public static function getTransactions(DateTime $dateStart, Datetime $dateEnd, array $transactionTypes, array $transactionStatus) {
+	public static function getTransactions(DateTime $dateStart, DateTime $dateEnd, array $transactionTypes, array $transactionStatus) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
@@ -516,7 +524,7 @@ EOL;
 		return $out;
 	}
 	
-	public static function getNumberOfTransactions(DateTime $dateStart, Datetime $dateEnd, array $transactionTypes, array $transactionStatus) {
+	public static function getNumberOfTransactions(DateTime $dateStart, DateTime $dateEnd, array $transactionTypes, array $transactionStatus) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));

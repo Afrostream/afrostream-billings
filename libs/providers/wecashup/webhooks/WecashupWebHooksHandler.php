@@ -25,19 +25,19 @@ class WecashupWebHooksHandler {
 			$received_transaction_status  = NULL;
 			$received_transaction_details = NULL;
 			$received_transaction_token = NULL;
-			if(in_array('merchant_secret', $post_data_as_array)) {
+			if(array_key_exists('merchant_secret', $post_data_as_array)) {
 				$received_transaction_merchant_secret = $post_data_as_array['merchant_secret'];
 			}
-			if(in_array('transaction_uid', $post_data_as_array)) {
+			if(array_key_exists('transaction_uid', $post_data_as_array)) {
 				$received_transaction_uid = $post_data_as_array['transaction_uid'];
 			}			
-			if(in_array('transaction_status', $post_data_as_array)) {
+			if(array_key_exists('transaction_status', $post_data_as_array)) {
 				$received_transaction_status = $post_data_as_array['transaction_status'];
 			}
-			if(in_array('transaction_details', $post_data_as_array)) {
+			if(array_key_exists('transaction_details', $post_data_as_array)) {
 				$received_transaction_details = $post_data_as_array['transaction_details'];
 			}
-			if(in_array('transaction_token', $post_data_as_array)) {
+			if(array_key_exists('transaction_token', $post_data_as_array)) {
 				$received_transaction_token = $post_data_as_array['transaction_token'];
 			}
 			//check merchant
@@ -92,14 +92,14 @@ class WecashupWebHooksHandler {
 			}
 		} else {
 			$billingsTransactionOpts = BillingsTransactionOptsDAO::getBillingsTransactionOptByTransactionId($billingsTransaction->getId());
-			if(!array_key_exists('transactionToken', $billingsTransactionOpts->getOpts())) {
-				$msg = "no transactionToken linked to the transaction";
+			if(!array_key_exists('transaction_token', $billingsTransactionOpts->getOpts())) {
+				$msg = "no transaction_token linked to the transaction";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$transactionToken = $billingsTransactionOpts->getOpt('transactionToken');
+			$transactionToken = $billingsTransactionOpts->getOpt('transaction_token');
 			if($transactionToken != $received_transaction_token) {
-				$msg = "transactionToken given does not match";
+				$msg = "transaction_token given does not match";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -188,8 +188,8 @@ class WecashupWebHooksHandler {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				//SUBSCRIPTION UPDATE
-				$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler();
-				$db_subscription = $wecashupSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $billingsWebHook->getId());
+				$wecashupSubscriptionsHandler = new WecashupSubscriptionsHandler($this->provider);
+				$db_subscription = $wecashupSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
 				//TRANSACTION UPDATE
 				$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 				//COMMIT
@@ -219,7 +219,7 @@ class WecashupWebHooksHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		$wecashupTransactionsHandler = new WecashupTransactionsHandler();
+		$wecashupTransactionsHandler = new WecashupTransactionsHandler($this->provider);
 		$wecashupTransactionsHandler->createOrUpdateRefundFromProvider($user, $userOpts, NULL, $refundTransaction, $billingsPaymentTransaction, $update_type);
 		//DONE
 		config::getLogger()->addInfo('Processing wecashup hook refund done successfully');

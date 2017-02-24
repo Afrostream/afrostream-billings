@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ .'/BillingsController.php';
+require_once __DIR__ . '/BillingsController.php';
 require_once __DIR__ . '/../webhooks/WebHooksHandler.php';
 require_once __DIR__ . '/../providers/cashway/client/cashway_lib.php';
 require_once __DIR__ . '/../providers/cashway/client/compat.php';
@@ -379,7 +379,7 @@ class WebHooksController extends BillingsController {
 		parse_str($post_data, $post_data_as_array);
 		
 		$received_transaction_merchant_secret = NULL;
-		if(in_array('merchant_secret', $post_data_as_array)) {
+		if(array_key_exists('merchant_secret', $post_data_as_array)) {
 			$received_transaction_merchant_secret = $post_data_as_array['merchant_secret'];
 		}
 		if(getEnv('WECASHUP_MERCHANT_SECRET') === $received_transaction_merchant_secret) {

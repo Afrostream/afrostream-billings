@@ -49,6 +49,9 @@ class ExceptionError extends Enum {
 	const SUBS_AUTO_ALREADY_EXISTS						=	420;
 	const SUBS_FUTURE_ALREADY_EXISTS					=	421;
 	const SUBS_ALREADY_EXISTS							=	422;
+	const SUBS_EXP_REFUND_UNSUPPORTED					=	423;
+	const SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED			=	424;
+	const SUBS_EXP_REFUND_MANDATORY						=	425;
 	//COUPONS
 	const COUPON_REDEEMED								=	450;
 	const COUPON_EXPIRED								=	451;
@@ -57,6 +60,8 @@ class ExceptionError extends Enum {
 	const COUPON_PROVIDER_INCOMPATIBLE					=	454;
 	const COUPON_INTERNALPLAN_INCOMPATIBLE				=	455;
 	const COUPON_ALREADY_LINKED							=	456;
+	//
+	const REQUEST_UNSUPPORTED							=	600;
 }
 
 class BillingsException extends Exception {

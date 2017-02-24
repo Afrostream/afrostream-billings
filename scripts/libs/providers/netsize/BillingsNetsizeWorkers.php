@@ -5,6 +5,9 @@ require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/ExpireSubscriptionRequest.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/CancelSubscriptionRequest.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/RenewSubscriptionRequest.php';
 
 class BillingsNetsizeWorkers extends BillingsWorkers {
 	
@@ -42,7 +45,7 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 			$lastId = NULL;
 			$totalCounter = NULL;
 			do {
-				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $this->provider->getId(), NULL, $status_array, $lastId);
+				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $this->provider->getId(), NULL, $status_array, NULL, NULL, $lastId);
 				if(is_null($totalCounter)) {$totalCounter = $endingBillingsSubscriptions['total_counter'];}
 				$idx+= count($endingBillingsSubscriptions['subscriptions']);
 				$lastId = $endingBillingsSubscriptions['lastId'];
@@ -106,7 +109,12 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 				try {
 					pg_query("BEGIN");
 					$subscriptionsHandler = new SubscriptionsHandler();
-					$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
+					$renewSubscriptionRequest = new RenewSubscriptionRequest();
+					$renewSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+					$renewSubscriptionRequest->setStartDate(NULL);
+					$renewSubscriptionRequest->setEndDate(NULL);
+					$renewSubscriptionRequest->setOrigin('script');
+					$subscriptionsHandler->doRenewSubscription($renewSubscriptionRequest);
 					$billingsSubscriptionActionLog->setProcessingStatus('done');
 					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 					//COMMIT
@@ -120,7 +128,11 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 				try {
 					pg_query("BEGIN");
 					$subscriptionsHandler = new SubscriptionsHandler();
-					$subscriptionsHandler->doCancelSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), new DateTime(), false);
+					$cancelSubscriptionRequest = new CancelSubscriptionRequest();
+					$cancelSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+					$cancelSubscriptionRequest->setOrigin('script');
+					$cancelSubscriptionRequest->setCancelDate(new DateTime());
+					$subscriptionsHandler->doCancelSubscription($cancelSubscriptionRequest);
 					$billingsSubscriptionActionLog->setProcessingStatus('done');
 					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 					//COMMIT
@@ -134,7 +146,11 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 				try {
 					pg_query("BEGIN");
 					$subscriptionsHandler = new SubscriptionsHandler();
-					$subscriptionsHandler->doExpireSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), new DateTime(), false);
+					$expireSubscriptionRequest = new ExpireSubscriptionRequest();
+					$expireSubscriptionRequest->setOrigin('script');
+					$expireSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+					$expireSubscriptionRequest->setExpiresDate(new DateTime());
+					$subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
 					$billingsSubscriptionActionLog->setProcessingStatus('done');
 					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 					//COMMIT
@@ -145,7 +161,7 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 				}
 			} else {
 				$msg = "transaction-status/@code ".$getStatusResponse->getTransactionStatusCode()." is unknown";
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::NETSIZE_SUBSCRIPTION_BAD_STATUS);
 			}
 			ScriptsConfig::getLogger()->addInfo("refreshing netsize subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()." done successfully");

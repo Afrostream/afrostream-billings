@@ -4,13 +4,11 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
-require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ . '/../client/WecashupClient.php';
+require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 
-class WecashupSubscriptionsHandler extends SubscriptionsHandler {
-	
-	public function __construct() {
-	}
+class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
@@ -102,10 +100,45 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
 		}*/
 		//
+		$now = new DateTime();
 		$api_subscription = new BillingsSubscription();
-		$api_subscription->setCreationDate(new DateTime());
+		$api_subscription->setCreationDate($now);
 		$api_subscription->setSubUid($sub_uuid);
-		$api_subscription->setSubStatus('future');
+		//<-- USUAL
+		//$api_subscription->setSubStatus('future');
+		//-->
+		//<-- HACK
+		$api_subscription->setSubStatus('active');
+		$api_subscription->setSubActivatedDate($now);
+		$start_date = $now;
+		$api_subscription->setSubPeriodStartedDate($start_date);
+		$end_date = NULL;
+		if(isset($start_date)) {
+			switch($internalPlan->getPeriodUnit()) {
+				case PlanPeriodUnit::day :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				case PlanPeriodUnit::month :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				case PlanPeriodUnit::year :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				default :
+					$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
+		}
+		$api_subscription->setSubPeriodEndsDate($end_date);
+		//-->
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
@@ -118,7 +151,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		/*$wecashupClient = new WecashupClient();
+		$wecashupClient = new WecashupClient();
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
 		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
@@ -130,11 +163,6 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$wecashupTransactionResponse = $wecashupTransactionsResponseArray[0];
-		if($wecashupTransactionResponse->getTransactionStatus() != 'success') {
-			$msg = "The transaction did not succeed, responseStatus=".$wecashupTransactionResponse->getTransactionStatus();
-			config::getLogger()->addError("wecashup subscription creation failed : ".$msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
-		}*/
 		//SUBSCRIPTION CREATE
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
@@ -171,12 +199,12 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted(false);
 		//TRANSACTION CREATE
-		/*$country = NULL;
+		$country = NULL;
 		if($wecashupTransactionResponse->getTransactionSenderCountryCodeIso2() != NULL) {
 			$country = $wecashupTransactionResponse->getTransactionSenderCountryCodeIso2();
 		} else {
 			$country = isset($billingInfo) ? $billingInfo->getCountryCode() : NULL;
-		}*/
+		}
 		$billingsTransaction = new BillingsTransaction();
 		$billingsTransaction->setProviderId($user->getProviderId());
 		$billingsTransaction->setUserId($user->getId());
@@ -184,15 +212,18 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$billingsTransaction->setInvoiceId(NULL);
 		$billingsTransaction->setTransactionBillingUuid(guid());
 		$billingsTransaction->setTransactionProviderUuid($subOpts->getOpt('transaction_uid'));
-		$billingsTransaction->setTransactionCreationDate($api_subscription->getCreationDate());
+		$billingsTransaction->setTransactionCreationDate($wecashupTransactionResponse->getTransactionDate());
 		$billingsTransaction->setAmountInCents($internalPlan->getAmountInCents());
 		$billingsTransaction->setCurrency($internalPlan->getCurrency());
-		$billingsTransaction->setCountry(isset($billingInfo) ? $billingInfo->getCountryCode() : NULL);
+		$billingsTransaction->setCountry($country);
 		$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
 		$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
 		$billingsTransaction->setInvoiceProviderUuid(NULL);
 		$billingsTransaction->setMessage('');
 		$billingsTransaction->setUpdateType('api');
+		//
+		$billingsTransactionOpts = new BillingsTransactionOpts();
+		$billingsTransactionOpts->setOpt('transaction_token', $subOpts->getOpt('transaction_token'));
 		//NO MORE DB TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
 		//BILLING_INFO
@@ -211,32 +242,56 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			$billingsTransaction->setSubId($db_subscription->getId());
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		}
+		//TRANSACTION_OPTS
+		if(isset($billingsTransactionOpts)) {
+			$billingsTransactionOpts->setTransactionId($billingsTransaction->getId());
+			$billingsTransactionOpts = BillingsTransactionOptsDAO::addBillingsTransactionOpts($billingsTransactionOpts);
+		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("wecashup dbsubscription creation for userid=".$user->getId().", wecashup_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
-	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("wecashup subscription expiring...");
 			if(
-					$subscription->getSubStatus() == "expired"
+				$subscription->getSubStatus() == "expired"
 			)
 			{
 				//nothing todo : already done or in process
 			} else {
 				//
-				if($subscription->getSubPeriodEndsDate() <= $expires_date) {
-					$subscription->setSubExpiresDate($expires_date);
-					$subscription->setSubStatus("expired");
-				} else {
-					$msg = "cannot expire a subscription that has not ended yet";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
+				//
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
+					if(!in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
+						//exception
+						$msg = "cannot expire a ".$this->provider->getName()." subscription that has not started or has not been canceled";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
 				}
+				if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
+					if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+						if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+							$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
+						}
+					}
+				}
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
+					if($subscription->getSubCanceledDate() == NULL) {
+						$subscription->setSubCanceledDate($expiresDate);
+					}
+				}
+				$subscription->setSubExpiresDate($expiresDate);
+				$subscription->setSubStatus("expired");
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
 					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
 					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT
@@ -246,10 +301,20 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 					throw $e;
 				}
 			}
+			if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+				$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase']);
+				if(count($transactionsResult['transactions']) == 1) {
+					$transaction = $transactionsResult['transactions'][0];
+					$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
+					$refundTransactionRequest = new RefundTransactionRequest();
+					$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
+					$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+					$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
+				}
+			}
 			//
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("wecashup subscription expiring done successfully for wecashup_subscription_uuid=".$subscription->getSubUid());
-			return($subscription);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while expiring a wecashup subscription for wecashup_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("wecashup subscription expiring failed : ".$msg);
@@ -259,6 +324,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError("wecashup subscription expiring failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		return($this->doFillSubscription($subscription));
 	}
 	
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
@@ -362,27 +428,29 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setSubPeriodStartedDate($start_date);
 		
 		$end_date = NULL;
-		switch($internalPlan->getPeriodUnit()) {
-			case PlanPeriodUnit::day :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::month :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			case PlanPeriodUnit::year :
-				$end_date = clone $start_date;
-				$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
-				$end_date->setTime(23, 59, 59);//force the time to the end of the day
-				break;
-			default :
-				$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
+		if(isset($start_date)) {
+			switch($internalPlan->getPeriodUnit()) {
+				case PlanPeriodUnit::day :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				case PlanPeriodUnit::month :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				case PlanPeriodUnit::year :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				default :
+					$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
 		}
 		$api_subscription->setSubPeriodEndsDate($end_date);
 		//
@@ -402,12 +470,13 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
 		config::getLogger()->addInfo("wecashup dbsubscription update for userid=".$user->getId().", wecashup_subscription_uuid=".$api_subscription->getSubUid().", id=".$db_subscription->getId()." done successfully");
-		return($db_subscription);	
+		return($this->doFillSubscription($db_subscription));	
 	}
 	
-	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
-			return;
+			return NULL;
 		}
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
@@ -438,11 +507,17 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addWarning("wecashup dbsubscription unknown subStatus=".$subscription->getSubStatus().", wecashup_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;
 		}
-		//done
 		$subscription->setIsActive($is_active);
+		$array_status_expirable = ['active', 'canceled'];
+		if(in_array($subscription->getSubStatus(), $array_status_expirable)) {
+			$subscription->setIsExpirable(true);
+		} else {
+			$subscription->setIsExpirable(false);
+		}
+		return($subscription);
 	}
 	
-	public function doUpdateUserSubscription(BillingsSubscription $db_subscription) {
+	public function doUpdateUserSubscription(BillingsSubscription $db_subscription, UpdateSubscriptionRequest $updateSubscriptionRequest) {
 		$user = UserDAO::getUserById($db_subscription->getUserId());
 		if($user == NULL) {
 			$msg = "unknown user with id : ".$db_subscription->getUserId();
@@ -538,7 +613,7 @@ class WecashupSubscriptionsHandler extends SubscriptionsHandler {
 		}		
 		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
 		$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
 }

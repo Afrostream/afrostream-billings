@@ -4,13 +4,11 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
-require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ . '/../client/NetsizeClient.php';
+require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 		
-class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
-	
-	public function __construct() {
-	}
+class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
@@ -174,10 +172,10 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("netsize dbsubscription creation for userid=".$user->getId().", netsize_subscription_uuid=".$api_subscription->getTransactionId()." done successfully, id=".$db_subscription->getId());
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("netsize subscription canceling...");
 			$doIt = false;
@@ -234,7 +232,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				}
 			/*}*/
 			if($doIt == true) {
-				$subscription->setSubCanceledDate($cancel_date);
+				$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
 				/*if($is_a_request == true) {
 					$subscription->setSubStatus('requesting_canceled');
 				} else {*/
@@ -263,10 +261,12 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError("netsize subscription canceling failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		return($subscription);
+		return($this->doFillSubscription($subscription));
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+	public function doRenewSubscription(BillingsSubscription $subscription, RenewSubscriptionRequest $renewSubscriptionRequest) {
+		$start_date = $renewSubscriptionRequest->getStartDate();
+		$end_date = $renewSubscriptionRequest->getEndDate();
 		if($end_date != NULL) {
 			$msg = "renewing a netsize subscription does not support that end_date is already set";
 			config::getLogger()->addError($msg);
@@ -352,19 +352,39 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				throw $e;
 			}
 		}
-		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
+		return($this->doFillSubscription(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId())));
 	}
 	
-	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("netsize subscription expiring...");
 			$doIt = false;
+			//
+			$expiresDate = $expireSubscriptionRequest->getExpiresDate();
+			//
 			if(
-					$subscription->getSubStatus() == "expired"
+				$subscription->getSubStatus() == "expired"
 			)
 			{
 				//nothing to do : already done or in process
 			} else {
+				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+					$msg = "cannot expire and refund a ".$this->provider->getName()." subscription";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_UNSUPPORTED);
+				}
+				//NC : only check via the API as we are not sure about dates when looking status in the script
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
+					if(in_array($subscription->getSubStatus(), ['active', 'canceled'])) {
+						if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+							if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+								$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
+								config::getLogger()->addError($msg);
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
+							}
+						}
+					}
+				}
 				$doIt = true;
 				$netsizeClient = new NetsizeClient();
 				
@@ -384,7 +404,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				}
 			}
 			if($doIt == true) {
-				$subscription->setSubExpiresDate($expires_date);
+				$subscription->setSubExpiresDate($expiresDate);
 				$subscription->setSubStatus("expired");
 				try {
 					//START TRANSACTION
@@ -400,7 +420,6 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 			}
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("netsize subscription expiring done successfully for netsize_subscription_uuid=".$subscription->getSubUid());
-			return($subscription);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while expiring a netsize subscription for netsize_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("netsize subscription expiring failed : ".$msg);
@@ -410,6 +429,7 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError("netsize subscription expiring failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		return($this->doFillSubscription($subscription));
 	}
 	
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
@@ -554,12 +574,13 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
 		config::getLogger()->addInfo("netsize dbsubscription update for userid=".$user->getId().", netsize_subscription_uuid=".$api_subscription->getTransactionId().", id=".$db_subscription->getId()." done successfully");
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
-	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
-			return;
+			return NULL;
 		}
 		$is_active = NULL;
 		switch($subscription->getSubStatus()) {
@@ -590,11 +611,17 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addWarning("netsize dbsubscription unknown subStatus=".$subscription->getSubStatus().", netsize_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;
 		}
-		//done
 		$subscription->setIsActive($is_active);
+		$array_status_expirable = ['canceled'];
+		if(in_array($subscription->getSubStatus(), $array_status_expirable)) {
+			$subscription->setIsExpirable(true);
+		} else {
+			$subscription->setIsExpirable(false);
+		}
+		return($subscription);
 	}
 	
-	public function doUpdateUserSubscription(BillingsSubscription $db_subscription) {
+	public function doUpdateUserSubscription(BillingsSubscription $db_subscription, UpdateSubscriptionRequest $updateSubscriptionRequest) {
 		$user = UserDAO::getUserById($db_subscription->getUserId());
 		if($user == NULL) {
 			$msg = "unknown user with id : ".$db_subscription->getUserId();
@@ -630,23 +657,8 @@ class NetsizeSubscriptionsHandler extends SubscriptionsHandler {
 		$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 		$api_subscription = $getStatusResponse;
 		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
-	
-	//NC : May not be needed...
-	/*protected function doGetUserSubscriptions(User $user) {
-		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		//NC : DO NOT THROW THE EXCEPTION, JUST LOG IT AS A BEST EFFORT.
-		//SO WE ALWAYS RETURN SUBSCRIPTIONS (EVEN EXPIRED) INSTEAD OF AN ERROR
-		try {
-			$this->doUpdateUserSubscriptions($user, $userOpts);
-		} catch(BillingsException $e) {
-			config::getLogger()->addError("Updating netsize Subscriptions for userid=".$user->getId()." failed, message=".$e->getMessage().", code=".$e->getCode());
-		} catch(Exception $e) {
-			config::getLogger()->addError("Updating netsize Subscriptions for userid=".$user->getId()." failed, message=".$e->getMessage());
-		}
-		return(BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId()));
-	}*/
 	
 }
 

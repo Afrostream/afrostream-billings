@@ -1,8 +1,10 @@
 <?php
 
+require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/RenewSubscriptionRequest.php';
 
 class BillingsGocardlessWorkers extends BillingsWorkers {
 	
@@ -40,7 +42,7 @@ class BillingsGocardlessWorkers extends BillingsWorkers {
 			$lastId = NULL;
 			$totalCounter = NULL;
 			do {
-				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $this->provider->getId(), $sub_period_ends_date, $status_array, $lastId);
+				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $this->provider->getId(), $sub_period_ends_date, $status_array, NULL, NULL, $lastId);
 				if(is_null($totalCounter)) {$totalCounter = $endingBillingsSubscriptions['total_counter'];}
 				$idx+= count($endingBillingsSubscriptions['subscriptions']);
 				$lastId = $endingBillingsSubscriptions['lastId'];
@@ -87,7 +89,12 @@ class BillingsGocardlessWorkers extends BillingsWorkers {
 			try {
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
-				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
+				$renewSubscriptionRequest = new RenewSubscriptionRequest();
+				$renewSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+				$renewSubscriptionRequest->setStartDate(NULL);
+				$renewSubscriptionRequest->setEndDate(NULL);
+				$renewSubscriptionRequest->setOrigin('script');
+				$subscriptionsHandler->doRenewSubscription($renewSubscriptionRequest);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
 				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT

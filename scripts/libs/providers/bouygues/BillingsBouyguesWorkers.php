@@ -6,6 +6,8 @@ require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ . '/../../../../libs/providers/bouygues/client/BouyguesTVClient.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/ExpireSubscriptionRequest.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/RenewSubscriptionRequest.php';
 
 class BillingsBouyguesWorkers extends BillingsWorkers {
 	
@@ -43,7 +45,7 @@ class BillingsBouyguesWorkers extends BillingsWorkers {
 			$lastId = NULL;
 			$totalCounter = NULL;
 			do {
-				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $this->provider->getId(), $sub_period_ends_date, $status_array, $lastId);
+				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $this->provider->getId(), $sub_period_ends_date, $status_array, NULL, NULL, $lastId);
 				if(is_null($totalCounter)) {$totalCounter = $endingBillingsSubscriptions['total_counter'];}
 				$idx+= count($endingBillingsSubscriptions['subscriptions']);
 				$lastId = $endingBillingsSubscriptions['lastId'];
@@ -89,13 +91,13 @@ class BillingsBouyguesWorkers extends BillingsWorkers {
 			$user = UserDAO::getUserById($subscription->getUserId());
 			if($user == NULL) {
 				$msg = "unknown user with id : ".$subscription->getUserId();
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
 			if($providerPlan == NULL) {
 				$msg = "unknown plan with id : ".$subscription->getPlanId();
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$bouyguesTVClient = new BouyguesTVClient($user->getUserProviderUuid());
@@ -106,7 +108,12 @@ class BillingsBouyguesWorkers extends BillingsWorkers {
 				try {
 					pg_query("BEGIN");
 					$subscriptionsHandler = new SubscriptionsHandler();
-					$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
+					$renewSubscriptionRequest = new RenewSubscriptionRequest();
+					$renewSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+					$renewSubscriptionRequest->setStartDate(NULL);
+					$renewSubscriptionRequest->setEndDate(NULL);
+					$renewSubscriptionRequest->setOrigin('script');
+					$subscriptionsHandler->doRenewSubscription($renewSubscriptionRequest);
 					$billingsSubscriptionActionLog->setProcessingStatus('done');
 					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 					//COMMIT
@@ -120,7 +127,11 @@ class BillingsBouyguesWorkers extends BillingsWorkers {
 				try {
 					pg_query("BEGIN");
 					$subscriptionsHandler = new SubscriptionsHandler();
-					$subscriptionsHandler->doExpireSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), new DateTime(), false);
+					$expireSubscriptionRequest = new ExpireSubscriptionRequest();
+					$expireSubscriptionRequest->setOrigin('script');
+					$expireSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+					$expireSubscriptionRequest->setExpiresDate(new DateTime());
+					$subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
 					$billingsSubscriptionActionLog->setProcessingStatus('done');
 					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 					//COMMIT
@@ -131,7 +142,7 @@ class BillingsBouyguesWorkers extends BillingsWorkers {
 				}
 			} else {
 				$msg = "BouyguesSubscription resultMessage not in (SubscribedNotCoupled, NotSubscribedNotCoupled), resultMessage=".$bouyguesSubscription->getResultMessage();
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::BOUYGUES_SUBSCRIPTION_BAD_STATUS);
 			}
 			ScriptsConfig::getLogger()->addInfo("refreshing bouygues subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()." done successfully");

@@ -4,13 +4,10 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
-require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ . '/../client/OrangeTVClient.php';
+require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
 
-class OrangeSubscriptionsHandler extends SubscriptionsHandler {
-	
-	public function __construct() {
-	}
+class OrangeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
 		$api_subscription = self::checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeApiToken'], $plan->getPlanUuid());
@@ -55,7 +52,7 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("orange dbsubscription creation for userid=".$user->getId().", providerPlanUuid=".$plan->getPlanUuid()." done successfully, id=".$db_subscription->getId());
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
 	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, OrangeSubscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
@@ -75,10 +72,10 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		//
 		config::getLogger()->addInfo("orange dbsubscription update for userid=".$user->getId().", id=".$db_subscription->getId()." done successfully");
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
-	protected function doGetUserSubscriptions(User $user) {
+	public function doGetUserSubscriptions(User $user) {
 		$shouldUpdate = true;
 		//only update after a period :check is HERE
 		$usersRequestsLogs_array = UsersRequestsLogDAO::getLastUsersRequestsLogsByUserId($user->getId(), 1);
@@ -105,12 +102,13 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError("Updating Orange Subscriptions for userid=".$user->getId()." failed, message=".$e->getMessage());
 			}
 		}
-		return(BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId()));
+		return(parent::doGetUserSubscriptions($user));
 	}
 	
-	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
-			return;
+			return NULL;
 		}
 		$is_active = NULL;
 		$periodStartedDate = $subscription->getSubPeriodStartedDate()->setTimezone(new DateTimeZone(config::$timezone));
@@ -145,12 +143,15 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addWarning("orange dbsubscription unknown subStatus=".$subscription->getSubStatus().", orange_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;
 		}
-		//done
 		$subscription->setIsActive($is_active);
 		$subscription->setIsCancelable(false);
+		$subscription->setIsExpirable(false);
+		return($subscription);
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+	public function doRenewSubscription(BillingsSubscription $subscription, RenewSubscriptionRequest $renewSubscriptionRequest) {
+		$start_date = $renewSubscriptionRequest->getStartDate();
+		$end_date = $renewSubscriptionRequest->getEndDate();
 		if($end_date != NULL) {
 			$msg = "renewing a orange subscription does not support that end_date is already set";
 			config::getLogger()->addError($msg);
@@ -212,7 +213,7 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 				throw $e;
 			}
 		}
-		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
+		return($this->doFillSubscription(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId())));
 	}
 	
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {

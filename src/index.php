@@ -10,6 +10,9 @@ require_once __DIR__ . '/../libs/site/UsersInternalCouponsController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
 require_once __DIR__ . '/../libs/site/InternalCouponsCampaignsController.php';
 require_once __DIR__ . '/../libs/site/ContextsController.php';
+require_once __DIR__ . '/../libs/site/TransactionsController.php';
+require_once __DIR__ . '/../libs/site/UtilsController.php';
+require_once __DIR__ . '/../libs/site/PartnerOrdersController.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -102,6 +105,11 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 		BillingStatsd::inc('route.others.hit');
 		BillingStatsd::timing('route.others.responsetime', $responseTimeInMillis);
 	}
+	//CDN Support
+	// default no-cache header should be :
+	$response = $response->withHeader('Cache-Control', 'max-age=0,private,no-cache,no-store,must-revalidate');
+	$response = $response->withHeader('Pragma', 'no-cache');// http 1.0
+	$response = $response->withHeader('Expires', 'Thu, 01-Jan-1970 00:00:01 GMT');// proxy
 	return $response;
 });
 
@@ -705,6 +713,33 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/updateinternalp
 });
 
 /**
+ * @api {put} /billings/api/subscriptions/:subscriptionBillingUuid/expire Request Subscription Expiration
+ * @apiDescription It expires a subscription.
+ * @apiParam {String} :subscriptionBillingUuid Api uuid of the subscription.
+ * Will expire Subscription which Api uuid is the subscriptionBillingUuid given.
+ *
+ * @apiSuccess {json} Subscription Information
+ *
+ * @apiSuccessExample Success-Response:
+ * 		HTTP/1.1 200 OK
+ *		{
+ *			"status": "done",
+ *			"statusMessage": "success",
+ *			"statusCode": 0,
+ *			"response": {
+ *				"subscription" {
+ *					"..."
+ *				}
+ *			}
+ *		}
+ */
+
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/expire", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->expire($request, $response, $args));
+});
+
+/**
  * @api {get} /billings/api/internalplans/:internalPlanUuid Request InternalPlan Information
  * @apiDescription It returns an InternalPlan Information.
  * @apiParam {String} :internalPlanUuid Api uuid of the internalPlan. It returns the internalPlan with the internalPlanUuid given.
@@ -1302,14 +1337,14 @@ $app->post("/billings/api/contexts/", function ($request, $response, $args) {
 	
 $app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/addinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
 	$contextsController = new ContextsController();
-	return($contextsController->AddInternalPlanToContext($request, $response, $args));
+	return($contextsController->addInternalPlanToContext($request, $response, $args));
 });
 	
 //actions to context : removeinternalplan
 
 $app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/removeinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
 	$contextsController = new ContextsController();
-	return($contextsController->RemoveInternalPlanFromContext($request, $response, $args));
+	return($contextsController->removeInternalPlanFromContext($request, $response, $args));
 });
 
 //actions to context : moveinternalplan
@@ -1317,6 +1352,18 @@ $app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/removein
 $app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/moveinternalplan/{internalPlanUuid}/{index}", function ($request, $response, $args) {
 	$contextsController = new ContextsController();
 	return($contextsController->setInternalPlanIndexInContext($request, $response, $args));
+});
+
+//transactions
+
+$app->get("/billings/api/transactions/{transactionBillingUuid}", function ($request, $response, $args) {
+	$transactionsController = new TransactionsController();
+	return($transactionsController->getOne($request, $response, $args));
+});
+
+$app->put("/billings/api/transactions/{transactionBillingUuid}/refund", function ($request, $response, $args) {
+	$transactionsController = new TransactionsController();
+	return($transactionsController->refund($request, $response, $args));
 });
 
 //WebHooks
@@ -1389,6 +1436,84 @@ $app->get("/alive", function ($request, $response, $args) {
 	$response = $response->withHeader('Content-Type', 'application/json');
 	$response->getBody()->write($json);
 	return($response);
+});
+
+//utils
+
+/**
+* @api {get} /billings/utils/currency/quotes/:fromCurrency/:toCurrencies Request Currency Quotes Information
+* @apiDescription It returns the toCurrencies quotes for the fromCurrency given.
+* @apiParam {String} :fromCurrency the currency source.
+* @apiParam {String} :toCurrencies the currency quotes wanted separated by a ";".
+*
+* @apiExample {curl} Example usage:
+*     curl -i http://localhost/billings/utils/currency/quotes/XOF/EUR;USD
+* @apiSuccess {json} Curency Quotes Information
+*
+* @apiSuccessExample Success-Response:
+* 		HTTP/1.1 200 OK
+*		{
+*			"status": "done",
+*			"statusMessage": "success",
+*			"statusCode": 0,
+*			"response": {
+*				"currencyQuotes": {
+* 					"currency": "XOF",
+* 					"quotes": {
+*   				"EUR": "0.0015",
+*   				"USD": "0.0016"
+*   				}
+*				}
+*			}
+*		}
+*
+**/
+
+$app->get("/billings/utils/currency/quotes/{fromCurrency}/{toCurrencies}", function ($request, $response, $args) {
+	$utilsController = new UtilsController();
+	return($utilsController->getCurrencyQuotes($request, $response, $args));
+});
+
+//partnerOrders : get
+
+$app->get("/billings/api/partnerorders/{partnerOrderBillingUuid}", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->getOne($request, $response, $args));
+});
+
+//partnerOrders : create
+
+$app->post("/billings/api/partnerorders/", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->create($request, $response, $args));
+});
+
+//partnerOrders, actions : addInternalCouponsCampaign
+
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/addinternalcouponscampaign/{internalCouponsCampaignBillingUuid}/{wishedCouponsCounter}", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->addInternalCouponsCampaignToPartnerOrder($request, $response, $args));
+});
+
+//partnerOrders, actions : book
+
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/book", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->book($request, $response, $args));
+});
+
+//partnerOrders, actions : ready : name has to be changed... : mark here that order is ready to process
+	
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/ready", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->ready($request, $response, $args));
+});
+
+//partnerOrders, actions : process
+
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/process", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->process($request, $response, $args));
 });
 
 $app->run();

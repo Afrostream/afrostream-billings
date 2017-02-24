@@ -4,15 +4,12 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
-require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ . '/../client/soap-wsse.php';
 require_once __DIR__ . '/../client/WSSoapClient.class.php';
 require_once __DIR__ . '/../client/ByTelBAchat.class.php';
+require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
 
-class BachatSubscriptionsHandler extends SubscriptionsHandler {
-	
-	public function __construct() {
-	}
+class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
@@ -147,12 +144,13 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("bachat dbsubscription creation for userid=".$user->getId().", bachat_subscription_uuid=".$api_subscription->getSubUid()." done successfully, id=".$db_subscription->getId());
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
-	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
-			return;
+			return NULL;
 		}
 		$is_active = NULL;
 		$periodStartedDate = $subscription->getSubPeriodStartedDate()->setTimezone(new DateTimeZone(config::$timezone));
@@ -193,9 +191,18 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				break;
 		}
 		$subscription->setIsActive($is_active);
+		$array_status_expirable = ['canceled'];
+		if(in_array($subscription->getSubStatus(), $array_status_expirable)) {
+			$subscription->setIsExpirable(true);
+		} else {
+			$subscription->setIsExpirable(false);
+		}
+		return($subscription);
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+	public function doRenewSubscription(BillingsSubscription $subscription, RenewSubscriptionRequest $renewSubscriptionRequest) {
+		$start_date = $renewSubscriptionRequest->getStartDate();
+		$end_date = $renewSubscriptionRequest->getEndDate();
 		if($end_date != NULL) {
 			$msg = "renewing a bachat subscription does not support that end_date is already set";
 			config::getLogger()->addError($msg);
@@ -262,12 +269,12 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				throw $e;
 			}
 		}
-		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
+		return($this->doFillSubscription(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId())));
 	}
 		
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
 		$doIt = false;
-		if($is_a_request == true) {
+		if($cancelSubscriptionRequest->getOrigin() == 'api') {
 			if($subscription->getSubStatus() == "pending_active") {
 				$msg = "cannot cancel because of the current_status=".$subscription->getSubStatus();
 				config::getLogger()->addError($msg);
@@ -293,7 +300,7 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			}
 		}
 		if($doIt == true) {
-			$subscription->setSubCanceledDate($cancel_date);
+			$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
 			if($is_a_request == true) {
 				$subscription->setSubStatus('requesting_canceled');
 			} else {
@@ -311,36 +318,50 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 				throw $e;
 			}
 		}
-		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
+		return($this->doFillSubscription(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId())));
 	}
 	
-	public function doExpireSubscription(BillingsSubscription $subscription, DateTime $expires_date, $is_a_request = true) {
+	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("bachat subscription expiring...");
 			if(
-					$subscription->getSubStatus() == "expired"
+				$subscription->getSubStatus() == "expired"
 			)
 			{
 				//nothing todo : already done or in process
 			} else {
+				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+					$msg = "cannot expire and refund a ".$this->provider->getName()." subscription";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_UNSUPPORTED);
+				}
+				//
+				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
 				if($subscription->getSubStatus() != "canceled") {
 					//exception
-					$msg = "cannot expire a subscription that has not been canceled";
+					$msg = "cannot expire a ".$this->provider->getName()." subscription that has not been canceled";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				if($subscription->getSubPeriodEndsDate() > $expires_date) {
-					//exception
-					$msg = "cannot expire a subscription that has not ended yet";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				if($subscription->getSubPeriodEndsDate() > $expiresDate) {
+					if($expireSubscriptionRequest->getForceBeforeEndsDate() == false) {
+						$msg = "cannot expire a ".$this->provider->getName()." subscription that has not ended yet";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED);
+					}
 				}
-				$subscription->setSubExpiresDate($expires_date);
+				if($expireSubscriptionRequest->getOrigin() == 'api') {
+					if($subscription->getSubCanceledDate() == NULL) {
+						$subscription->setSubCanceledDate($expiresDate);
+					}
+				}
+				$subscription->setSubExpiresDate($expiresDate);
 				$subscription->setSubStatus("expired");
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
 					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
 					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT
@@ -353,7 +374,6 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			//
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
 			config::getLogger()->addInfo("bachat subscription expiring done successfully for bachat_subscription_uuid=".$subscription->getSubUid());
-			return($subscription);
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while expiring a bachat subscription for bachat_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("bachat subscription expiring failed : ".$msg);
@@ -363,10 +383,17 @@ class BachatSubscriptionsHandler extends SubscriptionsHandler {
 			config::getLogger()->addError("bachat subscription expiring failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		return($this->doFillSubscription($subscription));
 	}
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
 		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
+	}
+	
+	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
+		$msg = "unsupported feature - update user subscriptions - for provider named : ".$this->provider->getName();
+		config::getLogger()->addWarning($msg);//Just warn for the moment
+		//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}
 	
 }

@@ -7,7 +7,9 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/GocardlessSubscriptionsHandler.php';
 require_once __DIR__ . '/../transactions/GocardlessTransactionsHandler.php';
-		
+require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../../providers/global/requests/ExpireSubscriptionRequest.php';
+
 class GocardlessWebHooksHandler {
 	
 	public function __construct() {
@@ -149,7 +151,7 @@ class GocardlessWebHooksHandler {
 				$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 				$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 				$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
-				$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler();
+				$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler($provider);
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
@@ -270,7 +272,12 @@ class GocardlessWebHooksHandler {
 					//GOCARDLESS DO NOT KEEP METADATA ALREADY SET
 					$subscriptionsHandler = new SubscriptionsHandler();
 					$expires_date = new DateTime($notification_as_array['created_at']);
-					$subscriptionsHandler->doExpireSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), $expires_date, false);
+					$expireSubscriptionRequest = new ExpireSubscriptionRequest();
+					$expireSubscriptionRequest->setOrigin('hook');
+					$expireSubscriptionRequest->setSubscriptionBillingUuid($db_subscription->getSubscriptionBillingUuid());
+					$expireSubscriptionRequest->setExpiresDate($expires_date);
+					$expireSubscriptionRequest->setForceBeforeEndsDate(true);
+					$subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
 				}
 				config::getLogger()->addInfo('Processing gocardless hook payment, action='.$notification_as_array['action'].' done successfully');
 				break;
@@ -334,7 +341,7 @@ class GocardlessWebHooksHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler();
+		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler($provider);
 		$gocardlessTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment, 'hook');
 		config::getLogger()->addInfo('Processing gocardless hook payment for backup, action='.$notification_as_array['action'].' done successfully');
 	}
@@ -402,7 +409,7 @@ class GocardlessWebHooksHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler();
+		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler($provider);
 		$gocardlessTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment, 'hook');
 		config::getLogger()->addInfo('Processing gocardless hook refund for backup, action='.$notification_as_array['action'].' done successfully');
 	}

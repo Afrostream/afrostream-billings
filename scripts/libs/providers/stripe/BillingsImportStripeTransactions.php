@@ -83,7 +83,7 @@ class BillingsImportStripeTransactions
     {
     	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe...");
     	$transactionHandler = new TransactionsHandler();
-    	$transactionHandler->doUpdateTransactionByTransactionProviderUuid('stripe', $charge->id);
+    	$transactionHandler->doUpdateTransactionByTransactionProviderUuid('stripe', $charge->id, 'import');
     	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe done successfully");
     }
     
@@ -105,7 +105,7 @@ class BillingsImportStripeTransactions
 	        $transactionHandler = new TransactionsHandler();
 	        $transactionHandler->doUpdateTransactionsByUser($user, $from, $to, 'import');
         } else {
-        	config::getLogger()->addInfo("stripe account with account_code=".$customer->id." is ignored");
+        	ScriptsConfig::getLogger()->addInfo("stripe account with account_code=".$customer->id." is ignored");
         }
         ScriptsConfig::getLogger()->addInfo("importing transactions from stripe account with account_code=".$customer->id." done successfully");
     }
