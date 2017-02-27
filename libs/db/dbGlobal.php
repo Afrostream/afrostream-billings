@@ -1381,12 +1381,14 @@ class ProviderDAO {
 	private static $providersById = array();
 	private static $providersByName = array();
 	
-	private static $sfields = "_id, name";
+	private static $sfields = "_id, name, uuid, plateformid";
 	
 	private static function getProviderFromRow($row) {
 		$out = new Provider();
 		$out->setId($row["_id"]);
 		$out->setName($row["name"]);
+		$out->setUuid($row["uuid"]);
+		$out->setPlateformId($row["plateformid"]);
 		//<-- cache -->
 		self::$providersById[$out->getId()] = $out;
 		self::$providersByName[$out->getName()] = $out;
@@ -1443,12 +1445,42 @@ class ProviderDAO {
 		return($out);
 	}
 	
+	public static function getProviderByUuid($uuid) {
+		$out = NULL;
+		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($uuid));
+			
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getProviderFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function getProviderByName2($name, $plateformid) {
+		$out = NULL;
+		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE name = $1 AND plateformid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($name, $plateformid));
+			
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getProviderFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 }
 
 class Provider implements JsonSerializable {
 	
 	private $_id;
 	private $name;
+	private $uuid;
+	private $plateformId;
 	
 	public function getId() {
 		return($this->_id);
@@ -1466,9 +1498,26 @@ class Provider implements JsonSerializable {
 		$this->name = $name;
 	}
 	
+	public function setUuid($uuid) {
+		$this->uuid = $uuid;
+	}
+	
+	public function getUuid() {
+		return($this->uuid);
+	}
+	
+	public function setPlateformId($id) {
+		$this->plateformId = $id;
+	}
+	
+	public function getPlateformId() {
+		return($this->plateformId);
+	}
+	
 	public function jsonSerialize() {
 		return[
-			'providerName' => $this->name	
+			'providerName' => $this->name,
+			'providerBillingUuid' => $this->uuid
 		];
 	}
 }

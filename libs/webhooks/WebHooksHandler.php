@@ -8,16 +8,9 @@ class WebHooksHander {
 	public function __construct() {
 	}
 	
-	public function doSaveWebHook($provider_name, $post_data) {
+	public function doSaveWebHook(Provider $provider, $post_data) {
 		try {
 			config::getLogger()->addInfo("post_data saving...");
-			$provider = ProviderDAO::getProviderByName($provider_name);
-				
-			if($provider == NULL) {
-				$msg = "unknown provider named : ".$provider_name;
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
 			$billingsWebHook = BillingsWebHookDAO::addBillingsWebHook($provider->getId(), $post_data);
 			config::getLogger()->addInfo("post_data saving done successfully, id=".$billingsWebHook->getId());
 			return($billingsWebHook);
