@@ -21,7 +21,11 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 		//
 		$contextBillingUuid = $this->selectContextBillingUuid($contextBillingUuid, $filtered_array);
 		$contextCountry = $this->selectContextCountry($contextCountry, $country, $filtered_array);
-		$internalPlans = parent::doGetInternalPlans($provider_name, $contextBillingUuid, $contextCountry, $isVisible, $country);
+		//
+		$getInternalPlansRequest->setContextBillingUuid($contextBillingUuid);
+		$getInternalPlansRequest->setContextCountry($contextCountry);
+		
+		$internalPlans = parent::doGetInternalPlans($getInternalPlansRequest);
 		$internalPlansFiltered = array();
 		if(isset($filtered_array)) {
 			$filterEnabled = false;
