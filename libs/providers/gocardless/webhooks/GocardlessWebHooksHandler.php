@@ -9,11 +9,9 @@ require_once __DIR__ . '/../subscriptions/GocardlessSubscriptionsHandler.php';
 require_once __DIR__ . '/../transactions/GocardlessTransactionsHandler.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ . '/../../../providers/global/requests/ExpireSubscriptionRequest.php';
+require_once __DIR__ . '/../../global/webhooks/ProviderWebHooksHandler.php';
 
-class GocardlessWebHooksHandler {
-	
-	public function __construct() {
-	}
+class GocardlessWebHooksHandler extends ProviderWebHooksHandler {
 	
 	public function doProcessWebHook(BillingsWebHook $billingsWebHook, $update_type = 'hook') {
 		try {

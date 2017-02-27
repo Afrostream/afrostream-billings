@@ -5,14 +5,9 @@ require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/WecashupSubscriptionsHandler.php';
 require_once __DIR__ . '/../transactions/WecashupTransactionsHandler.php';
 require_once __DIR__ . '/../client/WecashupClient.php';
+require_once __DIR__ . '/../../global/webhooks/ProviderWebHooksHandler.php';
 
-class WecashupWebHooksHandler {
-	
-	private $provider = NULL;
-	
-	public function __construct() {
-		$this->provider = ProviderDAO::getProviderByName('wecashup');
-	}
+class WecashupWebHooksHandler extends ProviderWebHooksHandler {
 	
 	public function doProcessWebHook(BillingsWebHook $billingsWebHook, $update_type = 'hook') {
 		try {

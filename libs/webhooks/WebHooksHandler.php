@@ -2,13 +2,6 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
-require_once __DIR__ . '/../providers/recurly/webhooks/RecurlyWebHooksHandler.php';
-require_once __DIR__ . '/../providers/gocardless/webhooks/GocardlessWebHooksHandler.php';
-require_once __DIR__ . '/../providers/cashway/webhooks/CashwayWebHooksHandler.php';
-require_once __DIR__ . '/../providers/stripe/webhooks/StripeWebHooksHandler.php';
-require_once __DIR__ . '/../providers/braintree/webhooks/BraintreeWebHooksHandler.php';
-require_once __DIR__ . '/../providers/netsize/webhooks/NetsizeWebHooksHandler.php';
-require_once __DIR__ . '/../providers/wecashup/webhooks/WecashupWebHooksHandler.php';
 
 class WebHooksHander {
 	
@@ -44,45 +37,12 @@ class WebHooksHander {
 			
 			$provider = ProviderDAO::getProviderById($billingsWebHook->getProviderId());
 			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$user->getProviderId();
+				$msg = "unknown provider with id : ".$billingsWebHook->getProviderId();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			switch($provider->getName()) {
-				case 'recurly' :
-					$recurlyWebHooksHandler = new RecurlyWebHooksHandler();
-					$recurlyWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
-					break;
-				case 'gocardless' :
-					$gocardlessWebHooksHandler = new GocardlessWebHooksHandler();
-					$gocardlessWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
-					break;
-				case 'cashway' :
-					$cashwayWebHooksHandler = new CashwayWebHooksHandler();
-					$cashwayWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
-					break;
-				case 'stripe':
-					$stripeWebHookHandler = new StripeWebHooksHandler();
-					$stripeWebHookHandler->doProcessWebHook($billingsWebHook, $update_type);
-					break;
-				case 'braintree' :
-					$braintreeWebHooksHandler = new BraintreeWebHooksHandler();
-					$braintreeWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
-					break;
-				case 'netsize' :
-					$netsizeWebHooksHandler = new NetsizeWebHooksHandler();
-					$netsizeWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
-					break;
-				case 'wecashup' :
-					$wecashupWebHooksHandler = new WecashupWebHooksHandler();
-					$wecashupWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
-					break;
-				default:
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-			}
+			$providerWebHooksHandler = ProviderHandlersBuilder::getProviderWebHooksHandlerInstance($provider);
+			$providerWebHooksHandler->doProcessWebHook($billingsWebHook, $update_type);
 			BillingsWebHookDAO::updateProcessingStatusById($id, 'done');
 			//
 			$billingsWebHookLog->setProcessingStatus('done');
