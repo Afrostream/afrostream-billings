@@ -42,7 +42,13 @@ class InternalPlansHandler {
 		return($db_internal_plan);
 	}
 	
-	public function doGetInternalPlans($provider_name = NULL, $contextBillingUuid = NULL, $contextCountry = NULL, $isVisible = NULL, $country = NULL) {
+	public function doGetInternalPlans(GetInternalPlansRequest $getInternalPlansRequest) {
+		$provider_name = $getInternalPlansRequest->getProviderName();
+		$contextBillingUuid = $getInternalPlansRequest->getContextBillingUuid();
+		$contextCountry = $getInternalPlansRequest->getContextCountry();
+		$isVisible = $getInternalPlansRequest->getIsVisible();
+		$country = $getInternalPlansRequest->getCountry();
+		//
 		$db_internal_plans = NULL;
 		try {
 			config::getLogger()->addInfo("internal plans getting...");
