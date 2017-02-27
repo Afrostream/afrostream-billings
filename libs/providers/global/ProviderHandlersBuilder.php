@@ -1,4 +1,4 @@
-77<?php
+<?php
 
 require_once __DIR__ . '/../../db/dbGlobal.php';
 //<-- subscriptions -->
