@@ -37,17 +37,22 @@ class WebHooksController extends BillingsController {
 				$plateformId = 1;/* 1 = www.afrostream.tv */
 				$provider = ProviderDAO::getProviderByName2($providerName, $plateformId);
 				if($provider == NULL) {
-					$msg = "provider with name =".$providerName.", for plateformId=".$plateformId." is unknown";
+					$msg = "provider with name=".$providerName.", for plateformId=".$plateformId." is unknown";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 			} else {
 				$provider = ProviderDAO::getProviderByUuid($providerBillingUuid);
 				if($provider == NULL) {
-					$msg = "provider with uuid =".$providerBillingUuid." is unknown";
+					$msg = "provider with uuid=".$providerBillingUuid." is unknown";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}				
+				}
+				if($provider->getName() != $providerName) {
+					$msg = "provider with uuid=".$providerBillingUuid.", expecting providerName=".$providerName.", found providerName=".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);					
+				}
 			}
 			switch($providerName) {
 				case 'recurly' :
