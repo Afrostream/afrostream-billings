@@ -1368,7 +1368,7 @@ $app->put("/billings/api/transactions/{transactionBillingUuid}/refund", function
 
 //WebHooks
 
-$app->post("/billings/providers/{providerName}/webhooks/{providerBillingUuid}", function ($request, $response, $args) {
+$app->post("/billings/providers/{providerName}/webhooks/{providerBillingUuid}/", function ($request, $response, $args) {
 	$webHooksController = new WebHooksController();
 	return($webHooksController->providerWebHooksPosting($request, $response, $args));
 });
