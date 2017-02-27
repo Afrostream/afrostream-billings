@@ -34,10 +34,10 @@ class WebHooksController extends BillingsController {
 			}
 			$provider = NULL;
 			if($providerBillingUuid == NULL) {
-				$plateformId = 1;/* 1 = www.afrostream.tv */
-				$provider = ProviderDAO::getProviderByName2($providerName, $plateformId);
+				$platformId = 1;/* 1 = www.afrostream.tv */
+				$provider = ProviderDAO::getProviderByName2($providerName, $platformId);
 				if($provider == NULL) {
-					$msg = "provider with name=".$providerName.", for plateformId=".$plateformId." is unknown";
+					$msg = "provider with name=".$providerName.", for platformId=".$platformId." is unknown";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}

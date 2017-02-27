@@ -2,9 +2,11 @@
 
 class ActionRequest {
 
-	private $origin = 'api';//other possible values : hook, script, import, sync, etc...
+	protected $origin = 'api';//other possible values : hook, script, import, sync, etc...
+	protected $platform = NULL; 
 	
 	public function __construct() {
+		//$platform =
 	}
 	
 	public function setOrigin($origin) {

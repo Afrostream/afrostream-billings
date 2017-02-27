@@ -1368,12 +1368,14 @@ $app->put("/billings/api/transactions/{transactionBillingUuid}/refund", function
 
 //WebHooks
 
+//sort of 'static' URL for each provider - no parameter - in order to be compatible with most of providers
+
 $app->post("/billings/providers/{providerName}/webhooks/{providerBillingUuid}/", function ($request, $response, $args) {
 	$webHooksController = new WebHooksController();
 	return($webHooksController->providerWebHooksPosting($request, $response, $args));
 });
 
-//for backward compatibility, to be removed when all webhook noticifications have been changed
+//for backward compatibility, to be removed when all webhook notifications have been changed
 
 $app->post("/billings/providers/{providerName}/webhooks/", function ($request, $response, $args) {
 	$webHooksController = new WebHooksController();

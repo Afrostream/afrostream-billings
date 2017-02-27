@@ -1381,14 +1381,14 @@ class ProviderDAO {
 	private static $providersById = array();
 	private static $providersByName = array();
 	
-	private static $sfields = "_id, name, uuid, plateformid";
+	private static $sfields = "_id, name, uuid, platformid";
 	
 	private static function getProviderFromRow($row) {
 		$out = new Provider();
 		$out->setId($row["_id"]);
 		$out->setName($row["name"]);
 		$out->setUuid($row["uuid"]);
-		$out->setPlateformId($row["plateformid"]);
+		$out->setPlatformId($row["platformid"]);
 		//<-- cache -->
 		self::$providersById[$out->getId()] = $out;
 		self::$providersByName[$out->getName()] = $out;
@@ -1459,10 +1459,10 @@ class ProviderDAO {
 		return($out);
 	}
 	
-	public static function getProviderByName2($name, $plateformid) {
+	public static function getProviderByName2($name, $platformid) {
 		$out = NULL;
-		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE name = $1 AND plateformid = $2";
-		$result = pg_query_params(config::getDbConn(), $query, array($name, $plateformid));
+		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE name = $1 AND platformid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($name, $platformid));
 			
 		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out = self::getProviderFromRow($row);
@@ -1480,7 +1480,7 @@ class Provider implements JsonSerializable {
 	private $_id;
 	private $name;
 	private $uuid;
-	private $plateformId;
+	private $platformId;
 	
 	public function getId() {
 		return($this->_id);
@@ -1506,12 +1506,12 @@ class Provider implements JsonSerializable {
 		return($this->uuid);
 	}
 	
-	public function setPlateformId($id) {
-		$this->plateformId = $id;
+	public function setPlatformId($id) {
+		$this->platformId = $id;
 	}
 	
-	public function getPlateformId() {
-		return($this->plateformId);
+	public function getPlatformId() {
+		return($this->platformId);
 	}
 	
 	public function jsonSerialize() {
@@ -7103,5 +7103,9 @@ class BillingMailTemplateDAO {
 		pg_free_result($result);
 		return(self::getBillingMailTemplateById($row[0]));
 	}
+	
+}
+
+class BillingPlatform {
 	
 }

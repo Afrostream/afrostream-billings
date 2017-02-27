@@ -72,6 +72,7 @@ require_once __DIR__ . '/../stripe/webhooks/StripeWebHooksHandler.php';
 require_once __DIR__ . '/../braintree/webhooks/BraintreeWebHooksHandler.php';
 require_once __DIR__ . '/../netsize/webhooks/NetsizeWebHooksHandler.php';
 require_once __DIR__ . '/../wecashup/webhooks/WecashupWebHooksHandler.php';
+require_once __DIR__ . '/../bachat/webhooks/BachatWebHooksHandler.php';
 
 class ProviderHandlersBuilder {
 	
@@ -284,6 +285,9 @@ class ProviderHandlersBuilder {
 				break;
 			case 'wecashup' :
 				$providerWebHooksHandlerInstance = new WecashupWebHooksHandler($provider);
+				break;
+			case 'bachat' :
+				$providerWebHooksHandlerInstance = new BachatWebHooksHandler($provider);
 				break;
 			default :
 				$providerWebHooksHandlerInstance = new ProviderWebHooksHandler($provider);
