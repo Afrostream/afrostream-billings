@@ -1373,6 +1373,13 @@ $app->post("/billings/providers/{providerName}/webhooks/{providerBillingUuid}", 
 	return($webHooksController->providerWebHooksPosting($request, $response, $args));
 });
 
+//for backward compatibility, to be removed when all webhook noticifications have been changed
+
+$app->post("/billings/providers/{providerName}/webhooks/", function ($request, $response, $args) {
+	$webHooksController = new WebHooksController();
+	return($webHooksController->providerWebHooksPosting($request, $response, $args));
+});
+
 //alive
 
 $app->get("/alive", function ($request, $response, $args) {
