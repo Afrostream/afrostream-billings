@@ -630,12 +630,11 @@ EOL;
 		SELECT BICC.coupon_type AS coupon_type,
 		count(*) as counter
 		FROM
-		billing_users_internal_coupons BUIC
-		INNER JOIN billing_internal_coupons BIC ON (BUIC.internalcouponsid = BIC._id)
+		billing_internal_coupons BIC 
 		INNER JOIN billing_internal_coupons_campaigns BICC ON (BIC.internalcouponscampaignsid = BICC._id)
 		WHERE
-		(BUIC.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
-		GROUP BY BICC._id ORDER BY BICC._id
+		(BIC.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		GROUP BY BICC.coupon_type
 EOL;
 		$query = sprintf($query, $date_start_str, $date_end_str);
 		
