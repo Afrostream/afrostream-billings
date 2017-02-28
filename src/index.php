@@ -1368,60 +1368,18 @@ $app->put("/billings/api/transactions/{transactionBillingUuid}/refund", function
 
 //WebHooks
 
-//WebHooks - Recurly
+//sort of 'static' URL for each provider - no parameter - in order to be compatible with most of providers
 
-$app->post("/billings/providers/recurly/webhooks/", function ($request, $response, $args) {
+$app->post("/billings/providers/{providerName}/webhooks/{providerBillingUuid}/", function ($request, $response, $args) {
 	$webHooksController = new WebHooksController();
-	return($webHooksController->recurlyWebHooksPosting($request, $response, $args));
+	return($webHooksController->providerWebHooksPosting($request, $response, $args));
 });
 
-//WebHooks - Stripe
+//for backward compatibility, to be removed when all webhook notifications have been changed
 
-$app->post("/billings/providers/stripe/webhooks/", function ($request, $response, $args) {
+$app->post("/billings/providers/{providerName}/webhooks/", function ($request, $response, $args) {
 	$webHooksController = new WebHooksController();
-	return($webHooksController->stripeWebHooksPosting($request, $response, $args));
-});
-
-//WebHooks - Gocardless
-
-$app->post("/billings/providers/gocardless/webhooks/", function ($request, $response, $args) {
-	$webHooksController = new WebHooksController();
-	return($webHooksController->gocardlessWebHooksPosting($request, $response, $args));
-});
-
-//WebHooks - Bachat
-
-$app->post("/billings/providers/bachat/webhooks/", function ($request, $response, $args) {
-	$webHooksController = new WebHooksController();
-	return($webHooksController->bachatWebHooksPosting($request, $response, $args));
-});
-
-//WebHooks - Cashway
-
-$app->post("/billings/providers/cashway/webhooks/", function ($request, $response, $args) {
-	$webHooksController = new WebHooksController();
-	return($webHooksController->cashwayWebHooksPosting($request, $response, $args));
-});
-
-//WebHooks - braintree
-	
-$app->post("/billings/providers/braintree/webhooks/", function ($request, $response, $args) {
-	$webHooksController = new WebHooksController();
-	return($webHooksController->braintreeWebHooksPosting($request, $response, $args));
-});
-
-//WebHooks - Netsize
-	
-$app->post("/billings/providers/netsize/webhooks/", function ($request, $response, $args) {
-	$webHooksController = new WebHooksController();
-	return($webHooksController->netsizeWebHooksPosting($request, $response, $args));
-});
-
-//WebHooks - Wecashup
-
-$app->post("/billings/providers/wecashup/webhooks/", function ($request, $response, $args) {
-	$webHooksController = new WebHooksController();
-	return($webHooksController->wecashupWebHooksPosting($request, $response, $args));
+	return($webHooksController->providerWebHooksPosting($request, $response, $args));
 });
 
 //alive

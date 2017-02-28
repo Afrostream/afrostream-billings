@@ -63,6 +63,16 @@ require_once __DIR__ . '/../cashway/plans/CashwayPlansHandler.php';
 require_once __DIR__ . '/coupons/ProviderCouponsHandler.php';
 require_once __DIR__ . '/../cashway/coupons/CashwayCouponsHandler.php';
 require_once __DIR__ . '/../afr/coupons/AfrCouponsHandler.php';
+//<-- webhooks -->
+require_once __DIR__ . '/webhooks/ProviderWebHooksHandler.php';
+require_once __DIR__ . '/../recurly/webhooks/RecurlyWebHooksHandler.php';
+require_once __DIR__ . '/../gocardless/webhooks/GocardlessWebHooksHandler.php';
+require_once __DIR__ . '/../cashway/webhooks/CashwayWebHooksHandler.php';
+require_once __DIR__ . '/../stripe/webhooks/StripeWebHooksHandler.php';
+require_once __DIR__ . '/../braintree/webhooks/BraintreeWebHooksHandler.php';
+require_once __DIR__ . '/../netsize/webhooks/NetsizeWebHooksHandler.php';
+require_once __DIR__ . '/../wecashup/webhooks/WecashupWebHooksHandler.php';
+require_once __DIR__ . '/../bachat/webhooks/BachatWebHooksHandler.php';
 
 class ProviderHandlersBuilder {
 	
@@ -250,6 +260,40 @@ class ProviderHandlersBuilder {
 				break;
 		}
 		return($providerCouponsHandlerInstance);
+	}
+	
+	public static function getProviderWebHooksHandlerInstance(Provider $provider) {
+		$providerWebHooksHandlerInstance  = NULL;
+		switch($provider->getName()) {
+			case 'recurly' :
+				$providerWebHooksHandlerInstance = new RecurlyWebHooksHandler($provider);
+				break;
+			case 'gocardless' :
+				$providerWebHooksHandlerInstance = new GocardlessWebHooksHandler($provider);
+				break;
+			case 'cashway' :
+				$providerWebHooksHandlerInstance = new CashwayWebHooksHandler($provider);
+				break;
+			case 'stripe':
+				$providerWebHooksHandlerInstance = new StripeWebHooksHandler($provider);
+				break;
+			case 'braintree' :
+				$providerWebHooksHandlerInstance = new BraintreeWebHooksHandler($provider);
+				break;
+			case 'netsize' :
+				$providerWebHooksHandlerInstance = new NetsizeWebHooksHandler($provider);
+				break;
+			case 'wecashup' :
+				$providerWebHooksHandlerInstance = new WecashupWebHooksHandler($provider);
+				break;
+			case 'bachat' :
+				$providerWebHooksHandlerInstance = new BachatWebHooksHandler($provider);
+				break;
+			default :
+				$providerWebHooksHandlerInstance = new ProviderWebHooksHandler($provider);
+				break;
+		}
+		return($providerWebHooksHandlerInstance);
 	}
 	
 }

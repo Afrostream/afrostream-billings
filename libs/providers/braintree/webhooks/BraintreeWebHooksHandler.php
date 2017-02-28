@@ -4,14 +4,9 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/BraintreeSubscriptionsHandler.php';
 require_once __DIR__ . '/../transactions/BraintreeTransactionsHandler.php';
+require_once __DIR__ . '/../../global/webhooks/ProviderWebHooksHandler.php';
 
-class BraintreeWebHooksHandler {
-	
-	protected $provider = NULL;
-	
-	public function __construct() {
-		$this->provider = ProviderDAO::getProviderByName('braintree');
-	}
+class BraintreeWebHooksHandler extends ProviderWebHooksHandler {
 	
 	public function doProcessWebHook(BillingsWebHook $billingsWebHook, $update_type = 'hook') {
 		try {

@@ -1381,12 +1381,14 @@ class ProviderDAO {
 	private static $providersById = array();
 	private static $providersByName = array();
 	
-	private static $sfields = "_id, name";
+	private static $sfields = "_id, name, uuid, platformid";
 	
 	private static function getProviderFromRow($row) {
 		$out = new Provider();
 		$out->setId($row["_id"]);
 		$out->setName($row["name"]);
+		$out->setUuid($row["uuid"]);
+		$out->setPlatformId($row["platformid"]);
 		//<-- cache -->
 		self::$providersById[$out->getId()] = $out;
 		self::$providersByName[$out->getName()] = $out;
@@ -1443,12 +1445,42 @@ class ProviderDAO {
 		return($out);
 	}
 	
+	public static function getProviderByUuid($uuid) {
+		$out = NULL;
+		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE uuid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($uuid));
+			
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getProviderFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function getProviderByName2($name, $platformid) {
+		$out = NULL;
+		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE name = $1 AND platformid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($name, $platformid));
+			
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getProviderFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 }
 
 class Provider implements JsonSerializable {
 	
 	private $_id;
 	private $name;
+	private $uuid;
+	private $platformId;
 	
 	public function getId() {
 		return($this->_id);
@@ -1466,9 +1498,26 @@ class Provider implements JsonSerializable {
 		$this->name = $name;
 	}
 	
+	public function setUuid($uuid) {
+		$this->uuid = $uuid;
+	}
+	
+	public function getUuid() {
+		return($this->uuid);
+	}
+	
+	public function setPlatformId($id) {
+		$this->platformId = $id;
+	}
+	
+	public function getPlatformId() {
+		return($this->platformId);
+	}
+	
 	public function jsonSerialize() {
 		return[
-			'providerName' => $this->name	
+			'providerName' => $this->name,
+			'providerBillingUuid' => $this->uuid
 		];
 	}
 }
@@ -7053,6 +7102,87 @@ class BillingMailTemplateDAO {
 		// free result
 		pg_free_result($result);
 		return(self::getBillingMailTemplateById($row[0]));
+	}
+	
+}
+
+class BillingPlatform {
+	
+	private $_id;
+	private $uuid;
+	private $name;
+	private $referenceUuid;
+	private $creationDate;
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setUuid($uuid) {
+		$this->uuid = $uuid;
+	}
+	
+	public function getUuid() {
+		return($this->uuid);
+	}
+	
+	public function setName($str) {
+		$this->name = $str;
+	}
+	
+	public function getName() {
+		return($this->name);
+	}
+	
+	public function setReferenceUuid($referenceUuid) {
+		$this->referenceUuid = $referenceUuid;
+	}
+	
+	public function getReferenceUuid() {
+		return($this->referenceUuid);
+	}
+	
+	public function setCreationDate(DateTime $date) {
+		$this->creationDate = $date;
+	}
+	
+	public function getCreationDate() {
+		return($this->creationDate);
+	}
+	
+}
+
+class BillingPlatformDAO {
+	
+	private static $sfields = "_id, platform_billing_uuid, platform_reference_uuid, name, creation_date";
+	
+	private static function getBillingPlatformFromRow($row) {
+		$out = new BillingPlatform();
+		$out->setId($row["_id"]);
+		$out->setUuid($row["platform_billing_uuid"]);
+		$out->setReferenceUuid($row["platform_reference_uuid"]);
+		$out->setName($row["name"]);
+		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		return($out);
+	}
+	
+	public static function getPlatformById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_platforms WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingPlatformFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
 	}
 	
 }
