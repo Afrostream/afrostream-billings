@@ -242,7 +242,20 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		config::getLogger()->addInfo("braintree dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(
+			User $user, 
+			UserOpts $userOpts, 
+			Provider $provider, 
+			InternalPlan $internalPlan = NULL, 
+			InternalPlanOpts $internalPlanOpts = NULL, 
+			Plan $plan = NULL, 
+			PlanOpts $planOpts = NULL, 
+			BillingsSubscriptionOpts $subOpts = NULL, 
+			BillingInfo $billingInfo = NULL, 
+			$subscription_billing_uuid, 
+			$sub_uuid, 
+			$update_type, 
+			$updateId) {
 		//
 		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
 		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
