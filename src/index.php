@@ -58,7 +58,7 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 		BillingStatsd::inc('route.all.success');
 		if(strpos($current_path, $path_api) === 0) {
 			BillingStatsd::inc('route.api.success');
-		} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix, $current_path)) {
+		} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix.'*', $current_path)) {
 			BillingStatsd::inc('route.providers.all.webhooks.success');
 			$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
 			$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
@@ -74,7 +74,7 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 		BillingStatsd::inc('route.all.error');
 		if(strpos($current_path, $path_api) === 0) {
 			BillingStatsd::inc('route.api.error');
-		} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix, $current_path)) {
+		} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix.'*', $current_path)) {
 			BillingStatsd::inc('route.providers.all.webhooks.error');
 			$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
 			$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
