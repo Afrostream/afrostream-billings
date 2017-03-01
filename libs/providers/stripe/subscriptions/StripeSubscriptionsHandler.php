@@ -92,7 +92,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 			BillingInfo $billingInfo = NULL, 
 			$subscription_billing_uuid, 
 			$sub_uuid, 
-			$update_type, 
+			$updateType, 
 			$updateId) {
     	$api_subscription = NULL;
     	if ($internalPlan->getCycle() == PlanCycle::once) {
