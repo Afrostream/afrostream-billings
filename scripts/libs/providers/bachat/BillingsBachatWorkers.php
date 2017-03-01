@@ -467,7 +467,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		try {
 			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingTypeSubsResponseRenew, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
-				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal bypassed - already done today -");
+				ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions renewal bypassed - already done today -");
 				return;
 			}
 			
