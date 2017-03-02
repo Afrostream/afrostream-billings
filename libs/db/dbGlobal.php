@@ -1381,7 +1381,7 @@ class ProviderDAO {
 	private static $providersById = array();
 	private static $providersByName = array();
 	
-	private static $sfields = "_id, name, uuid, platformid";
+	private static $sfields = "_id, name, uuid, platformid, merchantid, serviceid, api_key, api_secret, webhook_key, webhook_secret";
 	
 	private static function getProviderFromRow($row) {
 		$out = new Provider();
