@@ -90,8 +90,8 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			BillingInfo $billingInfo = NULL, 
 			$subscription_billing_uuid, 
 			Google_Service_AndroidPublisher_SubscriptionPurchase $api_subscription, 
-			$update_type, 
 			$sub_uuid,
+			$update_type,
 			$updateId) {
 		config::getLogger()->addInfo($this->provider->getName()." dbsubscription creation for userid=".$user->getId()."...");
 		//
