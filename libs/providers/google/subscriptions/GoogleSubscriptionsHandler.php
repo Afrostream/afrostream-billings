@@ -24,23 +24,20 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		try {
 			config::getLogger()->addInfo($this->provider->getName()." subscription creation...");
 			if(isset($subscription_provider_uuid)) {
-				checkSubOptsArray($subOpts->getOpts(), $this->provider->getName(), 'get');
-				//** in google : user subscription is pre-created **/
-				//
-				$googleClient = new GoogleClient();
-				$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
-				//FIX ME
-				$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());//$subscription_provider_uuid);
-				$googleGetSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
-				$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
-				config::getLogger()->addError($this->provider->getName()." subscription creation...result=".var_export($api_subscription, true));
-				//FIX ME
-				$sub_uuid = guid();//$subscription_provider_uuid;
-			} else {
-				$msg = "unsupported feature for provider named ".$this->provider->getName().", subscriptionProviderUuid has to be provided";
+				$msg = "unsupported feature for provider named google, subscriptionProviderUuid has NOT to be provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			checkSubOptsArray($subOpts->getOpts(), $this->provider->getName(), 'create');
+			//** in google : user subscription is pre-created **/
+			//
+			$googleClient = new GoogleClient();
+			$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
+			$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
+			$googleGetSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
+			$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
+			config::getLogger()->addInfo($this->provider->getName()." subscription creation...result=".var_export($api_subscription, true));
+			$sub_uuid = guid();
 			//
 			config::getLogger()->addInfo($this->provider->getName()." subscription creation done successfully, ".$this->provider->getName()."_subscription_uuid=".$sub_uuid);
 		} catch(BillingsException $e) {
@@ -77,10 +74,10 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		}
 		$googleClient = new GoogleClient();
 		$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
-		$googleGetSubscriptionRequest->setSubscriptionId($sub_uuid);
+		$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
 		$googleGetSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 		$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $sub_uuid, $update_type, $updateId));
 	}
 	
 	public function createDbSubscriptionFromApiSubscription(User $user, 
@@ -94,9 +91,9 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$subscription_billing_uuid, 
 			Google_Service_AndroidPublisher_SubscriptionPurchase $api_subscription, 
 			$update_type, 
+			$sub_uuid,
 			$updateId) {
-		//TODO : FIXME
-		config::getLogger()->addInfo($this->provider->getName()." dbsubscription creation for userid=".$user->getId().", ".$this->provider->getName()."_subscription_uuid=".$api_subscription->__get('subscriptionId')."...");
+		config::getLogger()->addInfo($this->provider->getName()." dbsubscription creation for userid=".$user->getId()."...");
 		//
 		if($subOpts == NULL) {
 			//Exception
@@ -110,8 +107,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$db_subscription->setProviderId($provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
-		//TODO : FIXME
-		$db_subscription->setSubUid($api_subscription->__get('subscriptionId'));
+		$db_subscription->setSubUid($sub_uuid);
 		$db_subscription->setSubStatus('active');
 		$start_date = new DateTime();
 		$start_date->setTimestamp($api_subscription->getStartTimeMillis());
@@ -231,13 +227,14 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			} else {
 				//
 				if($cancelSubscriptionRequest->getOrigin() == 'api') {
+					$plan = PlanDAO::getPlanById($subscription->getPlanId());
 					$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
 					$googleClient = new GoogleClient();
 					$googleCancelSubscriptionRequest = new GoogleCancelSubscriptionRequest();
-					$googleCancelSubscriptionRequest->setSubscriptionId($subscription->getSubUid());
+					$googleCancelSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
 					$googleCancelSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 					$api_subscription = $googleClient->cancelSubscription($googleCancelSubscriptionRequest);
-					config::getLogger()->addError($this->provider->getName()." subscription canceling...result=".var_export($api_subscription, true));
+					config::getLogger()->addInfo($this->provider->getName()." subscription canceling...result=".var_export($api_subscription, true));
 				}
 				$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
 				$subscription->setSubStatus('canceled');
@@ -295,10 +292,11 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_MANDATORY);
 					}
+					$plan = PlanDAO::getPlanById($subscription->getPlanId());
 					$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
 					$googleClient = new GoogleClient();
 					$googleExpireSubscriptionRequest = new GoogleExpireSubscriptionRequest();
-					$googleExpireSubscriptionRequest->setSubscriptionId($subscription->getSubUid());
+					$googleExpireSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
 					$googleExpireSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 					$api_subscription = $googleClient->expireSubscription($googleExpireSubscriptionRequest);
 					config::getLogger()->addError($this->provider->getName()." subscription expiring...result=".var_export($api_subscription, true));

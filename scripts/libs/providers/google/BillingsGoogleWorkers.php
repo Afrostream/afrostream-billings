@@ -88,10 +88,17 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 		try {
 			//
 			ScriptsConfig::getLogger()->addInfo("refreshing ".$this->provider->getName()." subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()."...");
+			$plan = PlanDAO::getPlanById($subscription->getPlanId());
+			//check plan
+			if($plan == NULL) {
+				$msg = "unknown plan with id : ".$subscription->getPlanId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
 			$googleClient = new GoogleClient();
 			$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
-			$googleGetSubscriptionRequest->setSubscriptionId($subscription->getSubUid());
+			$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
 			$googleGetSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 			$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
 			//
@@ -104,13 +111,6 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-			$plan = PlanDAO::getPlanById($subscription->getPlanId());
-			//check plan
-			if($plan == NULL) {
-				$msg = "unknown plan with id : ".$subscription->getPlanId();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
-			}
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
 			//check internalPlan
