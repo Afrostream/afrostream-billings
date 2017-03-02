@@ -12,9 +12,9 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			config::getLogger()->addInfo("updating braintree transactions...");
 			//
 			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-			Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-			Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+			Braintree_Configuration::merchantId($this->provider->getMerchantId());
+			Braintree_Configuration::publicKey($this->provider->getApiKey());
+			Braintree_Configuration::privateKey($this->provider->getApiSecret());
 			//
 			$search_query = [Braintree\TransactionSearch::customerId()->is($user->getUserProviderUuid())];
 			//NC : WARNING : greaterThanOrEqualTo / lessThanOrEqualTo does not seem to work...
@@ -136,9 +136,9 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 	private function updateRefundsFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeChargeTransaction, BillingsTransaction $billingsTransaction, $updateType) {
 		//
 		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-		Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-		Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+		Braintree_Configuration::merchantId($this->provider->getMerchantId());
+		Braintree_Configuration::publicKey($this->provider->getApiKey());
+		Braintree_Configuration::privateKey($this->provider->getApiSecret());
 		//
 		$braintreeRefundTransactions = array();
 		if(count($braintreeChargeTransaction->refundIds) > 0) {
@@ -271,9 +271,9 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
 			//
 			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-			Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-			Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+			Braintree_Configuration::merchantId($this->provider->getMerchantId());
+			Braintree_Configuration::publicKey($this->provider->getApiKey());
+			Braintree_Configuration::privateKey($this->provider->getApiSecret());
 			//
 			$api_payment = Braintree\Transaction::find($transaction->getTransactionProviderUuid());
 			switch ($api_payment->status) {

@@ -92,7 +92,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				}
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_REN uploading...");
-				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."PAR_REN_".$this->today->format("Ymd").".csv";
+				$url = $this->getBouyguesBillingSystemUrl()."/"."PAR_REN_".$this->today->format("Ymd").".csv";
 				$curl_options = array(
 						CURLOPT_URL => $url,
 						CURLOPT_PUT => true,
@@ -117,12 +117,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				) {
 					$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 				}
-				if(	null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER'))
+				if(	null !== ($this->provider->getWebhookKey())
 						&&
-					null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD'))
+					null !== ($this->provider->getWebhookSecret())
 				) {			
 					$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-					$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
+					$curl_options[CURLOPT_USERPWD] = $this->provider->getWebhookKey().":".$this->provider->getWebhookSecret();
 				}
 				$curl_options[CURLOPT_VERBOSE] = true;
 				$CURL = curl_init();
@@ -214,7 +214,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$time->setTimezone(new DateTimeZone(self::$timezone));
 			$time_str = $time->format("His");
 			$fields[] = $time_str;
-			$fields[] = getEnv("BOUYGUES_SERVICEID");//ServiceId
+			$fields[] = $this->provider->getServiceId();//ServiceId
 			$fields[] = $subscription->getSubscriptionBillingUuid();//SubscriptionServiceId
 			$fields[] = $subscription->getSubUid();//SubscriptionId
 			$fields[] = (string) number_format($internalPlan->getVatRate(), 2, '.', '');//VAT : "." for BACHAT not ","
@@ -329,7 +329,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				}
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_CAN uploading...");
-				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."PAR_CAN_".$this->today->format("Ymd").".csv";
+				$url = $this->getBouyguesBillingSystemUrl()."/"."PAR_CAN_".$this->today->format("Ymd").".csv";
 				$curl_options = array(
 						CURLOPT_URL => $url,
 						CURLOPT_PUT => true,
@@ -354,12 +354,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				) {
 					$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 				}
-				if(	null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER'))
+				if(	null !== ($this->provider->getWebhookKey())
 					&&
-					null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD'))
+					null !== ($this->provider->getWebhookSecret())
 				) {
 					$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-					$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
+					$curl_options[CURLOPT_USERPWD] = $this->provider->getWebhookKey().":".$this->provider->getWebhookSecret();
 				}
 				$curl_options[CURLOPT_VERBOSE] = true;
 				$CURL = curl_init();
@@ -445,7 +445,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$time->setTimezone(new DateTimeZone(self::$timezone));
 			$time_str = $time->format("His");
 			$fields[] = $time_str;
-			$fields[] = getEnv("BOUYGUES_SERVICEID");//ServiceId
+			$fields[] = $this->provider->getServiceId();//ServiceId
 			$fields[] = $subscription->getSubscriptionBillingUuid();//SubscriptionServiceId
 			$fields[] = $subscription->getSubUid();//SubscriptionId
 			fputcsv($current_par_can_file_res, $fields);
@@ -487,7 +487,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			//GET FILE FROM THE SYSTEM WEBDAV (GET)
 			ScriptsConfig::getLogger()->addInfo("REN downloading...");
-			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."REN_".$this->today->format("Ymd").".csv";
+			$url = $this->getBouyguesBillingSystemUrl()."/"."REN_".$this->today->format("Ymd").".csv";
 			$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_RETURNTRANSFER => true,
@@ -507,12 +507,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			) {
 				$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 			}
-			if(	null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER'))
+			if(	null !== ($this->provider->getWebhookKey())
 				&&
-				null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD'))
+				null !== ($this->provider->getWebhookSecret())
 			) {
 				$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-				$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
+				$curl_options[CURLOPT_USERPWD] = $this->provider->getWebhookKey().":".$this->provider->getWebhookSecret();
 			}
 			$curl_options[CURLOPT_VERBOSE] = true;
 			$CURL = curl_init();
@@ -615,7 +615,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if($serviceId != getenv('BOUYGUES_SERVICEID')) {
+			if($serviceId != $this->provider->getServiceId()) {
 				$msg = "serviceId ".$serviceId." is unknown";
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -729,7 +729,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			//GET FILE FROM THE SYSTEM WEBDAV (GET)
 			ScriptsConfig::getLogger()->addInfo("CAN downloading...");
-			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."CAN_".$this->today->format("Ymd").".csv";
+			$url = $this->getBouyguesBillingSystemUrl()."/"."CAN_".$this->today->format("Ymd").".csv";
 			$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_RETURNTRANSFER => true,
@@ -749,12 +749,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			) {
 				$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 			}
-			if(	null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER'))
+			if(	null !== ($this->provider->getWebhookKey())
 				&&
-				null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD'))
+				null !== ($this->provider->getWebhookSecret())
 			) {
 				$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-				$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
+				$curl_options[CURLOPT_USERPWD] = $this->provider->getWebhookKey().":".$this->provider->getWebhookSecret();
 			}
 			$curl_options[CURLOPT_VERBOSE] = true;
 			$CURL = curl_init();
@@ -855,7 +855,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if($serviceId != getenv('BOUYGUES_SERVICEID')) {
+			if($serviceId != $this->provider->getServiceId()) {
 				$msg = "serviceId ".$serviceId." is unknown";
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -935,7 +935,11 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 			}
 		}
-	}	
+	}
+	
+	private function getBouyguesBillingSystemUrl() {
+		return(getEnv('BOUYGUES_BILLING_SYSTEM_URL_PREFIX').$this->provider->getMerchantId().'_'.$this->provider->getServiceId());
+	}
 	
 }
 

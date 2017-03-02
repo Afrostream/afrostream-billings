@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler
 class OrangeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
-		$api_subscription = self::checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeApiToken'], $plan->getPlanUuid());
+		$api_subscription = $this->checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeApiToken'], $plan->getPlanUuid());
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
@@ -176,7 +176,7 @@ class OrangeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		//VERIFY THAT SUBSCRIPTION IS STILL ACTIVE BEFORE RENEWING
-		self::checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeApiToken'], $providerPlan->getPlanUuid());
+		$this->checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeApiToken'], $providerPlan->getPlanUuid());
 		$today = new DateTime();
 		$today->setTimezone(new DateTimeZone(config::$timezone));
 		$today->setTime(23, 59, 59);//consider all the day
@@ -219,7 +219,7 @@ class OrangeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
 		config::getLogger()->addInfo("orange dbsubscriptions update for userid=".$user->getId()."...");
 		//
-		$orangeTVClient = new OrangeTVClient($userOpts->getOpts()['OrangeApiToken']);
+		$orangeTVClient = new OrangeTVClient($this->provider->getApiKey(), $this->provider->getApiSecret(), $userOpts->getOpts()['OrangeApiToken']);
 		//
 		$provider = ProviderDAO::getProviderById($user->getProviderId());
 		//
@@ -295,8 +295,8 @@ class OrangeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		}
 	}
 	
-	private static function checkApiSubscriptionByProviderPlanUuid($orangeAPIToken, $providerPlanUuid) {
-		$orangeTVClient = new OrangeTVClient($orangeAPIToken);
+	private function checkApiSubscriptionByProviderPlanUuid($orangeAPIToken, $providerPlanUuid) {
+		$orangeTVClient = new OrangeTVClient($this->provider->getApiKey(), $this->provider->getApiSecret(), $orangeAPIToken);
 		$orangeSubscriptionsResponse = $orangeTVClient->getSubscriptions($providerPlanUuid);
 		$orangeSubscription = $orangeSubscriptionsResponse->getOrangeSubscriptionById($providerPlanUuid);
 		if($orangeSubscription == NULL) {

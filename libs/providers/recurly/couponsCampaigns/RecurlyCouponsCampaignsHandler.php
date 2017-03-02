@@ -14,8 +14,8 @@ class RecurlyCouponsCampaignsHandler extends ProviderCouponsCampaignsHandler {
 			config::getLogger()->addInfo("recurly couponsCampaign creation...");
 			//Check Compatibility
 			//
-			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			Recurly_Client::$subdomain = $this->provider->getMerchantId();
+			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			//
 			$recurly_coupon = new Recurly_Coupon();
 			$recurly_coupon->redemption_resource = 'subscription';

@@ -13,16 +13,16 @@ class RecurlyUsersHandler extends ProviderUsersHandler {
 			$account = NULL;
 			if($createUserRequest->getUserProviderUuid() != NULL) {
 				//
-				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+				Recurly_Client::$subdomain = $this->provider->getMerchantId();
+				Recurly_Client::$apiKey = $this->provider->getApiSecret();
 				//
 				$account = Recurly_Account::get($createUserRequest->getUserProviderUuid());
 			} else {
 				//
 				checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName());
 				//
-				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+				Recurly_Client::$subdomain = $this->provider->getMerchantId();
+				Recurly_Client::$apiKey = $this->provider->getApiSecret();
 				//
 				$account = new Recurly_Account(guid());
 				$account->email = $createUserRequest->getUserOptsArray()['email'];
@@ -60,8 +60,8 @@ class RecurlyUsersHandler extends ProviderUsersHandler {
 			//
 			checkUserOptsArray($updateUserRequest->getUserOptsArray(), $this->provider->getName());
 			//
-			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			Recurly_Client::$subdomain = $this->provider->getMerchantId();
+			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			//
 			$account = Recurly_Account::get($updateUserRequest->getUserProviderUuid());
 			$account->email = $updateUserRequest->getUserOptsArray()['email'];
