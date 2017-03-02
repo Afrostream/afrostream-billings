@@ -4,10 +4,10 @@ require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class ExpireSubscriptionRequest extends ActionRequest {
 	
-	private $subscriptionBillingUuid = NULL;
-	private $expiresDate = NULL;
-	private $forceBeforeEndsDate = false;
-	private $isRefundEnabled = false;
+	protected $subscriptionBillingUuid = NULL;
+	protected $expiresDate = NULL;
+	protected $forceBeforeEndsDate = false;
+	protected $isRefundEnabled = false;
 	
 	public function __construct() {
 		parent::__construct();

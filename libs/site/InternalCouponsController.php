@@ -2,7 +2,8 @@
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../internalCoupons/InternalCouponsHandler.php';
-require_once __DIR__ .'/BillingsController.php';
+require_once __DIR__ . '/BillingsController.php';
+require_once __DIR__ . '/../providers/global/requests/GetInternalCouponRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -22,7 +23,10 @@ class InternalCouponsController extends BillingsController {
 			$couponCode = $data['couponCode'];
 			//
 			$internalCouponsHandler = new InternalCouponsHandler();
-			$coupon = $internalCouponsHandler->doGetInternalCouponByCode($couponCode);
+			$getInternalCouponRequest = new GetInternalCouponRequest();
+			$getInternalCouponRequest->setCouponCode($couponCode);
+			$getInternalCouponRequest->setOrigin('api');
+			$coupon = $internalCouponsHandler->doGetInternalCoupon($getInternalCouponRequest);
 			if($coupon == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {

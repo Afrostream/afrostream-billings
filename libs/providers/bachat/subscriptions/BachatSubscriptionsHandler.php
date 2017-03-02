@@ -8,7 +8,6 @@ require_once __DIR__ . '/../client/soap-wsse.php';
 require_once __DIR__ . '/../client/WSSoapClient.class.php';
 require_once __DIR__ . '/../client/ByTelBAchat.class.php';
 require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
-require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 
 class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
@@ -201,7 +200,9 @@ class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($subscription);
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+	public function doRenewSubscription(BillingsSubscription $subscription, RenewSubscriptionRequest $renewSubscriptionRequest) {
+		$start_date = $renewSubscriptionRequest->getStartDate();
+		$end_date = $renewSubscriptionRequest->getEndDate();
 		if($end_date != NULL) {
 			$msg = "renewing a bachat subscription does not support that end_date is already set";
 			config::getLogger()->addError($msg);
@@ -271,9 +272,9 @@ class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId())));
 	}
 		
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
 		$doIt = false;
-		if($is_a_request == true) {
+		if($cancelSubscriptionRequest->getOrigin() == 'api') {
 			if($subscription->getSubStatus() == "pending_active") {
 				$msg = "cannot cancel because of the current_status=".$subscription->getSubStatus();
 				config::getLogger()->addError($msg);
@@ -299,7 +300,7 @@ class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			}
 		}
 		if($doIt == true) {
-			$subscription->setSubCanceledDate($cancel_date);
+			$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
 			if($is_a_request == true) {
 				$subscription->setSubStatus('requesting_canceled');
 			} else {
@@ -387,6 +388,12 @@ class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
 		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
+	}
+	
+	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
+		$msg = "unsupported feature - update user subscriptions - for provider named : ".$this->provider->getName();
+		config::getLogger()->addWarning($msg);//Just warn for the moment
+		//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}
 	
 }

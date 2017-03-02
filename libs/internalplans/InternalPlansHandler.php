@@ -2,12 +2,16 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
-require_once __DIR__ . '/../providers/recurly/plans/RecurlyPlansHandler.php';
-require_once __DIR__ . '/../providers/gocardless/plans/GocardlessPlansHandler.php';
-require_once __DIR__ . '/../providers/bachat/plans/BachatPlansHandler.php';
-require_once __DIR__ . '/../providers/afr/plans/AfrPlansHandler.php';
-require_once __DIR__ . '/../providers/stripe/plans/StripePlanHandler.php';
-require_once __DIR__ . '/../providers/cashway/plans/CashwayPlansHandler.php';
+require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
+require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToCountryRequest.php';
+require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToProviderRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetInternalPlanRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetInternalPlansRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CreateInternalPlanRequest.php';
+require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromCountryRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateInternalPlanRequest.php';
 
 use Money\Currency;
 use Iso3166\Codes;
@@ -17,7 +21,8 @@ class InternalPlansHandler {
 	public function __construct() {
 	}
 	
-	public function doGetInternalPlan($internalPlanUuid) {
+	public function doGetInternalPlan(GetInternalPlanRequest $getInternalPlanRequest) {
+		$internalPlanUuid = $getInternalPlanRequest->getInternalPlanUuid();
 		$db_internal_plan = NULL;
 		try {
 			config::getLogger()->addInfo("internal plan getting, internalPlanUuid=".$internalPlanUuid."....");
@@ -37,7 +42,13 @@ class InternalPlansHandler {
 		return($db_internal_plan);
 	}
 	
-	public function doGetInternalPlans($provider_name = NULL, $contextBillingUuid = NULL, $contextCountry = NULL, $isVisible = NULL, $country = NULL) {
+	public function doGetInternalPlans(GetInternalPlansRequest $getInternalPlansRequest) {
+		$provider_name = $getInternalPlansRequest->getProviderName();
+		$contextBillingUuid = $getInternalPlansRequest->getContextBillingUuid();
+		$contextCountry = $getInternalPlansRequest->getContextCountry();
+		$isVisible = $getInternalPlansRequest->getIsVisible();
+		$country = $getInternalPlansRequest->getCountry();
+		//
 		$db_internal_plans = NULL;
 		try {
 			config::getLogger()->addInfo("internal plans getting...");
@@ -96,7 +107,21 @@ class InternalPlansHandler {
 		return($db_internal_plans);
 	}
 	
-	public function doCreate($internalPlanUuid,	$name, $description, $amount_in_cents, $currency, $cycle, $period_unit_str, $period_length, $vatRate, $internalplan_opts_array, $trialEnabled, $trialPeriodLength, $trialPeriodUnit) {
+	public function doCreate(CreateInternalPlanRequest $createInternalPlanRequest) {
+		$internalPlanUuid = $createInternalPlanRequest->getInternalPlanUuid();
+		$name = $createInternalPlanRequest->getName();
+		$description = $createInternalPlanRequest->getDescription();
+		$amount_in_cents = $createInternalPlanRequest->getAmountInCents();
+		$currency = $createInternalPlanRequest->getCurrency();
+		$cycle = $createInternalPlanRequest->getCycle();
+		$period_unit_str = $createInternalPlanRequest->getPeriodUnit();
+		$period_length = $createInternalPlanRequest->getPeriodLength();
+		$vatRate = $createInternalPlanRequest->getVateRate();
+		$internalplan_opts_array = $createInternalPlanRequest->getInternalplanOptsArray();
+		$trialEnabled = $createInternalPlanRequest->getTrialEnabled();
+		$trialPeriodLength = $createInternalPlanRequest->getTrialPeriodLength();
+		$trialPeriodUnit = $createInternalPlanRequest->getTrialPeriodUnit();
+		//
 		$db_internal_plan = NULL;
 		try {
 			config::getLogger()->addInfo("internal plan creating...");
@@ -178,12 +203,21 @@ class InternalPlansHandler {
 		return($db_internal_plan);
 	}
 	
-	public function doAddToProvider($internalPlanUuid, Provider $provider) {
+	public function doAddToProvider(AddInternalPlanToProviderRequest $addInternalPlanToProviderRequest) {
+		$internalPlanUuid = $addInternalPlanToProviderRequest->getInternalPlanUuid();
+		$providerName = $addInternalPlanToProviderRequest->getProviderName();
+		//
 		$db_internal_plan = NULL;
 		try {
 			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$provider = ProviderDAO::getProviderByName($providerName);
+			if($provider == NULL) {
+				$msg = "unknown provider named : ".$providerName;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -202,43 +236,8 @@ class InternalPlansHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//create provider side
-			$provider_plan_uuid = NULL;
-			switch($provider->getName()) {
-				case 'recurly' :
-					$recurlyPlansHandler = new RecurlyPlansHandler();
-					$provider_plan_uuid = $recurlyPlansHandler->createProviderPlan($db_internal_plan);
-					break;
-				case 'gocardless' :
-					$gocardlessPlansHandler = new GocardlessPlansHandler();
-					$provider_plan_uuid = $gocardlessPlansHandler->createProviderPlan($db_internal_plan);
-					break;
-				case 'celery' :
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-				case 'bachat' :
-					$bachatPlansHandler = new BachatPlansHandler();
-					$provider_plan_uuid = $bachatPlansHandler->createProviderPlan($db_internal_plan);
-					break;
-				case 'afr' :
-					$afrPlansHandler = new AfrPlansHandler();
-					$provider_plan_uuid = $afrPlansHandler->createProviderPlan($db_internal_plan);
-					break;
-				case 'stripe':
-					$stripePlanHandler = new StripePlanHandler();
-					$provider_plan_uuid = $stripePlanHandler->createProviderPlan($db_internal_plan);
-					break;
-				case 'cashway' :
-					$cashwayPlansHandler = new CashwayPlansHandler();
-					$provider_plan_uuid = $cashwayPlansHandler->createProviderPlan($db_internal_plan);
-					break;
-				default:
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-			}
+			$providerPlansHandler = ProviderHandlersBuilder::getProviderPlansHandlerInstance($provider);
+			$provider_plan_uuid = $providerPlansHandler->createProviderPlan($db_internal_plan);
 			//create it in DB
 			try {
 				//START TRANSACTION
@@ -429,7 +428,10 @@ class InternalPlansHandler {
 		return($db_internal_plan);
 	}
 	
-	public function doUpdateInternalPlanOpts($internalPlanUuid, array $internalplan_opts_array) {
+	public function doUpdateInternalPlanOpts(UpdateInternalPlanRequest $updateInternalPlanRequest) {
+		$internalPlanUuid = $updateInternalPlanRequest->getInternalPlanUuid();
+		$internalplan_opts_array = $updateInternalPlanRequest->getInternalplanOptsArray();
+		//
 		$db_internal_plan = NULL;
 		try {
 			config::getLogger()->addInfo("internal plan opts updating...");

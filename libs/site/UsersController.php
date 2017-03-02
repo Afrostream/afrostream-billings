@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../users/UsersHandler.php';
-require_once __DIR__ .'/BillingsController.php';
+require_once __DIR__ . '/BillingsController.php';
 require_once __DIR__ . '/../providers/global/requests/GetUserRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetUsersRequest.php';
 require_once __DIR__ . '/../providers/global/requests/CreateUserRequest.php';
@@ -36,7 +36,7 @@ class UsersController extends BillingsController {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$providerName = $data['providerName'];
-				$userReferenceUuuid = $data['userReferenceUuid'];
+				$userReferenceUuid = $data['userReferenceUuid'];
 			}
 			//
 			$usersHandler = new UsersHandler();
@@ -109,7 +109,7 @@ class UsersController extends BillingsController {
 			$createUserRequest->setOrigin('api');
 			$createUserRequest->setProviderName($providerName);
 			$createUserRequest->setUserReferenceUuid($userReferenceUuid);
-			$createUserRequest->setUserOpts($userOptsArray);
+			$createUserRequest->setUserOptsArray($userOptsArray);
 			$createUserRequest->setUserProviderUuid($userProviderUuid);
 			$user = $usersHandler->doGetOrCreateUser($createUserRequest);
 			return($this->returnObjectAsJson($response, 'user', $user));
@@ -151,7 +151,7 @@ class UsersController extends BillingsController {
 				$updateUserRequest = new UpdateUserRequest();
 				$updateUserRequest->setOrigin('api');
 				$updateUserRequest->setUserBillingUuid($userBillingUuid);
-				$updateUserRequest->setUserOpts($userOptsArray);
+				$updateUserRequest->setUserOptsArray($userOptsArray);
 				$user = $usersHandler->doUpdateUserOpts($updateUserRequest);
 			}
 			if($user == NULL) {
@@ -210,7 +210,7 @@ class UsersController extends BillingsController {
 					$updateUserRequest = new UpdateUserRequest();
 					$updateUserRequest->setOrigin('api');
 					$updateUserRequest->setUserBillingUuid($user->getUserBillingUuid());
-					$updateUserRequest->setUserOpts($userOptsArray);
+					$updateUserRequest->setUserOptsArray($userOptsArray);
 					$users[] = $usersHandler->doUpdateUserOpts($updateUserRequest);
 				}
 			}

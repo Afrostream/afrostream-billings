@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 
-class StripePlanHandler
+class StripePlansHandler
 {
 
     public function __construct()

@@ -11,10 +11,21 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 		parent::__construct();
 	}
 	
-	public function doGetInternalPlans($provider_name = NULL, $contextBillingUuid = NULL, $contextCountry = NULL, $isVisible = NULL, $country = NULL, array $filtered_array = NULL) {
+	public function doGetInternalPlans(GetInternalPlansRequest $getInternalPlansRequest) {
+		$provider_name = $getInternalPlansRequest->getProviderName();
+		$contextBillingUuid = $getInternalPlansRequest->getContextBillingUuid();
+		$contextCountry = $getInternalPlansRequest->getContextCountry();
+		$isVisible = $getInternalPlansRequest->getIsVisible();
+		$country = $getInternalPlansRequest->getCountry();
+		$filtered_array = $getInternalPlansRequest->getFilteredArray();
+		//
 		$contextBillingUuid = $this->selectContextBillingUuid($contextBillingUuid, $filtered_array);
 		$contextCountry = $this->selectContextCountry($contextCountry, $country, $filtered_array);
-		$internalPlans = parent::doGetInternalPlans($provider_name, $contextBillingUuid, $contextCountry, $isVisible, $country);
+		//
+		$getInternalPlansRequest->setContextBillingUuid($contextBillingUuid);
+		$getInternalPlansRequest->setContextCountry($contextCountry);
+		
+		$internalPlans = parent::doGetInternalPlans($getInternalPlansRequest);
 		$internalPlansFiltered = array();
 		if(isset($filtered_array)) {
 			$filterEnabled = false;

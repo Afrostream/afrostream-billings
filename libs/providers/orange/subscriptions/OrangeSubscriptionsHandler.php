@@ -149,7 +149,9 @@ class OrangeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($subscription);
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+	public function doRenewSubscription(BillingsSubscription $subscription, RenewSubscriptionRequest $renewSubscriptionRequest) {
+		$start_date = $renewSubscriptionRequest->getStartDate();
+		$end_date = $renewSubscriptionRequest->getEndDate();
 		if($end_date != NULL) {
 			$msg = "renewing a orange subscription does not support that end_date is already set";
 			config::getLogger()->addError($msg);

@@ -7,9 +7,6 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../global/users/ProviderUsersHandler.php';
-require_once __DIR__ . '/../../global/requests/CreateUserRequest.php';
-require_once __DIR__ . '/../../global/requests/UpdateUserRequest.php';
-require_once __DIR__ . '/../../global/requests/UpdateUsersRequest.php';
 
 class GocardlessUsersHandler extends ProviderUsersHandler {
 	
@@ -32,14 +29,14 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//
-				checkUserOptsArray($createUserRequest->getUserOpts(), $this->provider->getName());
+				checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName());
 				//
 				$customer = $client->customers()->create(
 						['params' => 
 								[
-								'email' => $createUserRequest->getUserOpts()['email'],
-								'given_name' => $createUserRequest->getUserOpts()['firstName'], 
-								'family_name' => $createUserRequest->getUserOpts()['lastName']
+								'email' => $createUserRequest->getUserOptsArray()['email'],
+								'given_name' => $createUserRequest->getUserOptsArray()['firstName'], 
+								'family_name' => $createUserRequest->getUserOptsArray()['lastName']
 								]
 						]);
 			}
@@ -65,7 +62,7 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 		try {
 			config::getLogger()->addInfo("gocardless user data updating...");
 			//
-			checkUserOptsArray($updateUserRequest->getUserOpts(), $this->provider->getName());
+			checkUserOptsArray($updateUserRequest->getUserOptsArray(), $this->provider->getName());
 			//
 			$client = new Client(array(
 					'access_token' => getEnv('GOCARDLESS_API_KEY'),
@@ -75,9 +72,9 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 			$client->customers()->update($updateUserRequest->getUserProviderUuid(),
 					['params' =>
 							[
-									'email' => $updateUserRequest->getUserOpts()['email'],
-									'given_name' => $updateUserRequest->getUserOpts()['firstName'],
-									'family_name' => $updateUserRequest->getUserOpts()['lastName']
+									'email' => $updateUserRequest->getUserOptsArray()['email'],
+									'given_name' => $updateUserRequest->getUserOptsArray()['firstName'],
+									'family_name' => $updateUserRequest->getUserOptsArray()['lastName']
 							]
 					]);
 			config::getLogger()->addInfo("gocardless user data updating done successfully, user_provider_uuid=".$updateUserRequest->getUserProviderUuid());

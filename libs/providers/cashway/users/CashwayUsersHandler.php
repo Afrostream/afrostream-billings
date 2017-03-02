@@ -4,9 +4,6 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../global/users/ProviderUsersHandler.php';
-require_once __DIR__ . '/../../global/requests/CreateUserRequest.php';
-require_once __DIR__ . '/../../global/requests/UpdateUserRequest.php';
-require_once __DIR__ . '/../../global/requests/UpdateUsersRequest.php';
 
 class CashwayUsersHandler extends ProviderUsersHandler {
 	

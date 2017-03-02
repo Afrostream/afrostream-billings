@@ -429,7 +429,7 @@ class CashwaySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($subscription));
 	}
 	
-	public function doDeleteSubscription(BillingsSubscription $subscription, $is_a_request = true) {
+	public function doDeleteSubscription(BillingsSubscription $subscription, DeleteSubscriptionRequest $deleteSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("cashway subscription deleting...");
 			if(
@@ -468,6 +468,12 @@ class CashwaySubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
 		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
+	}
+	
+	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
+		$msg = "unsupported feature - update user subscriptions - for provider named : ".$this->provider->getName();
+		config::getLogger()->addWarning($msg);//Just warn for the moment
+		//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}
 	
 }

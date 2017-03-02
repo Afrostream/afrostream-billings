@@ -7,6 +7,7 @@ require_once __DIR__ . '/observers/HookInterface.php';
 require_once __DIR__ . '/observers/CancelSubscription.php';
 require_once __DIR__ . '/observers/UpdateSubscription.php';
 require_once __DIR__ . '/observers/ChargeHookObserver.php';
+require_once __DIR__ . '/../../global/webhooks/ProviderWebHooksHandler.php';
 
 /**
  * Handler for stripe web hook
@@ -14,7 +15,7 @@ require_once __DIR__ . '/observers/ChargeHookObserver.php';
  * Web hook are event sent by stripe who reflect the modification on stripe side
  * like subscription updated, customer canceled a subscription,...
  */
-class StripeWebHooksHandler
+class StripeWebHooksHandler extends ProviderWebHooksHandler
 {
     /**
      * @var SplObjectStorage
@@ -24,8 +25,9 @@ class StripeWebHooksHandler
     /**
      * StripeWebHooksHandler constructor.
      */
-    public function __construct()
+    public function __construct(Provider $provider)
     {
+    	parent::__construct($provider);
     	\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
     	$this->observers = new \SplObjectStorage();
         $this->loadHooks();

@@ -5,6 +5,8 @@ require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/CancelSubscriptionRequest.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/RenewSubscriptionRequest.php';
 
 ini_set("auto_detect_line_endings", true);
 
@@ -660,7 +662,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
-				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
+				$renewSubscriptionRequest = new RenewSubscriptionRequest();
+				$renewSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+				$renewSubscriptionRequest->setStartDate(NULL);
+				$renewSubscriptionRequest->setEndDate(NULL);
+				$renewSubscriptionRequest->setOrigin('script');
+				$subscriptionsHandler->doRenewSubscription($renewSubscriptionRequest);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
 				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
@@ -892,7 +899,11 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
-				$subscriptionsHandler->doCancelSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), $cancel_date, false);
+				$cancelSubscriptionRequest = new CancelSubscriptionRequest();
+				$cancelSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+				$cancelSubscriptionRequest->setOrigin('script');
+				$cancelSubscriptionRequest->setCancelDate($cancel_date);
+				$subscriptionsHandler->doCancelSubscription($cancelSubscriptionRequest);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
 				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT

@@ -38,6 +38,41 @@ require_once __DIR__ . '/../braintree/users/BraintreeUsersHandler.php';
 require_once __DIR__ . '/../netsize/users/NetsizeUsersHandler.php';
 require_once __DIR__ . '/../wecashup/users/WecashupUsersHandler.php';
 require_once __DIR__ . '/../google/users/GoogleUsersHandler.php';
+//<-- couponsCampaigns -->
+require_once __DIR__ . '/couponsCampaigns/ProviderCouponsCampaignsHandler.php';
+require_once __DIR__ . '/../recurly/couponsCampaigns/RecurlyCouponsCampaignsHandler.php';
+require_once __DIR__ . '/../stripe/couponsCampaigns/StripeCouponsCampaignsHandler.php';
+require_once __DIR__ . '/../braintree/couponsCampaigns/BraintreeCouponsCampaignsHandler.php';
+require_once __DIR__ . '/../afr/couponsCampaigns/AfrCouponsCampaignsHandler.php';
+//<-- plans -->
+require_once __DIR__ . '/plans/ProviderPlansHandler.php';
+//require_once __DIR__ . '/../celery/plans/CeleryPlansHandler.php';
+require_once __DIR__ . '/../recurly/plans/RecurlyPlansHandler.php';
+require_once __DIR__ . '/../gocardless/plans/GocardlessPlansHandler.php';
+require_once __DIR__ . '/../bachat/plans/BachatPlansHandler.php';
+require_once __DIR__ . '/../afr/plans/AfrPlansHandler.php';
+require_once __DIR__ . '/../cashway/plans/CashwayPlansHandler.php';
+//TODO : require_once __DIR__ . '/../orange/plans/OrangePlansHandler.php';
+//TODO : require_once __DIR__ . '/../bouygues/plans/BouyguesPlansHandler.php';
+//TODO : require_once __DIR__ . '/../stripe/plans/StripePlansHandler.php';
+//TODO : require_once __DIR__ . '/../braintree/plans/BraintreePlansHandler.php';
+//TODO : require_once __DIR__ . '/../netsize/plans/NetsizePlansHandler.php';
+//TODO : require_once __DIR__ . '/../wecashup/plans/WecashupPlansHandler.php';
+//TODO : require_once __DIR__ . '/../google/plans/GooglePlansHandler.php';
+//<-- coupons -->
+require_once __DIR__ . '/coupons/ProviderCouponsHandler.php';
+require_once __DIR__ . '/../cashway/coupons/CashwayCouponsHandler.php';
+require_once __DIR__ . '/../afr/coupons/AfrCouponsHandler.php';
+//<-- webhooks -->
+require_once __DIR__ . '/webhooks/ProviderWebHooksHandler.php';
+require_once __DIR__ . '/../recurly/webhooks/RecurlyWebHooksHandler.php';
+require_once __DIR__ . '/../gocardless/webhooks/GocardlessWebHooksHandler.php';
+require_once __DIR__ . '/../cashway/webhooks/CashwayWebHooksHandler.php';
+require_once __DIR__ . '/../stripe/webhooks/StripeWebHooksHandler.php';
+require_once __DIR__ . '/../braintree/webhooks/BraintreeWebHooksHandler.php';
+require_once __DIR__ . '/../netsize/webhooks/NetsizeWebHooksHandler.php';
+require_once __DIR__ . '/../wecashup/webhooks/WecashupWebHooksHandler.php';
+require_once __DIR__ . '/../bachat/webhooks/BachatWebHooksHandler.php';
 
 class ProviderHandlersBuilder {
 	
@@ -162,6 +197,103 @@ class ProviderHandlersBuilder {
 				break;
 		}
 		return($providerUsersHandlerInstance);
+	}
+	
+	public static function getProviderCouponsCampaignsHandlerInstance(Provider $provider) {
+		$providerCouponsCampaignsHandlerInstance = NULL;
+		switch($provider->getName()) {
+			case 'recurly' :
+				$providerCouponsCampaignsHandlerInstance = new RecurlyCouponsCampaignsHandler($provider);
+				break;
+			case 'stripe' :
+				$providerCouponsCampaignsHandlerInstance = new StripeCouponsCampaignsHandler($provider);
+				break;
+			case 'braintree' :
+				$providerCouponsCampaignsHandlerInstance = new BraintreeCouponsCampaignsHandler($provider);
+				break;
+			case 'afr' :
+				$providerCouponsCampaignsHandlerInstance = new AfrCouponsCampaignsHandler($provider);
+				break;
+			default :
+				$providerCouponsCampaignsHandlerInstance = new ProviderCouponsCampaignsHandler($provider);
+				break;
+		}
+		return($providerCouponsCampaignsHandlerInstance);
+	}
+	
+	public static function getProviderPlansHandlerInstance(Provider $provider) {
+		$providerPlansHandlerInstance = NULL;
+		switch($provider->getName()) {
+			case 'recurly' :
+				$providerPlansHandlerInstance = new RecurlyPlansHandler($provider);
+				break;
+			case 'gocardless' :
+				$providerPlansHandlerInstance = new GocardlessPlansHandler($provider);
+				break;
+			case 'bachat' :
+				$providerPlansHandlerInstance = new BachatPlansHandler($provider);
+				break;
+			case 'afr' :
+				$providerPlansHandlerInstance = new AfrPlansHandler($provider);
+				break;
+			case 'cashway' :
+				$providerPlansHandlerInstance = new CashwayPlansHandler($provider);
+				break;
+			default :
+				$providerPlansHandlerInstance = new ProviderPlansHandler($provider);
+				break;
+		}
+		return($providerPlansHandlerInstance);
+	}
+		
+	public static function getProviderCouponsHandlerInstance(Provider $provider) {
+		$providerCouponsHandlerInstance = NULL;
+		switch($provider->getName()) {
+			case 'cashway' :
+				$providerCouponsHandlerInstance = new CashwayCouponsHandler($provider);
+				break;
+			case 'afr' :
+				$providerCouponsHandlerInstance = new AfrCouponsHandler($provider);
+				break;
+			default :
+				$providerCouponsHandlerInstance = new ProviderCouponsHandler($provider);
+				break;
+		}
+		return($providerCouponsHandlerInstance);
+	}
+	
+	public static function getProviderWebHooksHandlerInstance(Provider $provider) {
+		$providerWebHooksHandlerInstance  = NULL;
+		switch($provider->getName()) {
+			case 'recurly' :
+				$providerWebHooksHandlerInstance = new RecurlyWebHooksHandler($provider);
+				break;
+			case 'gocardless' :
+				$providerWebHooksHandlerInstance = new GocardlessWebHooksHandler($provider);
+				break;
+			case 'cashway' :
+				$providerWebHooksHandlerInstance = new CashwayWebHooksHandler($provider);
+				break;
+			case 'stripe':
+				$providerWebHooksHandlerInstance = new StripeWebHooksHandler($provider);
+				break;
+			case 'braintree' :
+				$providerWebHooksHandlerInstance = new BraintreeWebHooksHandler($provider);
+				break;
+			case 'netsize' :
+				$providerWebHooksHandlerInstance = new NetsizeWebHooksHandler($provider);
+				break;
+			case 'wecashup' :
+				$providerWebHooksHandlerInstance = new WecashupWebHooksHandler($provider);
+				break;
+			case 'bachat' :
+				$providerWebHooksHandlerInstance = new BachatWebHooksHandler($provider);
+				break;
+			default :
+				$providerWebHooksHandlerInstance = new ProviderWebHooksHandler($provider);
+				break;
+		}
+		return($providerWebHooksHandlerInstance);
 	}
 	
 }

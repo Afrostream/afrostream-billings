@@ -4,8 +4,8 @@ require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class UpdateUsersRequest extends ActionRequest {
 	
-	protected $userReferenceUuid;
-	protected $userOpts;
+	protected $userReferenceUuid = NULL;
+	protected $userOptsArray = array();
 	
 	public function __construct() {
 		parent::__construct();
@@ -19,12 +19,12 @@ class UpdateUsersRequest extends ActionRequest {
 		return($this->userReferenceUuid);
 	}
 	
-	public function setUserOpts(array $userOpts = NULL) {
-		$this->userOpts = $userOpts;
+	public function setUserOpts(array $userOptsArray) {
+		$this->userOptsArray = $userOptsArray;
 	}
 	
-	public function getUserOpts() {
-		return($this->userOpts);
+	public function getUserOptsArray() {
+		return($this->userOptsArray);
 	}
 	
 }

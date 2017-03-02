@@ -175,7 +175,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($db_subscription));
 	}
 	
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("netsize subscription canceling...");
 			$doIt = false;
@@ -232,7 +232,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				}
 			/*}*/
 			if($doIt == true) {
-				$subscription->setSubCanceledDate($cancel_date);
+				$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
 				/*if($is_a_request == true) {
 					$subscription->setSubStatus('requesting_canceled');
 				} else {*/
@@ -264,7 +264,9 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($subscription));
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+	public function doRenewSubscription(BillingsSubscription $subscription, RenewSubscriptionRequest $renewSubscriptionRequest) {
+		$start_date = $renewSubscriptionRequest->getStartDate();
+		$end_date = $renewSubscriptionRequest->getEndDate();
 		if($end_date != NULL) {
 			$msg = "renewing a netsize subscription does not support that end_date is already set";
 			config::getLogger()->addError($msg);
@@ -619,7 +621,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($subscription);
 	}
 	
-	public function doUpdateUserSubscription(BillingsSubscription $db_subscription) {
+	public function doUpdateUserSubscription(BillingsSubscription $db_subscription, UpdateSubscriptionRequest $updateSubscriptionRequest) {
 		$user = UserDAO::getUserById($db_subscription->getUserId());
 		if($user == NULL) {
 			$msg = "unknown user with id : ".$db_subscription->getUserId();

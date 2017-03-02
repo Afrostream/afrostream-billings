@@ -13,8 +13,6 @@ require_once __DIR__ . '/../plans/GocardlessPlansHandler.php';
 require_once __DIR__ . '/../../global/ProviderHandlersBuilder.php';
 require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
 require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.php';
-require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
-require_once __DIR__ . '/../../global/requests/RefundTransactionRequest.php';
 
 class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
@@ -535,7 +533,9 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return(NULL);
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+	public function doRenewSubscription(BillingsSubscription $subscription, RenewSubscriptionRequest $renewSubscriptionRequest) {
+		$start_date = $renewSubscriptionRequest->getStartDate();
+		$end_date = $renewSubscriptionRequest->getEndDate();
 		if($end_date != NULL) {
 			$msg = "renewing a gocardless subscription does not support that end_date is already set";
 			config::getLogger()->addError($msg);
@@ -623,7 +623,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId())));
 	}
 	
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("gocardless subscription cancel...");
 			if(
@@ -635,7 +635,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//nothing todo : already done or in process
 			} else {
 				//
-				if($is_a_request == true) {
+				if($cancelSubscriptionRequest->getOrigin() == 'api') {
 					$client = new Client(array(
 							'access_token' => getEnv('GOCARDLESS_API_KEY'),
 							'environment' => getEnv('GOCARDLESS_API_ENV')
@@ -643,7 +643,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					//
 					$client->subscriptions()->cancel($subscription->getSubUid());
 				}
-				$subscription->setSubCanceledDate($cancel_date);
+				$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
 				$subscription->setSubStatus('canceled');
 				//
 				try {

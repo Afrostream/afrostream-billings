@@ -374,7 +374,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return(NULL);
 	}
 	
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("recurly subscription canceling...");
 			if(
@@ -393,7 +393,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//
 				$api_subscription->cancel();
 				//
-				$subscription->setSubCanceledDate($cancel_date);
+				$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
 				$subscription->setSubStatus('canceled');
 				//
 				try {
@@ -461,13 +461,12 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
 	}
 	
-	public function doReactivateSubscription(BillingsSubscription $subscription) {
+	public function doReactivateSubscription(BillingsSubscription $subscription, ReactivateSubscriptionRequest $reactivateSubscriptionRequest) {
 		try {
-			config::getLogger()->addInfo("recurly subscription reactivating...");
-			if($subscription->getSubStatus() == "active")
-			{
-				//nothing todo
-			} else {
+			config::getLogger()->addInfo($this->provider->getName()." subscription reactivating...");
+			if($subscription->getSubStatus() == "active") {
+				//nothing to do
+			} else if($subscription->getSubStatus() == "canceled") {
 				//
 				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
@@ -490,38 +489,59 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 					pg_query("ROLLBACK");
 					throw $e;
 				}
+			} else {
+				$msg = "cannot reactivate subscription with status=".$subscription->getSubStatus();
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
-			config::getLogger()->addInfo("recurly subscription reactivating done successfully for recurly_subscription_uuid=".$subscription->getSubUid());
+			config::getLogger()->addInfo($this->provider->getName()." subscription reactivating done successfully for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid());
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while reactivating a recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("recurly subscription reactivating failed : ".$msg);
+			$msg = "a billings exception occurred while reactivating a ".$this->provider->getName()." subscription for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." subscription reactivating failed : ".$msg);
 			throw $e;
 		} catch (Recurly_ValidationError $e) {
-			$msg = "a validation error exception occurred while reactivating a recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("recurly subscription reactivating failed : ".$msg);
+			$msg = "a validation error exception occurred while reactivating a ".$this->provider->getName()." subscription for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." subscription reactivating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while reactivating a recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("recurly subscription reactivating failed : ".$msg);
+			$msg = "an unknown exception occurred while reactivating a ".$this->provider->getName()." subscription for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." subscription reactivating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($this->doFillSubscription($subscription));
 	}
 	
-	public function doUpdateInternalPlan(BillingsSubscription $subscription, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts) {
+	public function doUpdateInternalPlanSubscription(BillingsSubscription $subscription, UpdateInternalPlanSubscriptionRequest $updateInternalPlanSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("recurly subscription updating Plan...");
+			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid());
+			if($internalPlan == NULL) {
+				$msg = "unknown internalPlanUuid : ".$updateInternalPlanSubscriptionRequest->getInternalPlanUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$providerPlanId = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internalPlan->getId(), $this->provider->getId());
+			if($providerPlanId == NULL) {
+				$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$this->provider->getName();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$providerPlan = PlanDAO::getPlanById($providerPlanId);
+			if($providerPlan == NULL) {
+				$msg = "unknown plan with id : ".$providerPlanId;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			//
 			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
 			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
 			//
 			$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
 			//
-			$api_subscription->plan_code = $plan->getPlanUuid();
+			$api_subscription->plan_code = $providerPlan->getPlanUuid();
 			$api_subscription->updateImmediately();
 			//
-			$subscription->setPlanId($plan->getId());
+			$subscription->setPlanId($providerPlan->getId());
 			//
 			try {
 				//START TRANSACTION
@@ -537,7 +557,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addInfo("recurly subscription updating Plan done successfully for recurly_subscription_uuid=".$subscription->getSubUid());
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while updating a Plan recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("recurly subscription reactivating failed : ".$msg);
+			config::getLogger()->addError("recurly subscription updating Plan failed : ".$msg);
 			throw $e;
 		} catch (Recurly_ValidationError $e) {
 			$msg = "a validation error exception occurred while updating a Plan recurly subscription for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
