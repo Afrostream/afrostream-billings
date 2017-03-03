@@ -11,7 +11,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 	
 	public function __construct($provider) {
 		parent::__construct($provider);
-		\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+		\Stripe\Stripe::setApiKey($this->provider->getApiSecret());
 	}
 	
 	public function doUpdateTransactionsByUser(User $user, UserOpts $userOpts, DateTime $from = NULL, DateTime $to = NULL, $updateType) {

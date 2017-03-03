@@ -13,7 +13,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 	
     public function __construct($provider) {
     	parent::__construct($provider);
-    	\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+    	\Stripe\Stripe::setApiKey($this->provider->getApiSecret());
     }
 
     /**
@@ -80,20 +80,20 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      * @return BillingsSubscription
      */
     
-    public function createDbSubscriptionFromApiSubscriptionUuid(User $user,
-    		UserOpts $userOpts,
-    		Provider $provider,
-    		InternalPlan $internalPlan,
-    		InternalPlanOpts $internalPlanOpts,
-    		Plan $plan,
-    		PlanOpts $planOpts,
-    		BillingsSubscriptionOpts $subOpts = NULL,
-    		BillingInfo $billingInfo = NULL,
-    		$subscription_billing_uuid,
-    		$sub_uuid,
-    		$updateType,
-    		$updateId)
-    {
+    public function createDbSubscriptionFromApiSubscriptionUuid(
+			User $user, 
+			UserOpts $userOpts, 
+			Provider $provider, 
+			InternalPlan $internalPlan = NULL, 
+			InternalPlanOpts $internalPlanOpts = NULL, 
+			Plan $plan = NULL, 
+			PlanOpts $planOpts = NULL, 
+			BillingsSubscriptionOpts $subOpts = NULL, 
+			BillingInfo $billingInfo = NULL, 
+			$subscription_billing_uuid, 
+			$sub_uuid, 
+			$updateType, 
+			$updateId) {
     	$api_subscription = NULL;
     	if ($internalPlan->getCycle() == PlanCycle::once) {
     		/* EMULATE API */

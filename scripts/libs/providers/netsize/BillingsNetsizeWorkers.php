@@ -88,7 +88,7 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 		try {
 			//
 			ScriptsConfig::getLogger()->addInfo("refreshing netsize subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()."...");
-			$netsizeClient = new NetsizeClient();
+			$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 			
 			$getStatusRequest = new GetStatusRequest();
 			$getStatusRequest->setTransactionId($subscription->getSubUid());

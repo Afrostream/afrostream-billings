@@ -17,7 +17,7 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 			if($createUserRequest->getUserProviderUuid() != NULL) {
 				//
 				$client = new Client(array(
-						'access_token' => getEnv('GOCARDLESS_API_KEY'),
+						'access_token' => $this->provider->getApiSecret(),
 						'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//
@@ -25,7 +25,7 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 			} else {
 				//
 				$client = new Client(array(
-					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'access_token' => $this->provider->getApiSecret(),
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//
@@ -65,7 +65,7 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 			checkUserOptsArray($updateUserRequest->getUserOptsArray(), $this->provider->getName());
 			//
 			$client = new Client(array(
-					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'access_token' => $this->provider->getApiSecret(),
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 			));
 			//

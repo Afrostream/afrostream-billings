@@ -54,7 +54,7 @@ require_once __DIR__ . '/../afr/plans/AfrPlansHandler.php';
 require_once __DIR__ . '/../cashway/plans/CashwayPlansHandler.php';
 //TODO : require_once __DIR__ . '/../orange/plans/OrangePlansHandler.php';
 //TODO : require_once __DIR__ . '/../bouygues/plans/BouyguesPlansHandler.php';
-//TODO : require_once __DIR__ . '/../stripe/plans/StripePlansHandler.php';
+require_once __DIR__ . '/../stripe/plans/StripePlansHandler.php';
 //TODO : require_once __DIR__ . '/../braintree/plans/BraintreePlansHandler.php';
 //TODO : require_once __DIR__ . '/../netsize/plans/NetsizePlansHandler.php';
 //TODO : require_once __DIR__ . '/../wecashup/plans/WecashupPlansHandler.php';
@@ -238,6 +238,9 @@ class ProviderHandlersBuilder {
 				break;
 			case 'cashway' :
 				$providerPlansHandlerInstance = new CashwayPlansHandler($provider);
+				break;
+			case 'stripe' :
+				$providerPlansHandlerInstance = new StripePlansHandler($provider);
 				break;
 			default :
 				$providerPlansHandlerInstance = new ProviderPlansHandler($provider);

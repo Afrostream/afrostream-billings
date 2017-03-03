@@ -66,15 +66,8 @@ class NetsizeWebHooksHandler extends ProviderWebHooksHandler {
 			//ignore notification
 			config::getLogger()->addWarning('notification_name : '. $notificationNode->getName(). ', no subscription-transaction-id attribute found, notification is ignored');
 		} else {
-			//provider
-			$provider = ProviderDAO::getProviderByName('netsize');
-			if($provider == NULL) {
-				$msg = "provider named 'netsize' not found";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
 			
-			$netsizeClient = new NetsizeClient();
+			$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 			
 			$getStatusRequest = new GetStatusRequest();
 			$getStatusRequest->setTransactionId($subscription_provider_uuid);
@@ -82,7 +75,7 @@ class NetsizeWebHooksHandler extends ProviderWebHooksHandler {
 			$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 			$api_subscription = $getStatusResponse; 
 			
-			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $subscription_provider_uuid);
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($this->provider->getId(), $subscription_provider_uuid);
 			if($db_subscription == NULL) {
 				$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found";
 				config::getLogger()->addError($msg);
@@ -104,16 +97,16 @@ class NetsizeWebHooksHandler extends ProviderWebHooksHandler {
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
 			if($internalPlan == NULL) {
-				$msg = "plan with uuid=".$plan_uuid." for provider ".$provider->getName()." is not linked to an internal plan";
+				$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
-			$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler($provider);
+			$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler($this->provider);
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
-				$db_subscription = $netsizeSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
+				$db_subscription = $netsizeSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch(Exception $e) {
@@ -146,13 +139,6 @@ class NetsizeWebHooksHandler extends ProviderWebHooksHandler {
 		$expirationDate = DateTime::createFromFormat('Y-m-d\TH:i:s', $expirationDateStr, new DateTimeZone(config::$timezone));
 		if($expirationDate === false) {
 			$msg = "expiration-date date : ".$expirationDateStr." cannot be parsed";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		//provider
-		$provider = ProviderDAO::getProviderByName('netsize');
-		if($provider == NULL) {
-			$msg = "provider named 'netsize' not found";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}

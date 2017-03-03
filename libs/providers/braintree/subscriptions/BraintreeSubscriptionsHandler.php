@@ -18,9 +18,9 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				checkSubOptsArray($subOpts->getOpts(), 'braintree', 'get');
 				// in braintree : user subscription is pre-created
 				Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-				Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-				Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-				Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+				Braintree_Configuration::merchantId($this->provider->getMerchantId());
+				Braintree_Configuration::publicKey($this->provider->getApiKey());
+				Braintree_Configuration::privateKey($this->provider->getApiSecret());
 				//
 				$subscription = NULL;
 				$customer = Braintree\Customer::find($user->getUserProviderUuid());
@@ -41,9 +41,9 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				checkSubOptsArray($subOpts->getOpts(), 'braintree', 'create');
 				// in braintree : user subscription is NOT pre-created
 				Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-				Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-				Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-				Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+				Braintree_Configuration::merchantId($this->provider->getMerchantId());
+				Braintree_Configuration::publicKey($this->provider->getApiKey());
+				Braintree_Configuration::privateKey($this->provider->getApiSecret());
 				//
 				$paymentMethod_attribs = array();
 				$paymentMethod_attribs['customerId'] = $user->getUserProviderUuid();
@@ -180,9 +180,9 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		config::getLogger()->addInfo("braintree dbsubscriptions update for userid=".$user->getId()."...");
 		//
 		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-		Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-		Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+		Braintree_Configuration::merchantId($this->provider->getMerchantId());
+		Braintree_Configuration::publicKey($this->provider->getApiKey());
+		Braintree_Configuration::privateKey($this->provider->getApiSecret());
 		//
 		$provider = ProviderDAO::getProviderById($user->getProviderId());
 		//
@@ -242,12 +242,25 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		config::getLogger()->addInfo("braintree dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(
+			User $user, 
+			UserOpts $userOpts, 
+			Provider $provider, 
+			InternalPlan $internalPlan = NULL, 
+			InternalPlanOpts $internalPlanOpts = NULL, 
+			Plan $plan = NULL, 
+			PlanOpts $planOpts = NULL, 
+			BillingsSubscriptionOpts $subOpts = NULL, 
+			BillingInfo $billingInfo = NULL, 
+			$subscription_billing_uuid, 
+			$sub_uuid, 
+			$update_type, 
+			$updateId) {
 		//
 		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-		Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-		Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+		Braintree_Configuration::merchantId($this->provider->getMerchantId());
+		Braintree_Configuration::publicKey($this->provider->getApiKey());
+		Braintree_Configuration::privateKey($this->provider->getApiSecret());
 		//
 		$api_subscription = Braintree\Subscription::find($sub_uuid);
 		//
@@ -490,9 +503,9 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			} else {
 				//
 				Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-				Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-				Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-				Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+				Braintree_Configuration::merchantId($this->provider->getMerchantId());
+				Braintree_Configuration::publicKey($this->provider->getApiKey());
+				Braintree_Configuration::privateKey($this->provider->getApiSecret());
 				//
 				$result = Braintree\Subscription::cancel($subscription->getSubUid());
 				if (!$result->success) {
@@ -603,9 +616,9 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			}
 			//
 			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-			Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-			Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+			Braintree_Configuration::merchantId($this->provider->getMerchantId());
+			Braintree_Configuration::publicKey($this->provider->getApiKey());
+			Braintree_Configuration::privateKey($this->provider->getApiSecret());
 			//
 			Braintree\Subscription::update($subscription->getSubUid(), 
 					[
@@ -688,9 +701,9 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					} else {
 						//
 						Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-						Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-						Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-						Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+						Braintree_Configuration::merchantId($this->provider->getMerchantId());
+						Braintree_Configuration::publicKey($this->provider->getApiKey());
+						Braintree_Configuration::privateKey($this->provider->getApiSecret());
 						//
 						$result = Braintree\Subscription::cancel($subscription->getSubUid());
 						if (!$result->success) {

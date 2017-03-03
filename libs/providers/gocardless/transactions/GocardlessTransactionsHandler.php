@@ -17,7 +17,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 			config::getLogger()->addInfo("updating gocardless transactions...");
 			//
 			$client = new Client(array(
-					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'access_token' => $this->provider->getApiSecret(),
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 			));
 			//
@@ -63,7 +63,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 		$country = $gocardlessCustomer->country_code;
 		if($country == NULL) {
 			$client = new Client(array(
-					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'access_token' => $this->provider->getApiSecret(),
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 			));
 			$api_mandate = $client->mandates()->get($gocardlessChargeTransaction->links->mandate);
@@ -132,7 +132,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 	
 	private function updateRefundsFromProvider(User $user, UserOpts $userOpts, Payment $gocardlessChargeTransaction, BillingsTransaction $billingsTransaction, $updateType) {
 		$client = new Client(array(
-				'access_token' => getEnv('GOCARDLESS_API_KEY'),
+				'access_token' => $this->provider->getApiSecret(),
 				'environment' => getEnv('GOCARDLESS_API_ENV')
 		));
 		//
@@ -242,7 +242,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 		try {
 			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
 			$client = new Client(array(
-					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'access_token' => $this->provider->getApiSecret(),
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 			));
 			$api_payment = $client->payments()->get($transaction->getTransactionProviderUuid());

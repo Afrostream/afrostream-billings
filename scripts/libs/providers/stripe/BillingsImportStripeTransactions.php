@@ -7,14 +7,14 @@ require_once __DIR__ . '/../../../../libs/transactions/TransactionsHandler.php';
 
 class BillingsImportStripeTransactions
 {
-    private $providerId = NULL;
+    private $provider = NULL;
 
     const STRIPE_LIMIT = 50;
 
     public function __construct()
     {
-        $this->providerId = ProviderDAO::getProviderByName('stripe')->getId();
-        \Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+        $this->provider = ProviderDAO::getProviderByName('stripe');
+        \Stripe\Stripe::setApiKey($this->provider->getApiSecret());
     }
 
     public function doImportTransactions(DateTime $from = NULL, DateTime $to = NULL)
@@ -83,7 +83,7 @@ class BillingsImportStripeTransactions
     {
     	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe...");
     	$transactionHandler = new TransactionsHandler();
-    	$transactionHandler->doUpdateTransactionByTransactionProviderUuid('stripe', $charge->id, 'import');
+    	$transactionHandler->doUpdateTransactionByTransactionProviderUuid($this->provider->getName(), $charge->id, 'import');
     	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe done successfully");
     }
     
@@ -98,7 +98,7 @@ class BillingsImportStripeTransactions
         }
         $hasToBeProcessed = !$isRecurlyCustomer;
         if($hasToBeProcessed) {
-	        $user = UserDAO::getUserByUserProviderUuid($this->providerId, $customer->id);
+	        $user = UserDAO::getUserByUserProviderUuid($this->provider->getId(), $customer->id);
 	        if($user == NULL) {
 	            throw new Exception("user with account_code=".$customer->id." does not exist in billings database");
 	        }
