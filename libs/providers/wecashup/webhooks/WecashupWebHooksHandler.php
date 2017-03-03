@@ -36,12 +36,12 @@ class WecashupWebHooksHandler extends ProviderWebHooksHandler {
 				$received_transaction_token = $post_data_as_array['transaction_token'];
 			}
 			//check merchant
-			if(getEnv('WECASHUP_MERCHANT_SECRET') != $received_transaction_merchant_secret) {
+			if($this->provider->getApiSecret() != $received_transaction_merchant_secret) {
 				$msg = "merchant secret given does not match";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$wecashupClient = new WecashupClient();
+			$wecashupClient = new WecashupClient($this->provider->getMerchantId(), $this->provider->getApiKey(), $this->provider->getApiSecret());
 			$wecashupTransactionRequest = new WecashupTransactionRequest();
 			$wecashupTransactionRequest->setTransactionUid($received_transaction_uid);
 			$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);

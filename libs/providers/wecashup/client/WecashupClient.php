@@ -3,11 +3,25 @@
 require_once __DIR__ . '/../../../../config/config.php';
 
 class WecashupClient {
+	
+	private $merchantUid;
+	private $merchantPublicKey;
+	private $merchantSecret;
 		
-	public function __construct() {
+	public function __construct($merchantUid, $merchantPublicKey, $merchantSecret) {
+		$this->merchantUid  = $merchantUid;
+		$this->merchantPublicKey = $merchantPublicKey;
+		$this->merchantSecret = $merchantSecret;
+	}
+	
+	protected function initRequest(WecashupRequest $wecashupRequest) {
+		$wecashupRequest->setMerchantUid($this->merchantUid);
+		$wecashupRequest->setMerchantPublicKey($this->merchantPublicKey);
+		$wecashupRequest->setMerchantSecret($this->merchantSecret);
 	}
 	
 	public function getTransaction(WecashupTransactionRequest $wecashupTransactionRequest) {
+		$this->initRequest($wecashupTransactionRequest);
 		$url = getEnv('WECASHUP_API_URL').'/'.
 				$wecashupTransactionRequest->getMerchantUid().
 				'/transactions/'.
@@ -39,6 +53,7 @@ class WecashupClient {
 	}
 	
 	public function validateTransaction(WecashupValidateTransactionRequest $wecashupValidateTransactionRequest) {
+		$this->initRequest($wecashupValidateTransactionRequest);
 		$url = getEnv('WECASHUP_API_URL').'/'.
 				$wecashupValidateTransactionRequest->getMerchantUid().
 				'/transactions/'.
@@ -81,6 +96,7 @@ class WecashupClient {
 	}
 	
 	public function refundTransaction(WecashupRefundTransactionRequest $wecashupRefundTransactionRequest) {
+		$this->initRequest($wecashupRefundTransactionRequest);
 		$url = getEnv('WECASHUP_API_URL').'/'.
 				$wecashupRefundTransactionRequest->getMerchantUid().
 				'/transactions?merchant_public_key='.
@@ -133,17 +149,27 @@ class WecashupRequest {
 	private $merchantSecret;
 	//
 	public function __construct() {
-		$this->merchantUid = getEnv('WECASHUP_MERCHANT_UID');
-		$this->merchantPublicKey = getEnv('WECASHUP_MERCHANT_PUBLIC_KEY');
-		$this->merchantSecret = getEnv('WECASHUP_MERCHANT_SECRET');
+		
+	}
+	
+	public function setMerchantUid($merchantUid) {
+		$this->merchantUid = $merchantUid;
 	}
 	
 	public function getMerchantUid() {
 		return($this->merchantUid);
 	}
 	
+	public function setMerchantPublicKey($merchantPublicKey) {
+		$this->merchantPublicKey = $merchantPublicKey;
+	}
+	
 	public function getMerchantPublicKey() {
 		return($this->merchantPublicKey);
+	}
+	
+	public function setMerchantSecret($merchantSecret) {
+		$this->merchantSecret = $merchantSecret;
 	}
 	
 	public function getMerchantSecret() {
