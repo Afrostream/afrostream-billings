@@ -28,7 +28,7 @@ class StripeWebHooksHandler extends ProviderWebHooksHandler
     public function __construct(Provider $provider)
     {
     	parent::__construct($provider);
-    	\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+    	\Stripe\Stripe::setApiKey($this->provider->getApiSecret());
     	$this->observers = new \SplObjectStorage();
         $this->loadHooks();
     }
@@ -71,11 +71,11 @@ class StripeWebHooksHandler extends ProviderWebHooksHandler
             return;
         }
 
-        $provider = ProviderDAO::getProviderByName('stripe');
+		
 
         // send event to observers
         foreach ($this->observers as $hookObserver) {
-			$hookObserver->event($event, $provider);
+			$hookObserver->event($event, $this->provider);
         }
         
         $this->log('Process new event id='.$postedEvent['id'].', type='.$postedEvent['type'].' done successfully');

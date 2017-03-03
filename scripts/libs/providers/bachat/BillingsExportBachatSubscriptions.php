@@ -5,10 +5,10 @@ require_once __DIR__ . '/../../../../libs/db/dbExports.php';
 
 class BillingsExportBachatSubscriptions {
 	
-	private $providerid = NULL;
+	private $provider = NULL;
 	
 	public function __construct() {
-		$this->providerid = ProviderDAO::getProviderByName('bachat')->getId();
+		$this->provider = ProviderDAO::getProviderByName('bachat');
 	}
 	
 	public function doExportSubscriptionsForChartmogul(DateTime $from, DateTime $to, $export_subs_file_path) {

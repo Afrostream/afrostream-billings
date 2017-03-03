@@ -13,7 +13,7 @@ class NetsizeUsersHandler extends ProviderUsersHandler {
 			if($createUserRequest->getUserProviderUuid() != NULL) {
 				//TODO : transactionId may be in $createUserRequest->getUserOptsArray(), maybe should we check it later
 				//REMOVE CHECK
-				/*$netsizeClient = new NetsizeClient();
+				/*$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 				$getStatusRequest = new GetStatusRequest();
 				$getStatusRequest->setTransactionId($user_provider_uuid);
 				$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);

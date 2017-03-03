@@ -106,7 +106,7 @@ class WecashupTransactionsHandler extends ProviderTransactionsHandler {
 			}
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 			//
-			$wecashupClient = new WecashupClient();
+			$wecashupClient = new WecashupClient($this->provider->getMerchantId(), $this->provider->getApiKey(), $this->provider->getApiSecret());
 			$wecashupRefundTransactionRequest = new WecashupRefundTransactionRequest();
 			$wecashupRefundTransactionRequest->setTransactionUid($transaction->getTransactionProviderUuid());
 			$wecashupRefundTransactionResponse = $wecashupClient->refundTransaction($wecashupRefundTransactionRequest);

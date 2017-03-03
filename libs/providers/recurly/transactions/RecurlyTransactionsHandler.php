@@ -21,8 +21,8 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
 			}
 			//
-			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			Recurly_Client::$subdomain = $this->provider->getMerchantId();
+			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			//
 			$recurlyAccount = Recurly_Account::get($user->getUserProviderUuid());
 			//
@@ -290,8 +290,8 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 		try {
 			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
 			//
-			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			Recurly_Client::$subdomain = $this->provider->getMerchantId();
+			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			//
 			$api_payment = Recurly_Transaction::get($transaction->getTransactionProviderUuid());
 			$api_invoice = $api_payment->invoice->get();

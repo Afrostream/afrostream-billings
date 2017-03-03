@@ -67,8 +67,8 @@ class CashwayCouponsHandler extends ProviderCouponsHandler {
 			}
 			//
 			$conf = array (
-					'API_KEY'		=> getEnv('CASHWAY_API_HTTP_AUTH_USER'),
-					'API_SECRET'	=> getEnv('CASHWAY_API_HTTP_AUTH_PWD'),
+					'API_KEY'		=> $this->provider->getApiKey(),
+					'API_SECRET'	=> $this->provider->getApiSecret(),
 					'USER_AGENT' 	=> getEnv('CASHWAY_USER_AGENT'),
 					'USE_STAGING'	=> getEnv('CASHWAY_USE_STAGING') == 1 ? true : false
 			);

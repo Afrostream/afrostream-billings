@@ -7,10 +7,10 @@ require_once __DIR__ . '/../../../../libs/transactions/TransactionsHandler.php';
 
 class BillingsImportBraintreeTransactions {
 	
-	private $providerid = NULL;
+	private $provider = NULL;
 	
 	public function __construct() {
-		$this->providerid = ProviderDAO::getProviderByName('braintree')->getId();
+		$this->provider = ProviderDAO::getProviderByName('braintree');
 	}
 	
 	public function doImportTransactions(DateTime $from = NULL, DateTime $to = NULL) {
@@ -18,9 +18,9 @@ class BillingsImportBraintreeTransactions {
 			ScriptsConfig::getLogger()->addInfo("importing transactions from braintree...");
 			//
 			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-			Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-			Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+			Braintree_Configuration::merchantId($this->provider->getMerchantId());
+			Braintree_Configuration::publicKey($this->provider->getApiKey());
+			Braintree_Configuration::privateKey($this->provider->getApiSecret());
 			//
 			$braintreeCustomers = Braintree\Customer::all(); 
 				
@@ -40,7 +40,7 @@ class BillingsImportBraintreeTransactions {
 	
 	public function doImportUserTransactions(Braintree\Customer $braintreeCustomer, DateTime $from = NULL, DateTime $to = NULL) {
 		ScriptsConfig::getLogger()->addInfo("importing transactions from braintree account with account_code=".$braintreeCustomer->id."...");
-		$user = UserDAO::getUserByUserProviderUuid($this->providerid, $braintreeCustomer->id);
+		$user = UserDAO::getUserByUserProviderUuid($this->provider->getId(), $braintreeCustomer->id);
 		if($user == NULL) {
 			throw new Exception("user with account_code=".$braintreeCustomer->id." does not exist in billings database");
 		}

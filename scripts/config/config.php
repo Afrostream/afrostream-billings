@@ -47,6 +47,10 @@ if(getEnv('BOUYGUES_BILLING_SYSTEM_URL') === false) {
 	putEnv('BOUYGUES_BILLING_SYSTEM_URL=https://vod.bouyguestelecom.fr/merchant/'.getEnv('BOUYGUES_MERCHANTID').'_'.getEnv('BOUYGUES_SERVICEID'));
 }
 
+if(getEnv('BOUYGUES_BILLING_SYSTEM_URL_PREFIX') === false) {
+	putEnv('BOUYGUES_BILLING_SYSTEM_URL_PREFIX=https://vod.bouyguestelecom.fr/merchant/');
+}
+
 if(getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER') === false) {
 	putEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER=admin');
 }
