@@ -404,7 +404,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$googleGetSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 		$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
 		//
-		$this->updateDbSubscriptionFromApiSubscription($user, 
+		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, 
 				$userOpts, 
 				$this->provider, 
 				$internalPlan, 
@@ -415,6 +415,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$db_subscription, 
 				'api', 
 				0);
+		return($this->doFillSubscription($db_subscription));
 	}
 }
 
