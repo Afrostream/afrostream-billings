@@ -14,9 +14,9 @@ class BraintreeUsersHandler extends ProviderUsersHandler {
 			if($createUserRequest->getUserProviderUuid() != NULL) {
 				//
 				Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-				Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-				Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-				Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+				Braintree_Configuration::merchantId($this->provider->getMerchantId());
+				Braintree_Configuration::publicKey($this->provider->getApiKey());
+				Braintree_Configuration::privateKey($this->provider->getApiSecret());
 				//
 				$account = Braintree\Customer::find($createUserRequest->getUserProviderUuid());
 				//
@@ -25,9 +25,9 @@ class BraintreeUsersHandler extends ProviderUsersHandler {
 				checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName());
 				//
 				Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-				Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-				Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-				Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+				Braintree_Configuration::merchantId($this->provider->getMerchantId());
+				Braintree_Configuration::publicKey($this->provider->getApiKey());
+				Braintree_Configuration::privateKey($this->provider->getApiSecret());
 				//
 				$attribs = array();
 				$attribs['email'] = $createUserRequest->getUserOptsArray()['email'];
@@ -71,9 +71,9 @@ class BraintreeUsersHandler extends ProviderUsersHandler {
 			checkUserOptsArray($updateUserRequest->getUserOptsArray(), $this->provider->getName());
 			//
 			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-			Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-			Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+			Braintree_Configuration::merchantId($this->provider->getMerchantId());
+			Braintree_Configuration::publicKey($this->provider->getApiKey());
+			Braintree_Configuration::privateKey($this->provider->getApiSecret());
 			//
 			$attribs = array();
 			$attribs['email'] = $updateUserRequest->getUserOptsArray()['email'];

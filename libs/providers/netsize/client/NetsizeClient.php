@@ -1,11 +1,22 @@
 <?php
 
 class NetsizeClient {
-		
-	public function __construct() {
+	
+	private $apiSecret;
+	private $serviceId;
+	
+	public function __construct($apiSecret, $serviceId) {
+		$this->apiSecret = $apiSecret;
+		$this->serviceId = $serviceId;
+	}
+	
+	protected function initRequest(NetsizeRequest $netsizeRequest) {
+		$netsizeRequest->setApiSecret($this->apiSecret);
+		$netsizeRequest->setServiceId($this->serviceId);
 	}
 	
 	public function initializeSubscription(InitializeSubscriptionRequest $initializeSubscriptionRequest) {
+		$this->initRequest($initializeSubscriptionRequest);
 		$initializeSubscriptionResponse = NULL;
 		$url = getEnv('NETSIZE_API_URL');
 		$data_string = $initializeSubscriptionRequest->getPost();
@@ -40,6 +51,7 @@ class NetsizeClient {
 	}
 	
 	public function getStatus(GetStatusRequest $getStatusRequest) {
+		$this->initRequest($getStatusRequest);
 		$getStatusResponse = NULL;
 		$url = getEnv('NETSIZE_API_URL');
 		$data_string = $getStatusRequest->getPost();
@@ -75,6 +87,7 @@ class NetsizeClient {
 	}
 	
 	public function closeSubscription(CloseSubscriptionRequest $closeSubscriptionRequest) {
+		$this->initRequest($closeSubscriptionRequest);
 		$closeSubscriptionResponse = NULL;
 		$url = getEnv('NETSIZE_API_URL');
 		$data_string = $closeSubscriptionRequest->getPost();
@@ -109,6 +122,7 @@ class NetsizeClient {
 	}
 	
 	public function finalize(FinalizeRequest $finalizeRequest) {
+		$this->initRequest($finalizeRequest);
 		$finalizeResponse = NULL;
 		$url = getEnv('NETSIZE_API_URL');
 		$data_string = $finalizeRequest->getPost();
@@ -145,8 +159,34 @@ class NetsizeClient {
 	
 }
 
-class InitializeSubscriptionRequest {
+class NetsizeRequest {
 	
+	protected $apiSecret;
+	protected $serviceId;
+	
+	public function __construct() {
+	}
+	
+	public function setApiSecret($apiSecret) {
+		$this->apiSecret = $apiSecret;
+	}
+	
+	public function getApiSecret() {
+		return($this->apiSecret);
+	}
+	
+	public function setServiceId($serviceId) {
+		$this->serviceId = $serviceId;
+	}
+	
+	public function getServiceId() {
+		return($this->serviceId);
+	}
+	
+}
+
+class InitializeSubscriptionRequest extends NetsizeRequest {
+		
 	private $flowId;
 	private $subscriptionModelId;
 	private $productName;
@@ -247,8 +287,8 @@ class InitializeSubscriptionRequest {
 		//method
 		$methodNode = $xml->createElement('initialize-subscription');
 		$methodNode = $requestNode->appendChild($methodNode);
-		$methodNode->setAttribute('auth-key', getEnv('NETSIZE_API_AUTH_KEY'));
-		$methodNode->setAttribute('service-id', getEnv('NETSIZE_API_SERVICE_ID'));
+		$methodNode->setAttribute('auth-key', $this->apiSecret);
+		$methodNode->setAttribute('service-id', $this->serviceId);
 		$methodNode->setAttribute('country-code', $this->countryCode);
 		$methodNode->setAttribute('language-code', $this->languageCode);
 		$methodNode->setAttribute('flow-id', $this->flowId);
@@ -356,7 +396,7 @@ class InitializeSubscriptionResponse {
 	
 }
 
-class GetStatusRequest {
+class GetStatusRequest extends NetsizeRequest {
 	
 	private $transactionId;
 	
@@ -381,8 +421,8 @@ class GetStatusRequest {
 		//method
 		$methodNode = $xml->createElement('get-status');
 		$methodNode = $requestNode->appendChild($methodNode);
-		$methodNode->setAttribute('auth-key', getEnv('NETSIZE_API_AUTH_KEY'));
-		//$methodNode->setAttribute('service-id', getEnv('NETSIZE_API_SERVICE_ID'));
+		$methodNode->setAttribute('auth-key', $this->apiSecret);
+		//$methodNode->setAttribute('service-id', $this->serviceId);
 		$methodNode->setAttribute('transaction-id', $this->transactionId);
 		return($xml->saveXML());
 	}
@@ -488,8 +528,8 @@ class GetStatusResponse {
 		return($this->userId);
 	}
 	
-	public function setProviderId($provderId) {
-		$this->providerId = $provderId;
+	public function setProviderId($providerId) {
+		$this->providerId = $providerId;
 	}
 	
 	public function getProviderId() {
@@ -507,7 +547,7 @@ class GetStatusResponse {
 	
 }
 
-class CloseSubscriptionRequest {
+class CloseSubscriptionRequest extends NetsizeRequest {
 	
 	private $transactionId;
 	private $trigger;
@@ -550,8 +590,8 @@ class CloseSubscriptionRequest {
 		//method
 		$methodNode = $xml->createElement('close-subscription');
 		$methodNode = $requestNode->appendChild($methodNode);
-		$methodNode->setAttribute('auth-key', getEnv('NETSIZE_API_AUTH_KEY'));
-		//$methodNode->setAttribute('service-id', getEnv('NETSIZE_API_SERVICE_ID'));
+		$methodNode->setAttribute('auth-key', $this->apiSecret);
+		//$methodNode->setAttribute('service-id', $this->serviceId);
 		$methodNode->setAttribute('transaction-id', $this->transactionId);
 		$methodNode->setAttribute('trigger', $this->trigger);
 		$methodNode->setAttribute('return-url', $this->returnUrl);
@@ -648,7 +688,7 @@ class CloseSubscriptionResponse {
 	
 }
 
-class FinalizeRequest {
+class FinalizeRequest extends NetsizeRequest {
 
 
 	private $transactionId;
@@ -674,8 +714,8 @@ class FinalizeRequest {
 		//method
 		$methodNode = $xml->createElement('finalize');
 		$methodNode = $requestNode->appendChild($methodNode);
-		$methodNode->setAttribute('auth-key', getEnv('NETSIZE_API_AUTH_KEY'));
-		//$methodNode->setAttribute('service-id', getEnv('NETSIZE_API_SERVICE_ID'));
+		$methodNode->setAttribute('auth-key', $this->apiSecret);
+		//$methodNode->setAttribute('service-id', $this->serviceId);
 		$methodNode->setAttribute('transaction-id', $this->transactionId);
 		return($xml->saveXML());
 	}

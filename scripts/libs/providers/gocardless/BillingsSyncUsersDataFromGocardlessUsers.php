@@ -11,10 +11,10 @@ require_once __DIR__ . '/../../../db/dbGlobal.php';
 
 class BillingsSyncUsersDataFromGocardlessUsers {
 	
-	private $providerid = NULL;
+	private $provider = NULL;
 	
 	public function __construct() {
-		$this->providerid = ProviderDAO::getProviderByName('gocardless')->getId();
+		$this->provider = ProviderDAO::getProviderByName('gocardless');
 	}
 	
 	public function doSyncUsersData() {
@@ -22,7 +22,7 @@ class BillingsSyncUsersDataFromGocardlessUsers {
 			ScriptsConfig::getLogger()->addInfo("syncing users data from gocardless...");
 			//
 			$client = new Client(array(
-					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'access_token' => $this->provider->getApiSecret(),
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 			));
 			//
@@ -47,7 +47,7 @@ class BillingsSyncUsersDataFromGocardlessUsers {
 	
 	public function doSyncUserData(Customer $customer_entry) {
 		ScriptsConfig::getLogger()->addInfo("syncing users data from gocardless account with id=".$customer_entry->id."...");
-		$user = UserDAO::getUserByUserProviderUuid($this->providerid, $customer_entry->id);
+		$user = UserDAO::getUserByUserProviderUuid($this->provider->getId(), $customer_entry->id);
 		if($user == NULL) {
 			throw new Exception("user with id=".$customer_entry->id." does not exist in billings database");
 		}

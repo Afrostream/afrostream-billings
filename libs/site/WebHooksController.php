@@ -90,7 +90,7 @@ class WebHooksController extends BillingsController {
 	protected function recurlyWebHooksPosting(Request $request, Response $response, array $args, Provider $provider) {
 		config::getLogger()->addInfo('Receiving recurly webhook...');
 		
-		$valid_passwords = array (getEnv('RECURLY_WH_HTTP_AUTH_USER') => getEnv('RECURLY_WH_HTTP_AUTH_PWD'));
+		$valid_passwords = array ($provider->getWebhookKey() => $provider->getWebhookSecret());
 		$valid_users = array_keys($valid_passwords);
 		
 		$user = NULL;
@@ -145,7 +145,7 @@ class WebHooksController extends BillingsController {
 	protected function stripeWebHooksPosting(Request $request, Response $response, array $args, Provider $provider) {
 		config::getLogger()->addInfo('Receiving stripe webhook...');
 
-		$valid_passwords = array (getEnv('STRIPE_WH_HTTP_AUTH_USER') => getEnv('STRIPE_WH_HTTP_AUTH_PWD'));
+		$valid_passwords = array ($provider->getWebhookKey() => $provider->getWebhookSecret());
 		$valid_users = array_keys($valid_passwords);
 
 		$user = NULL;
@@ -201,7 +201,7 @@ class WebHooksController extends BillingsController {
 	protected function gocardlessWebHooksPosting(Request $request, Response $response, array $args, Provider $provider) {
 		config::getLogger()->addInfo('Receiving gocardless webhook...');
 		
-		$gocardless_secret = getEnv('GOCARDLESS_WH_SECRET');
+		$gocardless_secret = $provider->getWebhookSecret();
 		
 		$validated = false;
 		
@@ -302,7 +302,7 @@ class WebHooksController extends BillingsController {
 	
 	protected function cashwayWebHooksPosting(Request $request, Response $response, array $args, Provider $provider) {
 		config::getLogger()->addInfo('Receiving cashway webhook...');
-		$result = API::receiveNotification($request->getBody(), getallheaders(), getEnv('CASHWAY_WH_SECRET'));
+		$result = API::receiveNotification($request->getBody(), getallheaders(), $provider->getWebhookSecret());
 		if ($result[0] === false) {
 			config::getLogger()->addError('Receiving cashway webhook failed, message='.$result[1]);
 			header('HTTP/1.0 400 '.$result[1]);
@@ -351,9 +351,9 @@ class WebHooksController extends BillingsController {
 		config::getLogger()->addInfo('Receiving braintree webhook...');
 		//
 		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-		Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-		Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+		Braintree_Configuration::merchantId($provider->getMerchantId());
+		Braintree_Configuration::publicKey($provider->getApiKey());
+		Braintree_Configuration::privateKey($provider->getApiSecret());
 		//
 		$bt_signature = $request->getParsedBodyParam('bt_signature');
 		$bt_payload = $request->getParsedBodyParam('bt_payload');
@@ -455,7 +455,7 @@ class WebHooksController extends BillingsController {
 		if(array_key_exists('merchant_secret', $post_data_as_array)) {
 			$received_transaction_merchant_secret = $post_data_as_array['merchant_secret'];
 		}
-		if(getEnv('WECASHUP_MERCHANT_SECRET') === $received_transaction_merchant_secret) {
+		if($provider->getApiSecret() === $received_transaction_merchant_secret) {
 			$validated = true;
 		}
 		

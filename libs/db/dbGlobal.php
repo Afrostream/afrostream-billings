@@ -1381,7 +1381,7 @@ class ProviderDAO {
 	private static $providersById = array();
 	private static $providersByName = array();
 	
-	private static $sfields = "_id, name, uuid, platformid";
+	private static $sfields = "_id, name, uuid, platformid, merchantid, serviceid, api_key, api_secret, webhook_key, webhook_secret";
 	
 	private static function getProviderFromRow($row) {
 		$out = new Provider();
@@ -1389,6 +1389,12 @@ class ProviderDAO {
 		$out->setName($row["name"]);
 		$out->setUuid($row["uuid"]);
 		$out->setPlatformId($row["platformid"]);
+		$out->setMerchantId($row["merchantid"]);
+		$out->setServiceId($row["serviceid"]);
+		$out->setApiKey($row["api_key"]);
+		$out->setApiSecret($row["api_secret"]);
+		$out->setWebhookKey($row["webhook_key"]);
+		$out->setWebhookSecret($row["webhook_secret"]);
 		//<-- cache -->
 		self::$providersById[$out->getId()] = $out;
 		self::$providersByName[$out->getName()] = $out;
@@ -1481,6 +1487,13 @@ class Provider implements JsonSerializable {
 	private $name;
 	private $uuid;
 	private $platformId;
+	//
+	private $merchantId;
+	private $serviceId;
+	private $apiKey;
+	private $apiSecret;
+	private $webhookKey;
+	private $webhookSecret;
 	
 	public function getId() {
 		return($this->_id);
@@ -1512,6 +1525,54 @@ class Provider implements JsonSerializable {
 	
 	public function getPlatformId() {
 		return($this->platformId);
+	}
+	
+	public function setMerchantId($merchandId) {
+		$this->merchantId = $merchandId;
+	}
+	
+	public function getMerchantId() {
+		return($this->merchantId);
+	}
+	
+	public function setServiceId($serviceId) {
+		$this->serviceId = $serviceId;
+	}
+	
+	public function getServiceId() {
+		return($this->serviceId);
+	}
+	
+	public function setApiKey($apiKey) {
+		$this->apiKey = $apiKey;
+	}
+	
+	public function getApiKey() {
+		return($this->apiKey);
+	}
+	
+	public function setApiSecret($apiSecret) {
+		$this->apiSecret = $apiSecret;
+	}
+	
+	public function getApiSecret() {
+		return($this->apiSecret);
+	}
+	
+	public function setWebhookKey($webhookKey) {
+		$this->webhookKey = $webhookKey;
+	}
+	
+	public function getWebhookKey() {
+		return($this->webhookKey);
+	}	
+	
+	public function setWebhookSecret($webhookSecret) {
+		$this->webhookSecret = $webhookSecret;
+	}
+	
+	public function getWebhookSecret() {
+		return($this->webhookSecret);
 	}
 	
 	public function jsonSerialize() {

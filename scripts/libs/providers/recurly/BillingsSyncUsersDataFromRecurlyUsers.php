@@ -6,18 +6,18 @@ require_once __DIR__ . '/../../../db/dbGlobal.php';
 
 class BillingsSyncUsersDataFromRecurlyUsers {
 	
-	private $providerid = NULL;
+	private $provider = NULL;
 	
 	public function __construct() {
-		$this->providerid = ProviderDAO::getProviderByName('recurly')->getId();
+		$this->provider = ProviderDAO::getProviderByName('recurly');
 	}
 	
 	public function doSyncUsersData() {
 		try {
 			ScriptsConfig::getLogger()->addInfo("syncing users data from recurly...");
 			//
-			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			Recurly_Client::$subdomain = $this->provider->getMerchantId();
+			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			//
 			$recurlyAccounts = Recurly_AccountList::getActive();
 			
@@ -37,7 +37,7 @@ class BillingsSyncUsersDataFromRecurlyUsers {
 	
 	public function doSyncUserData(Recurly_Account $recurlyAccount) {
 		ScriptsConfig::getLogger()->addInfo("syncing users data from recurly account with account_code=".$recurlyAccount->account_code."...");
-		$user = UserDAO::getUserByUserProviderUuid($this->providerid, $recurlyAccount->account_code);
+		$user = UserDAO::getUserByUserProviderUuid($this->provider->getId(), $recurlyAccount->account_code);
 		if($user == NULL) {
 			throw new Exception("user with account_code=".$recurlyAccount->account_code." does not exist in billings database");
 		}

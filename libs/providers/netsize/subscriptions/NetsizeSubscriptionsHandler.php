@@ -17,7 +17,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			if(isset($subscription_provider_uuid)) {
 				checkSubOptsArray($subOpts->getOpts(), 'netsize', 'get');
 				//in netsize : user subscription is pre-created and must be finalized
-				$netsizeClient = new NetsizeClient();
+				$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 				
 				$finalizeRequest = new FinalizeRequest();
 				$finalizeRequest->setTransactionId($subscription_provider_uuid);
@@ -37,7 +37,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				/*checkSubOptsArray($subOpts->getOpts(), 'netsize', 'create');
 				// in netsize : user subscription is NOT pre-created
-				$netsizeClient = new NetsizeClient();
+				$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 				
 				$initializeSubscriptionRequest = new InitializeSubscriptionRequest();
 				$initializeSubscriptionRequest->setFlowId($subOpts->getOpts()['flowId']);
@@ -87,7 +87,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$update_type, 
 			$updateId) {
 		//
-		$netsizeClient = new NetsizeClient();
+		$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 		
 		$getStatusRequest = new GetStatusRequest();
 		$getStatusRequest->setTransactionId($sub_uuid);
@@ -204,7 +204,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				} else {
 					//
 					$doIt = true;
-					$netsizeClient = new NetsizeClient();
+					$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 						
 					$closeSubscriptionRequest = new CloseSubscriptionRequest();
 					$closeSubscriptionRequest->setTransactionId($subscription->getSubUid());
@@ -228,7 +228,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					//nothing to do : already done or in process
 				} else {
 					$doIt = true;
-					$netsizeClient = new NetsizeClient();
+					$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 						
 					$getStatusRequest = new GetStatusRequest();
 					$getStatusRequest->setTransactionId($subscription->getSubUid());
@@ -399,7 +399,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					}
 				}
 				$doIt = true;
-				$netsizeClient = new NetsizeClient();
+				$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 				
 				$getStatusRequest = new GetStatusRequest();
 				$getStatusRequest->setTransactionId($subscription->getSubUid());
@@ -456,7 +456,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$netsizeClient = new NetsizeClient();
+		$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 		foreach ($db_subscriptions as $db_subscription) {
 			try {
 				$plan = PlanDAO::getPlanById($db_subscription->getPlanId());
@@ -664,7 +664,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		}
 		$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 		//
-		$netsizeClient = new NetsizeClient();
+		$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 		$getStatusRequest = new GetStatusRequest();
 		$getStatusRequest->setTransactionId($db_subscription->getSubUid());
 		$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);

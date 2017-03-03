@@ -24,17 +24,9 @@ class CashwayWebHooksHandler extends ProviderWebHooksHandler {
 	private function doProcessNotification($post_data, $update_type, $updateId) {
 		config::getLogger()->addInfo('Processing cashway hook notification...');
 		$data = json_decode($post_data, true);
-		
-		$provider_name = "cashway";
-		
-		$provider = ProviderDAO::getProviderByName($provider_name);
-		if($provider == NULL) {
-			$msg = "unknown provider named : ".$provider_name;
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}		
+				
 		//TODO : Merge to be done later
-		$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler($provider);
+		$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler($this->provider);
 		$subscriptionsHandler = new SubscriptionsHandler();
 		switch($data['event']) {
 			case 'transaction_paid' :
@@ -81,7 +73,7 @@ class CashwayWebHooksHandler extends ProviderWebHooksHandler {
 					$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 					$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
 					if($internalPlan == NULL) {
-						$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+						$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
@@ -98,7 +90,7 @@ class CashwayWebHooksHandler extends ProviderWebHooksHandler {
 							$api_subscription->setSubStatus('active');
 							$api_subscription->setSubActivatedDate($now);
 							$api_subscription->setSubPeriodStartedDate($now);
-							$db_subscription = $cashwaySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription_before_update, $update_type, $updateId);
+							$db_subscription = $cashwaySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription_before_update, $update_type, $updateId);
 						}
 						//userInternalCoupon
 						$userInternalCoupon->setStatus("redeemed");

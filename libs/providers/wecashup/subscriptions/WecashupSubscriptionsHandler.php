@@ -20,7 +20,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			checkSubOptsArray($subOpts->getOpts(), 'wecashup', 'create');
-			$wecashupClient = new WecashupClient();
+			$wecashupClient = new WecashupClient($this->provider->getMerchantId(), $this->provider->getApiKey(), $this->provider->getApiSecret());
 			//Check
 			$wecashupTransactionRequest = new WecashupTransactionRequest();
 			$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
@@ -95,7 +95,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		/*$wecashupClient = new WecashupClient();
+		/*$wecashupClient = new WecashupClient($this->provider->getMerchantId(), $this->provider->getApiKey(), $this->provider->getApiSecret());
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
 		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
@@ -164,7 +164,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$wecashupClient = new WecashupClient();
+		$wecashupClient = new WecashupClient($this->provider->getMerchantId(), $this->provider->getApiKey(), $this->provider->getApiSecret());
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
 		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
@@ -351,7 +351,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$wecashupClient = new WecashupClient();
+		$wecashupClient = new WecashupClient($this->provider->getMerchantId(), $this->provider->getApiKey(), $this->provider->getApiSecret());
 		foreach ($db_subscriptions as $db_subscription) {
 			try {
 				$plan = PlanDAO::getPlanById($db_subscription->getPlanId());
@@ -563,7 +563,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		//
 		$api_subscription = clone $db_subscription;
 		//
-		$wecashupClient = new WecashupClient();
+		$wecashupClient = new WecashupClient($this->provider->getMerchantId(), $this->provider->getApiKey(), $this->provider->getApiSecret());
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
 		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);

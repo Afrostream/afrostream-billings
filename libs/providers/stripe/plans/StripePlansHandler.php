@@ -1,14 +1,12 @@
 <?php
 
-require_once __DIR__ . '/../../../../config/config.php';
-require_once __DIR__ . '/../../../db/dbGlobal.php';
+require_once __DIR__ . '/../../global/plans/ProviderPlansHandler.php';
 
-class StripePlansHandler
-{
+class StripePlansHandler extends ProviderPlansHandler {
 
-    public function __construct()
-    {
-        \Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+	public function __construct(Provider $provider) {
+  		parent::__construct($provider);
+        \Stripe\Stripe::setApiKey($this->provider->getApiSecret());
     }
 
     /**

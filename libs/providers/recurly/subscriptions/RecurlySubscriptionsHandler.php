@@ -16,8 +16,8 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				checkSubOptsArray($subOpts->getOpts(), 'recurly', 'get');
 				//** in recurly : user subscription is pre-created **/
 				//
-				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+				Recurly_Client::$subdomain = $this->provider->getMerchantId();
+				Recurly_Client::$apiKey = $this->provider->getApiSecret();
 				//
 				$subscriptions = Recurly_SubscriptionList::getForAccount($user->getUserProviderUuid());
 				$found = false;
@@ -35,8 +35,8 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			} else {
 				checkSubOptsArray($subOpts->getOpts(), 'recurly', 'create');
 				//** in recurly : user subscription is NOT pre-created **/
-				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+				Recurly_Client::$subdomain = $this->provider->getMerchantId();
+				Recurly_Client::$apiKey = $this->provider->getApiSecret();
 				//
 				$subscription = new Recurly_Subscription();
 				$subscription->plan_code = $plan->getPlanUuid();
@@ -137,8 +137,8 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
 		config::getLogger()->addInfo("recurly dbsubscriptions update for userid=".$user->getId()."...");
 		//
-		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+		Recurly_Client::$subdomain = $this->provider->getMerchantId();
+		Recurly_Client::$apiKey = $this->provider->getApiSecret();
 		//
 		$provider = ProviderDAO::getProviderById($user->getProviderId());
 		//
@@ -210,8 +210,8 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$update_type, 
 			$updateId) {
 		//
-		Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-		Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+		Recurly_Client::$subdomain = $this->provider->getMerchantId();
+		Recurly_Client::$apiKey = $this->provider->getApiSecret();
 		//
 		$api_subscription = Recurly_Subscription::get($sub_uuid);
 		//
@@ -398,8 +398,8 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//nothing todo : already done or in process
 			} else {
 				//
-				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+				Recurly_Client::$subdomain = $this->provider->getMerchantId();
+				Recurly_Client::$apiKey = $this->provider->getApiSecret();
 				//
 				$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
 				//
@@ -480,8 +480,8 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//nothing to do
 			} else if($subscription->getSubStatus() == "canceled") {
 				//
-				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+				Recurly_Client::$subdomain = $this->provider->getMerchantId();
+				Recurly_Client::$apiKey = $this->provider->getApiSecret();
 				//
 				$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
 				//
@@ -545,8 +545,8 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//
-			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			Recurly_Client::$subdomain = $this->provider->getMerchantId();
+			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			//
 			$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
 			//
@@ -605,8 +605,8 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 					}
 				}
 				//
-				Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-				Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+				Recurly_Client::$subdomain = $this->provider->getMerchantId();
+				Recurly_Client::$apiKey = $this->provider->getApiSecret();
 				//
 				$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
 				//

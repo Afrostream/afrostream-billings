@@ -14,9 +14,9 @@ class BraintreeCouponsCampaignsHandler extends ProviderCouponsCampaignsHandler {
 			$couponsCampaignProviderBillingUuid = 'AfrBillingApiDiscount';
 			//
 			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-			Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-			Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+			Braintree_Configuration::merchantId($this->provider->getMerchantId());
+			Braintree_Configuration::publicKey($this->provider->getApiKey());
+			Braintree_Configuration::privateKey($this->provider->getApiSecret());
 			//Check Only
 			$discount = $this->getDiscountByCouponCode(Braintree\Discount::all(), $couponsCampaignProviderBillingUuid);
 			if($discount == NULL) {

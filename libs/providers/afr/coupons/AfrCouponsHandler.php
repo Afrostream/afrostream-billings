@@ -14,7 +14,7 @@ class AfrCouponsHandler extends ProviderCouponsHandler {
 	
 	public function __construct(Provider $provider) {
 		parent::__construct($provider);
-		\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+		\Stripe\Stripe::setApiKey($this->provider->getApiSecret());
 	}
 	
 	public function doCreateCoupon(User $user,

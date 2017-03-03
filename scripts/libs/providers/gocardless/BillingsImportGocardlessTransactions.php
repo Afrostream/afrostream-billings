@@ -11,10 +11,10 @@ require_once __DIR__ . '/../../../../libs/transactions/TransactionsHandler.php';
 
 class BillingsImportGocardlessTransactions {
 	
-	private $providerid = NULL;
+	private $provider = NULL;
 	
 	public function __construct() {
-		$this->providerid = ProviderDAO::getProviderByName('gocardless')->getId();
+		$this->provider = ProviderDAO::getProviderByName('gocardless');
 	}
 	
 	public function doImportTransactions(DateTime $from = NULL, DateTime $to = NULL) {
@@ -22,7 +22,7 @@ class BillingsImportGocardlessTransactions {
 			ScriptsConfig::getLogger()->addInfo("importing transactions from gocardless...");
 			//
 			$client = new Client(array(
-					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'access_token' => $this->provider->getApiSecret(),
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 			));
 			
@@ -48,7 +48,7 @@ class BillingsImportGocardlessTransactions {
 	
 	public function doImportUserTransactions(Customer $gocardlessCustomer, DateTime $from = NULL, DateTime $to = NULL) {
 		ScriptsConfig::getLogger()->addInfo("importing transactions from gocardless account with account_code=".$gocardlessCustomer->id."...");
-		$user = UserDAO::getUserByUserProviderUuid($this->providerid, $gocardlessCustomer->id);
+		$user = UserDAO::getUserByUserProviderUuid($this->provider->getId(), $gocardlessCustomer->id);
 		if($user == NULL) {
 			throw new Exception("user with account_code=".$gocardlessCustomer->id." does not exist in billings database");
 		}

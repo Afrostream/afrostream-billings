@@ -25,7 +25,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//Verify that subscription belongs to the current customer
 				//
 				$client = new Client(array(
-						'access_token' => getEnv('GOCARDLESS_API_KEY'),
+						'access_token' => $this->provider->getApiSecret(),
 						'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//
@@ -103,7 +103,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$customer_bank_account_token = $subOpts->getOpts()['customerBankAccountToken'];
 				//
 				$client = new Client(array(
-						'access_token' => getEnv('GOCARDLESS_API_KEY'),
+						'access_token' => $this->provider->getApiSecret(),
 						'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//HACK : Disable current Bank Accounts (Create will be enable existing accounts)
@@ -185,7 +185,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		config::getLogger()->addInfo("gocardless dbsubscriptions update for userid=".$user->getId()."...");
 		//
 		$client = new Client(array(
-			'access_token' => getEnv('GOCARDLESS_API_KEY'),
+			'access_token' => $this->provider->getApiSecret(),
 			'environment' => getEnv('GOCARDLESS_API_ENV')
 		));
 		//
@@ -268,7 +268,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$updateId) {
 		//
 		$client = new Client(array(
-			'access_token' => getEnv('GOCARDLESS_API_KEY'),
+			'access_token' => $this->provider->getApiSecret(),
 			'environment' => getEnv('GOCARDLESS_API_ENV')
 		));
 		//
@@ -650,7 +650,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//
 				if($cancelSubscriptionRequest->getOrigin() == 'api') {
 					$client = new Client(array(
-							'access_token' => getEnv('GOCARDLESS_API_KEY'),
+							'access_token' => $this->provider->getApiSecret(),
 							'environment' => getEnv('GOCARDLESS_API_ENV')
 					));
 					//
@@ -715,7 +715,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 						//already canceled, nothing can be done in gocardless side
 					} else {
 						$client = new Client(array(
-								'access_token' => getEnv('GOCARDLESS_API_KEY'),
+								'access_token' => $this->provider->getApiSecret(),
 								'environment' => getEnv('GOCARDLESS_API_ENV')
 						));
 						$api_subscription = $client->subscriptions()->get($subscription->getSubUid());
