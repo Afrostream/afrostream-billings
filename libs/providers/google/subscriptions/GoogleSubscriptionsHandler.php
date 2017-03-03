@@ -179,6 +179,8 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		if($end_date < $now) {
 			$status = 'expired';
 		}
+		$db_subscription->setSubStatus($status);
+		$db_subscription = BillingsSubscriptionDAO::updateSubStatus($subscription);
 		switch($status) {
 			case 'canceled' :
 				if($db_subscription->getSubCanceledDate() == NULL) {
