@@ -90,7 +90,7 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 		BillingStatsd::inc('route.api.method.'.$method.'.hit');
 		BillingStatsd::timing('route.api.responsetime', $responseTimeInMillis);
 		BillingStatsd::timing('route.api.method.'.$method.'.responsetime', $responseTimeInMillis);
-	} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix, $current_path)) {
+	} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix.'*', $current_path)) {
 		BillingStatsd::timing('route.providers.all.webhooks.responsetime', $responseTimeInMillis);
 		BillingStatsd::timing('route.providers.all.webhooks.method.'.$method.'.responsetime', $responseTimeInMillis);
 		BillingStatsd::inc('route.providers.all.webhooks.hit');
