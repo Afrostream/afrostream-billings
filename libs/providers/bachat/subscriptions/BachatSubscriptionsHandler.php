@@ -11,7 +11,7 @@ require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler
 
 class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("bachat subscription creation...");

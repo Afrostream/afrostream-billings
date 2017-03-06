@@ -11,7 +11,6 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	public function doCreateUserSubscription(User $user, 
 			UserOpts $userOpts, 
-			Provider $provider, 
 			InternalPlan $internalPlan, 
 			InternalPlanOpts $internalPlanOpts, 
 			Plan $plan, 

@@ -201,7 +201,8 @@ class ProviderSubscriptionsHandler {
 			$event = NULL;
 			//check subscription_is_new_event
 			$switchEvent = NULL;
-			switch($subscription_after_update->getSubStatus()) {
+			$afterUpdateMergedStatus = self::mergeStatus($subscription_after_update->getSubStatus());
+			switch($afterUpdateMergedStatus) {
 				case 'active' :
 					$switchEvent = 'NEW';
 					break;
@@ -220,9 +221,15 @@ class ProviderSubscriptionsHandler {
 					break;
 			}
 			if(isset($switchEvent)) {
-				//There is only a real event, if object was NULL or SubStatus was different
-				if($subscription_before_update == NULL || $subscription_before_update->getSubStatus() != $subscription_after_update->getSubStatus()) {
+				//There is only a real event, if object was NULL or SubStatus are different
+				if($subscription_before_update == NULL) {
 					$event = $switchEvent;
+				} else {
+					//subStatus are 'merged' before comparing
+					$beforeUpdateMergedStatus = self::mergeStatus($subscription_before_update->getSubStatus());
+					if($beforeUpdateMergedStatus != $afterUpdateMergedStatus) {
+						$event = $switchEvent;
+					}
 				}
 			}
 			$hasEvent = ($event != NULL);
@@ -539,7 +546,6 @@ class ProviderSubscriptionsHandler {
 	
 	public function doCreateUserSubscription(User $user, 
 			UserOpts $userOpts, 
-			Provider $provider, 
 			InternalPlan $internalPlan, 
 			InternalPlanOpts $internalPlanOpts, 
 			Plan $plan, 
@@ -581,6 +587,21 @@ class ProviderSubscriptionsHandler {
 		$msg = "unsupported feature - update subscription - for provider named : ".$this->provider->getName();
 		config::getLogger()->addError($msg);
 		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
+	/*
+	 * active, pending_active => active
+	 * canceled, requesting_canceled, pending_canceled => canceled
+	 * future => future
+	 * expired => pending_expired => expired
+	 */
+	private static function mergeStatus($subStatus) {
+		$pos = strrpos($subStatus, "_");
+		if($pos === false) {
+			return($subStatus);
+		} else {
+			return(substr($subStatus, $pos + 1));
+		}
 	}
 	
 }

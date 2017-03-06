@@ -130,7 +130,7 @@ class SubscriptionsHandler {
 				config::getLogger()->addInfo("subscription creating...provider creating...");
 				$subscription_billing_uuid = guid();
 				$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
-				$sub_uuid = $providerSubscriptionsHandlerInstance->doCreateUserSubscription($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $getOrCreateSubscriptionRequest->getSubscriptionProviderUuid(), $billingInfo, $subOpts);
+				$sub_uuid = $providerSubscriptionsHandlerInstance->doCreateUserSubscription($user, $userOpts, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subscription_billing_uuid, $getOrCreateSubscriptionRequest->getSubscriptionProviderUuid(), $billingInfo, $subOpts);
 				config::getLogger()->addInfo("subscription creating...provider creating done successfully, provider_subscription_uuid=".$sub_uuid);
 				//subscription created provider side, save it in billings database
 				config::getLogger()->addInfo("subscription creating...database savings...");
