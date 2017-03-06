@@ -9,7 +9,7 @@ require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 
 class CashwaySubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("cashway subscription creation...");
@@ -38,7 +38,7 @@ class CashwaySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$providerCouponsCampaign = NULL;
 			$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
 			foreach ($providerCouponsCampaigns as $currentProviderCouponsCampaign) {
-				if($currentProviderCouponsCampaign->getProviderId() == $provider->getId()) {
+				if($currentProviderCouponsCampaign->getProviderId() == $this->provider->getId()) {
 					$providerCouponsCampaign = $currentProviderCouponsCampaign;
 					$isProviderCompatible = true;
 					break;
@@ -46,7 +46,7 @@ class CashwaySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			}
 			if($isProviderCompatible == false) {
 				//Exception
-				$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$provider->getName();
+				$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$this->provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PROVIDER_INCOMPATIBLE);
 			}

@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.p
 
 class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("braintree subscription creation...");
@@ -75,7 +75,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
 					if(strlen($couponCode) > 0) {
-						$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+						$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
 						$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
 						$billingProviderCouponsCampaign = $couponsInfos['providerCouponsCampaign'];
 						$discountArray = array();
@@ -184,13 +184,6 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		Braintree_Configuration::publicKey($this->provider->getApiKey());
 		Braintree_Configuration::privateKey($this->provider->getApiSecret());
 		//
-		$provider = ProviderDAO::getProviderById($user->getProviderId());
-		//
-		if($provider == NULL) {
-			$msg = "unknown provider id : ".$user->getProviderId();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
 		$api_subscriptions = array();
 		try {
 			$customer = Braintree\Customer::find($user->getUserProviderUuid());
@@ -209,7 +202,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		foreach ($api_subscriptions as $api_subscription) {
 			//plan
 			$plan_uuid = $api_subscription->planId;
-			$plan = PlanDAO::getPlanByUuid($provider->getId(), $plan_uuid);
+			$plan = PlanDAO::getPlanByUuid($this->provider->getId(), $plan_uuid);
 			if($plan == NULL) {
 				$msg = "plan with uuid=".$plan_uuid." not found";
 				config::getLogger()->addError($msg);
@@ -218,7 +211,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
 			if($internalPlan == NULL) {
-				$msg = "plan with uuid=".$plan_uuid." for provider ".$provider->getName()." is not linked to an internal plan";
+				$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -226,10 +219,10 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->id);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
-				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
+				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
 			}
 		}
 		//DELETE UNUSED SUBSCRIPTIONS (DELETED FROM THIRD PARTY)
