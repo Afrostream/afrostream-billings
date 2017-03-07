@@ -153,7 +153,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 		$chartmogulStatus = NULL;
 		try {
 			ScriptsConfig::getLogger()->addInfo("syncing chartmogul customer for user with id=".$user->getId()."...");
-			$chartmogulCustomers = ChartMogul\Enrichment\Customer::all([
+			$chartmogulCustomers = ChartMogul\Customer::all([
 					'external_id' => $user->getUserProviderUuid()
 			]);
 			if(count($chartmogulCustomers->entries) == 0) {
@@ -208,7 +208,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 			foreach ($pendingUsers as $pendingUser) {
 				try {
 					try {
-						if(ChartMogul\Enrichment\Customer::merge(["customer_uuid" => $pendingUser->getChartmogulCustomerUuid()],
+						if(ChartMogul\Customer::merge(["customer_uuid" => $pendingUser->getChartmogulCustomerUuid()],
 						 	["customer_uuid" => $masterUser->getChartmogulCustomerUuid()]) == false) {
 						 		throw new Exception("charmogul api : cannot merge, no reason given");
 						}

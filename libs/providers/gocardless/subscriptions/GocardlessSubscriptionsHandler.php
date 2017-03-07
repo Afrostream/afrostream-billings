@@ -16,7 +16,7 @@ require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.p
 
 class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("gocardless subscription creation...");
@@ -189,13 +189,6 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			'environment' => getEnv('GOCARDLESS_API_ENV')
 		));
 		//
-		$provider = ProviderDAO::getProviderById($user->getProviderId());
-		//
-		if($provider == NULL) {
-			$msg = "unknown provider id : ".$user->getProviderId();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
 		try {
 			//
 			$api_subscriptions = $client->subscriptions()->all(
@@ -220,26 +213,13 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		//ADD OR UPDATE
 		foreach ($api_subscriptions as $api_subscription) {
-			//plan
-			/*$plan_uuid = $api_subscription->plan->plan_code;
-			if($plan_uuid == NULL) {
-				$msg = "plan uuid not found";
-				config::getLogger()->addError($msg);
-				throw new Exception($msg);
-			}
-			$plan = PlanDAO::getPlanByUuid($provider->getId(), $plan_uuid);
-			if($plan == NULL) {
-				$msg = "plan with uuid=".$plan_uuid." not found";
-				config::getLogger()->addError($msg);
-				throw new Exception($msg);
-			}*/
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->id);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, NULL, NULL, guid(), $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, NULL, NULL, NULL, NULL, NULL, NULL, guid(), $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
-				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
+				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
 			}
 		}
 		//DELETE UNUSED SUBSCRIPTIONS (DELETED FROM THIRD PARTY)
@@ -252,7 +232,20 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		config::getLogger()->addInfo("gocardless dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan = NULL, InternalPlanOpts $internalPlanOpts = NULL, Plan $plan = NULL , PlanOpts $planOpts = NULL, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(
+			User $user, 
+			UserOpts $userOpts, 
+			Provider $provider, 
+			InternalPlan $internalPlan = NULL, 
+			InternalPlanOpts $internalPlanOpts = NULL, 
+			Plan $plan = NULL, 
+			PlanOpts $planOpts = NULL, 
+			BillingsSubscriptionOpts $subOpts = NULL, 
+			BillingInfo $billingInfo = NULL, 
+			$subscription_billing_uuid, 
+			$sub_uuid, 
+			$update_type, 
+			$updateId) {
 		//
 		$client = new Client(array(
 			'access_token' => $this->provider->getApiSecret(),
