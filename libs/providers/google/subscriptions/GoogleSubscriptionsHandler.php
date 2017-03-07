@@ -77,12 +77,11 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
 		$googleGetSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 		$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $sub_uuid, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $sub_uuid, $update_type, $updateId));
 	}
 	
 	public function createDbSubscriptionFromApiSubscription(User $user, 
 			UserOpts $userOpts, 
-			Provider $provider, 
 			InternalPlan $internalPlan, 
 			InternalPlanOpts $internalPlanOpts, 
 			Plan $plan, PlanOpts $planOpts, 
@@ -104,7 +103,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		//SUBSCRIPTION CREATE
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
-		$db_subscription->setProviderId($provider->getId());
+		$db_subscription->setProviderId($this->provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription->setSubUid($sub_uuid);
@@ -154,7 +153,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		//UPDATE
 		$db_subscription_before_update = clone $db_subscription;
 		//
-		//$db_subscription->setProviderId($provider->getId());//STATIC
+		//$db_subscription->setProviderId($this->provider->getId());//STATIC
 		//$db_subscription->setUserId($user->getId());//STATIC
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription = BillingsSubscriptionDAO::updatePlanId($db_subscription);
@@ -393,7 +392,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
 		if($internalPlan == NULL) {
-			$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+			$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}

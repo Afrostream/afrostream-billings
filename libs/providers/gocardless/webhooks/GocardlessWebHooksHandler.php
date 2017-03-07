@@ -154,7 +154,7 @@ class GocardlessWebHooksHandler extends ProviderWebHooksHandler {
 						//DO NOT CREATE ANYMORE : race condition when creating from API + from the webhook
 						//WAS :
 						//CREATE
-						//$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, NULL, NULL, $api_subscription, $update_type, $updateId);
+						//$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, NULL, NULL, $api_subscription, $update_type, $updateId);
 					} else {
 						//UPDATE
 						$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, $update_type, $updateId);
