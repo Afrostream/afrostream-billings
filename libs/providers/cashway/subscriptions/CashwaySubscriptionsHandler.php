@@ -125,7 +125,6 @@ class CashwaySubscriptionsHandler extends ProviderSubscriptionsHandler {
 	public function createDbSubscriptionFromApiSubscriptionUuid(
 			User $user, 
 			UserOpts $userOpts, 
-			Provider $provider, 
 			InternalPlan $internalPlan = NULL, 
 			InternalPlanOpts $internalPlanOpts = NULL, 
 			Plan $plan = NULL, 
