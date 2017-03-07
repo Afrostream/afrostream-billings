@@ -219,7 +219,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->id);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
 				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
