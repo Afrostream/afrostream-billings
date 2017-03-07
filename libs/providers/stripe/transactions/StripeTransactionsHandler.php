@@ -240,7 +240,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 			//should not happen
 			if($userId == NULL) {
 				if(isset($stripeChargeTransaction->customer)) {
-					$user = UserDAO::getUserByUserProviderUuid($providerid, $stripeChargeTransaction->customer);
+					$user = UserDAO::getUserByUserProviderUuid($this->provider->getId(), $stripeChargeTransaction->customer);
 					if($user == NULL) {
 						$msg = "user with user_provider_uuid=".$stripeChargeTransaction->customer." not found";
 						config::getLogger()->addError($msg);

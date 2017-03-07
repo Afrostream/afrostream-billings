@@ -21,7 +21,6 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      *
      * @param User                     $user
      * @param UserOpts                 $userOpts
-     * @param Provider                 $provider
      * @param InternalPlan             $internalPlan
      * @param InternalPlanOpts         $internalPlanOpts
      * @param Plan                     $plan
@@ -134,7 +133,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         	}
         }
         if(isset($couponCode)) {
-        	$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+        	$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
         }
         //<-- DATABASE -->
         //BILLING_INFO (NOT MANDATORY)
@@ -187,11 +186,6 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      */
     public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts)
     {
-        $provider = ProviderDAO::getProviderById($user->getProviderId());
-        if($provider == NULL) {
-            throw new BillingsException(new ExceptionType(ExceptionType::internal), "Unknow provider id {$user->getProviderId()}");
-        }
-		
         $customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
         if (empty($customer['id'])) {
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow customer');
@@ -203,7 +197,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         foreach ($subscriptionList as $subscription) {
             $providerPlanId = $subscription['plan']['id'];
 
-            $plan = PlanDAO::getPlanByUuid($provider->getId(), $providerPlanId);
+            $plan = PlanDAO::getPlanByUuid($this->provider->getId(), $providerPlanId);
             if($plan == NULL) {
                 $msg = "plan with uuid=".$providerPlanId." not found";
                 throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -212,7 +206,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             $planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
             $internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
             if($internalPlan == NULL) {
-                $msg = "plan with uuid=".$providerPlanId." for provider ".$provider->getName()." is not linked to an internal plan";
+                $msg = "plan with uuid=".$providerPlanId." for provider ".$this->provider->getName()." is not linked to an internal plan";
                 throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
             }
             $internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
@@ -223,7 +217,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             if (is_null($billingSubscription)) {
             	$subscription_billing_uuid = guid();
                 $billingSubscription = $this->getNewBillingSubscription($user, $plan, $subscription, $subscription_billing_uuid);
-                $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider,
+                $this->createDbSubscriptionFromApiSubscription($user, $userOpts,
                 		$internalPlan, $internalPlanOpts, $plan, $planOpts, 
                 		NULL, NULL, $subscription_billing_uuid, $billingSubscription, 'api', 0);
             } else {
