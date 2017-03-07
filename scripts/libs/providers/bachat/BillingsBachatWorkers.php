@@ -117,12 +117,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				) {
 					$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 				}
-				if(	null !== ($this->provider->getWebhookKey())
+				if(	null !== ($this->provider->getApiKey())
 						&&
-					null !== ($this->provider->getWebhookSecret())
+					null !== ($this->provider->getApiSecret())
 				) {			
 					$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-					$curl_options[CURLOPT_USERPWD] = $this->provider->getWebhookKey().":".$this->provider->getWebhookSecret();
+					$curl_options[CURLOPT_USERPWD] = $this->provider->getApiKey().":".$this->provider->getApiSecret();
 				}
 				$curl_options[CURLOPT_VERBOSE] = true;
 				$CURL = curl_init();
@@ -354,12 +354,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				) {
 					$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 				}
-				if(	null !== ($this->provider->getWebhookKey())
+				if(	null !== ($this->provider->getApiKey())
 					&&
-					null !== ($this->provider->getWebhookSecret())
+					null !== ($this->provider->getApiSecret())
 				) {
 					$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-					$curl_options[CURLOPT_USERPWD] = $this->provider->getWebhookKey().":".$this->provider->getWebhookSecret();
+					$curl_options[CURLOPT_USERPWD] = $this->provider->getApiKey().":".$this->provider->getApiSecret();
 				}
 				$curl_options[CURLOPT_VERBOSE] = true;
 				$CURL = curl_init();
@@ -507,12 +507,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			) {
 				$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 			}
-			if(	null !== ($this->provider->getWebhookKey())
+			if(	null !== ($this->provider->getApiKey())
 				&&
-				null !== ($this->provider->getWebhookSecret())
+				null !== ($this->provider->getApiSecret())
 			) {
 				$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-				$curl_options[CURLOPT_USERPWD] = $this->provider->getWebhookKey().":".$this->provider->getWebhookSecret();
+				$curl_options[CURLOPT_USERPWD] = $this->provider->getApiKey().":".$this->provider->getApiSecret();
 			}
 			$curl_options[CURLOPT_VERBOSE] = true;
 			$CURL = curl_init();
@@ -749,12 +749,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			) {
 				$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 			}
-			if(	null !== ($this->provider->getWebhookKey())
+			if(	null !== ($this->provider->getApiKey())
 				&&
-				null !== ($this->provider->getWebhookSecret())
+				null !== ($this->provider->getApiSecret())
 			) {
 				$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-				$curl_options[CURLOPT_USERPWD] = $this->provider->getWebhookKey().":".$this->provider->getWebhookSecret();
+				$curl_options[CURLOPT_USERPWD] = $this->provider->getApiKey().":".$this->provider->getApiSecret();
 			}
 			$curl_options[CURLOPT_VERBOSE] = true;
 			$CURL = curl_init();
