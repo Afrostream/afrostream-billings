@@ -75,7 +75,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
 					if(strlen($couponCode) > 0) {
-						$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
+						$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
 						$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
 						$billingProviderCouponsCampaign = $couponsInfos['providerCouponsCampaign'];
 						$discountArray = array();
@@ -238,7 +238,6 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	public function createDbSubscriptionFromApiSubscriptionUuid(
 			User $user, 
 			UserOpts $userOpts, 
-			Provider $provider, 
 			InternalPlan $internalPlan = NULL, 
 			InternalPlanOpts $internalPlanOpts = NULL, 
 			Plan $plan = NULL, 
@@ -339,7 +338,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			}
 		}
 		if(isset($couponCode)) {
-			$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
+			$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
 		}
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->

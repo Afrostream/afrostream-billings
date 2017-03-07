@@ -71,7 +71,7 @@ class ProviderSubscriptionsHandler {
 		return($subscriptions);
 	}
 
-	protected function getCouponInfos($couponCode, Provider $provider, User $user, InternalPlan $internalPlan) {
+	protected function getCouponInfos($couponCode, User $user, InternalPlan $internalPlan) {
 		//
 		$out = array();
 		$internalCoupon = NULL;
@@ -117,7 +117,7 @@ class ProviderSubscriptionsHandler {
 		$isProviderCompatible = false;
 		$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
 		foreach ($providerCouponsCampaigns as $currentProviderCouponsCampaign) {
-			if($currentProviderCouponsCampaign->getProviderId() == $provider->getId()) {
+			if($currentProviderCouponsCampaign->getProviderId() == $this->provider->getId()) {
 				$providerCouponsCampaign = $currentProviderCouponsCampaign;
 				$isProviderCompatible = true;
 				break;
@@ -125,7 +125,7 @@ class ProviderSubscriptionsHandler {
 		}
 		if($isProviderCompatible == false) {
 			//Exception
-			$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$provider->getName();
+			$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$this->provider->getName();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PROVIDER_INCOMPATIBLE);
 		}
@@ -307,14 +307,8 @@ class ProviderSubscriptionsHandler {
 				return;
 			}
 			$eventEmailProvidersExceptionArray = explode(";", getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION'));
-			$provider = ProviderDAO::getProviderById($subscription_after_update->getProviderId());
-			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$subscription_after_update->getProviderId();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			if(in_array($provider->getName(), $eventEmailProvidersExceptionArray)) {
-				config::getLogger()->addInfo("event by email : ignored for providerName=".$provider->getName()." for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event);
+			if(in_array($this->provider->getName(), $eventEmailProvidersExceptionArray)) {
+				config::getLogger()->addInfo("event by email : ignored for providerName=".$this->provider->getName()." for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event);
 				return;
 			}
 			$user = UserDAO::getUserById($subscription_after_update->getUserId());
@@ -343,7 +337,7 @@ class ProviderSubscriptionsHandler {
 			}
 			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
 			if($internalPlan == NULL) {
-				$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+				$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -561,7 +555,6 @@ class ProviderSubscriptionsHandler {
 	
 	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, 
 			UserOpts $userOpts, 
-			Provider $provider, 
 			InternalPlan $internalPlan = NULL, 
 			InternalPlanOpts $internalPlanOpts = NULL, 
 			Plan $plan = NULL, 

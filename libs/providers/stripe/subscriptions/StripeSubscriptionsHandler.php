@@ -81,7 +81,6 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     public function createDbSubscriptionFromApiSubscriptionUuid(
 			User $user, 
 			UserOpts $userOpts, 
-			Provider $provider, 
 			InternalPlan $internalPlan = NULL, 
 			InternalPlanOpts $internalPlanOpts = NULL, 
 			Plan $plan = NULL, 
@@ -133,7 +132,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         	}
         }
         if(isset($couponCode)) {
-        	$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
+        	$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
         }
         //<-- DATABASE -->
         //BILLING_INFO (NOT MANDATORY)
@@ -544,7 +543,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         if(array_key_exists('couponCode', $subOpts->getOpts())) {
         	$couponCode = $subOpts->getOpts()['couponCode'];
         	if(strlen($couponCode) > 0) {
-        		$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
+        		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
         		$subscriptionData['coupon'] = $couponsInfos['providerCouponsCampaign']->getExternalUuid();
         		$logMessage = 'Create subscription : customer : %s, plan : %s, source : %s, coupon : %s';
         	}
@@ -593,7 +592,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             if(array_key_exists('couponCode', $subOpts->getOpts())) {
             	$couponCode = $subOpts->getOpts()['couponCode'];
             	if(strlen($couponCode) > 0) {
-            		$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
+            		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
             		$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
             		$billingInternalCoupon = $couponsInfos['internalCoupon'];
             		$billingUserInternalCoupon = $couponsInfos['userInternalCoupon'];
