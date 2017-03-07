@@ -13,8 +13,8 @@ class BillingsImportBraintreeBillingInfos {
 	
 	private $provider = NULL;
 	
-	public function __construct() {
-		$this->provider = ProviderDAO::getProviderByName('braintree');
+	public function __construct(Provider $provider) {
+		$this->provider = $provider;
 	}
 	
 	public function doImportBillingInfos() {

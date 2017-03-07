@@ -13,16 +13,20 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 	private $supportedProviderNames = ['celery', 'recurly', 'braintree', 'bachat', 'gocardless', 'afr'];
 	private $supportedProviders = array();
 	private $supportedProvidersIds = array();
+	private $platformId = NULL;
 	
-	public function __construct() {
+	public function __construct($platformId) {
 		parent::__construct();
 		ChartMogul\Configuration::getDefaultConfiguration()
 		->setAccountToken(getEnv('CHARTMOGUL_API_ACCOUNT_TOKEN'))
 		->setSecretKey(getEnv('CHARTMOGUL_API_SECRET_KEY'));
+		$this->platformId = $platformId;
 		foreach ($this->supportedProviderNames as $providerName) {
-			$provider = ProviderDAO::getProviderByName($providerName);
-			$this->supportedProviders[] = $provider;
-			$this->supportedProvidersIds[] = $provider->getId();
+			$provider = ProviderDAO::getProviderByName2($providerName, $this->platformId);
+			if($provider != NULL) {
+				$this->supportedProviders[] = $provider;
+				$this->supportedProvidersIds[] = $provider->getId();
+			}
 		}
 	}
 	

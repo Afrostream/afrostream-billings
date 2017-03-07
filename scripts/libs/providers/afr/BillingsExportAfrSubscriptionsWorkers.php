@@ -13,9 +13,9 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 	private $provider = NULL;
 	private $processingType = 'subscriptions_export';
 	
-	public function __construct() {
+	public function __construct(Provider $provider) {
 		parent::__construct();
-		$this->provider = ProviderDAO::getProviderByName('afr');
+		$this->provider = $provider;
 	}
 	
 	public function doExportSubscriptions() {
@@ -33,7 +33,7 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 			
 			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingType);
 			//
-			$billingsExportAfrSubscriptions = new BillingsExportAfrSubscriptions();
+			$billingsExportAfrSubscriptions = new BillingsExportAfrSubscriptions($this->provider);
 			//
 					$s3 = S3Client::factory(array(
 							'region' => getEnv('AWS_REGION'),

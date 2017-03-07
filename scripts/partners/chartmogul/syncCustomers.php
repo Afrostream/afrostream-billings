@@ -20,7 +20,7 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingsChartmogulWorkers = new BillingsChartmogulWorkers();
+$billingsChartmogulWorkers = new BillingsChartmogulWorkers(1);
 $billingsChartmogulWorkers->doSyncCustomers();
 
 print_r("processing done\n");

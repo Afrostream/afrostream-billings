@@ -20,7 +20,7 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingsExportAfrSubscriptionsWorkers = new BillingsExportAfrSubscriptionsWorkers();
+$billingsExportAfrSubscriptionsWorkers = new BillingsExportAfrSubscriptionsWorkers(ProviderDAO::getProviderByName2('afr', 1));
 $billingsExportAfrSubscriptionsWorkers->doExportSubscriptions();
 
 print_r("processing done\n");
