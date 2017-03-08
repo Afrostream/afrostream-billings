@@ -18,9 +18,9 @@ class BillingsBachatWorkers extends BillingsWorkers {
 	private $processingTypeSubsRequestCancel = 'subs_request_cancel';
 	private $processingTypeSubsResponseCancel = 'subs_response_cancel';
 	
-	public function __construct() {
+	public function __construct(Provider $provider) {
 		parent::__construct();
-		$this->provider = ProviderDAO::getProviderByName('bachat');
+		$this->provider = $provider;
 	}
 	
 	public function doRequestRenewSubscriptions($force = true) {

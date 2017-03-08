@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/providers/gocardless/BillingsSyncUsersDataFromGocardlessUsers.php';
 
 /*
@@ -20,7 +21,7 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingsSyncUsersDataFromGocardlessUsers = new BillingsSyncUsersDataFromGocardlessUsers();
+$billingsSyncUsersDataFromGocardlessUsers = new BillingsSyncUsersDataFromGocardlessUsers(ProviderDAO::getProviderByName2('gocardless', 1));
 
 $billingsSyncUsersDataFromGocardlessUsers->doSyncUsersData();
 

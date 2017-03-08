@@ -13,9 +13,9 @@ class BillingsExportGocardlessSubscriptionsWorkers extends BillingsWorkers {
 	private $provider = NULL;
 	private $processingType = 'subscriptions_export';
 	
-	public function __construct() {
+	public function __construct(Provider $provider) {
 		parent::__construct();
-		$this->provider = ProviderDAO::getProviderByName('gocardless');
+		$this->provider = $provider;
 	}
 	
 	public function doExportSubscriptions() {
@@ -33,7 +33,7 @@ class BillingsExportGocardlessSubscriptionsWorkers extends BillingsWorkers {
 			
 			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingType);
 			//
-			$billingsExportGocardlessSubscriptions = new BillingsExportGocardlessSubscriptions();
+			$billingsExportGocardlessSubscriptions = new BillingsExportGocardlessSubscriptions($this->provider);
 			//
 			$s3 = S3Client::factory(array(
 							'region' => getEnv('AWS_REGION'),

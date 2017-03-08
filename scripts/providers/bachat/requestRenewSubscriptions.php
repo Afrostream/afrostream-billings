@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/providers/bachat/BillingsBachatWorkers.php';
 
 print_r("starting bachat tool to request renews...\n");
@@ -24,7 +25,7 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsBachatWorkers = new BillingsBachatWorkers();
+$billingsBachatWorkers = new BillingsBachatWorkers(ProviderDAO::getProviderByName2('bachat', 1));
 
 $billingsBachatWorkers->doRequestRenewSubscriptions($force);
 

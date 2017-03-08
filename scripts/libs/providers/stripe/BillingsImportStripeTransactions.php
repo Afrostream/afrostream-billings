@@ -11,9 +11,9 @@ class BillingsImportStripeTransactions
 
     const STRIPE_LIMIT = 50;
 
-    public function __construct()
+    public function __construct(Provider $provider)
     {
-        $this->provider = ProviderDAO::getProviderByName('stripe');
+        $this->provider = $provider;
         \Stripe\Stripe::setApiKey($this->provider->getApiSecret());
     }
 

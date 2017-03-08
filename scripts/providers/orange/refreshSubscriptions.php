@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/providers/orange/BillingsOrangeWorkers.php';
 
 /*
@@ -52,7 +53,7 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsOrangeWorkers = new BillingsOrangeWorkers();
+$billingsOrangeWorkers = new BillingsOrangeWorkers(ProviderDAO::getProviderByName2('orange', 1));
 
 $billingsOrangeWorkers->doRefreshSubscriptions();
 

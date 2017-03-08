@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
+require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../libs/providers/gocardless/BillingsExportGocardlessSubscriptionsWorkers.php';
 require_once __DIR__ . '/../libs/providers/bachat/BillingsExportBachatSubscriptionsWorkers.php';
 require_once __DIR__ . '/../libs/providers/afr/BillingsExportAfrSubscriptionsWorkers.php';
@@ -22,21 +23,21 @@ foreach ($argv as $arg) {
 
 print_r("processing gocardless subscriptions export...\n");
 
-$billingsExportGocardlessSubscriptionsWorkers = new BillingsExportGocardlessSubscriptionsWorkers();
+$billingsExportGocardlessSubscriptionsWorkers = new BillingsExportGocardlessSubscriptionsWorkers(ProviderDAO::getProviderByName2('gocardless', 1));
 $billingsExportGocardlessSubscriptionsWorkers->doExportSubscriptions();
 
 print_r("processing gocardless subscriptions export done\n");
 
 print_r("processing bachat subscriptions export...\n");
 
-$billingsExportBachatSubscriptionsWorkers = new BillingsExportBachatSubscriptionsWorkers();
+$billingsExportBachatSubscriptionsWorkers = new BillingsExportBachatSubscriptionsWorkers(ProviderDAO::getProviderByName2('bachat', 1));
 $billingsExportBachatSubscriptionsWorkers->doExportSubscriptions();
 
 print_r("processing bachat subscriptions export done\n");
 
 print_r("processing afr subscriptions export...\n");
 
-$billingsExportAfrSubscriptionsWorkers = new BillingsExportAfrSubscriptionsWorkers();
+$billingsExportAfrSubscriptionsWorkers = new BillingsExportAfrSubscriptionsWorkers(ProviderDAO::getProviderByName2('afr', 1));
 $billingsExportAfrSubscriptionsWorkers->doExportSubscriptions();
 
 print_r("processing afr subscriptions export done\n");

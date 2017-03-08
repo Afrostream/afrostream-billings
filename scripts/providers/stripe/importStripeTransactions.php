@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/providers/stripe/BillingsImportStripeTransactions.php';
 
 /*
@@ -76,7 +77,7 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsImportStripeTransactions = new BillingsImportStripeTransactions();
+$billingsImportStripeTransactions = new BillingsImportStripeTransactions(ProviderDAO::getProviderByName2('stripe', 1));
 
 $billingsImportStripeTransactions->doImportTransactions($from, $to);
 

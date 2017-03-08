@@ -8,8 +8,8 @@ class BillingsImportRecurlyUsers {
 	
 	private $provider = NULL;
 	
-	public function __construct() {
-		$this->provider = ProviderDAO::getProviderByName('recurly');
+	public function __construct(Provider $provider) {
+		$this->provider = $provider;
 	}
 	
 	function doImportRecurlyUsers() {

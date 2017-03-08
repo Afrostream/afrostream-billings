@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/providers/recurly/BillingsSyncUsersDataFromRecurlyUsers.php';
 
 /*
@@ -20,7 +21,7 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingsSyncUsersDataFromRecurlyUsers = new BillingsSyncUsersDataFromRecurlyUsers();
+$billingsSyncUsersDataFromRecurlyUsers = new BillingsSyncUsersDataFromRecurlyUsers(ProviderDAO::getProviderByName2('recurly', 1));
 
 $billingsSyncUsersDataFromRecurlyUsers->doSyncUsersData();
 
