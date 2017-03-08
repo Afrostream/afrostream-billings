@@ -53,7 +53,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 			$lastId = NULL;
 			$totalCounter = NULL;
 			do {
-				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $this->supportedProvidersIds, $chartmogulStatus_array);
+				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $this->supportedProvidersIds, $chartmogulStatus_array, $this->platformId);
 				if(is_null($totalCounter)) {$totalCounter = $users['total_counter'];}
 				$idx+= count($users['users']);
 				$lastId = $users['lastId'];
@@ -114,7 +114,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 			$lastId = NULL;
 			$totalCounter = NULL;
 			do {
-				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $this->supportedProvidersIds, $chartmogulStatus_array);
+				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $this->supportedProvidersIds, $chartmogulStatus_array, $this->platformId);
 				if(is_null($totalCounter)) {$totalCounter = $users['total_counter'];}
 				$idx+= count($users['users']);
 				$lastId = $users['lastId'];
@@ -199,7 +199,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 		try {
 			ScriptsConfig::getLogger()->addInfo("merging chartmogul customer for user with id=".$user->getId()."...");
 			//get users
-			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid()), $this->supportedProvidersIds);
+			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid(), NULL, $this->platformId), $this->supportedProvidersIds);
 			$masterUser = self::getFirstUserByChartmogulMergeStatus($users, 'master');
 			if($masterUser == NULL) {
 				$masterUser = self::getFirstUserByChartmogulMergeStatus($users, 'pending');
@@ -207,7 +207,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 				$masterUser = UserDAO::updateChartmogulStatus($masterUser);
 			}
 			//update users
-			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid()), $this->supportedProvidersIds);
+			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid(), NULL, $this->platformId), $this->supportedProvidersIds);
 			$pendingUsers = self::getUsersByChartmogulMergeStatus($users, 'pending');
 			foreach ($pendingUsers as $pendingUser) {
 				try {

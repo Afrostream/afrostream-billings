@@ -322,7 +322,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     public function doUpdateInternalPlanSubscription(BillingsSubscription $subscription, UpdateInternalPlanSubscriptionRequest $updateInternalPlanSubscriptionRequest) {
 	    try {
 	    	config::getLogger()->addInfo("stripe subscription updating Plan...");
-	    	$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid());
+	    	$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid(), $updateInternalPlanSubscriptionRequest->getPlatform()->getId());
 	    	if($internalPlan == NULL) {
 	    		$msg = "unknown internalPlanUuid : ".$updateInternalPlanSubscriptionRequest->getInternalPlanUuid();
 	    		config::getLogger()->addError($msg);

@@ -63,7 +63,7 @@ class InternalCouponsCampaignsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$provider = ProviderDAO::getProviderByName($providerName);
+			$provider = ProviderDAO::getProviderByName2($providerName, $addProviderToInternalCouponsCampaignRequest->getPlatform()->getId());
 			if($provider == NULL) {
 				$msg = "unknown provider named : ".$providerName;
 				config::getLogger()->addError($msg);

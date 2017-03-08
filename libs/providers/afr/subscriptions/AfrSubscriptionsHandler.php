@@ -513,7 +513,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	protected function doCheckSponsoring(User $user) {
 		$subscriptionsHandler = new SubscriptionsHandler();
-		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid());
+		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid(), $user->getPlatformId());
 		foreach ($subscriptions as $subscription) {
 			$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription->getId());
 			if(isset($userInternalCoupon)) {

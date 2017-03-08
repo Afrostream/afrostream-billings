@@ -27,7 +27,7 @@ class InternalPlansHandler {
 		try {
 			config::getLogger()->addInfo("internal plan getting, internalPlanUuid=".$internalPlanUuid."....");
 			//
-			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $getInternalPlanRequest->getPlatform()->getId());
 			//
 			config::getLogger()->addInfo("internal plan getting, internalPlanUuid=".$internalPlanUuid." done successfully");
 		} catch(BillingsException $e) {
@@ -54,7 +54,7 @@ class InternalPlansHandler {
 			config::getLogger()->addInfo("internal plans getting...");
 			$provider_id = NULL;
 			if(isset($provider_name)) {
-				$provider = ProviderDAO::getProviderByName($provider_name);
+				$provider = ProviderDAO::getProviderByName2($provider_name, $getInternalPlansRequest->getPlatform()->getId());
 				if($provider == NULL) {
 					$msg = "unknown provider named : ".$provider_name;
 					config::getLogger()->addError($msg);
@@ -89,10 +89,10 @@ class InternalPlansHandler {
 				} else {
 					$context_id = $context->getId();
 					$country = $contextCountry;//Force country to the contextCountry
-					$db_internal_plans = InternalPlanDAO::getInternalPlans($provider_id, $context_id, $isVisible, $country);
+					$db_internal_plans = InternalPlanDAO::getInternalPlans($provider_id, $context_id, $isVisible, $country, $getInternalPlansRequest->getPlatform()->getId());
 				}
 			} else {
-				$db_internal_plans = InternalPlanDAO::getInternalPlans($provider_id, $context_id, $isVisible, $country);
+				$db_internal_plans = InternalPlanDAO::getInternalPlans($provider_id, $context_id, $isVisible, $country, $getInternalPlansRequest->getPlatform()->getId());
 			}
 			config::getLogger()->addInfo("internal plans getting done successfully");
 		} catch(BillingsException $e) {
@@ -126,13 +126,13 @@ class InternalPlansHandler {
 		try {
 			config::getLogger()->addInfo("internal plan creating...");
 			//checks
-			$db_tmp_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_tmp_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $createInternalPlanRequest->getPlatform()->getId());
 			if(isset($db_tmp_internal_plan)) {
 				$msg = "an internal plan with the same InternalPlanUuid=".$internalPlanUuid." already exists";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_tmp_internal_plan = InternalPlanDAO::getInternalPlanByName($name);
+			$db_tmp_internal_plan = InternalPlanDAO::getInternalPlanByName($name, $createInternalPlanRequest->getPlatform()->getId());
 			if(isset($db_tmp_internal_plan)) {
 				$msg = "an internal plan with the same name=".$name." already exists";
 				config::getLogger()->addError($msg);
@@ -178,6 +178,7 @@ class InternalPlansHandler {
 				$db_internal_plan->setTrialEnabled($trialEnabled);
 				$db_internal_plan->setTrialPeriodLength($trialPeriodLength);
 				$db_internal_plan->setTrialPeriodUnit(new TrialPeriodUnit($trialPeriodUnit));
+				$db_internal_plan->setPlatformId($createInternalPlanRequest->getPlatform()->getId());
 				$db_internal_plan = InternalPlanDAO::addInternalPlan($db_internal_plan);
 				//INTERNAL_PLAN_OPTS
 				$internalPlanOpts = new InternalPlanOpts();
@@ -209,13 +210,13 @@ class InternalPlansHandler {
 		//
 		$db_internal_plan = NULL;
 		try {
-			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $addInternalPlanToProviderRequest->getPlatform()->getId());
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$provider = ProviderDAO::getProviderByName($providerName);
+			$provider = ProviderDAO::getProviderByName2($providerName, $addInternalPlanToProviderRequest->getPlatform()->getId());
 			if($provider == NULL) {
 				$msg = "unknown provider named : ".$providerName;
 				config::getLogger()->addError($msg);
@@ -270,7 +271,9 @@ class InternalPlansHandler {
 		return($db_internal_plan);
 	}
 	
-	public function doAddToCountry($internalPlanUuid, $country) {
+	public function doAddToCountry(AddInternalPlanToCountryRequest $addInternalPlanToCountryRequest) {
+		$internalPlanUuid = $addInternalPlanToCountryRequest->getInternalPlanUuid();
+		$country = $addInternalPlanToCountryRequest->getCountry();
 		$db_internal_plan = NULL;
 		try {
 			if(!Codes::isValid($country)) {
@@ -278,7 +281,7 @@ class InternalPlansHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $addInternalPlanToCountryRequest->getPlatform()->getId());
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
 				config::getLogger()->addError($msg);
@@ -309,10 +312,12 @@ class InternalPlansHandler {
 		return($db_internal_plan);	
 	}
 	
-	public function doRemoveFromCountry($internalPlanUuid, $country) {
+	public function doRemoveFromCountry(RemoveInternalPlanFromCountryRequest $removeInternalPlanFromCountryRequest) {
+		$internalPlanUuid = $removeInternalPlanFromCountryRequest->getInternalPlanUuid();
+		$country = $removeInternalPlanFromCountryRequest->getCountry();
 		$db_internal_plan = NULL;
 		try {
-			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $removeInternalPlanFromCountryRequest->getPlatform()->getId());
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
 				config::getLogger()->addError($msg);
@@ -340,7 +345,10 @@ class InternalPlansHandler {
 		return($db_internal_plan);		
 	}
 	
-	public function doAddToContext($internalPlanUuid, $contextBillingUuid, $contextCountry) {
+	public function doAddToContext(AddInternalPlanToContextRequest $addInternalPlanToContextRequest) {
+		$internalPlanUuid = $addInternalPlanToContextRequest->getInternalPlanUuid();
+		$contextBillingUuid = $addInternalPlanToContextRequest->getContextBillingUuid();
+		$contextCountry = $addInternalPlanToContextRequest->getContextCountry();
 		$db_internal_plan = NULL;
 		try {
 			if(!Codes::isValid($contextCountry)) {
@@ -348,7 +356,7 @@ class InternalPlansHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $addInternalPlanToContextRequest->getPlatform()->getId());
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
 				config::getLogger()->addError($msg);
@@ -391,10 +399,13 @@ class InternalPlansHandler {
 		return($db_internal_plan);		
 	}
 	
-	public function doRemoveFromContext($internalPlanUuid, $contextBillingUuid, $contextCountry) {
+	public function doRemoveFromContext(RemoveInternalPlanFromContextRequest $removeInternalPlanFromContextRequest) {
+		$internalPlanUuid = $removeInternalPlanFromContextRequest->getInternalPlanUuid();
+		$contextBillingUuid = $removeInternalPlanFromContextRequest->getContextBillingUuid();
+		$contextCountry = $removeInternalPlanFromContextRequest->getContextCountry();
 		$db_internal_plan = NULL;
 		try {
-			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $removeInternalPlanFromContextRequest->getPlatform()->getId());
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
 				config::getLogger()->addError($msg);
@@ -435,7 +446,7 @@ class InternalPlansHandler {
 		$db_internal_plan = NULL;
 		try {
 			config::getLogger()->addInfo("internal plan opts updating...");
-			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $updateInternalPlanRequest->getPlatform()->getId());
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
 				config::getLogger()->addError($msg);

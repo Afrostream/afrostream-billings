@@ -108,7 +108,7 @@ class ContextsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $addInternalPlanToContextRequest->getPlatform()->getId());
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
 				config::getLogger()->addError($msg);
@@ -157,7 +157,7 @@ class ContextsHandler {
 		$internalPlanUuid = $removeInternalPlanFromContextRequest->getInternalPlanUuid();
 		$context = NULL;
 		try {
-			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $removeInternalPlanFromContextRequest->getPlatform()->getId());
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
 				config::getLogger()->addError($msg);
@@ -203,7 +203,7 @@ class ContextsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $setInternalPlanIndexInContextRequest->getPlatform()->getId());
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
 				config::getLogger()->addError($msg);

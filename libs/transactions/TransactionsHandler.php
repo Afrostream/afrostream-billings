@@ -38,10 +38,13 @@ class TransactionsHandler {
 		}
 	}
 	
-	public function doUpdateTransactionByTransactionProviderUuid($provider_name, $transactionProviderUuid, $updateType) {
+	public function doUpdateTransactionByTransactionProviderUuid(UpdateTransactionRequest $updateTransactionRequest) {
+		$provider_name = $updateTransactionRequest->getProviderName();
+		$transactionProviderUuid = $updateTransactionRequest->getTransactionProviderUuid();
+		$updateType = $updateTransactionRequest->getOrigin();
 		try {
 			config::getLogger()->addInfo("transaction updating for transactionProviderUuid=".$transactionProviderUuid."...");
-			$provider = ProviderDAO::getProviderByName($provider_name);
+			$provider = ProviderDAO::getProviderByName2($provider_name, $updateTransactionRequest->getPlatform()->getId());
 			
 			if($provider == NULL) {
 				$msg = "unknown provider named : ".$provider_name;
@@ -49,7 +52,7 @@ class TransactionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($provider);
-			$providerTransactionsHandlerInstance->doUpdateTransactionByTransactionProviderUuid($transactionProviderUuid, $updateType);
+			$providerTransactionsHandlerInstance->doUpdateTransactionByTransactionProviderUuid($updateTransactionRequest);
 			config::getLogger()->addInfo("transaction updating for transactionProviderUuid=".$transactionProviderUuid." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while transaction updating for transactionProviderUuid=".$transactionProviderUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();

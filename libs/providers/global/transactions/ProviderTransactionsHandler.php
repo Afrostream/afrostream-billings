@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../requests/RefundTransactionRequest.php';
+require_once __DIR__ . '/../requests/UpdateTransactionRequest.php';
 
 class ProviderTransactionsHandler {
 	
@@ -25,7 +26,7 @@ class ProviderTransactionsHandler {
 		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}
 	
-	public function doUpdateTransactionByTransactionProviderUuid($transactionProviderUuid, $updateType) {
+	public function doUpdateTransactionByTransactionProviderUuid(UpdateTransactionRequest $updateTransactionRequest) {
 		$msg = "unsupported feature - update transaction - for provider named : ".$this->provider->getName();
 		config::getLogger()->addError($msg);
 		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);

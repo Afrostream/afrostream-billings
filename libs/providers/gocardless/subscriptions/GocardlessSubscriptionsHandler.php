@@ -266,7 +266,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			
 			$internal_plan_uuid = $api_subscription->metadata->internal_plan_uuid;
 			
-			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid);
+			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid, $this->provider->getPlatformId());
 			
 			if($internalPlan == NULL) {
 				$msg = "unknown internal_plan_uuid : ".$internal_plan_uuid;
@@ -401,7 +401,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			
 			$internal_plan_uuid = $api_subscription->metadata->internal_plan_uuid;
 			
-			$internal_plan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid);
+			$internal_plan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid, $this->provider->getPlatformId());
 			
 			if($internal_plan == NULL) {
 				$msg = "unknown internal_plan_uuid : ".$internal_plan_uuid;

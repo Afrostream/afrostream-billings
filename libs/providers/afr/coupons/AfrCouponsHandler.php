@@ -114,7 +114,7 @@ class AfrCouponsHandler extends ProviderCouponsHandler {
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), 'recipient has already been sponsored', ExceptionError::AFR_COUPON_SPS_RECIPIENT_ALREADY_SPONSORED);
 						}
 						//Check if user has not already an active subscription
-						$recipientUsers = UserDAO::getUsersByEmail($recipentEmail);
+						$recipientUsers = UserDAO::getUsersByEmail($recipentEmail, $this->provider->getPlatformId());
 						$subscriptionsHandler = new SubscriptionsHandler();
 						foreach ($recipientUsers as $recipientUser) {
 							$recipientSubscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($recipientUser);

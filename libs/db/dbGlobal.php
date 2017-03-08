@@ -60,7 +60,7 @@ class UserDAO {
 	BU._id, BU.creation_date, BU.providerid, 
 	BU.user_billing_uuid, BU.user_reference_uuid, 
 	BU.user_provider_uuid, BU.deleted,
-	BU.chartmogul_customer_uuid, BU.chartmogul_merge_status
+	BU.chartmogul_customer_uuid, BU.chartmogul_merge_status, BU.platformId
 EOL;
 	
 	private static function getUserFromRow($row) {
@@ -74,17 +74,19 @@ EOL;
 		$out->setDeleted($row["deleted"] == 't' ? true : false);
 		$out->setChartmogulCustomerUuid($row["chartmogul_customer_uuid"]);
 		$out->setChartmogulMergeStatus($row["chartmogul_merge_status"]);
+		$out->setPlatformId($row["platformid"]);
 		return($out);
 	}
 	
 	public static function addUser(User $user) {
-		$query = "INSERT INTO billing_users (providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid)";
-		$query.= " VALUES ($1, $2, $3, $4) RETURNING _id";
+		$query = "INSERT INTO billing_users (providerid, user_billing_uuid, user_reference_uuid, user_provider_uuid, platformid)";
+		$query.= " VALUES ($1, $2, $3, $4, $5) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query, 
 				array($user->getProviderId(),
 					$user->getUserBillingUuid(),
 					$user->getUserReferenceUuid(),
-					$user->getUserProviderUuid()));
+					$user->getUserProviderUuid(),
+					$user->getPlatformId()));
 		$row = pg_fetch_row($result);
 		// free result
 		pg_free_result($result);
@@ -106,12 +108,12 @@ EOL;
 		return($out);
 	}
 	
-	public static function getUsersByUserReferenceUuid($user_reference_uuid, $providerid = NULL) {
-		$query = "SELECT ".self::$sfields." FROM billing_users BU WHERE BU.deleted = false AND BU.user_reference_uuid = $1";
+	public static function getUsersByUserReferenceUuid($user_reference_uuid, $providerid = NULL, $platformId) {
+		$query = "SELECT ".self::$sfields." FROM billing_users BU WHERE BU.deleted = false AND BU.user_reference_uuid = $1 AND BU.platformid = $2";
 		if(isset($providerid)) {
-			$query.= " AND BU.providerid = $2";
+			$query.= " AND BU.providerid = $3";
 		}
-		$query_params = array($user_reference_uuid);
+		$query_params = array($user_reference_uuid, $platformId);
 		if(isset($providerid)) {
 			array_push($query_params, $providerid);
 		}
@@ -143,9 +145,9 @@ EOL;
 		return($out);
 	}
 	
-	public static function getUserByUserBillingUuid($user_billing_uuid) {
-		$query = "SELECT ".self::$sfields." FROM billing_users BU WHERE BU.deleted = false AND BU.user_billing_uuid = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($user_billing_uuid));
+	public static function getUserByUserBillingUuid($user_billing_uuid, $platformId) {
+		$query = "SELECT ".self::$sfields." FROM billing_users BU WHERE BU.deleted = false AND BU.user_billing_uuid = $1 AND BU.platformid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($user_billing_uuid, $platformId));
 	
 		$out = null;
 	
@@ -176,15 +178,16 @@ EOL;
 		return($out);
 	}
 	
-	public static function getUsersByEmail($email) {
+	public static function getUsersByEmail($email, $platformId) {
 		$query = "SELECT ".self::$sfields." FROM billing_users BU";
 		$query.= " INNER JOIN billing_users_opts BUO ON (BU._id = BUO.userid)";
 		$query.= " WHERE BU.deleted = false";
 		$query.= " AND BUO.key = 'email'";
 		$query.= " AND BUO.deleted = false";
 		$query.= " AND BUO.value = $1";
+		$query.= " AND BU.platformid = $2";
 		
-		$result = pg_query_params(config::getDbConn(), $query, array($email));
+		$result = pg_query_params(config::getDbConn(), $query, array($email, $platformId));
 		
 		$out = array();
 		
@@ -201,10 +204,12 @@ EOL;
 			$offset = 0,
 			$afterId = NULL,
 			$providerIds_array = NULL,
-			$chartmogulStatus_array = NULL) {
+			$chartmogulStatus_array = NULL,
+			$platformId) {
 		$params = array();
 		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_users BU";
-		$query.= " WHERE BU.deleted = false";
+		$query.= " WHERE BU.deleted = false AND BU.platformid = $1";
+		$params[] = $platformId;
 		if(isset($providerIds_array) && count($providerIds_array) > 0) {
 			$firstLoop = true;
 			$query.= " AND BU.providerid in (";
@@ -288,6 +293,7 @@ class User implements JsonSerializable {
 	private $deleted;
 	private $chartmogul_customer_uuid;
 	private $chartmogul_merge_status;
+	private $platformId;
 
 	public function getId() {
 		return($this->_id);
@@ -359,6 +365,14 @@ class User implements JsonSerializable {
 	
 	public function getChartmogulMergeStatus() {
 		return($this->chartmogul_merge_status);
+	}
+	
+	public function setPlatformId($platformId) {
+		$this->platformId = $platformId;
+	}
+	
+	public function getPlatformId() {
+		return($this->platformId);
 	}
 	
 	public function jsonSerialize() {
@@ -500,7 +514,7 @@ class InternalPlanDAO {
 	public static function init() {
 		InternalPlanDAO::$sfields = "BIP._id, BIP.internal_plan_uuid, BIP.name, BIP.description,".
 			" BIP.amount_in_cents, BIP.currency, BIP.cycle, BIP.period_unit, BIP.period_length, BIP.thumbid, BIP.vat_rate,".
-			" BIP.trial_enabled, BIP.trial_period_length, BIP.trial_period_unit, BIP.is_visible, BIP.details";
+			" BIP.trial_enabled, BIP.trial_period_length, BIP.trial_period_unit, BIP.is_visible, BIP.details, BIP.platformid";
 	}
 	
 	private static function getInternalPlanFromRow($row) {
@@ -521,6 +535,7 @@ class InternalPlanDAO {
 		$out->setTrialPeriodUnit($row["trial_period_unit"] == NULL ? NULL : new TrialPeriodUnit($row["trial_period_unit"]));
 		$out->setIsVisible($row["is_visible"] == 't' ? true : false);
 		$out->setDetails(json_decode($row["details"], true));
+		$out->setPlatformId($row["platformid"]);
 		return($out);
 	}
 	
@@ -539,9 +554,9 @@ class InternalPlanDAO {
 		return($out);
 	}
 	
-	public static function getInternalPlanByUuid($internal_plan_uuid) {
-		$query = "SELECT ".self::$sfields." FROM billing_internal_plans BIP WHERE BIP.internal_plan_uuid = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($internal_plan_uuid));
+	public static function getInternalPlanByUuid($internal_plan_uuid, $platformId) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans BIP WHERE BIP.internal_plan_uuid = $1 AND BIP.platformid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($internal_plan_uuid, $platformId));
 	
 		$out = null;
 	
@@ -554,9 +569,9 @@ class InternalPlanDAO {
 		return($out);
 	}
 	
-	public static function getInternalPlanByName($name) {
-		$query = "SELECT ".self::$sfields." FROM billing_internal_plans BIP WHERE BIP.name = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($name));
+	public static function getInternalPlanByName($name, $platformId) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans BIP WHERE BIP.name = $1 AND BIP.platformid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($name, $platformId));
 	
 		$out = null;
 	
@@ -569,7 +584,7 @@ class InternalPlanDAO {
 		return($out);
 	}
 	
-	public static function getInternalPlans($providerId = NULL, $contextId = NULL, $isVisible = NULL, $country = NULL) {
+	public static function getInternalPlans($providerId = NULL, $contextId = NULL, $isVisible = NULL, $country = NULL, $platformId) {
 		$query = "SELECT ".self::$sfields." FROM billing_internal_plans BIP";
 		$params = array();
 		
@@ -628,7 +643,13 @@ class InternalPlanDAO {
 			}
 			$where.= "BIP.is_visible = $".(count($params));
 		}
-		
+		$params[] = $platformId;
+		if(empty($where)) {
+			$where.= " WHERE ";
+		} else {
+			$where.= " AND ";
+		}
+		$where.= "BIP.platformid = $".(count($params));
 		$query.= $where;
 		if(isset($contextId)) {
 			$query.= " ORDER BY BIPBC.index ASC";
@@ -646,7 +667,8 @@ class InternalPlanDAO {
 	}
 	
 	public static function addInternalPlan(InternalPlan $internalPlan) {
-		$query = "INSERT INTO billing_internal_plans (internal_plan_uuid, name, description, amount_in_cents, currency, cycle, period_unit, period_length, trial_enabled, trial_period_length, trial_period_unit, vat_rate)";
+		$query = "INSERT INTO billing_internal_plans ";
+		$query.= "(internal_plan_uuid, name, description, amount_in_cents, currency, cycle, period_unit, period_length, trial_enabled, trial_period_length, trial_period_unit, vat_rate, platformid)";
 		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query, 
 				array($internalPlan->getInternalPlanUuid(),
@@ -660,7 +682,8 @@ class InternalPlanDAO {
 					$internalPlan->getTrialEnabled(),
 					$internalPlan->getTrialPeriodLength(),
 					$internalPlan->getTrialPeriodUnit(),
-					$internalPlan->getVatRate()
+					$internalPlan->getVatRate(),
+					$internalPlan->getPlatformId()
 				));
 		$row = pg_fetch_row($result);
 		// free result
@@ -737,6 +760,7 @@ class InternalPlan implements JsonSerializable {
 	private $trialPeriodUnit;
 	private $isVisible;
 	private $details;
+	private $platformId;
 
 	public function getId() {
 		return($this->_id);
@@ -888,6 +912,14 @@ class InternalPlan implements JsonSerializable {
 	
 	public function getDetails() {
 		return($this->details);
+	}
+	
+	public function setPlatformId($platformId) {
+		$this->platformId = $platformId;
+	}
+	
+	public function getPlatformId() {
+		return($this->platformId);
 	}
 	
 	public function jsonSerialize() {
@@ -1379,7 +1411,6 @@ class PlanOptsDAO {
 class ProviderDAO {
 	
 	private static $providersById = array();
-	private static $providersByName = array();
 	
 	private static $sfields = "_id, name, uuid, platformid, merchantid, serviceid, api_key, api_secret, webhook_key, webhook_secret";
 	
@@ -1397,25 +1428,21 @@ class ProviderDAO {
 		$out->setWebhookSecret($row["webhook_secret"]);
 		//<-- cache -->
 		self::$providersById[$out->getId()] = $out;
-		self::$providersByName[$out->getName()] = $out;
 		//<-- cache -->
 		return($out);
 	}
 	
 	public static function getProviderByName($name) {
 		$out = NULL;
-		if(array_key_exists($name, self::$providersByName)) {
-			$out = self::$providersByName[$name];
-		} else {
-			$query = "SELECT ".self::$sfields." FROM billing_providers WHERE name = $1";
-			$result = pg_query_params(config::getDbConn(), $query, array($name));
+		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE name = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($name));
 			
-			if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-				$out = self::getProviderFromRow($row);
-			}
-			// free result
-			pg_free_result($result);
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getProviderFromRow($row);
 		}
+		// free result
+		pg_free_result($result);
+	
 		return($out);
 	}
 	

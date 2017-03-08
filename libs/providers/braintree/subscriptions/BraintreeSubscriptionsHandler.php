@@ -588,7 +588,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		try {
 			config::getLogger()->addInfo("braintree subscription updating Plan...");
 			//
-			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid());
+			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid(), $this->provider->getPlatformId());
 			if($internalPlan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$updateInternalPlanSubscriptionRequest->getInternalPlanUuid();
 				config::getLogger()->addError($msg);

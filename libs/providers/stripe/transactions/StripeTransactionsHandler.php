@@ -160,7 +160,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 					if($userId == NULL) {
 						if(array_key_exists('AfrUserBillingUuid', $metadata)) {
 							$user_billing_uuid = $metadata['AfrUserBillingUuid'];
-							$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
+							$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid, $this->provider->getPlatformId());
 							if($user == NULL) {
 								$msg = "AfrUserBillingUuid=".$user_billing_uuid." in metadata cannot be found";
 								config::getLogger()->addError($msg);
@@ -192,7 +192,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 					if($userId == NULL) {
 						if(array_key_exists('AfrUserBillingUuid', $metadata)) {
 							$user_billing_uuid = $metadata['AfrUserBillingUuid'];
-							$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
+							$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid, $this->provider->getPlatformId());
 							if($user == NULL) {
 								$msg = "AfrUserBillingUuid=".$user_billing_uuid." in metadata cannot be found";
 								config::getLogger()->addError($msg);
@@ -376,7 +376,9 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 		return($billingsRefundTransaction);
 	}
 	
-	public function doUpdateTransactionByTransactionProviderUuid($transactionProviderUuid, $updateType) {
+	public function doUpdateTransactionByTransactionProviderUuid(UpdateTransactionRequest $updateTransactionRequest) {
+		$transactionProviderUuid = $updateTransactionRequest->getTransactionProviderUuid();
+		$updateType = $updateTransactionRequest->getOrigin();
 		try {
 			$stripeChargeTransaction = \Stripe\Charge::retrieve($transactionProviderUuid);
 			if(isset($stripeChargeTransaction->customer)) {

@@ -61,7 +61,7 @@ class SubscriptionsHandler {
 			$billingInfo->setBillingInfoBillingUuid(guid());
 			$subOpts = new BillingsSubscriptionOpts();
 			$subOpts->setOpts($getOrCreateSubscriptionRequest->getSubOptsArray());
-			$user = UserDAO::getUserByUserBillingUuid($getOrCreateSubscriptionRequest->getUserBillingUuid());
+			$user = UserDAO::getUserByUserBillingUuid($getOrCreateSubscriptionRequest->getUserBillingUuid(), $getOrCreateSubscriptionRequest->getPlatform()->getId());
 			if($user == NULL) {
 				$msg = "unknown user_billing_uuid : ".$getOrCreateSubscriptionRequest->getUserBillingUuid();
 				config::getLogger()->addError($msg);
@@ -70,7 +70,7 @@ class SubscriptionsHandler {
 			
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 			
-			$internal_plan = InternalPlanDAO::getInternalPlanByUuid($getOrCreateSubscriptionRequest->getInternalPlanUuid());
+			$internal_plan = InternalPlanDAO::getInternalPlanByUuid($getOrCreateSubscriptionRequest->getInternalPlanUuid(), $getOrCreateSubscriptionRequest->getPlatform()->getId());
 			if($internal_plan == NULL) {
 				$msg = "unknown internal_plan_uuid : ".$getOrCreateSubscriptionRequest->getInternalPlanUuid();
 				config::getLogger()->addError($msg);
@@ -190,11 +190,11 @@ class SubscriptionsHandler {
 		return($subscriptions);
 	}
 	
-	public function doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid) {
+	public function doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid, $platformId) {
 		$subscriptions = array();
 		try {
 			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid."...");
-			$users = UserDAO::getUsersByUserReferenceUuid($userReferenceUuid);
+			$users = UserDAO::getUsersByUserReferenceUuid($userReferenceUuid, NULL, $platformId);
 			foreach ($users as $user) {
 				$subscriptions = array_merge($subscriptions, $this->doGetUserSubscriptionsByUser($user));
 			}
