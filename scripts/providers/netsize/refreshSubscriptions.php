@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/providers/netsize/BillingsNetsizeWorkers.php';
 
 /*
@@ -52,7 +53,7 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsNetsizeWorkers = new BillingsNetsizeWorkers();
+$billingsNetsizeWorkers = new BillingsNetsizeWorkers(ProviderDAO::getProviderByName2('netsize', 1));
 
 $billingsNetsizeWorkers->doRefreshSubscriptions();
 

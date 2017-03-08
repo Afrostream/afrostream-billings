@@ -7,8 +7,8 @@ class BillingsExportGocardlessSubscriptions {
 	
 	private $provider = NULL;
 	
-	public function __construct() {
-		$this->provider = ProviderDAO::getProviderByName('gocardless');
+	public function __construct(Provider $provider) {
+		$this->provider = $provider;
 	}
 	
 	public function doExportSubscriptionsForChartmogul(DateTime $from, DateTime $to, $export_subs_file_path) {

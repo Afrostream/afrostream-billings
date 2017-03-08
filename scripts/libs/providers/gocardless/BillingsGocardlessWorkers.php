@@ -11,9 +11,9 @@ class BillingsGocardlessWorkers extends BillingsWorkers {
 	private $provider = NULL;
 	private $processingType = 'subs_refresh';
 	
-	public function __construct() {
+	public function __construct(Provider $provider) {
 		parent::__construct();
-		$this->provider = ProviderDAO::getProviderByName('gocardless');
+		$this->provider = $provider;
 	}
 	
 	public function doRefreshSubscriptions() {

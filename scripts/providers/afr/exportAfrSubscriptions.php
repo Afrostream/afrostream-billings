@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/providers/afr/BillingsExportAfrSubscriptionsWorkers.php';
 
 /*
@@ -20,7 +21,7 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingsExportAfrSubscriptionsWorkers = new BillingsExportAfrSubscriptionsWorkers();
+$billingsExportAfrSubscriptionsWorkers = new BillingsExportAfrSubscriptionsWorkers(ProviderDAO::getProviderByName2('afr', 1));
 $billingsExportAfrSubscriptionsWorkers->doExportSubscriptions();
 
 print_r("processing done\n");

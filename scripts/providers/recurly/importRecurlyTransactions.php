@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/providers/recurly/BillingsImportRecurlyTransactions.php';
 
 /*
@@ -52,7 +53,7 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsImportRecurlyTransactions = new BillingsImportRecurlyTransactions();
+$billingsImportRecurlyTransactions = new BillingsImportRecurlyTransactions(ProviderDAO::getProviderByName2('recurly', 1));
 
 $billingsImportRecurlyTransactions->doImportTransactions();
 
