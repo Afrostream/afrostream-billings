@@ -4305,7 +4305,7 @@ class BillingsTransactionDAO {
 	transaction_billing_uuid, transaction_provider_uuid,
 	creation_date, updated_date, transaction_creation_date, 
 	amount_in_cents, currency, country, transaction_status, 
-	transaction_type, invoice_provider_uuid, message, update_type, transactionid, platformid
+	transaction_type, invoice_provider_uuid, message, update_type, platformid
 EOL;
 
 	private static function getBillingsTransactionFromRow($row) {
