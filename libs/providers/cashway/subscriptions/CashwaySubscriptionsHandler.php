@@ -21,7 +21,7 @@ class CashwaySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$couponCode = $subOpts->getOpts()['couponCode'];
-			$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+			$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode, $this->provider->getPlatformId());
 			if($internalCoupon == NULL) {
 				$msg = "coupon : code=".$couponCode." NOT FOUND";
 				config::getLogger()->addError($msg);
@@ -189,7 +189,7 @@ class CashwaySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$couponCode = $subOpts->getOpts()['couponCode'];
-		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode, $this->provider->getPlatformId());
 		if($internalCoupon == NULL) {
 			$msg = "coupon : code=".$couponCode." NOT FOUND";
 			config::getLogger()->addError($msg);

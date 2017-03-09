@@ -63,7 +63,7 @@ class OrdersHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($addInternalCouponsCampaignToPartnerOrderRequest->getInternalCouponsCampaignBillingUuid());
+			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($addInternalCouponsCampaignToPartnerOrderRequest->getInternalCouponsCampaignBillingUuid(), $addInternalCouponsCampaignToPartnerOrderRequest->getPlatform()->getId());
 			if($internalCouponsCampaign == NULL) {
 				$msg = "unknown internalCouponsCampaignBillingUuid : ".$addInternalCouponsCampaignToPartnerOrderRequest->getInternalCouponsCampaignBillingUuid();
 				config::getLogger()->addError($msg);

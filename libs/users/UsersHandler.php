@@ -47,7 +47,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting...");
-			$provider = ProviderDAO::getProviderByName2($providerName, $platformid);
+			$provider = ProviderDAO::getProviderByName2($providerName, $platformId);
 			
 			if($provider == NULL) {
 				$msg = "unknown provider named : ".$providerName;

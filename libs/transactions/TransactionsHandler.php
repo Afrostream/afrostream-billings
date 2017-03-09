@@ -87,7 +87,7 @@ class TransactionsHandler {
 		$db_transaction = NULL;
 		try {
 			config::getLogger()->addInfo("db_transaction refund for transactionBillingUuid=".$transactionBillingUuid."...");
-			$db_transaction = BillingsTransactionDAO::getBillingsTransactionByTransactionBillingUuid($transactionBillingUuid);
+			$db_transaction = BillingsTransactionDAO::getBillingsTransactionByTransactionBillingUuid($transactionBillingUuid, $refundTransactionRequest->getPlatform()->getId());
 			if($db_transaction == NULL) {
 				$msg = "unknown transactionBillingUuid : ".$transactionBillingUuid;
 				config::getLogger()->addError($msg);
@@ -126,7 +126,7 @@ class TransactionsHandler {
 		$db_transaction = NULL;
 		try {
 			config::getLogger()->addInfo("db_transaction getting for transactionBillingUuid=".$transactionBillingUuid."...");
-			$db_transaction = BillingsTransactionDAO::getBillingsTransactionByTransactionBillingUuid($transactionBillingUuid);
+			$db_transaction = BillingsTransactionDAO::getBillingsTransactionByTransactionBillingUuid($transactionBillingUuid, $getTransactionRequest->getPlatform()->getId());
 			config::getLogger()->addInfo("db_transaction getting for transactionBillingUuid=".$transactionBillingUuid." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while db_transaction getting for transactionBillingUuid=".$transactionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();

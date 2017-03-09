@@ -31,7 +31,7 @@ class CashwayWebHooksHandler extends ProviderWebHooksHandler {
 		switch($data['event']) {
 			case 'transaction_paid' :
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].'...');
-				$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($data['order_id']);
+				$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($data['order_id'], $this->provider->getPlatformId());
 				if($userInternalCoupon == NULL) {
 					$msg = "no user coupon found with coupon_billing_uuid=".$data['order_id'];
 					config::getLogger()->addError($msg);
@@ -113,7 +113,7 @@ class CashwayWebHooksHandler extends ProviderWebHooksHandler {
 				break;
 			case 'transaction_expired' :
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].'...');
-				$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($data['order_id']);
+				$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($data['order_id'], $this->provider->getPlatformId());
 				if($userInternalCoupon == NULL) {
 					$msg = "no user coupon found with coupon_billing_uuid=".$data['order_id'];
 					config::getLogger()->addError($msg);

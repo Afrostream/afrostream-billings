@@ -22,7 +22,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$couponCode = $subOpts->getOpts()['couponCode'];
-			$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+			$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode, $this->provider->getPlatformId());
 			if($internalCoupon == NULL) {
 				$msg = "coupon : code=".$couponCode." NOT FOUND";
 				config::getLogger()->addError($msg);
@@ -286,7 +286,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$couponCode = $subOpts->getOpts()['couponCode'];
-		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode, $this->provider->getPlatformId());
 		if($internalCoupon == NULL) {
 			$msg = "coupon : code=".$couponCode." NOT FOUND";
 			config::getLogger()->addError($msg);
@@ -342,6 +342,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$userInternalCoupon->setUuid(guid());
 			$userInternalCoupon->setUserId($user->getId());
 			$userInternalCoupon->setExpiresDate($internalCoupon->getExpiresDate());
+			$userInternalCoupon->setPlatformId($this->provider->getPlatformId());
 		}
 		//simple check
 		if($userInternalCoupon->getStatus() != 'waiting') {

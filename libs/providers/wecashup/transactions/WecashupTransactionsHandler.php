@@ -47,6 +47,7 @@ class WecashupTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);
 			$billingsRefundTransaction->setMessage("provider_status=".$wecashupTransactionResponse->getTransactionStatus());
 			$billingsRefundTransaction->setUpdateType($updateType);
+			$billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -67,6 +68,7 @@ class WecashupTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);
 			$billingsRefundTransaction->setMessage("provider_status=".$wecashupTransactionResponse->getTransactionStatus());
 			$billingsRefundTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from wecashup refund transaction id=".$wecashupTransactionResponse->getTransactionUid()." done successfully");

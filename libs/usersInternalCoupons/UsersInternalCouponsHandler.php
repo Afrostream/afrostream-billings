@@ -26,7 +26,7 @@ class UsersInternalCouponsHandler {
 	
 		$internalCouponsCampaignBillingId = null;
 		if (!is_null($couponsCampaignInternalBillingUuid)) {
-			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid);
+			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid, $getUsersInternalCouponsRequest->getPlatform()->getId());
 	
 			if($internalCouponsCampaign == NULL) {
 				$msg = "unknown couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid;
@@ -60,7 +60,7 @@ class UsersInternalCouponsHandler {
 			}
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 			//
-			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid);
+			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid, $createUsersInternalCouponRequest->getPlatform()->getId());
 			if($internalCouponsCampaign == NULL) {
 				$msg = "unknown couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid;
 				config::getLogger()->addError($msg);
