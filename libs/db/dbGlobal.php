@@ -669,7 +669,7 @@ class InternalPlanDAO {
 	public static function addInternalPlan(InternalPlan $internalPlan) {
 		$query = "INSERT INTO billing_internal_plans ";
 		$query.= "(internal_plan_uuid, name, description, amount_in_cents, currency, cycle, period_unit, period_length, trial_enabled, trial_period_length, trial_period_unit, vat_rate, platformid)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING _id";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query, 
 				array($internalPlan->getInternalPlanUuid(),
 					$internalPlan->getName(),
@@ -1680,8 +1680,8 @@ class BillingsSubscriptionDAO {
 	public static function addBillingsSubscription(BillingsSubscription $subscription) {
 		$query = "INSERT INTO billing_subscriptions (subscription_billing_uuid, providerid, userid, planid,";
 		$query.= " sub_uuid, sub_status, sub_activated_date, sub_canceled_date, sub_expires_date,";
-		$query.= " sub_period_started_date, sub_period_ends_date, update_type, updateid, deleted, billinginfoid)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING _id";
+		$query.= " sub_period_started_date, sub_period_ends_date, update_type, updateid, deleted, billinginfoid, platformid)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$subscription->getSubscriptionBillingUuid(),
 						$subscription->getProviderId(),
@@ -1697,7 +1697,8 @@ class BillingsSubscriptionDAO {
 						$subscription->getUpdateType(),
 						$subscription->getUpdateId(),
 						$subscription->getDeleted() === true ? 'true' : 'false',
-						$subscription->getBillingInfoId()));
+						$subscription->getBillingInfoId(),
+						$subscription->getPlatformId()));
 		$row = pg_fetch_row($result);
 		// free result
 		pg_free_result($result);
@@ -2723,7 +2724,7 @@ class BillingInfoOptsDAO {
 
 class BillingsWebHookDAO {
 	
-	private static $sfields = "_id, providerid, post_data, processing_status, creation_date";
+	private static $sfields = "_id, providerid, post_data, processing_status, creation_date, platformid";
 	
 	private static function getBillingsWebHookFromRow($row) {
 		$out = new BillingsWebHook();
@@ -2732,6 +2733,7 @@ class BillingsWebHookDAO {
 		$out->setPostData($row["post_data"]);
 		$out->setProcessingStatus($row["processing_status"]);
 		$out->setCreationDate($row["creation_date"] == NULL ? NULL : new DateTime($row["creation_date"]));
+		$out->setPlatformId($row["platformid"]);
 		return($out);
 	}
 	
@@ -2751,9 +2753,9 @@ class BillingsWebHookDAO {
 		return($out);
 	}
 
-	public static function addBillingsWebHook($providerid, $post_data) {
-		$query = "INSERT INTO billing_webhooks (providerid, post_data) VALUES ($1, $2) RETURNING _id";
-		$result = pg_query_params(config::getDbConn(), $query, array($providerid, $post_data));
+	public static function addBillingsWebHook($platformid, $providerid, $post_data) {
+		$query = "INSERT INTO billing_webhooks (platformid, providerid, post_data) VALUES ($1, $2, $3) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query, array($platformid, $providerid, $post_data));
 		$row = pg_fetch_row($result);
 		// free result
 		pg_free_result($result);
@@ -2775,6 +2777,7 @@ class BillingsWebHook {
 	private $post_data;
 	private $processing_status;
 	private $creation_date;
+	private $platformId;
 
 	public function getId() {
 		return($this->_id);
@@ -2815,7 +2818,15 @@ class BillingsWebHook {
 	public function setCreationDate($date) {
 		$this->creation_date = $date;
 	}
-
+	
+	public function setPlatformId($platformId) {
+		$this->platformId = $platformId;
+	}
+	
+	public function getPlatformId() {
+		return($this->platformId);
+	}
+	
 }
 
 class BillingsWebHookLogDAO {
