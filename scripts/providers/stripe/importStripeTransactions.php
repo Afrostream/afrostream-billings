@@ -77,7 +77,7 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsImportStripeTransactions = new BillingsImportStripeTransactions(ProviderDAO::getProviderByName2('stripe', 1));
+$billingsImportStripeTransactions = new BillingsImportStripeTransactions(ProviderDAO::getProviderByName('stripe', 1));
 
 $billingsImportStripeTransactions->doImportTransactions($from, $to);
 

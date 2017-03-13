@@ -53,7 +53,7 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsImportBraintreeBillingInfos = new BillingsImportBraintreeBillingInfos(ProviderDAO::getProviderByName2('braintree', 1));
+$billingsImportBraintreeBillingInfos = new BillingsImportBraintreeBillingInfos(ProviderDAO::getProviderByName('braintree', 1));
 
 $billingsImportBraintreeBillingInfos->doImportBillingInfos();
 

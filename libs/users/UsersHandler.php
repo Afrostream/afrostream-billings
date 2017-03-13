@@ -17,18 +17,18 @@ class UsersHandler {
 	
 	public function doGetUser(GetUserRequest $getUserRequest) {
 		if($getUserRequest->getUserBillingUuid() != NULL) {
-			return($this->doGetUserByUserBillingUuid($getUserRequest->getUserBillingUuid()));
+			return($this->doGetUserByUserBillingUuid($getUserRequest->getUserBillingUuid(), $getUserRequest->getPlatform()->getId()));
 		} else {
-			return($this->doGetUserByUserReferenceUuid($getUserRequest->getProviderName(), $getUserRequest->getUserReferenceUuid()));
+			return($this->doGetUserByUserReferenceUuid($getUserRequest->getProviderName(), $getUserRequest->getUserReferenceUuid(), $getUserRequest->getPlatform()->getId()));
 		}
 	}
 	
-	protected function doGetUserByUserBillingUuid($userBillingUuid) {
+	protected function doGetUserByUserBillingUuid($userBillingUuid, $platformId) {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting, userBillingUuid=".$userBillingUuid."....");
 			//
-			$db_user = UserDAO::getUserByUserBillingUuid($userBillingUuid);
+			$db_user = UserDAO::getUserByUserBillingUuid($userBillingUuid, $platformId);
 			//
 			config::getLogger()->addInfo("user getting, userBillingUuid=".$userBillingUuid." done successfully");
 		} catch(BillingsException $e) {
@@ -43,11 +43,11 @@ class UsersHandler {
 		return($db_user);
 	}
 	
-	protected function doGetUserByUserReferenceUuid($providerName, $userReferenceUuid) {
+	protected function doGetUserByUserReferenceUuid($providerName, $userReferenceUuid, $platformId) {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting...");
-			$provider = ProviderDAO::getProviderByName($providerName);
+			$provider = ProviderDAO::getProviderByName($providerName, $platformId);
 			
 			if($provider == NULL) {
 				$msg = "unknown provider named : ".$providerName;
@@ -55,7 +55,7 @@ class UsersHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//
-			$db_users = UserDAO::getUsersByUserReferenceUuid($userReferenceUuid, $provider->getId());
+			$db_users = UserDAO::getUsersByUserReferenceUuid($userReferenceUuid, $provider->getId(), $provider->getPlatformId());
 			$count_users = count($db_users);
 			if($count_users == 1) {
 				$db_user = $db_users[0];
@@ -81,7 +81,7 @@ class UsersHandler {
 		$db_users = NULL;
 		try {
 			config::getLogger()->addInfo("users getting for userReferenceUuid=".$getUsersRequest->getUserReferenceUuid()."...");
-			$db_users = UserDAO::getUsersByUserReferenceUuid($getUsersRequest->getUserReferenceUuid());
+			$db_users = UserDAO::getUsersByUserReferenceUuid($getUsersRequest->getUserReferenceUuid(), NULL, $getUsersRequest->getPlatform()->getId());
 			config::getLogger()->addInfo("users getting for userReferenceUuid=".$getUsersRequest->getUserReferenceUuid()." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting users for userReferenceUuid=".$getUsersRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -100,7 +100,7 @@ class UsersHandler {
 		try {
 			config::getLogger()->addInfo("user getting/creating...");
 			checkUserOptsArray($createUserRequest->getUserOptsArray(), $createUserRequest->getProviderName());
-			$provider = ProviderDAO::getProviderByName($createUserRequest->getProviderName());
+			$provider = ProviderDAO::getProviderByName($createUserRequest->getProviderName(), $createUserRequest->getPlatform()->getId());
 				
 			if($provider == NULL) {
 				$msg = "unknown provider named : ".$createUserRequest->getProviderName();
@@ -113,7 +113,7 @@ class UsersHandler {
 			}
 			//as usual
 			$db_tmp_user = NULL;
-			$db_users = UserDAO::getUsersByUserReferenceUuid($createUserRequest->getUserReferenceUuid(), $provider->getId());
+			$db_users = UserDAO::getUsersByUserReferenceUuid($createUserRequest->getUserReferenceUuid(), $provider->getId(), $provider->getPlatformId());
 			$count_users = count($db_users);
 			if($count_users == 1) {
 				$db_tmp_user = $db_users[0];
@@ -202,7 +202,7 @@ class UsersHandler {
 		try {
 			config::getLogger()->addInfo("user creating...");
 			checkUserOptsArray($createUserRequest->getUserOptsArray(), $createUserRequest->getProviderName());
-			$provider = ProviderDAO::getProviderByName($createUserRequest->getProviderName());
+			$provider = ProviderDAO::getProviderByName($createUserRequest->getProviderName(), $createUserRequest->getPlatform()->getId());
 			
 			if($provider == NULL) {
 				$msg = "unknown provider named : ".$createUserRequest->getProviderName();
@@ -223,6 +223,7 @@ class UsersHandler {
 				$db_user->setProviderId($provider->getId());
 				$db_user->setUserReferenceUuid($createUserRequest->getUserReferenceUuid());
 				$db_user->setUserProviderUuid($userProviderUuid);
+				$db_user->setPlatformId($createUserRequest->getPlatform()->getId());
 				$db_user = UserDAO::addUser($db_user);
 				//USER_OPTS
 				$userOpts = new UserOpts();
@@ -252,7 +253,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("userOpts updating...");
-			$db_user = UserDAO::getUserByUserBillingUuid($updateUserRequest->getUserBillingUuid());
+			$db_user = UserDAO::getUserByUserBillingUuid($updateUserRequest->getUserBillingUuid(), $updateUserRequest->getPlatform()->getId());
 			if($db_user == NULL) {
 				$msg = "unknown userBillingUuid : ".$updateUserRequest->getUserBillingUuid();
 				config::getLogger()->addError($msg);

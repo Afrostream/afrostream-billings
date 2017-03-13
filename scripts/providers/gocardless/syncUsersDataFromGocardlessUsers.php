@@ -21,7 +21,7 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingsSyncUsersDataFromGocardlessUsers = new BillingsSyncUsersDataFromGocardlessUsers(ProviderDAO::getProviderByName2('gocardless', 1));
+$billingsSyncUsersDataFromGocardlessUsers = new BillingsSyncUsersDataFromGocardlessUsers(ProviderDAO::getProviderByName('gocardless', 1));
 
 $billingsSyncUsersDataFromGocardlessUsers->doSyncUsersData();
 

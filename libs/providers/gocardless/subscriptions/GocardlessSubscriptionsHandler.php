@@ -266,7 +266,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			
 			$internal_plan_uuid = $api_subscription->metadata->internal_plan_uuid;
 			
-			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid);
+			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid, $this->provider->getPlatformId());
 			
 			if($internalPlan == NULL) {
 				$msg = "unknown internal_plan_uuid : ".$internal_plan_uuid;
@@ -374,6 +374,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
+		$db_subscription->setPlatformId($this->provider->getPlatformId());
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS
 		if(isset($subOpts)) {
@@ -401,7 +402,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			
 			$internal_plan_uuid = $api_subscription->metadata->internal_plan_uuid;
 			
-			$internal_plan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid);
+			$internal_plan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid, $this->provider->getPlatformId());
 			
 			if($internal_plan == NULL) {
 				$msg = "unknown internal_plan_uuid : ".$internal_plan_uuid;
@@ -733,7 +734,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					throw $e;
 				}
 				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase']);
+					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], $this->provider->getPlatformId());
 					if(count($transactionsResult['transactions']) == 1) {
 						$transaction = $transactionsResult['transactions'][0];
 						$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);

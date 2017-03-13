@@ -53,7 +53,7 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsNetsizeWorkers = new BillingsNetsizeWorkers(ProviderDAO::getProviderByName2('netsize', 1));
+$billingsNetsizeWorkers = new BillingsNetsizeWorkers(ProviderDAO::getProviderByName('netsize', 1));
 
 $billingsNetsizeWorkers->doRefreshSubscriptions();
 

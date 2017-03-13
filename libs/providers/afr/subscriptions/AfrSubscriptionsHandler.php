@@ -22,7 +22,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$couponCode = $subOpts->getOpts()['couponCode'];
-			$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+			$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode, $this->provider->getPlatformId());
 			if($internalCoupon == NULL) {
 				$msg = "coupon : code=".$couponCode." NOT FOUND";
 				config::getLogger()->addError($msg);
@@ -286,7 +286,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$couponCode = $subOpts->getOpts()['couponCode'];
-		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode, $this->provider->getPlatformId());
 		if($internalCoupon == NULL) {
 			$msg = "coupon : code=".$couponCode." NOT FOUND";
 			config::getLogger()->addError($msg);
@@ -342,6 +342,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$userInternalCoupon->setUuid(guid());
 			$userInternalCoupon->setUserId($user->getId());
 			$userInternalCoupon->setExpiresDate($internalCoupon->getExpiresDate());
+			$userInternalCoupon->setPlatformId($this->provider->getPlatformId());
 		}
 		//simple check
 		if($userInternalCoupon->getStatus() != 'waiting') {
@@ -356,6 +357,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
+		$db_subscription->setPlatformId($this->provider->getPlatformId());
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS (MANDATORY)
 		$subOpts->setSubId($db_subscription->getId());
@@ -513,7 +515,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	protected function doCheckSponsoring(User $user) {
 		$subscriptionsHandler = new SubscriptionsHandler();
-		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid());
+		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid(), $user->getPlatformId());
 		foreach ($subscriptions as $subscription) {
 			$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription->getId());
 			if(isset($userInternalCoupon)) {

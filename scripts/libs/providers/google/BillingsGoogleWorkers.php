@@ -23,7 +23,7 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingType, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("refreshing ".$this->provider->getName()." subscriptions bypassed - already done today -");
 				return;
@@ -32,7 +32,7 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 				
 			ScriptsConfig::getLogger()->addInfo("refreshing ".$this->provider->getName()." subscriptions...");
 				
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingType);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType);
 			//
 			$limit = 100;
 			//will select all day strictly before today

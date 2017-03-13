@@ -107,6 +107,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setInvoiceProviderUuid($braintreeChargeTransaction->orderId);
 			$billingsTransaction->setMessage("provider_status=".$braintreeChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
+			$billingsTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -126,6 +127,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setInvoiceProviderUuid($braintreeChargeTransaction->orderId);
 			$billingsTransaction->setMessage("provider_status=".$braintreeChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		$this->updateRefundsFromProvider($user, $userOpts, $braintreeChargeTransaction, $billingsTransaction, $updateType);
@@ -175,6 +177,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid($braintreeRefundTransaction->orderId);
 			$billingsRefundTransaction->setMessage("provider_status=".$braintreeRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
+			$billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -195,6 +198,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid($braintreeRefundTransaction->orderId);
 			$billingsRefundTransaction->setMessage("provider_status=".$braintreeRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from braintree refund transaction id=".$braintreeRefundTransaction->id." done successfully");

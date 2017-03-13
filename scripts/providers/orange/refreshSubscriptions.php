@@ -53,7 +53,7 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsOrangeWorkers = new BillingsOrangeWorkers(ProviderDAO::getProviderByName2('orange', 1));
+$billingsOrangeWorkers = new BillingsOrangeWorkers(ProviderDAO::getProviderByName('orange', 1));
 
 $billingsOrangeWorkers->doRefreshSubscriptions();
 

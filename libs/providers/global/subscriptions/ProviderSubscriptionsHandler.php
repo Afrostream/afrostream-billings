@@ -79,7 +79,7 @@ class ProviderSubscriptionsHandler {
 		$providerCouponsCampaign = NULL;
 		$userInternalCoupon = NULL;
 		//
-		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode, $this->provider->getPlatformId());
 		if($internalCoupon == NULL) {
 			$msg = "coupon : code=".$couponCode." NOT FOUND";
 			config::getLogger()->addError($msg);
@@ -154,6 +154,7 @@ class ProviderSubscriptionsHandler {
 			$userInternalCoupon->setUuid(guid());
 			$userInternalCoupon->setUserId($user->getId());
 			$userInternalCoupon->setExpiresDate($internalCoupon->getExpiresDate());
+			$userInternalCoupon->setPlatformId($this->provider->getPlatformId());
 			$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
 		}
 		//Check userInternalCoupon
@@ -466,7 +467,7 @@ class ProviderSubscriptionsHandler {
 	
 	protected function hasFutureSubscription(User $user, BillingsSubscription $currentBillingsSubscription) {
 		$subscriptionsHandler = new SubscriptionsHandler();
-		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid());
+		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid(), $user->getPlatformId());
 		if(count($subscriptions) > 0) {
 			foreach ($subscriptions as $subscription) {
 				if($subscription->getId() != $currentBillingsSubscription->getId()) {

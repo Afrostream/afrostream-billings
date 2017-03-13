@@ -10,17 +10,19 @@ use Aws\S3\S3Client;
 
 class BillingExportTransactionsWorkers extends BillingsWorkers {
 	
+	private $platform;
 	private $processingType = 'transactions_export';
 	
-	public function __construct() {
+	public function __construct(BillingPlatform $platform) {
 		parent::__construct();
+		$this->platform = $platform;
 	}
 	
 	public function doExportTransactions() {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingType, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->platform->getId(), NULL, $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("exporting transactions bypassed - already done today -");
 				return;
@@ -29,7 +31,7 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 		
 			ScriptsConfig::getLogger()->addInfo("exporting transactions...");
 		
-			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, $this->processingType);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->platform->getId(), NULL, $this->processingType);
 			//
 			$billingExportTransactions = new BillingExportTransactions();
 			//

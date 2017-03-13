@@ -354,7 +354,11 @@ class InternalPlansController extends BillingsController {
 			}
 			$country = $args['country'];
 			$internalPlansHandler = new InternalPlansFilteredHandler();
-			$internalPlan = $internalPlansHandler->doAddToCountry($internalPlanUuid, $country);
+			$addInternalPlanToCountryRequest = new AddInternalPlanToCountryRequest();
+			$addInternalPlanToCountryRequest->setInternalPlanUuid($internalPlanUuid);
+			$addInternalPlanToCountryRequest->setCountry($country);
+			$addInternalPlanToCountryRequest->setOrigin('api');
+			$internalPlan = $internalPlansHandler->doAddToCountry($addInternalPlanToCountryRequest);
 			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while linking an internal plan to a country, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -388,7 +392,11 @@ class InternalPlansController extends BillingsController {
 			}
 			$country = $args['country'];
 			$internalPlansHandler = new InternalPlansFilteredHandler();
-			$internalPlan = $internalPlansHandler->doRemoveFromCountry($internalPlanUuid, $country);
+			$removeInternalPlanFromCountryRequest = new RemoveInternalPlanFromCountryRequest();
+			$removeInternalPlanFromCountryRequest->setInternalPlanUuid($internalPlanUuid);
+			$removeInternalPlanFromCountryRequest->setCountry($country);
+			$removeInternalPlanFromCountryRequest->setOrigin('api');
+			$internalPlan = $internalPlansHandler->doRemoveFromCountry($removeInternalPlanFromCountryRequest);
 			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while removing an internal plan from a country, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -429,7 +437,12 @@ class InternalPlansController extends BillingsController {
 			}
 			$contextCountry = $args['contextCountry'];
 			$internalPlansHandler = new InternalPlansFilteredHandler();
-			$internalPlan = $internalPlansHandler->doAddToContext($internalPlanUuid, $contextBillingUuid, $contextCountry);
+			$addInternalPlanToContextRequest = new AddInternalPlanToContextRequest();
+			$addInternalPlanToContextRequest->setInternalPlanUuid($internalPlanUuid);
+			$addInternalPlanToContextRequest->setContextBillingUuid($contextBillingUuid);
+			$addInternalPlanToContextRequest->setContextCountry($contextCountry);
+			$addInternalPlanToContextRequest->setOrigin('api');
+			$internalPlan = $internalPlansHandler->doAddToContext($addInternalPlanToContextRequest);
 			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while linking an internal plan to a context, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -470,7 +483,12 @@ class InternalPlansController extends BillingsController {
 			}
 			$contextCountry = $args['contextCountry'];
 			$internalPlansHandler = new InternalPlansFilteredHandler();
-			$internalPlan = $internalPlansHandler->doRemoveFromContext($internalPlanUuid, $contextBillingUuid, $contextCountry);
+			$removeInternalPlanFromContextRequest = new RemoveInternalPlanFromContextRequest();
+			$removeInternalPlanFromContextRequest->setInternalPlanUuid($internalPlanUuid);
+			$removeInternalPlanFromContextRequest->setContextBillingUuid($contextBillingUuid);
+			$removeInternalPlanFromContextRequest->setContextCountry($contextCountry);
+			$removeInternalPlanFromContextRequest->setOrigin('api');
+			$internalPlan = $internalPlansHandler->doRemoveFromContext($removeInternalPlanFromContextRequest);
 			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while removing an internal plan from a context, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();

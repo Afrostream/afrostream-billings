@@ -233,6 +233,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$billingsTransaction->setInvoiceProviderUuid(NULL);
 		$billingsTransaction->setMessage('');
 		$billingsTransaction->setUpdateType('api');
+		$billingsTransaction->setPlatformId($this->provider->getPlatformId());
 		//
 		$billingsTransactionOpts = new BillingsTransactionOpts();
 		$billingsTransactionOpts->setOpt('transaction_token', $subOpts->getOpt('transaction_token'));
@@ -243,6 +244,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
+		$db_subscription->setPlatformId($this->provider->getPlatformId());
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS
 		if(isset($subOpts)) {
@@ -314,7 +316,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				}
 			}
 			if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-				$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase']);
+				$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], $this->provider->getPlatformId());
 				if(count($transactionsResult['transactions']) == 1) {
 					$transaction = $transactionsResult['transactions'][0];
 					$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);

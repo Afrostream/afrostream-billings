@@ -268,6 +268,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
+		$db_subscription->setPlatformId($this->provider->getPlatformId());
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS (NOT MANDATORY)
 		if(isset($subOpts)) {
@@ -518,7 +519,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 	public function doUpdateInternalPlanSubscription(BillingsSubscription $subscription, UpdateInternalPlanSubscriptionRequest $updateInternalPlanSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("recurly subscription updating Plan...");
-			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid());
+			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid(), $updateInternalPlanSubscriptionRequest->getPlatform()->getId());
 			if($internalPlan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$updateInternalPlanSubscriptionRequest->getInternalPlanUuid();
 				config::getLogger()->addError($msg);

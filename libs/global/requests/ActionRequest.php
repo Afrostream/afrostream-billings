@@ -8,7 +8,7 @@ class ActionRequest {
 	protected $platform = NULL; 
 	
 	public function __construct() {
-		$platform = BillingPlatformDAO::getPlatformById(1);/* 1 = www.afrostream.tv */
+		$this->platform = BillingPlatformDAO::getPlatformById(1);/* 1 = www.afrostream.tv */
 	}
 	
 	public function setOrigin($origin) {

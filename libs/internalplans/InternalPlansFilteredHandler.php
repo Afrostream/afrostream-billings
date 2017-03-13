@@ -19,7 +19,7 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 		$country = $getInternalPlansRequest->getCountry();
 		$filtered_array = $getInternalPlansRequest->getFilteredArray();
 		//
-		$contextBillingUuid = $this->selectContextBillingUuid($contextBillingUuid, $filtered_array);
+		$contextBillingUuid = $this->selectContextBillingUuid($contextBillingUuid, $filtered_array, $getInternalPlansRequest->getPlatform()->getId());
 		$contextCountry = $this->selectContextCountry($contextCountry, $country, $filtered_array);
 		//
 		$getInternalPlansRequest->setContextBillingUuid($contextBillingUuid);
@@ -47,7 +47,7 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 		return($internalPlansFiltered);
 	}
 	
-	private function selectContextBillingUuid($currentContextBillingUuid = NULL, array $filtered_array = NULL) {
+	private function selectContextBillingUuid($currentContextBillingUuid = NULL, array $filtered_array = NULL, $platformId) {
 		$contextBillingUuid = NULL;
 		if(isset($currentContextBillingUuid)) {
 			$contextBillingUuid = $currentContextBillingUuid;
@@ -64,7 +64,7 @@ class InternalPlansFilteredHandler extends InternalPlansHandler {
 				}
 				if(isset($userReferenceUuid)) {
 					$subscriptionsHandler = new SubscriptionsHandler();
-					$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid);
+					$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid, $platformId);
 					if(count($subscriptions) == 0) {
 						$contextBillingUuid = 'common';
 						config::getLogger()->addInfo("contextBillingUuid set to ".$contextBillingUuid." because no subscription was found for userReferenceUuid=".$userReferenceUuid);

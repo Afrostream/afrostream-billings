@@ -140,7 +140,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         	$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
         	$billingSubscription->setBillingInfoId($billingInfo->getId());
         }
-        
+        $billingSubscription->setPlatformId($this->provider->getPlatformId());
         $billingSubscription = BillingsSubscriptionDAO::addBillingsSubscription($billingSubscription);
 
         $this->log('Subscription id : '.$billingSubscription->getId());
@@ -322,7 +322,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     public function doUpdateInternalPlanSubscription(BillingsSubscription $subscription, UpdateInternalPlanSubscriptionRequest $updateInternalPlanSubscriptionRequest) {
 	    try {
 	    	config::getLogger()->addInfo("stripe subscription updating Plan...");
-	    	$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid());
+	    	$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid(), $updateInternalPlanSubscriptionRequest->getPlatform()->getId());
 	    	if($internalPlan == NULL) {
 	    		$msg = "unknown internalPlanUuid : ".$updateInternalPlanSubscriptionRequest->getInternalPlanUuid();
 	    		config::getLogger()->addError($msg);
@@ -815,7 +815,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     			}
     		}
     		if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-    			$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase']);
+    			$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], $this->provider->getPlatformId());
     			if(count($transactionsResult['transactions']) == 1) {
     				$transaction = $transactionsResult['transactions'][0];
 					$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);

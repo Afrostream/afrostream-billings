@@ -1,6 +1,8 @@
 <?php
 
+require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../libs/global/BillingExpireSubscriptionsWorkers.php';
+
 /*
  * Tool
  */
@@ -41,7 +43,7 @@ print_r("using limit=".$limit."\n");
 
 print_r("processing...\n");
 
-$billingExpireSubscriptionsWorkers = new BillingExpireSubscriptionsWorkers();
+$billingExpireSubscriptionsWorkers = new BillingExpireSubscriptionsWorkers(BillingPlatformDAO::getPlatformById(1));
 $billingExpireSubscriptionsWorkers->doExpireEndedSubscriptions();
 
 print_r("processing done");

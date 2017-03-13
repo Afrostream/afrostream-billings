@@ -9,18 +9,20 @@ require_once __DIR__ . '/../../../libs/providers/global/requests/ExpireSubscript
 
 class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 	
+	private $platform;
 	private $processingTypeSubsExpireCanceled = 'subs_expire_canceled';
 	private $processingTypeSubsExpireEnded = 'subs_expire_ended';
 	
-	public function __construct() {
+	public function __construct(BillingPlatform $platform) {
 		parent::__construct();
+		$this->platform = $platform;
 	}
 	
 	public function doExpireCanceledSubscriptions() {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingTypeSubsExpireCanceled, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->platform->getId(), NULL, $this->processingTypeSubsExpireCanceled, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("expiring canceled subscriptions bypassed - already done today -");
 				return;
@@ -29,7 +31,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 		
 			ScriptsConfig::getLogger()->addInfo("expiring canceled subscriptions...");
 		
-			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, $this->processingTypeSubsExpireCanceled);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->platform->getId(), NULL, $this->processingTypeSubsExpireCanceled);
 			//
 			$limit = 100;
 			//will select all day strictly before today
@@ -39,13 +41,10 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 			$providerIdsToIgnore = array();
 			$providerNamesToIgnore = ['recurly', 'stripe'];
 			foreach ($providerNamesToIgnore as $providerNameToIgnore) {
-				$provider = ProviderDAO::getProviderByName($providerNameToIgnore);
-				if($provider == NULL) {
-					$msg = "unknown provider named : ".$providerNameToIgnore;
-					ScriptsConfig::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				$provider = ProviderDAO::getProviderByName($providerNameToIgnore, $this->platform->getId());
+				if($provider != NULL) {
+					$providerIdsToIgnore[] = $provider->getId();
 				}
-				$providerIdsToIgnore[] = $provider->getId();
 			}
 			//
 			$idx = 0;
@@ -94,7 +93,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingTypeSubsExpireEnded, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->platform->getId(), NULL, $this->processingTypeSubsExpireEnded, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("expiring ended subscriptions bypassed - already done today -");
 				return;
@@ -103,7 +102,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 		
 			ScriptsConfig::getLogger()->addInfo("expiring ended subscriptions...");
 		
-			$processingLog = ProcessingLogDAO::addProcessingLog(NULL,$this->processingTypeSubsExpireEnded);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->platform->getId(), NULL, $this->processingTypeSubsExpireEnded);
 			//
 			$limit = 100;
 			//will select all day strictly before today
@@ -113,13 +112,10 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 			$providerIdsToIgnore = array();
 			$providerNamesToIgnore = ['recurly', 'braintree'];
 			foreach ($providerNamesToIgnore as $providerNameToIgnore) {
-				$provider = ProviderDAO::getProviderByName($providerNameToIgnore);
-				if($provider == NULL) {
-					$msg = "unknown provider named : ".$providerNameToIgnore;
-					ScriptsConfig::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				$provider = ProviderDAO::getProviderByName($providerNameToIgnore, $this->platform->getId());
+				if($provider != NULL) {
+					$providerIdsToIgnore[] = $provider->getId();
 				}
-				$providerIdsToIgnore[] = $provider->getId();
 			}
 			//
 			$idx = 0;
