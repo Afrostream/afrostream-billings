@@ -17,7 +17,7 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingsBachatWorkers = new BillingsBachatWorkers(ProviderDAO::getProviderByName2('bachat', 1));
+$billingsBachatWorkers = new BillingsBachatWorkers(ProviderDAO::getProviderByName('bachat', 1));
 
 $billingsBachatWorkers->doCheckRenewResultFile();
 

@@ -53,7 +53,7 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsImportRecurlyUsers = new BillingsImportRecurlyUsers(ProviderDAO::getProviderByName2('recurly', 1));
+$billingsImportRecurlyUsers = new BillingsImportRecurlyUsers(ProviderDAO::getProviderByName('recurly', 1));
 
 $billingsImportRecurlyUsers->doImportRecurlyUsers();
 

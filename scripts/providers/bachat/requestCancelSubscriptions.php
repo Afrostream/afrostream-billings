@@ -25,7 +25,7 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsBachatWorkers = new BillingsBachatWorkers(ProviderDAO::getProviderByName2('bachat', 1));
+$billingsBachatWorkers = new BillingsBachatWorkers(ProviderDAO::getProviderByName('bachat', 1));
 
 $billingsBachatWorkers->doRequestCancelSubscriptions($force);
 

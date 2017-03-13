@@ -44,7 +44,7 @@ class TransactionsHandler {
 		$updateType = $updateTransactionRequest->getOrigin();
 		try {
 			config::getLogger()->addInfo("transaction updating for transactionProviderUuid=".$transactionProviderUuid."...");
-			$provider = ProviderDAO::getProviderByName2($provider_name, $updateTransactionRequest->getPlatform()->getId());
+			$provider = ProviderDAO::getProviderByName($provider_name, $updateTransactionRequest->getPlatform()->getId());
 			
 			if($provider == NULL) {
 				$msg = "unknown provider named : ".$provider_name;

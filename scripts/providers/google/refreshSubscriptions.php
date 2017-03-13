@@ -53,7 +53,7 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsGoogleWorkers = new BillingsGoogleWorkers(ProviderDAO::getProviderByName2('google', 1));
+$billingsGoogleWorkers = new BillingsGoogleWorkers(ProviderDAO::getProviderByName('google', 1));
 
 $billingsGoogleWorkers->doRefreshSubscriptions();
 

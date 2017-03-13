@@ -139,7 +139,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 				case 'subscription' :
 					if(array_key_exists('AfrSubscriptionBillingUuid', $metadata)) {
 						$subscription_billing_uuid = $metadata['AfrSubscriptionBillingUuid'];
-						$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscription_billing_uuid);
+						$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscription_billing_uuid, $this->provider->getPlatformId());
 						if($subscription == NULL) {
 							if($stripeChargeTransaction->status != 'failed') {
 								$msg = "AfrSubscriptionBillingUuid=".$subscription_billing_uuid." in metadata cannot be found";

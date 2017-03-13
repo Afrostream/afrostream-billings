@@ -140,7 +140,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         	$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
         	$billingSubscription->setBillingInfoId($billingInfo->getId());
         }
-        
+        $billingSubscription->setPlatformId($this->provider->getPlatformId());
         $billingSubscription = BillingsSubscriptionDAO::addBillingsSubscription($billingSubscription);
 
         $this->log('Subscription id : '.$billingSubscription->getId());

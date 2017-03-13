@@ -22,7 +22,7 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingType, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("exporting daily afr subscriptions bypassed - already done today -");
 				return;
@@ -31,7 +31,7 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 			
 			ScriptsConfig::getLogger()->addInfo("exporting daily afr subscriptions...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingType);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType);
 			//
 			$billingsExportAfrSubscriptions = new BillingsExportAfrSubscriptions($this->provider);
 			//

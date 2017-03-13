@@ -5,7 +5,9 @@ require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/db/dbStats.php';
 require_once __DIR__ . '/../../libs/slack/SlackHandler.php';
 
-print_r("starting tool to generate Stats...\n");
+$platform = BillingPlatformDAO::getPlatformById(1);
+
+print_r("starting tool to generate Stats for platform named : ".$platform->getName()."...\n");
 
 foreach ($argv as $arg) {
 	$e=explode("=",$arg);
@@ -39,13 +41,10 @@ $numberOfActiveSubscriptions = dbStats::getNumberOfActiveSubscriptions($yesterda
 $providerIdsToIgnore = array();
 $providerNamesToIgnore = ['orange', 'bouygues'];
 foreach ($providerNamesToIgnore as $providerNameToIgnore) {
-	$provider = ProviderDAO::getProviderByName($providerNameToIgnore);
-	if($provider == NULL) {
-		$msg = "unknown provider named : ".$providerNameToIgnore;
-		ScriptsConfig::getLogger()->addError($msg);
-		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+	$provider = ProviderDAO::getProviderByName($providerNameToIgnore, $platform->getId());
+	if($provider != NULL) {
+		$providerIdsToIgnore[] = $provider->getId();
 	}
-	$providerIdsToIgnore[] = $provider->getId();
 }
 $numberOfActiveSubscriptionsExceptMultiscreen = dbStats::getNumberOfActiveSubscriptions($yesterdayEndOfDay, $providerIdsToIgnore);
 $numberOfExpiredSubscriptions = dbStats::getNumberOfExpiredSubscriptions(NULL, $yesterdayEndOfDay);

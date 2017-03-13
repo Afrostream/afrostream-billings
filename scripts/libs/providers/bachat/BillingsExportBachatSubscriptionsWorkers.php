@@ -22,7 +22,7 @@ class BillingsExportBachatSubscriptionsWorkers extends BillingsWorkers {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingType, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("exporting daily bachat subscriptions bypassed - already done today -");
 				return;
@@ -30,7 +30,7 @@ class BillingsExportBachatSubscriptionsWorkers extends BillingsWorkers {
 			BillingStatsd::inc('route.scripts.workers.providers.'.$this->provider->getName().'.workertype.'.$this->processingType.'.hit');
 			ScriptsConfig::getLogger()->addInfo("exporting daily bachat subscriptions...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingType);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType);
 			//
 			$billingsExportBachatSubscriptions = new BillingsExportBachatSubscriptions($this->provider);
 			//

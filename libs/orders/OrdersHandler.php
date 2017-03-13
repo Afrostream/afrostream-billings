@@ -32,7 +32,7 @@ class OrdersHandler {
 		$billingPartnerOrder = NULL;
 		try {
 			config::getLogger()->addInfo("creating a partnerOrder...");
-			$partner = BillingPartnerDAO::getPartnerByName($createPartnerOrderRequest->getPartnerName());
+			$partner = BillingPartnerDAO::getPartnerByName($createPartnerOrderRequest->getPartnerName(), $createPartnerOrderRequest->getPlatform()->getId());
 			if($partner == NULL) {
 				$msg = "unknown partner with name : ".$createPartnerOrderRequest->getPartnerName();
 				config::getLogger()->addError($msg);

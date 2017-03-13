@@ -54,7 +54,7 @@ class InternalPlansHandler {
 			config::getLogger()->addInfo("internal plans getting...");
 			$provider_id = NULL;
 			if(isset($provider_name)) {
-				$provider = ProviderDAO::getProviderByName2($provider_name, $getInternalPlansRequest->getPlatform()->getId());
+				$provider = ProviderDAO::getProviderByName($provider_name, $getInternalPlansRequest->getPlatform()->getId());
 				if($provider == NULL) {
 					$msg = "unknown provider named : ".$provider_name;
 					config::getLogger()->addError($msg);
@@ -216,7 +216,7 @@ class InternalPlansHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$provider = ProviderDAO::getProviderByName2($providerName, $addInternalPlanToProviderRequest->getPlatform()->getId());
+			$provider = ProviderDAO::getProviderByName($providerName, $addInternalPlanToProviderRequest->getPlatform()->getId());
 			if($provider == NULL) {
 				$msg = "unknown provider named : ".$providerName;
 				config::getLogger()->addError($msg);

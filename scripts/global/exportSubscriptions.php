@@ -23,21 +23,21 @@ foreach ($argv as $arg) {
 
 print_r("processing gocardless subscriptions export...\n");
 
-$billingsExportGocardlessSubscriptionsWorkers = new BillingsExportGocardlessSubscriptionsWorkers(ProviderDAO::getProviderByName2('gocardless', 1));
+$billingsExportGocardlessSubscriptionsWorkers = new BillingsExportGocardlessSubscriptionsWorkers(ProviderDAO::getProviderByName('gocardless', 1));
 $billingsExportGocardlessSubscriptionsWorkers->doExportSubscriptions();
 
 print_r("processing gocardless subscriptions export done\n");
 
 print_r("processing bachat subscriptions export...\n");
 
-$billingsExportBachatSubscriptionsWorkers = new BillingsExportBachatSubscriptionsWorkers(ProviderDAO::getProviderByName2('bachat', 1));
+$billingsExportBachatSubscriptionsWorkers = new BillingsExportBachatSubscriptionsWorkers(ProviderDAO::getProviderByName('bachat', 1));
 $billingsExportBachatSubscriptionsWorkers->doExportSubscriptions();
 
 print_r("processing bachat subscriptions export done\n");
 
 print_r("processing afr subscriptions export...\n");
 
-$billingsExportAfrSubscriptionsWorkers = new BillingsExportAfrSubscriptionsWorkers(ProviderDAO::getProviderByName2('afr', 1));
+$billingsExportAfrSubscriptionsWorkers = new BillingsExportAfrSubscriptionsWorkers(ProviderDAO::getProviderByName('afr', 1));
 $billingsExportAfrSubscriptionsWorkers->doExportSubscriptions();
 
 print_r("processing afr subscriptions export done\n");

@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
+require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../libs/global/BillingExportTransactionsWorkers.php';
 /*
  * Tool
@@ -19,7 +20,7 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingExportTransactionsWorkers = new BillingExportTransactionsWorkers();
+$billingExportTransactionsWorkers = new BillingExportTransactionsWorkers(BillingPlatformDAO::getPlatformById(1));
 $billingExportTransactionsWorkers->doExportTransactions();
 
 print_r("processing done\n");

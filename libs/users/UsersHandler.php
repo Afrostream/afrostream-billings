@@ -47,7 +47,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting...");
-			$provider = ProviderDAO::getProviderByName2($providerName, $platformId);
+			$provider = ProviderDAO::getProviderByName($providerName, $platformId);
 			
 			if($provider == NULL) {
 				$msg = "unknown provider named : ".$providerName;
@@ -100,7 +100,7 @@ class UsersHandler {
 		try {
 			config::getLogger()->addInfo("user getting/creating...");
 			checkUserOptsArray($createUserRequest->getUserOptsArray(), $createUserRequest->getProviderName());
-			$provider = ProviderDAO::getProviderByName2($createUserRequest->getProviderName(), $createUserRequest->getPlatform()->getId());
+			$provider = ProviderDAO::getProviderByName($createUserRequest->getProviderName(), $createUserRequest->getPlatform()->getId());
 				
 			if($provider == NULL) {
 				$msg = "unknown provider named : ".$createUserRequest->getProviderName();
@@ -202,7 +202,7 @@ class UsersHandler {
 		try {
 			config::getLogger()->addInfo("user creating...");
 			checkUserOptsArray($createUserRequest->getUserOptsArray(), $createUserRequest->getProviderName());
-			$provider = ProviderDAO::getProviderByName2($createUserRequest->getProviderName(), $createUserRequest->getPlatform()->getId());
+			$provider = ProviderDAO::getProviderByName($createUserRequest->getProviderName(), $createUserRequest->getPlatform()->getId());
 			
 			if($provider == NULL) {
 				$msg = "unknown provider named : ".$createUserRequest->getProviderName();
