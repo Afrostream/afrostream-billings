@@ -19,46 +19,31 @@ foreach ($argv as $arg) {
         $_GET[$e[0]]=0;
 }
 
-$firstId = NULL;
+$provider = NULL;
+$providerUuid = NULL;
 
-if(isset($_GET["-firstId"])) {
-    $firstId = $_GET["-firstId"];
+if(isset($_GET["-providerUuid"])) {
+	$providerUuid = $_GET["-providerUuid"];
+	$provider = ProviderDAO::getProviderByUuid($providerUuid);
+} else {
+	$msg = "-providerUuid field is missing";
+	die($msg);
 }
 
-print_r("using firstId=".$firstId."\n");
-
-$offset = 0;
-
-if(isset($_GET["-offset"])) {
-    $offset = $_GET["-offset"];
+if($provider == NULL) {
+	$msg = "provider with uuid=".$providerUuid." not found";
+	die($msg);
 }
 
-print_r("using offset=".$offset."\n");
-
-$limit = 100;
-
-if(isset($_GET["-limit"])) {
-    $limit = $_GET["-limit"];
+if($provider->getName() != 'braintree') {
+	$msg = "provider with uuid=".$providerUuid." is not connected to braintree";
+	die($msg);
 }
-
-print_r("using limit=".$limit."\n");
-
-$force = false;
-
-if(isset($_GET["-force"])) {
-    $force = boolval($_GET["-force"]);
-}
-
-print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$providers = ProviderDAO::getProvidersByName('braintree');
-
-foreach ($providers as $provider) {
-	$billingsImportBraintreeBillingInfos = new BillingsImportBraintreeBillingInfos($provider);
-	$billingsImportBraintreeBillingInfos->doImportBillingInfos();
-}
+$billingsImportBraintreeBillingInfos = new BillingsImportBraintreeBillingInfos($provider);
+$billingsImportBraintreeBillingInfos->doImportBillingInfos();
 
 print_r("processing done\n");
 

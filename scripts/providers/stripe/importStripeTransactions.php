@@ -9,7 +9,7 @@ require_once __DIR__ . '/../../libs/providers/stripe/BillingsImportStripeTransac
  * Tool
  */
 
-print_r("starting tool to import recurly transactions...\n");
+print_r("starting tool to import stripe transactions...\n");
 
 foreach ($argv as $arg) {
     $e=explode("=",$arg);
@@ -43,46 +43,31 @@ if(isset($_GET["-to"])) {
 
 print_r("using to=".$toStr."\n");
 
-$firstId = NULL;
+$provider = NULL;
+$providerUuid = NULL;
 
-if(isset($_GET["-firstId"])) {
-    $firstId = $_GET["-firstId"];
+if(isset($_GET["-providerUuid"])) {
+	$providerUuid = $_GET["-providerUuid"];
+	$provider = ProviderDAO::getProviderByUuid($providerUuid);
+} else {
+	$msg = "-providerUuid field is missing";
+	die($msg);
 }
 
-print_r("using firstId=".$firstId."\n");
-
-$offset = 0;
-
-if(isset($_GET["-offset"])) {
-    $offset = $_GET["-offset"];
+if($provider == NULL) {
+	$msg = "provider with uuid=".$providerUuid." not found";
+	die($msg);
 }
 
-print_r("using offset=".$offset."\n");
-
-$limit = 100;
-
-if(isset($_GET["-limit"])) {
-    $limit = $_GET["-limit"];
+if($provider->getName() != 'stripe') {
+	$msg = "provider with uuid=".$providerUuid." is not connected to stripe";
+	die($msg);
 }
-
-print_r("using limit=".$limit."\n");
-
-$force = false;
-
-if(isset($_GET["-force"])) {
-    $force = boolval($_GET["-force"]);
-}
-
-print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$providers = ProviderDAO::getProvidersByName('stripe');
-
-foreach ($providers as $provider) {
-	$billingsImportStripeTransactions = new BillingsImportStripeTransactions($provider);
-	$billingsImportStripeTransactions->doImportTransactions($from, $to);
-}
+$billingsImportStripeTransactions = new BillingsImportStripeTransactions($provider);
+$billingsImportStripeTransactions->doImportTransactions($from, $to);
 
 print_r("processing done\n");
 
