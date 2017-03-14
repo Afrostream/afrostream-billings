@@ -33,7 +33,7 @@ class BillingExportTransactionsWorkers extends BillingsWorkers {
 		
 			$processingLog = ProcessingLogDAO::addProcessingLog($this->platform->getId(), NULL, $this->processingType);
 			//
-			$billingExportTransactions = new BillingExportTransactions();
+			$billingExportTransactions = new BillingExportTransactions($this->platform);
 			//
 			$s3 = S3Client::factory(array(
 							'region' => getEnv('AWS_REGION'),
