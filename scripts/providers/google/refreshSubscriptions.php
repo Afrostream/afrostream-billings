@@ -53,9 +53,12 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsGoogleWorkers = new BillingsGoogleWorkers(ProviderDAO::getProviderByName('google', 1));
+$providers = ProviderDAO::getProvidersByName('google');
 
-$billingsGoogleWorkers->doRefreshSubscriptions();
+foreach ($providers as $provider) {
+	$billingsGoogleWorkers = new BillingsGoogleWorkers($provider);
+	$billingsGoogleWorkers->doRefreshSubscriptions();
+}
 
 print_r("processing done\n");
 

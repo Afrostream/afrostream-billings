@@ -17,9 +17,12 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingsBachatWorkers = new BillingsBachatWorkers(ProviderDAO::getProviderByName('bachat', 1));
+$providers = ProviderDAO::getProvidersByName('bachat');
 
-$billingsBachatWorkers->doCheckCancelResultFile();
+foreach ($providers as $provider) {
+	$billingsBachatWorkers = new BillingsBachatWorkers($provider);
+	$billingsBachatWorkers->doCheckCancelResultFile();
+}
 
 print_r("processing done\n");
 

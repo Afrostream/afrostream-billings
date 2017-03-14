@@ -37,7 +37,7 @@ class BillingsExportBachatSubscriptions {
 			fputcsv($export_subs_file_res, $fields, $csvDelimiter);
 			$offset = 0;
 			$limit = 1000;
-			while(count($subscriptions = dbExports::getBachatSubscriptionsInfosForChartmogul($from, $to, $limit, $offset)) > 0) {
+			while(count($subscriptions = dbExports::getBachatSubscriptionsInfosForChartmogul($from, $to, $limit, $offset, $this->provider->getPlatformId())) > 0) {
 				$offset = $offset + $limit;
 				//
 				foreach($subscriptions as $subscription) {

@@ -19,10 +19,30 @@ foreach ($argv as $arg) {
 			$_GET[$e[0]]=0;
 }
 
+$provider = NULL;
+$providerUuid = NULL;
+
+if(isset($_GET["-providerUuid"])) {
+	$providerUuid = $_GET["-providerUuid"];
+	$provider = ProviderDAO::getProviderByUuid($providerUuid);
+} else {
+	$msg = "-providerUuid field is missing";
+	die($msg);
+}
+
+if($provider == NULL) {
+	$msg = "provider with uuid=".$providerUuid." not found";
+	die($msg);
+}
+
+if($provider->getName() != 'gocardless') {
+	$msg = "provider with uuid=".$providerUuid." is not connected to gocardless";
+	die($msg);
+}
+
 print_r("processing...\n");
 
-$billingsSyncUsersDataFromGocardlessUsers = new BillingsSyncUsersDataFromGocardlessUsers(ProviderDAO::getProviderByName('gocardless', 1));
-
+$billingsSyncUsersDataFromGocardlessUsers = new BillingsSyncUsersDataFromGocardlessUsers($provider);
 $billingsSyncUsersDataFromGocardlessUsers->doSyncUsersData();
 
 print_r("processing done\n");

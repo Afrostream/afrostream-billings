@@ -8,10 +8,12 @@ require_once __DIR__ . '/../libs/providers/bachat/BillingsExportBachatSubscripti
 require_once __DIR__ . '/../libs/providers/afr/BillingsExportAfrSubscriptionsWorkers.php';
 
 /*
- * Tool
+ * Tool : Only for AFROSTREAM Platform
  */
 
-print_r("starting tool to export subscriptions...\n");
+$platform = BillingPlatformDAO::getPlatformById(1);
+
+print_r("starting tool to export subscriptions for platform named : ".$platform->getName()."...\n");
 
 foreach ($argv as $arg) {
     $e=explode("=",$arg);
@@ -23,21 +25,21 @@ foreach ($argv as $arg) {
 
 print_r("processing gocardless subscriptions export...\n");
 
-$billingsExportGocardlessSubscriptionsWorkers = new BillingsExportGocardlessSubscriptionsWorkers(ProviderDAO::getProviderByName('gocardless', 1));
+$billingsExportGocardlessSubscriptionsWorkers = new BillingsExportGocardlessSubscriptionsWorkers(ProviderDAO::getProviderByName('gocardless', $platform->getId()));
 $billingsExportGocardlessSubscriptionsWorkers->doExportSubscriptions();
 
 print_r("processing gocardless subscriptions export done\n");
 
 print_r("processing bachat subscriptions export...\n");
 
-$billingsExportBachatSubscriptionsWorkers = new BillingsExportBachatSubscriptionsWorkers(ProviderDAO::getProviderByName('bachat', 1));
+$billingsExportBachatSubscriptionsWorkers = new BillingsExportBachatSubscriptionsWorkers(ProviderDAO::getProviderByName('bachat', $platform->getId()));
 $billingsExportBachatSubscriptionsWorkers->doExportSubscriptions();
 
 print_r("processing bachat subscriptions export done\n");
 
 print_r("processing afr subscriptions export...\n");
 
-$billingsExportAfrSubscriptionsWorkers = new BillingsExportAfrSubscriptionsWorkers(ProviderDAO::getProviderByName('afr', 1));
+$billingsExportAfrSubscriptionsWorkers = new BillingsExportAfrSubscriptionsWorkers(ProviderDAO::getProviderByName('afr', $platform->getId()));
 $billingsExportAfrSubscriptionsWorkers->doExportSubscriptions();
 
 print_r("processing afr subscriptions export done\n");
