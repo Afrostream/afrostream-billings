@@ -94,9 +94,12 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsImportBraintreeTransactions = new BillingsImportBraintreeTransactions(ProviderDAO::getProviderByName('braintree', 1));
+$providers = ProviderDAO::getProvidersByName('braintree');
 
-$billingsImportBraintreeTransactions->doImportTransactions($from, $to);
+foreach ($providers as $provider) {
+	$billingsImportBraintreeTransactions = new BillingsImportBraintreeTransactions($provider);
+	$billingsImportBraintreeTransactions->doImportTransactions($from, $to);
+}
 
 print_r("processing done\n");
 

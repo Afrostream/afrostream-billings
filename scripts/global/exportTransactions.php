@@ -4,11 +4,14 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../libs/global/BillingExportTransactionsWorkers.php';
+
 /*
- * Tool
+ * Tool : Only for AFROSTREAM Platform
  */
 
-print_r("starting tool to export transactions...\n");
+$platform = BillingPlatformDAO::getPlatformById(1);
+
+print_r("starting tool to export transactions for platform named : ".$platform->getName()."...\n");
 
 foreach ($argv as $arg) {
     $e=explode("=",$arg);
@@ -20,7 +23,7 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingExportTransactionsWorkers = new BillingExportTransactionsWorkers(BillingPlatformDAO::getPlatformById(1));
+$billingExportTransactionsWorkers = new BillingExportTransactionsWorkers($platform);
 $billingExportTransactionsWorkers->doExportTransactions();
 
 print_r("processing done\n");

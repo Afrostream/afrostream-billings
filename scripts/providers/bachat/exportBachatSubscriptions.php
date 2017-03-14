@@ -21,8 +21,12 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingsExportBachatSubscriptionsWorkers = new BillingsExportBachatSubscriptionsWorkers(ProviderDAO::getProviderByName('bachat', 1));
-$billingsExportBachatSubscriptionsWorkers->doExportSubscriptions();
+$providers = ProviderDAO::getProvidersByName('bachat');
+
+foreach ($providers as $provider) {
+	$billingsExportBachatSubscriptionsWorkers = new BillingsExportBachatSubscriptionsWorkers($provider);
+	$billingsExportBachatSubscriptionsWorkers->doExportSubscriptions();
+}
 
 print_r("processing done\n");
 

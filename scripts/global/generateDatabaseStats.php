@@ -91,8 +91,12 @@ print_r("using limit=".$limit."\n");
 
 print_r("processing...\n");
 
-$billingStatsWorkers = new BillingStatsWorkers(BillingPlatformDAO::getPlatformById(1));
-$billingStatsWorkers->doGenerateStats($from, $to);
+$platforms = BillingPlatformDAO::getPlatforms();
+
+foreach ($platforms as $platform) {
+	$billingStatsWorkers = new BillingStatsWorkers($platform);
+	$billingStatsWorkers->doGenerateStats($from, $to);
+}
 
 print_r("processing done");
 

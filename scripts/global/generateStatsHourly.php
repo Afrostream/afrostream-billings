@@ -6,6 +6,10 @@ require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/db/dbStats.php';
 require_once __DIR__ . '/../../libs/slack/SlackHandler.php';
 
+/*
+ * Only for AFROSTREAM Platform
+ */
+
 $platform = BillingPlatformDAO::getPlatformById(1);
 
 print_r("starting tool to generate Stats for platform named : ".$platform->getName()."...\n");

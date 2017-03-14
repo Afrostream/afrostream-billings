@@ -77,9 +77,12 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsImportGocardlessTransactions = new BillingsImportGocardlessTransactions(ProviderDAO::getProviderByName('gocardless', 1));
+$providers = ProviderDAO::getProvidersByName('gocardless');
 
-$billingsImportGocardlessTransactions->doImportTransactions($from, $to);
+foreach ($providers as $provider) {
+	$billingsImportGocardlessTransactions = new BillingsImportGocardlessTransactions($provider);
+	$billingsImportGocardlessTransactions->doImportTransactions($from, $to);
+}
 
 print_r("processing done\n");
 

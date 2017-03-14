@@ -21,8 +21,12 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingLogistaProcessIncidentsReportWorkers = new BillingLogistaProcessIncidentsReportWorkers(BillingPartnerDAO::getPartnerByName('logista', 1));
-$billingLogistaProcessIncidentsReportWorkers->doProcessIncidentsReports();
+$partners = BillingPartnerDAO::getPartnersByName('logista');
+
+foreach ($partners as $partner) {
+	$billingLogistaProcessIncidentsReportWorkers = new BillingLogistaProcessIncidentsReportWorkers($partner);
+	$billingLogistaProcessIncidentsReportWorkers->doProcessIncidentsReports();
+}
 
 print_r("processing done\n");
 

@@ -21,9 +21,12 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingsSyncUsersDataFromRecurlyUsers = new BillingsSyncUsersDataFromRecurlyUsers(ProviderDAO::getProviderByName('recurly', 1));
+$providers = ProviderDAO::getProvidersByName('recurly');
 
-$billingsSyncUsersDataFromRecurlyUsers->doSyncUsersData();
+foreach ($providers as $provider) {
+	$billingsSyncUsersDataFromRecurlyUsers = new BillingsSyncUsersDataFromRecurlyUsers($provider);
+	$billingsSyncUsersDataFromRecurlyUsers->doSyncUsersData();
+}
 
 print_r("processing done\n");
 

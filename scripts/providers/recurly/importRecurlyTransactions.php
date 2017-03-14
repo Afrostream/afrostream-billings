@@ -53,9 +53,12 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsImportRecurlyTransactions = new BillingsImportRecurlyTransactions(ProviderDAO::getProviderByName('recurly', 1));
+$providers = ProviderDAO::getProvidersByName('recurly');
 
-$billingsImportRecurlyTransactions->doImportTransactions();
+foreach ($providers as $provider) {
+	$billingsImportRecurlyTransactions = new BillingsImportRecurlyTransactions($provider);
+	$billingsImportRecurlyTransactions->doImportTransactions();
+}
 
 print_r("processing done\n");
 
