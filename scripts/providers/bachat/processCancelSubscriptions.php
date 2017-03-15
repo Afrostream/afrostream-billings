@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/providers/bachat/BillingsBachatWorkers.php';
 
 print_r("starting bachat tool to process cancel file...\n");
@@ -16,9 +17,12 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingsBachatWorkers = new BillingsBachatWorkers();
+$providers = ProviderDAO::getProvidersByName('bachat');
 
-$billingsBachatWorkers->doCheckCancelResultFile();
+foreach ($providers as $provider) {
+	$billingsBachatWorkers = new BillingsBachatWorkers($provider);
+	$billingsBachatWorkers->doCheckCancelResultFile();
+}
 
 print_r("processing done\n");
 

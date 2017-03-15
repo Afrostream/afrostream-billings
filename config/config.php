@@ -9,6 +9,14 @@ use Monolog\Handler\StreamHandler;
 
 #General
 
+if(getEnv('DYNO') === false) {
+	putEnv('DYNO=web-0');
+}
+
+if(getEnv('BILLINGS_ENV') === false) {
+	putEnv('BILLINGS_ENV=staging');
+}
+
 if(getEnv('LOG_REQUESTS_ACTIVATED') === false) {
 	putEnv('LOG_REQUESTS_ACTIVATED=1');
 }
@@ -86,8 +94,13 @@ if(getEnv('RECURLY_POSTPONE_TO') === false) {
 if(getEnv('RECURLY_WH_HTTP_AUTH_USER') === false) {
 	putEnv('RECURLY_WH_HTTP_AUTH_USER=admin');
 }
+
 if(getEnv('RECURLY_WH_HTTP_AUTH_PWD') === false) {
 	putEnv('RECURLY_WH_HTTP_AUTH_PWD=pwd');
+}
+
+if(getEnv('RECURLY_IMPORT_TRANSACTIONS_SLEEPING_TIME_IN_MILLIS') === false) {
+	putEnv('RECURLY_IMPORT_TRANSACTIONS_SLEEPING_TIME_IN_MILLIS=250');
 }
 
 #Gocardless API
@@ -126,6 +139,22 @@ if(getEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_FP_ID') === false) {
 	putEnv('SENDGRID_TEMPLATE_SUBSCRIPTION_ENDED_FP_ID=835e891b-c196-486e-8f0a-64394e62f737');
 }
 
+if(getEnv('SENDGRID_TEMPLATE_COUPON_OWN_STANDARD_NEW') === false) {
+	putEnv('SENDGRID_TEMPLATE_COUPON_OWN_STANDARD_NEW=40c8532f-4117-434f-882d-81b4e5e50193');
+}
+
+if(getEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_STANDARD_NEW') === false) {
+	putEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_STANDARD_NEW=06e63db8-0cf9-4396-b527-1d9e70bee72b');
+}
+
+if(getEnv('SENDGRID_TEMPLATE_COUPON_OWN_SPONSORSHIP_NEW') === false) {
+	putEnv('SENDGRID_TEMPLATE_COUPON_OWN_SPONSORSHIP_NEW=9a9a2f5b-d784-46f2-852d-0958185f7dd7');
+}
+
+if(getEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_SPONSORSHIP_NEW') === false) {
+	putEnv('SENDGRID_TEMPLATE_COUPON_OFFERED_SPONSORSHIP_NEW=22a2e61c-565f-4270-a9bd-6ec7f592b3ed');
+}
+
 if(getEnv('SENDGRID_FROM') === false) {
 	putEnv('SENDGRID_FROM=abonnement@afrostream.tv');
 }
@@ -140,6 +169,10 @@ if(getEnv('SENDGRID_BCC') === false) {
 
 if(getEnv('SENDGRID_TO_IFNULL') === false) {
 	putEnv('SENDGRID_TO_IFNULL=null@afrostream.tv');
+}
+
+if(getEnv('SENDGRID_VAR_couponAppliedSentence') === false) {
+	putEnv('SENDGRID_VAR_couponAppliedSentence=La réduction de %couponAmountForDisplay% liée au code promo %couponCode% sera appliquée lors du prélèvement.');
 }
 
 #Event (MAIL)
@@ -168,6 +201,10 @@ if(getEnv('SLACK_STATS_CHANNEL') === false) {
 
 if(getEnv('SLACK_STATS_COUPONS_CHANNEL') === false) {
 	putEnv('SLACK_STATS_COUPONS_CHANNEL=activation');
+}
+
+if(getEnv('SLACK_STATS_TRANSACTIONS_CHANNEL') === false) {
+	putEnv('SLACK_STATS_TRANSACTIONS_CHANNEL=test-channel');
 }
 
 #Bouygues
@@ -256,6 +293,10 @@ if(getEnv('NETSIZE_API_PRODUCT_TYPE') === false) {
 	putEnv('NETSIZE_API_PRODUCT_TYPE=121');
 }
 
+if(getEnv('NETSIZE_SUBSCRIPTION_PERIOD_LENGTH') === false) {
+	putEnv('NETSIZE_SUBSCRIPTION_PERIOD_LENGTH=1');
+}
+
 #If 1, always consider that customer is a subscriber
 if(getEnv('BOUYGUES_TV_HACK_ACTIVATED') === false) {
 	putEnv('BOUYGUES_TV_HACK_ACTIVATED=0');
@@ -279,6 +320,11 @@ if(getEnv('BRAINTREE_PRIVATE_KEY') === false) {
 	putEnv('BRAINTREE_PRIVATE_KEY=d2cc0c2d62852a9555e7fa9119f89665');
 }
 
+// url au format sprintf 
+if(getEnv('BRAINTREE_TRANSACTION_URL_DETAIL_FORMAT') === false) {
+	putEnv('BRAINTREE_TRANSACTION_URL_DETAIL_FORMAT=https://sandbox.braintreegateway.com/merchants/%s/transactions/%s');
+}
+
 #proxy
 
 if(getEnv('PROXY_HOST') === false) {
@@ -297,7 +343,6 @@ if(getEnv('PROXY_PWD') === false) {
 	putEnv('PROXY_PWD=afrostream77');
 }
 
-
 # stripe api key
 if(getEnv('STRIPE_API_KEY') === false) {
 	putEnv('STRIPE_API_KEY=sk_test_VaFvskbZOobGZ1L3x1iGwzOk');
@@ -308,10 +353,184 @@ if(getEnv('STRIPE_API_KEY') === false) {
 if(getEnv('STRIPE_WH_HTTP_AUTH_USER') === false) {
 	putEnv('STRIPE_WH_HTTP_AUTH_USER=admin');
 }
+
 if(getEnv('STRIPE_WH_HTTP_AUTH_PWD') === false) {
 	putEnv('STRIPE_WH_HTTP_AUTH_PWD=pwd');
 }
 
+#statsd
+
+if(getEnv('STATSD_ACTIVATED') === false) {
+	putEnv('STATSD_ACTIVATED=1');
+}
+
+if(getEnv('STATSD_HOST') === false) {
+	putEnv('STATSD_HOST=graphite.afrostream.net');
+}
+
+if(getEnv('STATSD_PORT') === false) {
+	putEnv('STATSD_PORT=8125');
+}
+
+if(getEnv('STATSD_NAMESPACE') === false) {
+	putEnv('STATSD_NAMESPACE=afrostream-billings');
+}
+
+if(getEnv('STATSD_DYNO_MODULO') === false) {
+	putEnv('STATSD_DYNO_MODULO=16');
+}
+
+if(getEnv('STATSD_KEY_PREFIX') === false) {
+	$dyno = str_replace('.', '-', getEnv('DYNO'));
+	$dynoNumber = substr($dyno, strrpos($dyno, '-') + 1) % getEnv('STATSD_DYNO_MODULO');
+	$dyno = substr($dyno, 0, strrpos($dyno, '-')).'-'.$dynoNumber;
+	putEnv('STATSD_KEY_PREFIX='.getEnv('BILLINGS_ENV').'.container.'.$dyno.'.worker.0.');
+}
+
+#
+
+if(getEnv('CONTEXTS_SWITCH_EXPIRED_DATE_BOUNDARY_TO_COMMON_CONTEXT') === false) {
+	putEnv('CONTEXTS_SWITCH_EXPIRED_DATE_BOUNDARY_TO_COMMON_CONTEXT=2016-11-21 23:59:59');
+}
+
+#Wecashup
+
+if(getEnv('WECASHUP_MERCHANT_UID') === false) {
+	putEnv('WECASHUP_MERCHANT_UID=bzmSSCP8WqUMDDH4sPb2w8hB14F2');
+}
+
+if(getEnv('WECASHUP_MERCHANT_PUBLIC_KEY') === false) {
+	putEnv('WECASHUP_MERCHANT_PUBLIC_KEY=NoZ7voE0KDRSBnxaB7oqcGdWQnrLVxAZm9NLiEIMyYvq');
+}
+
+if(getEnv('WECASHUP_MERCHANT_SECRET') === false) {
+	putEnv('WECASHUP_MERCHANT_SECRET=PwWqkwwq8L7nlb61');
+}
+
+if(getEnv('WECASHUP_API_URL') === false) {
+	putEnv('WECASHUP_API_URL=https://www.wecashup.com/api/v1.0/merchants');
+}
+
+#MONEY
+
+if(getEnv('CURRENCY_CONVERSION_ENABLED') === false) {
+	putEnv('CURRENCY_CONVERSION_ENABLED=1');
+}
+
+if(getEnv('CURRENCY_CONVERSION_CACHE_TTL') === false) {
+	putEnv('CURRENCY_CONVERSION_CACHE_TTL=21600');//21600s = 6 hours by default
+}
+
+if(getEnv('CURRENCY_CONVERSION_INTERNALPLAN_CURRENCY_TARGETS') === false) {
+	putEnv('CURRENCY_CONVERSION_INTERNALPLAN_CURRENCY_TARGETS=EUR;USD');
+}
+
+#AMAZON
+
+#AWS_ACCESS_KEY_ID
+
+if(getEnv('AWS_ACCESS_KEY_ID') === false) {
+	putEnv('AWS_ACCESS_KEY_ID=');
+}
+
+#AWS_SECRET_ACCESS_KEY
+
+if(getEnv('AWS_SECRET_ACCESS_KEY') === false) {
+	putEnv('AWS_SECRET_ACCESS_KEY=');
+}
+
+#AWS_ENV ( 'staging' / 'production' )
+
+if(getEnv('AWS_ENV') === false) {
+	putEnv('AWS_ENV=staging');
+}
+
+#AWS_BUCKET_BILLINGS
+
+if(getEnv('AWS_BUCKET_BILLINGS_EXPORTS') === false) {
+	putEnv('AWS_BUCKET_BILLINGS_EXPORTS=afrostream-exports-billings');
+}
+
+#AWS_REGION
+
+if(getEnv('AWS_REGION') === false) {
+	putEnv('AWS_REGION=eu-central-1');
+}
+
+#AWS_VERSION
+
+if(getEnv('AWS_VERSION') === false) {
+	putEnv('AWS_VERSION=latest');
+}
+
+#PARTNER_ORDERS
+if(getEnv('PARTNER_ORDERS_LOGISTA_FILE_SIZE_LIMIT') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FILE_SIZE_LIMIT=0');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID=055');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_PREFIX') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_PREFIX=AFST');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_USER') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_USER=logista-staging');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD=6rQOM9PLts');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST=ftp.afrostream.net');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_PORT') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_PORT=21');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_OUT') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_OUT=TOLOG');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_IN') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_IN=FLOG');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE='.dirname(__FILE__).'/../libs/partners/logista/pgp-public-key/logista-pgp-public-key.txt');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME=SAF_STRT');
+}
+
+#Known user-agents
+
+if(getEnv('AFROSTREAM_ANDROID_APP_CLIENT_IDS') === false) {
+	putEnv('AFROSTREAM_ANDROID_APP_CLIENT_IDS=85f700d9-4a80-4913-8223-e0d49fef3a05;');
+}
+
+if(getEnv('AFROSTREAM_IOS_APP_CLIENT_IDS') === false) {
+	putEnv('AFROSTREAM_IOS_APP_CLIENT_IDS=');
+}
+
+#Google
+
+#Given by google itself
+
+if(getEnv('GOOGLE_APPLICATION_CREDENTIALS') === false) {
+	putenv('GOOGLE_APPLICATION_CREDENTIALS='.__DIR__.'/../libs/providers/google/credentials/afrostream-billing-project-e6f27e14d70a.json');
+}
+
+#
+
+if(getEnv('GOOGLE_PACKAGENAME') === false) {
+	putenv('GOOGLE_PACKAGENAME=tv.afrostream.app');
+}
 
 #logger, #db_conn, ...
 
@@ -322,8 +541,6 @@ class config {
 	private static $logger;
 	
 	public static function init() {
-		self::getLogger();
-		self::getDbConn();
 	}
 	
 	public static function getLogger() {
@@ -334,21 +551,91 @@ class config {
 		return(self::$logger);
 	}
 	
-	private static $db_conn;
+	private static $db_conns = array();
 	
-	public static function getDbConn() {
-		if(self::$db_conn == null) {
-			$connection_string = NULL;
-			if(getEnv('DATABASE_URL') === false) {
-				$connection_string = 'host='.getEnv('DB_HOST').' port='.getEnv('DB_PORT').' dbname='.getEnv('DB_NAME').' user='.getEnv('DB_USER').' password='.getEnv('DB_PASSWORD');
-			} else {
-				$connection_string = getEnv('DATABASE_URL');
-			}
-			self::$db_conn = pg_connect($connection_string)
-				or die('connection to database impossible : '.pg_last_error());
+	public static function getDbConn($connection_string_options = NULL, $read_only = false) {
+		$connection_string = NULL;
+		if(getEnv('DATABASE_URL') === false) {
+			$connection_string = 'host='.getEnv('DB_HOST').' port='.getEnv('DB_PORT').' dbname='.getEnv('DB_NAME').' user='.getEnv('DB_USER').' password='.getEnv('DB_PASSWORD');
+		} else {
+			$connection_string = getEnv('DATABASE_URL');
 		}
-		return(self::$db_conn);
+		if(isset($connection_string_options)) {
+			$connection_string.= ' '.$connection_string_options;
+		}
+		$db_conn = NULL;
+		$key = $connection_string.'-'.$read_only;
+		if(key_exists($key, self::$db_conns)) {
+			$db_conn = self::$db_conns[$key];
+		} else {
+			/* NC - keep in mind - 
+			 * an old connection can be kept by pg_connect.
+			 * By forcing PGSQL_CONNECT_FORCE_NEW will create one connection with read-only mode that will not be returned for connections with read-write mode 
+			 */
+			if($read_only == true) {
+				$db_conn = pg_connect($connection_string, PGSQL_CONNECT_FORCE_NEW)
+				or die('connection to database impossible : '.pg_last_error());
+				pg_query($db_conn, "SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY");
+			} else {
+				$db_conn = pg_connect($connection_string)
+				or die('connection to database impossible : '.pg_last_error());			
+			}
+			self::$db_conns[$key] = $db_conn;
+		}
+		return($db_conn);
 	}
+	
+	public static function getReadOnlyDbConn() {
+		$db_conn = self::getDbConn(NULL, true);
+		return($db_conn);
+	}
+	
 }
 
 config::init();
+
+class BillingStatsd {
+	
+	private static $statsd;
+	
+	private static function getStatsd() {
+		if(self::$statsd == NULL) {
+			$conn = new \Domnikl\Statsd\Connection\UdpSocket(getEnv('STATSD_HOST'), getEnv('STATSD_PORT'));
+			self::$statsd = new \Domnikl\Statsd\Client($conn, getEnv('STATSD_NAMESPACE'));
+		}
+		return(self::$statsd);
+	}
+	
+	public static function inc($key, $sampleRate = 1) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->increment(getEnv('STATSD_KEY_PREFIX').$key, $sampleRate);
+		}
+	}
+	
+	public static function timing($key, $value, $sampleRate = 1) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->timing(getEnv('STATSD_KEY_PREFIX').$key, $value, $sampleRate);
+		}
+	}
+	
+	public static function gauge($key, $value) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->gauge(getEnv('STATSD_KEY_PREFIX').$key, $value);
+		}
+	}
+	
+	public static function startTiming($key) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->startTiming(getEnv('STATSD_KEY_PREFIX').$key);
+		}
+	}
+	
+	public static function endTiming($key, $sampleRate = 1) {
+		if(getEnv('STATSD_ACTIVATED') == 1) {
+			self::getStatsd()->endTiming(getEnv('STATSD_KEY_PREFIX').$key, $sampleRate);
+		}		
+	}
+	
+}
+
+?>

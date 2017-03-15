@@ -3,33 +3,45 @@
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
+require_once __DIR__ . '/../../global/users/ProviderUsersHandler.php';
 
-class NetsizeUsersHandler {
+class NetsizeUsersHandler extends ProviderUsersHandler {
 	
-	public function __construct() {
-	}
-	
-	public function doCreateUser($user_reference_uuid, $user_provider_uuid, array $user_opts_array) {
+	public function doCreateUser(CreateUserRequest $createUserRequest) {
 		try {
-			config::getLogger()->addInfo("netsize user creation...");
-			if(isset($user_provider_uuid)) {
-				//TODO : (should check provider side...)
+			config::getLogger()->addInfo($this->provider->getName()." user creation...");
+			if($createUserRequest->getUserProviderUuid() != NULL) {
+				//TODO : transactionId may be in $createUserRequest->getUserOptsArray(), maybe should we check it later
+				//REMOVE CHECK
+				/*$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
+				$getStatusRequest = new GetStatusRequest();
+				$getStatusRequest->setTransactionId($user_provider_uuid);
+				$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
+				//1 - A real MSISDN
+				//2 - An encrypted MSISDN
+				//4 - IMSI
+				$array_userIdType_ok = [1, 2, 4];
+				if(!in_array($getStatusResponse->getUserIdType(), $array_userIdType_ok)) {
+					$msg = "user-id-type ".$getStatusResponse->getUserIdType()." is not correct";
+					config::getLogger()->addError("netsize user creation failed : ".$msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
+				}*/
 			} else {
-				$msg = "unsupported feature for provider named netsize, userProviderUuid has to be provided";
+				$msg = "unsupported feature for provider named ".$this->provider->getName().", userProviderUuid has to be provided";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			config::getLogger()->addInfo("netsize user creation done successfully, user_provider_uuid=".$user_provider_uuid);
+			config::getLogger()->addInfo($this->provider->getName()." user creation done successfully, user_provider_uuid=".$createUserRequest->getUserProviderUuid());
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while creating a netsize user for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("netsize user creation failed : ".$msg);
+			$msg = "a billings exception occurred while creating a ".$this->provider->getName()." user for user_reference_uuid=".$createUserRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." user creation failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while creating a netsize user for user_reference_uuid=".$user_reference_uuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("netsize user creation failed : ".$msg);
+			$msg = "an unknown exception occurred while creating a ".$this->provider->getName()." user for user_reference_uuid=".$createUserRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." user creation failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
-		return($user_provider_uuid);
+		return($createUserRequest->getUserProviderUuid());
 	}
 	
 }

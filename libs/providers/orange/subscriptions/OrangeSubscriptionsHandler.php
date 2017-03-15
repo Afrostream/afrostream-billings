@@ -4,26 +4,35 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
-require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ . '/../client/OrangeTVClient.php';
+require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
 
-class OrangeSubscriptionsHandler extends SubscriptionsHandler {
+class OrangeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
-	public function __construct() {
+	public function createDbSubscriptionFromApiSubscriptionUuid(
+			User $user, 
+			UserOpts $userOpts, 
+			InternalPlan $internalPlan = NULL, 
+			InternalPlanOpts $internalPlanOpts = NULL, 
+			Plan $plan = NULL, 
+			PlanOpts $planOpts = NULL, 
+			BillingsSubscriptionOpts $subOpts = NULL, 
+			BillingInfo $billingInfo = NULL, 
+			$subscription_billing_uuid, 
+			$sub_uuid, 
+			$update_type, 
+			$updateId) {
+		$api_subscription = $this->checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeApiToken'], $plan->getPlanUuid());
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, $sub_uuid, $update_type, $updateId) {
-		$api_subscription = self::checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeApiToken'], $plan->getPlanUuid());
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $api_subscription, $update_type, $updateId));
-	}
-	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, OrangeSubscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, OrangeSubscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("orange dbsubscription creation for userid=".$user->getId().", providerPlanUuid=".$plan->getPlanUuid()."...");
 		//CREATE
 		$start_date = (new DateTime())->setTimezone(new DateTimeZone(config::$timezone));
 		$db_subscription = new BillingsSubscription();
-		$db_subscription->setSubscriptionBillingUuid(guid());
-		$db_subscription->setProviderId($provider->getId());
+		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
+		$db_subscription->setProviderId($this->provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription->setSubUid(guid());
@@ -39,9 +48,15 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setUpdateType($update_type);
 		//
 		$db_subscription->setUpdateId($updateId);
-		$db_subscription->setDeleted('false');
+		$db_subscription->setDeleted(false);
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
+		//BILLING_INFO
+		if(isset($billingInfo)) {
+			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
+			$db_subscription->setBillingInfoId($billingInfo->getId());
+		}
+		$db_subscription->setPlatformId($this->provider->getPlatformId());
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS
 		if(isset($subOpts)) {
@@ -50,12 +65,14 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 		}
 		//<-- DATABASE -->
 		config::getLogger()->addInfo("orange dbsubscription creation for userid=".$user->getId().", providerPlanUuid=".$plan->getPlanUuid()." done successfully, id=".$db_subscription->getId());
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
 	public function updateDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, OrangeSubscription $api_subscription, BillingsSubscription $db_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("orange dbsubscription update for userid=".$user->getId().", id=".$db_subscription->getId()."...");
 		//UPDATE
+		$db_subscription_before_update = clone $db_subscription;
+		//
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription = BillingsSubscriptionDAO::updatePlanId($db_subscription);
 		//
@@ -65,11 +82,13 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription = BillingsSubscriptionDAO::updateUpdateId($db_subscription);
 		//
+		$this->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+		//
 		config::getLogger()->addInfo("orange dbsubscription update for userid=".$user->getId().", id=".$db_subscription->getId()." done successfully");
-		return($db_subscription);
+		return($this->doFillSubscription($db_subscription));
 	}
 	
-	protected function doGetUserSubscriptions(User $user) {
+	public function doGetUserSubscriptions(User $user) {
 		$shouldUpdate = true;
 		//only update after a period :check is HERE
 		$usersRequestsLogs_array = UsersRequestsLogDAO::getLastUsersRequestsLogsByUserId($user->getId(), 1);
@@ -96,12 +115,13 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addError("Updating Orange Subscriptions for userid=".$user->getId()." failed, message=".$e->getMessage());
 			}
 		}
-		return(BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId()));
+		return(parent::doGetUserSubscriptions($user));
 	}
 	
-	protected function doFillSubscription(BillingsSubscription $subscription = NULL) {
+	public function doFillSubscription(BillingsSubscription $subscription = NULL) {
+		$subscription = parent::doFillSubscription($subscription);
 		if($subscription == NULL) {
-			return;
+			return NULL;
 		}
 		$is_active = NULL;
 		$periodStartedDate = $subscription->getSubPeriodStartedDate()->setTimezone(new DateTimeZone(config::$timezone));
@@ -136,12 +156,15 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 				config::getLogger()->addWarning("orange dbsubscription unknown subStatus=".$subscription->getSubStatus().", orange_subscription_uuid=".$subscription->getSubUid().", id=".$subscription->getId());
 				break;
 		}
-		//done
 		$subscription->setIsActive($is_active);
 		$subscription->setIsCancelable(false);
+		$subscription->setIsExpirable(false);
+		return($subscription);
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+	public function doRenewSubscription(BillingsSubscription $subscription, RenewSubscriptionRequest $renewSubscriptionRequest) {
+		$start_date = $renewSubscriptionRequest->getStartDate();
+		$end_date = $renewSubscriptionRequest->getEndDate();
 		if($end_date != NULL) {
 			$msg = "renewing a orange subscription does not support that end_date is already set";
 			config::getLogger()->addError($msg);
@@ -166,7 +189,7 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		//VERIFY THAT SUBSCRIPTION IS STILL ACTIVE BEFORE RENEWING
-		self::checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeApiToken'], $providerPlan->getPlanUuid());
+		$this->checkApiSubscriptionByProviderPlanUuid($userOpts->getOpts()['OrangeApiToken'], $providerPlan->getPlanUuid());
 		$today = new DateTime();
 		$today->setTimezone(new DateTimeZone(config::$timezone));
 		$today->setTime(23, 59, 59);//consider all the day
@@ -203,50 +226,48 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 				throw $e;
 			}
 		}
-		return(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId()));
+		return($this->doFillSubscription(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId())));
 	}
 	
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
 		config::getLogger()->addInfo("orange dbsubscriptions update for userid=".$user->getId()."...");
 		//
-		$orangeTVClient = new OrangeTVClient($userOpts->getOpts()['OrangeApiToken']);
+		$orangeTVClient = new OrangeTVClient($this->provider->getApiKey(), $this->provider->getApiSecret(), $userOpts->getOpts()['OrangeApiToken']);
 		//
-		$provider = ProviderDAO::getProviderById($user->getProviderId());
-		//
-		if($provider == NULL) {
-			$msg = "unknown provider id : ".$user->getProviderId();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
 		$orangeSubscriptionsResponse = $orangeTVClient->getSubscriptions();
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		//ADD OR UPDATE
 		foreach ($orangeSubscriptionsResponse->getOrangeSubscriptions() as $orange_subscription) {
-			if($orange_subscription->getStatus() == 1) {
-				//plan
-				$plan_uuid = $orange_subscription->getId();
-				$plan = PlanDAO::getPlanByUuid($provider->getId(), $plan_uuid);
-				if($plan == NULL) {
-					$msg = "plan with uuid=".$plan_uuid." not found";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			try {
+				if($orange_subscription->getStatus() == 1) {
+					//plan
+					$plan_uuid = $orange_subscription->getId();
+					$plan = PlanDAO::getPlanByUuid($this->provider->getId(), $plan_uuid);
+					if($plan == NULL) {
+						$msg = "plan with uuid=".$plan_uuid." not found";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
+					$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+					if($internalPlan == NULL) {
+						$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
+					$db_subscription = self::getDbSubscriptionByProviderPlanId($db_subscriptions, $plan->getId());
+					if($db_subscription == NULL) {
+						//CREATE
+						$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $orange_subscription, 'api', 0);
+					} else {
+						//UPDATE
+						$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $orange_subscription, $db_subscription, 'api', 0);
+					}
 				}
-				$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-				$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
-				if($internalPlan == NULL) {
-					$msg = "plan with uuid=".$plan_uuid." for provider ".$provider->getName()." is not linked to an internal plan";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
-				$db_subscription = self::getDbSubscriptionByProviderPlanId($db_subscriptions, $plan->getId());
-				if($db_subscription == NULL) {
-					//CREATE
-					$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, $orange_subscription, 'api', 0);
-				} else {
-					//UPDATE
-					$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $orange_subscription, $db_subscription, 'api', 0);
-				}
+			} catch(Exception $e) {
+				$msg = "orange dbsubscription update failed for orange_subscription_id=".$orange_subscription->getId().", message=".$e->getMessage();
+				config::getLogger()->addError($msg);
 			}
 		}
 		//DELETE UNUSED SUBSCRIPTIONS (DELETED FROM THIRD PARTY)
@@ -280,8 +301,8 @@ class OrangeSubscriptionsHandler extends SubscriptionsHandler {
 		}
 	}
 	
-	private static function checkApiSubscriptionByProviderPlanUuid($orangeAPIToken, $providerPlanUuid) {
-		$orangeTVClient = new OrangeTVClient($orangeAPIToken);
+	private function checkApiSubscriptionByProviderPlanUuid($orangeAPIToken, $providerPlanUuid) {
+		$orangeTVClient = new OrangeTVClient($this->provider->getApiKey(), $this->provider->getApiSecret(), $orangeAPIToken);
 		$orangeSubscriptionsResponse = $orangeTVClient->getSubscriptions($providerPlanUuid);
 		$orangeSubscription = $orangeSubscriptionsResponse->getOrangeSubscriptionById($providerPlanUuid);
 		if($orangeSubscription == NULL) {

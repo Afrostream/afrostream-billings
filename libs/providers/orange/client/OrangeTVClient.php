@@ -2,9 +2,13 @@
 
 class OrangeTVClient {
 	
+	private $apiKey;
+	private $apiSecret;
 	private $orangeAPIToken = null;
 	
-	public function __construct($orangeAPIToken) {
+	public function __construct($apiKey, $apiSecret, $orangeAPIToken) {
+		$this->apiKey = $apiKey;
+		$this->apiSecret = $apiSecret;
 		self::checkOrangeAPIToken($orangeAPIToken);
 		$this->orangeAPIToken = $orangeAPIToken;
 	}
@@ -75,12 +79,12 @@ class OrangeTVClient {
 		) {
 			$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('PROXY_USER').":".getEnv('PROXY_PWD');
 		}
-		if(	null !== (getEnv('ORANGE_TV_HTTP_AUTH_USER'))
+		if(	null !== ($this->apiKey)
 			&&
-			null !== (getEnv('ORANGE_TV_HTTP_AUTH_PWD'))
+			null !== ($this->apiSecret)
 		) {
 			$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-			$curl_options[CURLOPT_USERPWD] = getEnv('ORANGE_TV_HTTP_AUTH_USER').":".getEnv('ORANGE_TV_HTTP_AUTH_PWD');
+			$curl_options[CURLOPT_USERPWD] = $this->apiKey.":".$this->apiSecret;
 		}
 		$curl_options[CURLOPT_VERBOSE] = true;
 		$CURL = curl_init();
@@ -91,14 +95,14 @@ class OrangeTVClient {
 		if($httpCode == 200) {
 			$orangeSubscriptionsResponse = new OrangeSubscriptionsResponse($content);
 		} else if($httpCode == 401) {
-			config::getLogger()->addError("API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Token");
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), "API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Token", ExceptionError::ORANGE_CALL_API_INVALID_TOKEN);
+			config::getLogger()->addError("ORANGETV API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Token");
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), "ORANGETV API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Token", ExceptionError::ORANGE_CALL_API_INVALID_TOKEN);
 		} else if($httpCode == 403) {
-			config::getLogger()->addError("API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Request");
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), "API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Request", ExceptionError::ORANGE_CALL_API_INVALID_REQUEST);	
+			config::getLogger()->addError("ORANGETV API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Request");
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), "ORANGETV API CALL : getting OrangeSubscriptions, code=".$httpCode.", Invalid Request", ExceptionError::ORANGE_CALL_API_INVALID_REQUEST);	
 		} else {
-			config::getLogger()->addError("API CALL : getting OrangeSubscriptions, code=".$httpCode);
-			throw new BillingsException(new ExceptionType(ExceptionType::provider), "API CALL : getting OrangeSubscriptions, code=".$httpCode." is unexpected...", ExceptionError::ORANGE_CALL_API_UNKNOWN_ERROR);
+			config::getLogger()->addError("ORANGETV API CALL : getting OrangeSubscriptions, code=".$httpCode);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), "ORANGETV API CALL : getting OrangeSubscriptions, code=".$httpCode." is unexpected...", ExceptionError::ORANGE_CALL_API_UNKNOWN_ERROR);
 		}
 		return($orangeSubscriptionsResponse);
 	}

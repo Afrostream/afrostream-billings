@@ -4,11 +4,10 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/NetsizeSubscriptionsHandler.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/requests/RenewSubscriptionRequest.php';
+require_once __DIR__ . '/../../global/webhooks/ProviderWebHooksHandler.php';
 
-class NetsizeWebHooksHandler {
-	
-	public function __construct() {
-	}
+class NetsizeWebHooksHandler extends ProviderWebHooksHandler {
 	
 	public function doProcessWebHook(BillingsWebHook $billingsWebHook, $update_type = 'hook') {
 		try {
@@ -37,7 +36,8 @@ class NetsizeWebHooksHandler {
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while processing netsize webHook with id=".$billingsWebHook->getId().", message=".$e->getMessage();
 			config::getLogger()->addError("processing netsize webHook with id=".$billingsWebHook->getId()." failed : ". $msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			//HACK : no more errors returned to netsize
+			//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 	}
 	
@@ -66,15 +66,8 @@ class NetsizeWebHooksHandler {
 			//ignore notification
 			config::getLogger()->addWarning('notification_name : '. $notificationNode->getName(). ', no subscription-transaction-id attribute found, notification is ignored');
 		} else {
-			//provider
-			$provider = ProviderDAO::getProviderByName('netsize');
-			if($provider == NULL) {
-				$msg = "provider named 'netsize' not found";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
 			
-			$netsizeClient = new NetsizeClient();
+			$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 			
 			$getStatusRequest = new GetStatusRequest();
 			$getStatusRequest->setTransactionId($subscription_provider_uuid);
@@ -82,7 +75,7 @@ class NetsizeWebHooksHandler {
 			$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 			$api_subscription = $getStatusResponse; 
 			
-			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $subscription_provider_uuid);
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($this->provider->getId(), $subscription_provider_uuid);
 			if($db_subscription == NULL) {
 				$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found";
 				config::getLogger()->addError($msg);
@@ -104,24 +97,22 @@ class NetsizeWebHooksHandler {
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
 			if($internalPlan == NULL) {
-				$msg = "plan with uuid=".$plan_uuid." for provider ".$provider->getName()." is not linked to an internal plan";
+				$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
-			$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler();
-			$db_subscription_before_update = clone $db_subscription;
+			$netsizeSubscriptionsHandler = new NetsizeSubscriptionsHandler($this->provider);
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
-				$db_subscription = $netsizeSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
+				$db_subscription = $netsizeSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch(Exception $e) {
 				pg_query("ROLLBACK");
 				throw $e;
 			}
-			$netsizeSubscriptionsHandler->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 		}
 		config::getLogger()->addInfo('Processing netsize hook subscription, notification_name='.$notificationNode->getName().' done successfully');
 	}
@@ -143,22 +134,28 @@ class NetsizeWebHooksHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);			
 		}
-		//http://stackoverflow.com/questions/4411340/php-datetimecreatefromformat-doesnt-parse-iso-8601-date-time
-		//https://bugs.php.net/bug.php?id=51950
-		$expirationDate = DateTime::createFromFormat('Y-m-d\TH:i:s.uO', $expirationDateStr);
+		//PHP cannot parse such dates (ex: '2016-05-16T08:29:07.9497653Z') - 7 digits for microseconds so here is a quick workaround -
+		$expirationDateStr = substr($expirationDateStr, 0, strrpos($expirationDateStr, '.'));
+		$expirationDate = DateTime::createFromFormat('Y-m-d\TH:i:s', $expirationDateStr, new DateTimeZone(config::$timezone));
 		if($expirationDate === false) {
 			$msg = "expiration-date date : ".$expirationDateStr." cannot be parsed";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $subscription_provider_uuid);
+		$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($this->provider->getId(), $subscription_provider_uuid);
 		if($db_subscription == NULL) {
 			$msg = "subscription with subscription_provider_uuid=".$subscription_provider_uuid." not found";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$subscriptionsHandler = new SubscriptionsHandler();
-		$subscriptionsHandler->doRenewSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), NULL, $expirationDate);
+		//NC : For the moment, Netsize renewing does not support to force $end_date, so we are not using $expirationDate.
+		$renewSubscriptionRequest = new RenewSubscriptionRequest();
+		$renewSubscriptionRequest->setSubscriptionBillingUuid($db_subscription->getSubscriptionBillingUuid());
+		$renewSubscriptionRequest->setStartDate(NULL);
+		$renewSubscriptionRequest->setEndDate(NULL);//NC : should be $expirationDate, but date given by Netsize is not good
+		$renewSubscriptionRequest->setOrigin('hook');
+		$subscriptionsHandler->doRenewSubscription($renewSubscriptionRequest);
 		config::getLogger()->addInfo('Processing netsize hook subscription, notification_name='.$notificationNode->getName().' done successfully');
 	}
 	

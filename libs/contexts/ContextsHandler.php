@@ -2,6 +2,12 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
+require_once __DIR__ . '/../providers/global/requests/GetContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetContextsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CreateContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/SetInternalPlanIndexInContextRequest.php';
 
 use Iso3166\Codes;
 
@@ -10,12 +16,14 @@ class ContextsHandler {
 	public function __construct() {
 	}
 
-	public function doGetContext($contextBillingUuid, $contextCountry) {
+	public function doGetContext(GetContextRequest $getContextRequest) {
+		$contextBillingUuid = $getContextRequest->getContextBillingUuid();
+		$contextCountry = $getContextRequest->getContextCountry();
 		$db_context = NULL;
 		try {
 			config::getLogger()->addInfo("context getting, contextBillingUuid=".$contextBillingUuid.", contextCountry=".$contextCountry."....");
 			//
-			$db_context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
+			$db_context = ContextDAO::getContext($contextBillingUuid, $contextCountry, $getContextRequest->getPlatform()->getId());
 			//
 			config::getLogger()->addInfo("context getting, contextBillingUuid=".$contextBillingUuid.", contextCountry=".$contextCountry." done successfully");
 		} catch(BillingsException $e) {
@@ -30,11 +38,12 @@ class ContextsHandler {
 		return($db_context);
 	}
 	
-	public function doGetContexts($contextCountry = NULL) {
+	public function doGetContexts(GetContextsRequest $getContextsRequest) {
+		$contextCountry = $getContextsRequest->getContextCountry();
 		$db_contexts = NULL;
 		try {
 			config::getLogger()->addInfo("contexts getting...");
-			$db_contexts = ContextDAO::getContexts($contextCountry);
+			$db_contexts = ContextDAO::getContexts($contextCountry, $getContextsRequest->getPlatform()->getId());
 			config::getLogger()->addInfo("contexts getting done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting contexts, error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -48,7 +57,11 @@ class ContextsHandler {
 		return($db_contexts);
 	}
 	
-	public function doCreate($contextBillingUuid, $contextCountry, $name, $description) {
+	public function doCreate(CreateContextRequest $createContextRequest) {
+		$contextBillingUuid = $createContextRequest->getContextBillingUuid();
+		$contextCountry = $createContextRequest->getContextCountry();
+		$name = $createContextRequest->getName();
+		$description = $createContextRequest->getDescription();
 		$db_context = NULL;
 		try {
 			config::getLogger()->addInfo("context creating...");
@@ -58,7 +71,7 @@ class ContextsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_tmp_context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
+			$db_tmp_context = ContextDAO::getContext($contextBillingUuid, $contextCountry, $createContextRequest->getPlatform()->getId());
 			if(isset($db_tmp_context)) {
 				$msg = "a context with the same contextBillingUuid=".$contextBillingUuid.", contextCountry=".$contextCountry." already exists";
 				config::getLogger()->addError($msg);
@@ -70,6 +83,7 @@ class ContextsHandler {
 			$db_context->setContextCountry($contextCountry);
 			$db_context->setName($name);
 			$db_context->setDescription($description);
+			$db_context->setPlatformId($createContextRequest->getPlatform()->getId());
 			$db_context = ContextDAO::addContext($db_context);
 			config::getLogger()->addInfo("context creating done successfully, contextId=".$db_context->getId());
 		} catch(BillingsException $e) {
@@ -84,7 +98,10 @@ class ContextsHandler {
 		return($db_context);
 	}
 	
-	public function doAddInternalPlanToContext($contextBillingUuid, $contextCountry, $internalPlanUuid) {
+	public function doAddInternalPlanToContext(AddInternalPlanToContextRequest $addInternalPlanToContextRequest) {
+		$contextBillingUuid = $addInternalPlanToContextRequest->getContextBillingUuid();
+		$contextCountry = $addInternalPlanToContextRequest->getContextCountry();
+		$internalPlanUuid = $addInternalPlanToContextRequest->getInternalPlanUuid();
 		$context = NULL;
 		try {
 			if(!Codes::isValid($contextCountry)) {
@@ -92,13 +109,13 @@ class ContextsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $addInternalPlanToContextRequest->getPlatform()->getId());
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
+			$context = ContextDAO::getContext($contextBillingUuid, $contextCountry, $addInternalPlanToContextRequest->getPlatform()->getId());
 			if($context == NULL) {
 				$msg = "unknown context with contextBillingUuid : ".$contextBillingUuid." AND contextCountry : ".$contextCountry;
 				config::getLogger()->addError($msg);
@@ -135,16 +152,19 @@ class ContextsHandler {
 		return($context);
 	}
 	
-	public function doRemoveInternalPlanFromContext($contextBillingUuid, $contextCountry, $internalPlanUuid) {
+	public function doRemoveInternalPlanFromContext(RemoveInternalPlanFromContextRequest $removeInternalPlanFromContextRequest) {
+		$contextBillingUuid = $removeInternalPlanFromContextRequest->getContextBillingUuid();
+		$contextCountry = $removeInternalPlanFromContextRequest->getContextCountry();
+		$internalPlanUuid = $removeInternalPlanFromContextRequest->getInternalPlanUuid();
 		$context = NULL;
 		try {
-			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $removeInternalPlanFromContextRequest->getPlatform()->getId());
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
+			$context = ContextDAO::getContext($contextBillingUuid, $contextCountry, $removeInternalPlanFromContextRequest->getPlatform()->getId());
 			if($context == NULL) {
 				$msg = "unknown context with contextBillingUuid : ".$contextBillingUuid." AND contextCountry : ".$contextCountry;
 				config::getLogger()->addError($msg);
@@ -172,7 +192,11 @@ class ContextsHandler {
 		return($context);
 	}
 	
-	public function doSetInternalPlanIndexInContext($contextBillingUuid, $contextCountry, $internalPlanUuid, $index) {
+	public function doSetInternalPlanIndexInContext(SetInternalPlanIndexInContextRequest $setInternalPlanIndexInContextRequest) {
+		$contextBillingUuid = $setInternalPlanIndexInContextRequest->getContextBillingUuid();
+		$contextCountry = $setInternalPlanIndexInContextRequest->getContextCountry();
+		$internalPlanUuid = $setInternalPlanIndexInContextRequest->getInternalPlanUuid();
+		$index = $setInternalPlanIndexInContextRequest->getIndex();
 		$context = NULL;
 		try {
 			if(!(ctype_digit($index)) || !($index > 0)) {
@@ -180,13 +204,13 @@ class ContextsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid);
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $setInternalPlanIndexInContextRequest->getPlatform()->getId());
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$context = ContextDAO::getContext($contextBillingUuid, $contextCountry);
+			$context = ContextDAO::getContext($contextBillingUuid, $contextCountry, $setInternalPlanIndexInContextRequest->getPlatform()->getId());
 			if($context == NULL) {
 				$msg = "unknown context with contextBillingUuid : ".$contextBillingUuid." AND contextCountry : ".$contextCountry;
 				config::getLogger()->addError($msg);

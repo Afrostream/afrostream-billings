@@ -3,6 +3,7 @@
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/db/dbGlobal.php';
 require_once __DIR__ . '/libs/BillingsUpdateSubscriptions.php';
+
 /*
  * Tool to update subscriptions
  */
@@ -16,39 +17,6 @@ foreach ($argv as $arg) {
 		else
 			$_GET[$e[0]]=0;
 }
-
-$possible_providers = array('all', 'celery', 'recurly', 'gocardless');
-
-$current_providers = NULL;
-
-$providerName = 'all';
-
-if(isset($_GET["-providerName"])) {
-	$providerName = $_GET["-providerName"];
-	if(!in_array($providerName, $possible_providers)) {
-		$msg = "-providerName must be one of follows : ";
-		$firstLoop = true;
-		foreach ($possible_providers as $val) {
-			if($firstLoop) {
-				$firstLoop = false;
-				$msg.= $val;
-			}
-			else {
-				$msg.= ", ".$val;
-			}
-		}
-		die($msg."\n");
-	}
-}
-
-if($providerName == 'all') {
-	$current_providers = $possible_providers;
-} else {
-	$current_providers = array();
-	$current_providers[] = $providerName;
-}
-
-print_r("using providerName=".$providerName."\n");
 
 $firstId = NULL;
 

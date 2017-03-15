@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ .'/BillingsController.php';
+require_once __DIR__ . '/BillingsController.php';
 require_once __DIR__ . '/../webhooks/WebHooksHandler.php';
 require_once __DIR__ . '/../providers/cashway/client/cashway_lib.php';
 require_once __DIR__ . '/../providers/cashway/client/compat.php';
@@ -14,10 +14,83 @@ use CashWay\API;
 
 class WebHooksController extends BillingsController {
 	
-	public function recurlyWebHooksPosting(Request $request, Response $response, array $args) {
+	public function providerWebHooksPosting(Request $request, Response $response, array $args) {
+		try {
+			$providerName = NULL;
+			if(!isset($args['providerName'])) {
+				//exception
+				$msg = "field 'providerName' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$providerName = $args['providerName'];
+			$providerBillingUuid = NULL;
+			if(!isset($args['providerBillingUuid'])) {
+				//LATER : exception
+				$msg = "field 'providerBillingUuid' is missing, using default";
+				config::getLogger()->addError($msg);
+			} else {
+				$providerBillingUuid = $args['providerBillingUuid'];
+			}
+			$provider = NULL;
+			if($providerBillingUuid == NULL) {
+				$platformId = 1;/* 1 = www.afrostream.tv */
+				$provider = ProviderDAO::getProviderByName($providerName, $platformId);
+				if($provider == NULL) {
+					$msg = "provider with name=".$providerName.", for platformId=".$platformId." is unknown";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			} else {
+				$provider = ProviderDAO::getProviderByUuid($providerBillingUuid);
+				if($provider == NULL) {
+					$msg = "provider with uuid=".$providerBillingUuid." is unknown";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($provider->getName() != $providerName) {
+					$msg = "provider with uuid=".$providerBillingUuid.", expecting providerName=".$providerName.", found providerName=".$provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);					
+				}
+			}
+			switch($providerName) {
+				case 'recurly' :
+					return($this->recurlyWebHooksPosting($request, $response, $args, $provider));
+				case 'stripe' :
+					return($this->stripeWebHooksPosting($request, $response, $args, $provider));
+				case 'gocardless' :
+					return($this->gocardlessWebHooksPosting($request, $response, $args, $provider));
+				case 'bachat' :
+					return($this->bachatWebHooksPosting($request, $response, $args, $provider));
+				case 'cashway' :
+					return($this->cashwayWebHooksPosting($request, $response, $args, $provider));
+				case 'braintree' :
+					return($this->braintreeWebHooksPosting($request, $response, $args, $provider));
+				case 'netsize' :
+					return($this->netsizeWebHooksPosting($request, $response, $args, $provider));
+				case 'wecashup' :
+					return($this->wecashupWebHooksPosting($request, $response, $args, $provider));
+				default :
+					$msg = "providerName : ".$providerName." is unknown";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while treating a webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnBillingsExceptionAsJson($response, $e, 500));
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while treating a webhook, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnExceptionAsJson($response, $e, 500));
+		}
+	}
+	
+	protected function recurlyWebHooksPosting(Request $request, Response $response, array $args, Provider $provider) {
 		config::getLogger()->addInfo('Receiving recurly webhook...');
 		
-		$valid_passwords = array (getEnv('RECURLY_WH_HTTP_AUTH_USER') => getEnv('RECURLY_WH_HTTP_AUTH_PWD'));
+		$valid_passwords = array ($provider->getWebhookKey() => $provider->getWebhookSecret());
 		$valid_users = array_keys($valid_passwords);
 		
 		$user = NULL;
@@ -46,41 +119,10 @@ class WebHooksController extends BillingsController {
 			
 			$post_data = file_get_contents('php://input');
 			
-			//Have to send it to other services (exception has to be catched)
-			try {
-				$urls = getenv('RECURLY_WH_REPOST_URLS');
-				$tok = strtok($urls, ";");
-				while($tok !== false) {
-					//
-					$url = $tok;
-					config::getLogger()->addInfo('Reposting the webhook to url='.$url.'...');
-					$curl_options = array(
-							CURLOPT_URL => $url,
-							CURLOPT_CUSTOMREQUEST => 'POST',
-							CURLOPT_POSTFIELDS => $post_data,
-							CURLOPT_HTTPHEADER => array(
-									'Content-Length: ' . strlen($post_data)
-							),
-							CURLOPT_RETURNTRANSFER => true,
-							CURLOPT_HEADER  => false
-					);
-					$CURL = curl_init();
-					curl_setopt_array($CURL, $curl_options);
-					$content = curl_exec($CURL);
-					$httpCode = curl_getinfo($CURL, CURLINFO_HTTP_CODE);
-					curl_close($CURL);
-					config::getLogger()->addInfo('Reposting the webhook to url='.$url.' done, httpCode='.$httpCode);
-					//done
-					$tok = strtok(";");
-				}
-			} catch(Exception $e) {
-				config::getLogger()->addError('Reposting the webhook to url='.$url.' failed, but continuing anyway, message='.$e->getMessage());
-			}
-			
 			$webHooksHander = new WebHooksHander();
 			
 			config::getLogger()->addInfo('Saving recurly webhook...');
-			$billingsWebHook = $webHooksHander->doSaveWebHook('recurly', $post_data);
+			$billingsWebHook = $webHooksHander->doSaveWebHook($provider, $post_data);
 			config::getLogger()->addInfo('Saving recurly webhook done successfully');
 		
 			config::getLogger()->addInfo('Processing recurly webhook, id='.$billingsWebHook->getId().'...');
@@ -100,10 +142,10 @@ class WebHooksController extends BillingsController {
 		config::getLogger()->addInfo('Receiving recurly webhook done successfully');
 	}
 
-	public function stripeWebHooksPosting(Request $request, Response $response, array $args) {
+	protected function stripeWebHooksPosting(Request $request, Response $response, array $args, Provider $provider) {
 		config::getLogger()->addInfo('Receiving stripe webhook...');
 
-		$valid_passwords = array (getEnv('STRIPE_WH_HTTP_AUTH_USER') => getEnv('STRIPE_WH_HTTP_AUTH_PWD'));
+		$valid_passwords = array ($provider->getWebhookKey() => $provider->getWebhookSecret());
 		$valid_users = array_keys($valid_passwords);
 
 		$user = NULL;
@@ -129,11 +171,12 @@ class WebHooksController extends BillingsController {
 
 		try {
 			$post_data = file_get_contents('php://input');
+			
 			$webHooksHander = new WebHooksHander();
 
 			config::getLogger()->addInfo('Saving stripe webhook...');
 
-			$billingsWebHook = $webHooksHander->doSaveWebHook('stripe', $post_data);
+			$billingsWebHook = $webHooksHander->doSaveWebHook($provider, $post_data);
 
 			config::getLogger()->addInfo('Saving stripe webhook done successfully');
 			config::getLogger()->addInfo('Processing stripe webhook, id='.$billingsWebHook->getId().'...');
@@ -155,10 +198,10 @@ class WebHooksController extends BillingsController {
 		config::getLogger()->addInfo('Receiving stripe webhook done successfully');
 	}
 	
-	public function gocardlessWebHooksPosting(Request $request, Response $response, array $args) {
+	protected function gocardlessWebHooksPosting(Request $request, Response $response, array $args, Provider $provider) {
 		config::getLogger()->addInfo('Receiving gocardless webhook...');
 		
-		$gocardless_secret = getEnv('GOCARDLESS_WH_SECRET');
+		$gocardless_secret = $provider->getWebhookSecret();
 		
 		$validated = false;
 		
@@ -182,7 +225,7 @@ class WebHooksController extends BillingsController {
 			$webHooksHander = new WebHooksHander();
 		
 			config::getLogger()->addInfo('Saving gocardless webhook...');
-			$billingsWebHook = $webHooksHander->doSaveWebHook('gocardless', $post_data);
+			$billingsWebHook = $webHooksHander->doSaveWebHook($provider, $post_data);
 			config::getLogger()->addInfo('Saving gocardless webhook done successfully');
 		
 			config::getLogger()->addInfo('Processing gocardless webhook, id='.$billingsWebHook->getId().'...');
@@ -202,7 +245,7 @@ class WebHooksController extends BillingsController {
 		config::getLogger()->addInfo('Receiving gocardless webhook done successfully');
 	}
 	
-	public function bachatWebHooksPosting(Request $request, Response $response, array $args) {
+	protected function bachatWebHooksPosting(Request $request, Response $response, array $args, Provider $provider) {
 		config::getLogger()->addInfo('Receiving bachat webhook...');
 	
 		$valid_passwords = array (getEnv('BACHAT_WH_HTTP_AUTH_USER') => getEnv('BACHAT_WH_HTTP_AUTH_PWD'));
@@ -237,7 +280,7 @@ class WebHooksController extends BillingsController {
 			$webHooksHander = new WebHooksHander();
 				
 			config::getLogger()->addInfo('Saving bachat webhook...');
-			$billingsWebHook = $webHooksHander->doSaveWebHook('bachat', $post_data);
+			$billingsWebHook = $webHooksHander->doSaveWebHook($provider, $post_data);
 			config::getLogger()->addInfo('Saving bachat webhook done successfully');
 	
 			config::getLogger()->addInfo('Processing bachat webhook, id='.$billingsWebHook->getId().'...');
@@ -257,9 +300,9 @@ class WebHooksController extends BillingsController {
 		config::getLogger()->addInfo('Receiving bachat webhook done successfully');
 	}
 	
-	public function cashwayWebHooksPosting(Request $request, Response $response, array $args) {
+	protected function cashwayWebHooksPosting(Request $request, Response $response, array $args, Provider $provider) {
 		config::getLogger()->addInfo('Receiving cashway webhook...');
-		$result = API::receiveNotification($request->getBody(), getallheaders(), getEnv('CASHWAY_WH_SECRET'));
+		$result = API::receiveNotification($request->getBody(), getallheaders(), $provider->getWebhookSecret());
 		if ($result[0] === false) {
 			config::getLogger()->addError('Receiving cashway webhook failed, message='.$result[1]);
 			header('HTTP/1.0 400 '.$result[1]);
@@ -273,7 +316,7 @@ class WebHooksController extends BillingsController {
 			$webHooksHander = new WebHooksHander();
 		
 			config::getLogger()->addInfo('Saving cashway webhook...');
-			$billingsWebHook = $webHooksHander->doSaveWebHook('cashway', $post_data);
+			$billingsWebHook = $webHooksHander->doSaveWebHook($provider, $post_data);
 			config::getLogger()->addInfo('Saving cashway webhook done successfully');
 		
 			config::getLogger()->addInfo('Processing cashway webhook, id='.$billingsWebHook->getId().'...');
@@ -304,13 +347,13 @@ class WebHooksController extends BillingsController {
 		config::getLogger()->addInfo('Receiving cashway webhook done successfully');
 	}
 
-	public function braintreeWebHooksPosting(Request $request, Response $response, array $args) {
+	protected function braintreeWebHooksPosting(Request $request, Response $response, array $args, Provider $provider) {
 		config::getLogger()->addInfo('Receiving braintree webhook...');
 		//
 		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-		Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-		Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+		Braintree_Configuration::merchantId($provider->getMerchantId());
+		Braintree_Configuration::publicKey($provider->getApiKey());
+		Braintree_Configuration::privateKey($provider->getApiSecret());
 		//
 		$bt_signature = $request->getParsedBodyParam('bt_signature');
 		$bt_payload = $request->getParsedBodyParam('bt_payload');
@@ -344,7 +387,7 @@ class WebHooksController extends BillingsController {
 			$post_data_as_json = json_encode($post_data_as_array);
 			
 			config::getLogger()->addInfo('Saving braintree webhook...');
-			$billingsWebHook = $webHooksHander->doSaveWebHook('braintree', $post_data_as_json);
+			$billingsWebHook = $webHooksHander->doSaveWebHook($provider, $post_data_as_json);
 			config::getLogger()->addInfo('Saving braintree webhook done successfully');
 	
 			config::getLogger()->addInfo('Processing braintree webhook, id='.$billingsWebHook->getId().'...');
@@ -364,7 +407,7 @@ class WebHooksController extends BillingsController {
 		config::getLogger()->addInfo('Receiving braintree webhook done successfully');
 	}
 					
-	public function netsizeWebHooksPosting(Request $request, Response $response, array $args) {
+	protected function netsizeWebHooksPosting(Request $request, Response $response, array $args, Provider $provider) {
 		config::getLogger()->addInfo('Receiving netsize webhook...');
 		$post_data = file_get_contents('php://input');
 		try {
@@ -373,7 +416,7 @@ class WebHooksController extends BillingsController {
 			$webHooksHander = new WebHooksHander();
 		
 			config::getLogger()->addInfo('Saving netsize webhook...');
-			$billingsWebHook = $webHooksHander->doSaveWebHook('netsize', $post_data);
+			$billingsWebHook = $webHooksHander->doSaveWebHook($provider, $post_data);
 			config::getLogger()->addInfo('Saving netsize webhook done successfully');
 		
 			config::getLogger()->addInfo('Processing netsize webhook, id='.$billingsWebHook->getId().'...');
@@ -397,6 +440,56 @@ class WebHooksController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e, 500));
 		}
 		config::getLogger()->addInfo('Receiving netsize webhook done successfully');
+	}
+	
+	protected function wecashupWebHooksPosting(Request $request, Response $response, array $args, Provider $provider) {
+
+		config::getLogger()->addInfo('Receiving wecashup webhook...');
+		
+		$validated = false;
+		
+		$post_data = file_get_contents('php://input');
+		parse_str($post_data, $post_data_as_array);
+		
+		$received_transaction_merchant_secret = NULL;
+		if(array_key_exists('merchant_secret', $post_data_as_array)) {
+			$received_transaction_merchant_secret = $post_data_as_array['merchant_secret'];
+		}
+		if($provider->getApiSecret() === $received_transaction_merchant_secret) {
+			$validated = true;
+		}
+		
+		if (!$validated) {
+			config::getLogger()->addError('Receiving wecashup webhook failed, Unauthorized access');
+			header('WWW-Authenticate: Basic realm="My Realm"');
+			header('HTTP/1.0 401 Unauthorized');
+			die ("Not authorized");
+		}
+		
+		try {
+			config::getLogger()->addInfo('Treating wecashup webhook...');
+				
+			$webHooksHander = new WebHooksHander();
+				
+			config::getLogger()->addInfo('Saving wecashup webhook...');
+			$billingsWebHook = $webHooksHander->doSaveWebHook($provider, $post_data);
+			config::getLogger()->addInfo('Saving wecashup webhook done successfully');
+		
+			config::getLogger()->addInfo('Processing wecashup webhook, id='.$billingsWebHook->getId().'...');
+			$webHooksHander->doProcessWebHook($billingsWebHook->getId());
+			config::getLogger()->addInfo('Processing wecashup webhook done successfully, id='.$billingsWebHook->getId());
+		
+			config::getLogger()->addInfo('Treating wecashup webhook done successfully, id='.$billingsWebHook->getId());
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while treating a wecashup webhook, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnBillingsExceptionAsJson($response, $e, 500));
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while treating a wecashup webhook, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			return($this->returnExceptionAsJson($response, $e, 500));
+		}
+		config::getLogger()->addInfo('Receiving wecashup webhook done successfully');
 	}
 	
 }

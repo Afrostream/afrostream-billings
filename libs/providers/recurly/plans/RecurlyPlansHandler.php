@@ -1,16 +1,15 @@
 <?php
 
-class RecurlyPlansHandler {
+require_once __DIR__ . '/../../global/plans/ProviderPlansHandler.php';
 
-	public function __construct() {
-	}
+class RecurlyPlansHandler extends ProviderPlansHandler {
 	
 	public function createProviderPlan(InternalPlan $internalPlan) {
 		$provider_plan_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("recurly plan creation...");
-			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			Recurly_Client::$subdomain = $this->provider->getMerchantId();
+			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			$plan = new Recurly_Plan();
 			$plan->plan_code = $internalPlan->getInternalPlanUuid();
 			$plan->name = $internalPlan->getName();
@@ -63,11 +62,11 @@ class RecurlyPlansHandler {
 			throw $e;
 		} catch (Recurly_ValidationError $e) {
 			$msg = "a validation error exception occurred while creating a recurly plan, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("recurly subscription creation failed : ".$msg);
+			config::getLogger()->addError("recurly plan creation failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while creating a recurly plan, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("recurly subscription creation failed : ".$msg);
+			config::getLogger()->addError("recurly plan creation failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($provider_plan_uuid);
