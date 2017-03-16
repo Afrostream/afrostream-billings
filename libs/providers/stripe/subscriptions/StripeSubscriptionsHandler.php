@@ -106,75 +106,89 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     		/* GET FROM API */
     		$api_subscription = $this->getSubscription($sub_uuid, $user);
     	}
-    	$billingSubscription = $this->getNewBillingSubscription($user, $plan, $api_subscription, $subscription_billing_uuid);
-        $billingSubscription->setUpdateType($updateType);
-        $billingSubscription->setUpdateId($updateId);
-
-        $subscriptionInfos = $billingSubscription->jsonSerialize();
-        $this->log(
-            'record subscription. providerUuid: %s, user billing uuid: %s, user provider uuid: %s, internal plan: %s',
-            [
-                $subscriptionInfos['subscriptionProviderUuid'],
-                $subscriptionInfos['user']['userBillingUuid'],
-                $subscriptionInfos['user']['userProviderUuid'],
-                $subscriptionInfos['internalPlan']['internalPlanUuid']
-            ]
-        );
-        //?COUPON?
-        $couponsInfos = NULL;
-        $couponCode = NULL;
-        if(isset($subOpts)) {
-        	if(array_key_exists('couponCode', $subOpts->getOpts())) {
-        		$str = $subOpts->getOpts()['couponCode'];
-        		if(strlen($str) > 0) {
-        			$couponCode = $str;
-        		}
-        	}
-        }
-        if(isset($couponCode)) {
-        	$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
-        }
-        //<-- DATABASE -->
-        //BILLING_INFO (NOT MANDATORY)
-        if(isset($billingInfo)) {
-        	$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
-        	$billingSubscription->setBillingInfoId($billingInfo->getId());
-        }
-        $billingSubscription->setPlatformId($this->provider->getPlatformId());
-        $billingSubscription = BillingsSubscriptionDAO::addBillingsSubscription($billingSubscription);
-
-        $this->log('Subscription id : '.$billingSubscription->getId());
-        //SUB_OPTS (NOT MANDATORY)
-        if(isset($subOpts)) {
-            $subOpts->setSubId($billingSubscription->getId());
-            BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
-        }
-        //COUPON (NOT MANDATORY)
-        if(isset($couponsInfos)) {
-        	$userInternalCoupon = $couponsInfos['userInternalCoupon'];
-        	$internalCoupon = $couponsInfos['internalCoupon'];
-        	$internalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
-        	//
-        	$now = new DateTime();
-        	//userInternalCoupon
-        	$userInternalCoupon->setStatus("redeemed");
-        	$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
-        	$userInternalCoupon->setRedeemedDate($now);
-        	$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
-        	$userInternalCoupon->setSubId($billingSubscription->getId());
-        	$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
-        	//internalCoupon
-        	if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
-        		$internalCoupon->setStatus("redeemed");
-        		$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
-        		$internalCoupon->setRedeemedDate($now);
-        		$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
-        	}
-        }
-        //<-- DATABASE -->
-        return $this->doFillSubscription($billingSubscription);
+    	return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $updateType, $updateId));
     }
 
+    public function createDbSubscriptionFromApiSubscription(User $user,
+    		UserOpts $userOpts,
+    		InternalPlan $internalPlan = NULL,
+    		InternalPlanOpts $internalPlanOpts = NULL,
+    		Plan $plan = NULL,
+    		PlanOpts $planOpts = NULL,
+    		BillingsSubscriptionOpts $subOpts = NULL,
+    		BillingInfo $billingInfo = NULL,
+    		$subscription_billing_uuid,
+    		\Stripe\Subscription $api_subscription,
+    		$updateType,
+    		$updateId) {
+    	$billingSubscription = $this->getNewBillingSubscription($user, $plan, $api_subscription, $subscription_billing_uuid);
+    	$billingSubscription->setUpdateType($updateType);
+    	$billingSubscription->setUpdateId($updateId);
+    			
+    	$subscriptionInfos = $billingSubscription->jsonSerialize();
+    	$this->log('record subscription. providerUuid: %s, user billing uuid: %s, user provider uuid: %s, internal plan: %s',
+    					[
+    						$subscriptionInfos['subscriptionProviderUuid'],
+    						$subscriptionInfos['user']['userBillingUuid'],
+    						$subscriptionInfos['user']['userProviderUuid'],
+    						$subscriptionInfos['internalPlan']['internalPlanUuid']
+    					]
+    	);
+    	//?COUPON?
+    	$couponsInfos = NULL;
+    	$couponCode = NULL;
+    	if(isset($subOpts)) {
+    		if(array_key_exists('couponCode', $subOpts->getOpts())) {
+    			$str = $subOpts->getOpts()['couponCode'];
+    			if(strlen($str) > 0) {
+    				$couponCode = $str;
+    			}
+    		}
+    	}
+    	if(isset($couponCode)) {
+    		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
+    	}
+    	//<-- DATABASE -->
+    	//BILLING_INFO (NOT MANDATORY)
+    	if(isset($billingInfo)) {
+    		$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
+    		$billingSubscription->setBillingInfoId($billingInfo->getId());
+    	}
+    	$billingSubscription->setPlatformId($this->provider->getPlatformId());
+    	$billingSubscription = BillingsSubscriptionDAO::addBillingsSubscription($billingSubscription);
+    		
+    	$this->log('Subscription id : '.$billingSubscription->getId());
+    	//SUB_OPTS (NOT MANDATORY)
+    	if(isset($subOpts)) {
+    		$subOpts->setSubId($billingSubscription->getId());
+    		BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+    	}
+    	//COUPON (NOT MANDATORY)
+    	if(isset($couponsInfos)) {
+    		$userInternalCoupon = $couponsInfos['userInternalCoupon'];
+    		$internalCoupon = $couponsInfos['internalCoupon'];
+    		$internalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+    		//
+    		$now = new DateTime();
+    		//userInternalCoupon
+    		$userInternalCoupon->setStatus("redeemed");
+    		$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
+    		$userInternalCoupon->setRedeemedDate($now);
+    		$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
+    		$userInternalCoupon->setSubId($billingSubscription->getId());
+    		$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+    		//internalCoupon
+    		if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
+    			$internalCoupon->setStatus("redeemed");
+    			$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
+    			$internalCoupon->setRedeemedDate($now);
+    			$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+    		}
+    	}
+    	//<-- DATABASE -->
+    	return $this->doFillSubscription($billingSubscription);
+    }
+	    
     /**
      * Synchronize subscription between afrostream and provider for the given user
      * 
@@ -183,8 +197,49 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      *
      * @throws BillingsException
      */
-    public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts)
-    {
+    public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
+    	config::getLogger()->addInfo($this->provider->getName()." dbsubscriptions update for userid=".$user->getId()."...");
+    	$customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
+    	///!\ 
+    	///!\ *** DO NOT FORGET : subscriptions that are not recurrent are not present in Stripe side ***
+    	///!\
+    	$api_subscriptions = $customer['subscriptions']['data'];
+    	$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
+    	foreach ($api_subscriptions as $api_subscription) {
+    		$plan = PlanDAO::getPlanByUuid($this->provider->getId(), $subscription['plan']['id']);
+    		if($plan == NULL) {
+    			$msg = "plan with uuid=".$subscription['plan']['id']." not found";
+    			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    		}
+    		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
+    		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+    		if($internalPlan == NULL) {
+    			$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
+    			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    		}
+    		$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
+    		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription['id']);
+    		if($db_subscription == NULL) {
+    			//CREATE
+    			$this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $api_subscription, 'api', 0);
+    		} else {
+    			//UPDATE
+    			$this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
+    		}
+    	}
+    	//DELETE UNUSED SUBSCRIPTIONS (DELETED FROM THIRD PARTY) (ONLY RECURRENT ONES)
+    	foreach ($db_subscriptions as $db_subscription) {
+    		$plan = $db_subscription->getPlanId();
+    		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+    		if ($internalPlan->getCycle()->getValue() === PlanCycle::auto) {
+    			$api_subscription = $this->getApiSubscriptionByUuid($api_subscriptions, $db_subscription->getSubUid());
+    			if($api_subscription == NULL) {
+    				BillingsSubscriptionDAO::deleteBillingsSubscriptionById($db_subscription->getId());
+    			}
+    		}
+    	}
+    	config::getLogger()->addInfo($this->provider->getName()." dbsubscriptions update for userid=".$user->getId()." done successfully");
+    	/*
         $customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
         if (empty($customer['id'])) {
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow customer');
@@ -236,7 +291,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             if (!$this->findProviderSubscriptionById($subscriptionList, $billingSubscription->getSubUid())) {
                 BillingsSubscriptionDAO::deleteBillingsSubscriptionById($billingSubscription->getId());
             }
-        }
+        }*/
     }
 
     /**
@@ -838,6 +893,32 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
     	}
     	return($this->doFillSubscription($subscription));
+    }
+    
+    private function getApiSubscriptionByUuid(array $api_subscriptions, $subUuid) {
+    	foreach ($api_subscriptions as $api_subscription) {
+    		if($api_subscription['id'] == $subUuid) {
+    			return($api_subscription);
+    		}
+    	}
+    	return(NULL);
+    }
+    
+    public function updateDbSubscriptionFromApiSubscription(User $user, 
+    		UserOpts $userOpts, 
+    		Provider $provider, 
+    		InternalPlan $internalPlan, 
+    		InternalPlanOpts $internalPlanOpts, 
+    		Plan $plan, PlanOpts $planOpts, 
+    		\Stripe\Subscription $api_subscription, 
+    		BillingsSubscription $db_subscription, 
+    		$updateType, $updateId) 
+    {
+    	config::getLogger()->addInfo($this->provider->getName()." dbsubscription update for userid=".$user->getId().", ".$this->provider->getName()."_subscription_uuid=".$api_subscription['id'].", id=".$db_subscription->getId()."...");
+    	//UPDATE
+    	
+    	config::getLogger()->addInfo($this->provider->getName()." dbsubscription update for userid=".$user->getId().", ".$this->provider->getName()."_subscription_uuid=".$api_subscription['id'].", id=".$db_subscription->getId()." done successfully");
+    	return($this->doFillSubscription($db_subscription));
     }
     
 }

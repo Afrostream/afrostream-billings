@@ -603,6 +603,15 @@ class ProviderSubscriptionsHandler {
 		}
 	}
 	
+	public function getDbSubscriptionByUuid(array $db_subscriptions, $subUuid) {
+		foreach ($db_subscriptions as $db_subscription) {
+			if($db_subscription->getSubUid() == $subUuid) {
+				return($db_subscription);
+			}
+		}
+		return(NULL);
+	}
+	
 }
 
 ?>

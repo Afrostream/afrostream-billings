@@ -361,15 +361,6 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($db_subscription));
 	}
 	
-	private function getDbSubscriptionByUuid(array $db_subscriptions, $subUuid) {
-		foreach ($db_subscriptions as $db_subscription) {
-			if($db_subscription->getSubUid() == $subUuid) {
-				return($db_subscription);
-			}
-		}
-		return(NULL);
-	}
-	
 	private function getApiSubscriptionByUuid(Recurly_SubscriptionList $api_subscriptions, $subUuid) {
 		foreach ($api_subscriptions as $api_subscription) {
 			if($api_subscription->uuid == $subUuid) {

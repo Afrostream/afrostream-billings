@@ -119,8 +119,8 @@ class RecurlyWebHooksHandler extends ProviderWebHooksHandler {
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
-		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		$recurlySubscriptionsHandler = new RecurlySubscriptionsHandler($this->provider);
+		$db_subscription = $recurlySubscriptionsHandler->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		try {
 			//START TRANSACTION
 			pg_query("BEGIN");
@@ -145,15 +145,6 @@ class RecurlyWebHooksHandler extends ProviderWebHooksHandler {
 		}
 		//
 		config::getLogger()->addInfo('Processing recurly hook subscription, notification_type='.$notification->type.' done successfully');
-	}
-	
-	private function getDbSubscriptionByUuid(array $db_subscriptions, $subUuid) {
-		foreach ($db_subscriptions as $db_subscription) {
-			if($db_subscription->getSubUid() == $subUuid) {
-				return($db_subscription);
-			}
-		}
-		return(NULL);
 	}
 	
 	private static function getNodeByName(SimpleXMLElement $node, $name) {
