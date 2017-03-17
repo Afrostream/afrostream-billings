@@ -815,7 +815,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     			}
     		}
     		if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-    			$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], $this->provider->getPlatformId());
+    			$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], NULL, $this->provider->getPlatformId());
     			if(count($transactionsResult['transactions']) == 1) {
     				$transaction = $transactionsResult['transactions'][0];
     				//
