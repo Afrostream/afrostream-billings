@@ -821,9 +821,9 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     				//
     				$amountInCents = NULL; //NULL = Refund ALL
     				if($expireSubscriptionRequest->getIsRefundProrated() == true) {
-    					$amountInCents = ceil($transaction->getAmountInCents() * ($subscription->getSubPeriodEndsDate() - new DateTime())
+    					$amountInCents = ceil($transaction->getAmountInCents() * ($subscription->getSubPeriodEndsDate()->getTimestamp() - (new DateTime())->getTimestamp())
     					/
-    					($subscription->getSubPeriodEndsDate() - $subscription->getSubPeriodStartedDate()));
+    					($subscription->getSubPeriodEndsDate()->getTimestamp() - $subscription->getSubPeriodStartedDate()->getTimestamp()));
     					
     				}
     				//

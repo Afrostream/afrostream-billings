@@ -729,13 +729,12 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					if(count($transactionsResult['transactions']) == 1) {
 						$transaction = $transactionsResult['transactions'][0];
 						//
-						$amountInCents = NULL; //NULL = Refund ALL
-						if($expireSubscriptionRequest->getIsRefundProrated() == true) {
-							$amountInCents = ceil($transaction->getAmountInCents() * ($subscription->getSubPeriodEndsDate() - new DateTime())
-									/
-									($subscription->getSubPeriodEndsDate() - $subscription->getSubPeriodStartedDate()));
-								
-						}
+					    $amountInCents = NULL; //NULL = Refund ALL
+    					if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+    						$amountInCents = ceil($transaction->getAmountInCents() * ($subscription->getSubPeriodEndsDate()->getTimestamp() - (new DateTime())->getTimestamp())
+    						/
+    						($subscription->getSubPeriodEndsDate()->getTimestamp() - $subscription->getSubPeriodStartedDate()->getTimestamp()));
+    					}
 						//
 						$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
 						$refundTransactionRequest = new RefundTransactionRequest();
