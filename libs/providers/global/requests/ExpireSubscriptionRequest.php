@@ -8,6 +8,7 @@ class ExpireSubscriptionRequest extends ActionRequest {
 	protected $expiresDate = NULL;
 	protected $forceBeforeEndsDate = false;
 	protected $isRefundEnabled = false;
+	protected $isRefundProrated = false;
 	
 	public function __construct() {
 		parent::__construct();
@@ -48,6 +49,14 @@ class ExpireSubscriptionRequest extends ActionRequest {
 	
 	public function getIsRefundEnabled() {
 		return($this->isRefundEnabled);
+	}
+	
+	public function setIsRefundProrated($isRefundProrated) {
+		$this->isRefundProrated = $isRefundProrated;
+	}
+	
+	public function getIsRefundProrated() {
+		return($this->isRefundProrated);
 	}
 	
 }

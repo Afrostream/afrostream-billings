@@ -316,6 +316,12 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				}
 			}
 			if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+				if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+					//exception
+					$msg = "prorated refund is not supported";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
 				$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], $this->provider->getPlatformId());
 				if(count($transactionsResult['transactions']) == 1) {
 					$transaction = $transactionsResult['transactions'][0];

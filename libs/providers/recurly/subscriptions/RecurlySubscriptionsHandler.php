@@ -604,7 +604,11 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
 				//
 				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-					$api_subscription->terminateAndRefund();
+					if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+						$api_subscription->terminateAndPartialRefund();
+					} else {
+						$api_subscription->terminateAndRefund();
+					}
 				} else {
 					$api_subscription->terminateWithoutRefund();
 				}
