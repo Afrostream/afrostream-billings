@@ -1,7 +1,9 @@
 <?php
 
 require_once __DIR__ . '/../libs/db/dbGlobal.php';
-
+require_once __DIR__ . '/../libs/subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../libs/providers/global/requests/ExpireSubscriptionRequest.php';
+		
 /*
  * Tool to import users from Afrostream DB
  */
@@ -40,7 +42,7 @@ $query =<<<EOL
 SELECT count(*) OVER() as total_counter, 
 BU._id as _id, 
 (CASE WHEN length(BUO.value) = 0 THEN 'unknown@domain.com' ELSE BUO.value END) as email,
-BS.sub_uuid
+BS.subscription_billing_uuid
 FROM billing_subscriptions BS
 INNER JOIN
 billing_plans BP ON (BP._id = BS.planid)
@@ -61,6 +63,7 @@ ORDER BY BU._id ASC
 EOL;
 
 $query = sprintf($query, $internalPlanUuid);
+
 $limit = 1000;
 $offset = 0;
 
@@ -72,7 +75,19 @@ do {
 	$lastId = $result['lastId'];
 	//
 	foreach($result['rows'] as $row) {
-		print_r("sub_uuid=".$row['sub_uuid']."\n");
+		print_r("subscription_billing_uuid=".$row['subscription_billing_uuid']."\n");
+		//
+		$subscriptionsHandler = new SubscriptionsHandler();
+		$expireSubscriptionRequest = new ExpireSubscriptionRequest();
+		$expireSubscriptionRequest->setSubscriptionBillingUuid($row['subscription_billing_uuid']);
+		$expireSubscriptionRequest->setOrigin('script');
+		$expireSubscriptionRequest->setExpiresDate(new DateTime());
+		$expireSubscriptionRequest->setForceBeforeEndsDate(true);
+		$expireSubscriptionRequest->setIsRefundEnabled(true);
+		$expireSubscriptionRequest->setIsRefundProrated(true);
+		//
+		$subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
+		//
 	}
 } while ($idx < $totalCounter && count($result['rows']) > 0);
 
