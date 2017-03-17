@@ -4244,7 +4244,7 @@ class BillingsTransaction implements JsonSerializable {
 		$this->amountInCents = $integer;
 	}
 	
-	public function getAmoutInCents() {
+	public function getAmountInCents() {
 		return($this->amountInCents);
 	}
 	
@@ -4401,7 +4401,7 @@ EOL;
 						$billingsTransaction->getTransactionBillingUuid(),
 						$billingsTransaction->getTransactionProviderUuid(),
 						dbGlobal::toISODate($billingsTransaction->getTransactionCreationDate()),
-						$billingsTransaction->getAmoutInCents(),
+						$billingsTransaction->getAmountInCents(),
 						$billingsTransaction->getCurrency(),
 						$billingsTransaction->getCountry(),
 						$billingsTransaction->getTransactionStatus(),
@@ -4443,7 +4443,7 @@ EOL;
 						$billingsTransaction->getTransactionBillingUuid(),
 						$billingsTransaction->getTransactionProviderUuid(),
 						dbGlobal::toISODate($billingsTransaction->getTransactionCreationDate()),
-						$billingsTransaction->getAmoutInCents(),
+						$billingsTransaction->getAmountInCents(),
 						$billingsTransaction->getCurrency(),
 						$billingsTransaction->getCountry(),
 						$billingsTransaction->getTransactionStatus(),
