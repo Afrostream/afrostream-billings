@@ -43,8 +43,12 @@ print_r("using limit=".$limit."\n");
 
 print_r("processing...\n");
 
-$billingExpireSubscriptionsWorkers = new BillingExpireSubscriptionsWorkers(BillingPlatformDAO::getPlatformById(1));
-$billingExpireSubscriptionsWorkers->doExpireEndedSubscriptions();
+$platforms = BillingPlatformDAO::getPlatforms();
+
+foreach ($platforms as $platform) {
+	$billingExpireSubscriptionsWorkers = new BillingExpireSubscriptionsWorkers($platform);
+	$billingExpireSubscriptionsWorkers->doExpireEndedSubscriptions();
+}
 
 print_r("processing done");
 	

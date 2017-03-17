@@ -25,9 +25,12 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsBachatWorkers = new BillingsBachatWorkers(ProviderDAO::getProviderByName('bachat', 1));
+$providers = ProviderDAO::getProvidersByName('bachat');
 
-$billingsBachatWorkers->doRequestRenewSubscriptions($force);
+foreach ($providers as $provider) {
+	$billingsBachatWorkers = new BillingsBachatWorkers($provider);
+	$billingsBachatWorkers->doRequestRenewSubscriptions($force);
+}
 
 print_r("processing done\n");
 

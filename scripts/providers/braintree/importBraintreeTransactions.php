@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/providers/braintree/BillingsImportBraintreeTransactions.php';
 
 /*
- * Tool
+ * Tool : by default for all braintree providers : we need to import all transactions constantly
  */
 
 print_r("starting tool to import braintree transactions...\n");
@@ -60,43 +60,33 @@ if(isset($_GET["-lastdays"])) {
 print_r("using from=".$fromStr."\n");
 print_r("using to=".$toStr."\n");
 
-$firstId = NULL;
+$providers = array();
 
-if(isset($_GET["-firstId"])) {
-    $firstId = $_GET["-firstId"];
+//Optionally we can specify an uuid of a given provider. 
+//For information, a script is already running in PRODUCTION without this option. 
+
+if(isset($_GET["-providerUuid"])) {
+	$providerUuid = $_GET["-providerUuid"];
+	$provider = ProviderDAO::getProviderByUuid($providerUuid);
+	if($provider == NULL) {
+		$msg = "provider with uuid=".$providerUuid." not found";
+		die($msg);
+	}
+	if($provider->getName() != 'braintree') {
+		$msg = "provider with uuid=".$providerUuid." is not connected to braintree";
+		die($msg);
+	}
+	$providers[] = $provider;
+} else {
+	$providers = ProviderDAO::getProvidersByName('braintree');
 }
-
-print_r("using firstId=".$firstId."\n");
-
-$offset = 0;
-
-if(isset($_GET["-offset"])) {
-    $offset = $_GET["-offset"];
-}
-
-print_r("using offset=".$offset."\n");
-
-$limit = 100;
-
-if(isset($_GET["-limit"])) {
-    $limit = $_GET["-limit"];
-}
-
-print_r("using limit=".$limit."\n");
-
-$force = false;
-
-if(isset($_GET["-force"])) {
-    $force = boolval($_GET["-force"]);
-}
-
-print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsImportBraintreeTransactions = new BillingsImportBraintreeTransactions(ProviderDAO::getProviderByName('braintree', 1));
-
-$billingsImportBraintreeTransactions->doImportTransactions($from, $to);
+foreach ($providers as $provider) {
+	$billingsImportBraintreeTransactions = new BillingsImportBraintreeTransactions($provider);
+	$billingsImportBraintreeTransactions->doImportTransactions($from, $to);
+}
 
 print_r("processing done\n");
 

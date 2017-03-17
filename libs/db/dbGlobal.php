@@ -1450,7 +1450,7 @@ class ProviderDAO {
 	}
 	
 	public static function getProviders($platformId) {
-		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE platformid = $1";
+		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE deleted = false AND platformid = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($platformId));
 	
 		$out = array();
@@ -1480,7 +1480,7 @@ class ProviderDAO {
 	
 	public static function getProviderByName($name, $platformId) {
 		$out = NULL;
-		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE name = $1 AND platformid = $2";
+		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE deleted = false AND name = $1 AND platformid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($name, $platformId));
 			
 		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
@@ -1489,6 +1489,20 @@ class ProviderDAO {
 		// free result
 		pg_free_result($result);
 	
+		return($out);
+	}
+	
+	public static function getProvidersByName($name) {
+		$query = "SELECT ".self::$sfields." FROM billing_providers WHERE deleted = false AND name = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($name));
+			
+		$out = array();
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getProviderFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
 		return($out);
 	}
 	
@@ -6627,7 +6641,21 @@ class BillingPartnerDAO {
 		pg_free_result($result);
 		return($out);
 	}
-
+	
+	public static function getPartnersByName($name) {
+		$query = "SELECT ".self::$sfields." FROM billing_partners WHERE name = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($name));
+			
+		$out = array();
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getPartnerFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 }
 
 class BillingPartnerOrder implements JsonSerializable {
@@ -7381,6 +7409,21 @@ class BillingPlatformDAO {
 		// free result
 		pg_free_result($result);
 		
+		return($out);
+	}
+	
+	public static function getPlatforms() {
+		$query = "SELECT ".self::$sfields." FROM billing_platforms";
+		$result = pg_query(config::getDbConn(), $query);
+	
+		$out = array();
+	
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getBillingPlatformFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
 		return($out);
 	}
 	

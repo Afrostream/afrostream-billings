@@ -24,11 +24,11 @@ class BillingGlobalStats extends BillingStats {
 			$data->setDate($startingDay);
 			$data->setProviderId($this->provider->getId());
 			//total
-		 	$data->setSubsTotal(dbStats::getNumberOfActiveSubscriptions($endingDay, NULL, $this->provider->getId())['total']);
+		 	$data->setSubsTotal(dbStats::getNumberOfActiveSubscriptions($endingDay, NULL, $this->provider->getId(), $this->provider->getPlatformId())['total']);
 			//new
-			$data->setSubsNew(dbStats::getNumberOfActivatedSubscriptions($startingDay, $this->provider->getId())['total']);
+			$data->setSubsNew(dbStats::getNumberOfActivatedSubscriptions($startingDay, $this->provider->getId(), $this->provider->getPlatformId())['total']);
 			//expired
-			$data->setSubsExpired(dbStats::getNumberOfExpiredSubscriptions($startingDay, $endingDay, $this->provider->getId())['total']);
+			$data->setSubsExpired(dbStats::getNumberOfExpiredSubscriptions($startingDay, $endingDay, $this->provider->getId(), $this->provider->getPlatformId())['total']);
 			//
 			$out[] = $data;
 			ScriptsConfig::getLogger()->addInfo("retrieved stats for provider ".$this->provider->getName().

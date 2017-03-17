@@ -17,6 +17,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 	
 	public function __construct(BillingPlatform $platform) {
 		parent::__construct();
+		//TODO : 1 ChartMogul by platform
 		ChartMogul\Configuration::getDefaultConfiguration()
 		->setAccountToken(getEnv('CHARTMOGUL_API_ACCOUNT_TOKEN'))
 		->setSecretKey(getEnv('CHARTMOGUL_API_SECRET_KEY'));

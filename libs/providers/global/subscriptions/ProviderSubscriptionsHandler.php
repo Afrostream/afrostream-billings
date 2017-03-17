@@ -261,9 +261,11 @@ class ProviderSubscriptionsHandler {
 	}
 	
 	private function selectSendgridTemplateId(BillingsSubscription $subscription_after_update, $event) {
+		$platform = BillingPlatformDAO::getPlatformById($this->provider->getPlatformId());
 		$templateNames = array();
 		$defaultTemplateName = 'SUBSCRIPTION'.'_'.$event;
 		$templateNames[] = $defaultTemplateName;
+		$templateNames[] = strtoupper($platform->getName()).'_'.$defaultTemplateName;
 		//SPECIFIC
 		$specific = NULL;
 		if($this->isSponsorshipSubscription($subscription_after_update)) {
@@ -273,13 +275,16 @@ class ProviderSubscriptionsHandler {
 		if(isset($specific)) {
 			$specificTemplateName = 'SUBSCRIPTION'.'_'.$specific.'_'.$event;
 			$templateNames[] = $specificTemplateName;
+			$templateNames[] = strtoupper($platform->getName()).'_'.$specificTemplateName;
 		}
 		$providerTemplateName = $defaultTemplateName.'_'.strtoupper($this->provider->getName());
 		$templateNames[] = $providerTemplateName;
+		$templateNames[] = strtoupper($platform->getName()).'_'.$providerTemplateName;
 		$specificProviderTemplateName = NULL;
 		if(isset($specificTemplateName)) {
 			$specificProviderTemplateName = $specificTemplateName.'_'.strtoupper($this->provider->getName());
 			$templateNames[] = $specificProviderTemplateName;
+			$templateNames[] = strtoupper($platform->getName()).'_'.$specificProviderTemplateName;
 		}
 		//NOW SEARCH TEMPLATE IN DATABASE
 		$billingMailTemplate = NULL;
