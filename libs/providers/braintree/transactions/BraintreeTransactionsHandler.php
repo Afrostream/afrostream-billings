@@ -295,7 +295,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 					break;
 				case Braintree\Transaction::SETTLING :
 				case Braintree\Transaction::SETTLED :
-					$result = Braintree\Transaction::refund($api_payment->id);
+					$result = Braintree\Transaction::refund($api_payment->id, $refundTransactionRequest->getAmountInCents());
 					if (!$result->success) {
 						$msg = 'a braintree api error occurred : ';
 						$errorString = $result->message;

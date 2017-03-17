@@ -728,10 +728,20 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], $this->provider->getPlatformId());
 					if(count($transactionsResult['transactions']) == 1) {
 						$transaction = $transactionsResult['transactions'][0];
+						//
+						$amountInCents = NULL; //NULL = Refund ALL
+						if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+							$amountInCents = ceil($transaction->getAmountInCents() * ($subscription->getSubPeriodEndsDate() - new DateTime())
+									/
+									($subscription->getSubPeriodEndsDate() - $subscription->getSubPeriodStartedDate()));
+								
+						}
+						//
 						$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
 						$refundTransactionRequest = new RefundTransactionRequest();
 						$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
 						$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+						$refundTransactionRequest->setAmountInCents($amountInCents);
 						$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
 					}
 				}

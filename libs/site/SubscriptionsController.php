@@ -486,12 +486,17 @@ class SubscriptionsController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$forceBeforeEndsDate = $data['forceBeforeEndsDate'] == 'true' ? true : false;
+			$isRefundProrated = false;
+			if(isset($data['isRefundProrated'])) {
+				$isRefundProrated = $data['isRefundProrated'] == 'true' ? true : false;
+			}
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$expireSubscriptionRequest = new ExpireSubscriptionRequest();
 			$expireSubscriptionRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
 			$expireSubscriptionRequest->setOrigin('api');
 			$expireSubscriptionRequest->setIsRefundEnabled($isRefundEnabled);
 			$expireSubscriptionRequest->setForceBeforeEndsDate($forceBeforeEndsDate);
+			$expireSubscriptionRequest->setIsRefundProrated($isRefundProrated);
 			$subscription = $subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
 			if($subscription == NULL) {
 				return($this->returnNotFoundAsJson($response));

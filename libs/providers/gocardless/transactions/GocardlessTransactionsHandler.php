@@ -258,8 +258,8 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 				case 'confirmed' :
 				case 'paid_out' :
 					$api_refund = $client->refunds()->create([
-						"params" => [	"amount" => $api_payment->amount,
-										"total_amount_confirmation" => $api_payment->amount,
+						"params" => [	"amount" => $refundTransactionRequest->getAmountInCents() == NULL ? $api_payment->amount : $refundTransactionRequest->getAmountInCents(),
+										"total_amount_confirmation" => $refundTransactionRequest->getAmountInCents() == NULL ? $api_payment->amount : $refundTransactionRequest->getAmountInCents(),
 										"links" => ["payment" => $api_payment->id]]
 								]);
 					//reload payment, in order to be up to date
