@@ -223,8 +223,8 @@ class InternalPlansHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//linked ?
-			$providerPlanId = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($db_internal_plan->getId(), $provider->getId());
-			if(isset($providerPlanId)) {
+			$providerPlan = PlanDAO::getPlanByInternalPlanId($db_internal_plan->getId(), $provider->getId());
+			if(isset($providerPlan)) {
 				$msg = "internal plan with internalPlanUuid : ".$internalPlanUuid." is already linked to provider : ".$provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);

@@ -274,16 +274,9 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
-			$plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internalPlan->getId(), $this->provider->getId());
-			if($plan_id == NULL) {
-				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$this->provider->getName();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			
-			$plan = PlanDAO::getPlanById($plan_id);
+			$plan = PlanDAO::getPlanByInternalPlanId($internalPlan->getId(), $this->provider->getId());
 			if($plan == NULL) {
-				$msg = "unknown plan with id : ".$plan_id;
+				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$this->provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -410,16 +403,9 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
-			$plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internal_plan->getId(), $this->provider->getId());
-			if($plan_id == NULL) {
-				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$this->provider->getName();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			
-			$plan = PlanDAO::getPlanById($plan_id);
+			$plan = PlanDAO::getPlanByInternalPlanId($internal_plan->getId(), $this->provider->getId());
 			if($plan == NULL) {
-				$msg = "unknown plan with id : ".$plan_id;
+				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$this->provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
