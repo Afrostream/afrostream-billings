@@ -2,13 +2,13 @@
 
 require_once __DIR__ . '/../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../libs/subscriptions/SubscriptionsHandler.php';
-require_once __DIR__ . '/../libs/providers/global/requests/ExpireSubscriptionRequest.php';
-		
+require_once __DIR__ . '/../libs/providers/global/requests/CancelSubscriptionRequest.php';
+
 /*
  * Tool to import users from Afrostream DB
  */
 
-print_r("starting tool to expire afrostream subscriptions from a given plan...\n");
+print_r("starting tool to cancel afrostream subscriptions from a given plan...\n");
 
 foreach ($argv as $arg) {
 	$e=explode("=",$arg);
@@ -71,6 +71,7 @@ WHERE BS.deleted = false
 AND BU.deleted = false 
 AND BS.sub_activated_date <= CURRENT_TIMESTAMP
 AND (BS.sub_expires_date IS NULL OR BS.sub_expires_date > CURRENT_TIMESTAMP) 
+AND BS.sub_canceled_date IS NULL
 AND BU.platformid = 1 AND BIP.internal_plan_uuid = '%s'
 ORDER BY BU._id ASC
 EOL;
@@ -92,15 +93,12 @@ do {
 		//
 		try {
 			$subscriptionsHandler = new SubscriptionsHandler();
-			$expireSubscriptionRequest = new ExpireSubscriptionRequest();
-			$expireSubscriptionRequest->setSubscriptionBillingUuid($row['subscription_billing_uuid']);
-			$expireSubscriptionRequest->setOrigin('script');
-			$expireSubscriptionRequest->setExpiresDate(new DateTime());
-			$expireSubscriptionRequest->setForceBeforeEndsDate(true);
-			$expireSubscriptionRequest->setIsRefundEnabled(true);
-			$expireSubscriptionRequest->setIsRefundProrated(true);
+			$cancelSubscriptionRequest = new CancelSubscriptionRequest();
+			$cancelSubscriptionRequest->setSubscriptionBillingUuid($row['subscription_billing_uuid']);
+			$cancelSubscriptionRequest->setOrigin('script');
+			$cancelSubscriptionRequest->setCancelDate(new DateTime());
 			//
-			$subscriptionsHandler->doExpireSubscription($expireSubscriptionRequest);
+			$subscriptionsHandler->doCancelSubscription($cancelSubscriptionRequest);
 			//
 			print_r("email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",done\n");
 		} catch(Exception $e) {
