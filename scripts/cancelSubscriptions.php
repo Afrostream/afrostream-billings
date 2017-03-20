@@ -29,7 +29,7 @@ if(isset($_GET["-internalPlanUuid"])) {
 	exit;
 }
 
-print_r("internalPlanUuid=".$internalPlanUuid."\n");
+print_r("using internalPlanUuid=".$internalPlanUuid."\n");
 
 $internalPlan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $platform->getId());
 
@@ -47,9 +47,11 @@ if(isset($_GET["-loopingSleepTimeInMillis"])) {
 	exit;
 }
 
-print_r("loopingSleepTimeInMillis=".$loopingSleepTimeInMillis."\n");
+print_r("using loopingSleepTimeInMillis=".$loopingSleepTimeInMillis."\n");
 
-print_r("processing...\n");
+print_r("processing in 5 secs...\n");
+
+sleep(5);
 
 $query =<<<EOL
 SELECT count(*) OVER() as total_counter, 
@@ -80,6 +82,7 @@ $query = sprintf($query, $internalPlanUuid);
 
 $limit = 1000;
 $offset = 0;
+$index = 1;
 
 do {
 	$result = dbGlobal::loadSqlResult($query, $limit, $offset);
@@ -89,7 +92,7 @@ do {
 	$lastId = $result['lastId'];
 	//
 	foreach($result['rows'] as $row) {
-		print_r("email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",processing\n");
+		print_r("total=".$totalCounter.",current=".$index.",email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",processing\n");
 		//
 		try {
 			$subscriptionsHandler = new SubscriptionsHandler();
@@ -100,12 +103,14 @@ do {
 			//
 			$subscriptionsHandler->doCancelSubscription($cancelSubscriptionRequest);
 			//
-			print_r("email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",done\n");
+			print_r("total=".$totalCounter.",current=".$index.",email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",done\n");
 		} catch(Exception $e) {
-			print_r("email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",failed,message=".$e->getMessage()."\n");
+			print_r("total=".$totalCounter.",current=".$index.",email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",failed,message=".$e->getMessage()."\n");
 		}
 		//
 		usleep($loopingSleepTimeInMillis * 1000);
+		//
+		$index++;
 		//
 	}
 } while ($idx < $totalCounter && count($result['rows']) > 0);
