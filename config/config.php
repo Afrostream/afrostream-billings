@@ -175,6 +175,10 @@ if(getEnv('SENDGRID_VAR_couponAppliedSentence') === false) {
 	putEnv('SENDGRID_VAR_couponAppliedSentence=La réduction de %couponAmountForDisplay% liée au code promo %couponCode% sera appliquée lors du prélèvement.');
 }
 
+if(getEnv('SENDGRID_TEMPLATE_SUFFIX') === false) {
+	putEnv('SENDGRID_TEMPLATE_SUFFIX=');
+}
+
 #Event (MAIL)
 
 if(getEnv('EVENT_EMAIL_ACTIVATED') === false) {
