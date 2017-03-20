@@ -38,16 +38,16 @@ if($internalPlan == NULL) {
 	exit;
 }
 
-$loopingSleepTime = NULL;
+$loopingSleepTimeInMillis = NULL;
 
-if(isset($_GET["-loopingSleepTime"])) {
-	$loopingSleepTime = $_GET["-loopingSleepTime"];
+if(isset($_GET["-loopingSleepTimeInMillis"])) {
+	$loopingSleepTimeInMillis = $_GET["-loopingSleepTimeInMillis"];
 } else {
-	print_r("-loopingSleepTime is missing\n");
+	print_r("-loopingSleepTimeInMillis is missing\n");
 	exit;
 }
 
-print_r("loopingSleepTime=".$loopingSleepTime."\n");
+print_r("loopingSleepTimeInMillis=".$loopingSleepTimeInMillis."\n");
 
 print_r("processing...\n");
 
@@ -105,7 +105,7 @@ do {
 			print_r("email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",failed,message=".$e->getMessage()."\n");
 		}
 		//
-		usleep($loopingSleepTime * 1000);
+		usleep($loopingSleepTimeInMillis * 1000);
 		//
 	}
 } while ($idx < $totalCounter && count($result['rows']) > 0);
