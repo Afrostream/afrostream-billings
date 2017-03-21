@@ -279,6 +279,11 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			Braintree_Configuration::publicKey($this->provider->getApiKey());
 			Braintree_Configuration::privateKey($this->provider->getApiSecret());
 			//
+			$amount = NULL;
+			if($refundTransactionRequest->getAmountInCents() != NULL) {
+				$amount = number_format((float) ($refundTransactionRequest->getAmountInCents() / 100), 2, '.', '');
+			}
+			//
 			$api_payment = Braintree\Transaction::find($transaction->getTransactionProviderUuid());
 			switch ($api_payment->status) {
 				case Braintree\Transaction::AUTHORIZED :
@@ -295,7 +300,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 					break;
 				case Braintree\Transaction::SETTLING :
 				case Braintree\Transaction::SETTLED :
-					$result = Braintree\Transaction::refund($api_payment->id);
+					$result = Braintree\Transaction::refund($api_payment->id, $amount);
 					if (!$result->success) {
 						$msg = 'a braintree api error occurred : ';
 						$errorString = $result->message;

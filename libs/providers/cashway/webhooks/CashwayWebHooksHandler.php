@@ -71,7 +71,7 @@ class CashwayWebHooksHandler extends ProviderWebHooksHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-					$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+					$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 					if($internalPlan == NULL) {
 						$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 						config::getLogger()->addError($msg);

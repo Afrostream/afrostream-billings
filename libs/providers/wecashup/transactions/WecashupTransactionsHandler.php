@@ -100,6 +100,12 @@ class WecashupTransactionsHandler extends ProviderTransactionsHandler {
 	public function doRefundTransaction(BillingsTransaction $transaction, RefundTransactionRequest $refundTransactionRequest) {
 		try {
 			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
+			if($refundTransactionRequest->getAmountInCents() != NULL) {
+				//Exception
+				$msg = "partial refund is not supported";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			$user = UserDAO::getUserById($transaction->getUserId());
 			if($user == NULL) {
 				$msg = "unknown user with id : ".$transaction->getUserId();

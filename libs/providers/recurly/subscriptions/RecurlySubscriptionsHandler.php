@@ -163,7 +163,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);
@@ -525,15 +525,9 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$providerPlanId = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internalPlan->getId(), $this->provider->getId());
-			if($providerPlanId == NULL) {
-				$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$this->provider->getName();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			$providerPlan = PlanDAO::getPlanById($providerPlanId);
+			$providerPlan = PlanDAO::getPlanByInternalPlanId($internalPlan->getId(), $this->provider->getId());
 			if($providerPlan == NULL) {
-				$msg = "unknown plan with id : ".$providerPlanId;
+				$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$this->provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -604,7 +598,11 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
 				//
 				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-					$api_subscription->terminateAndRefund();
+					if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+						$api_subscription->terminateAndPartialRefund();
+					} else {
+						$api_subscription->terminateAndRefund();
+					}
 				} else {
 					$api_subscription->terminateWithoutRefund();
 				}

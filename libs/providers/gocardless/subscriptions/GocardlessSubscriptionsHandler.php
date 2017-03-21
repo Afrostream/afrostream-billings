@@ -274,16 +274,9 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
-			$plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internalPlan->getId(), $this->provider->getId());
-			if($plan_id == NULL) {
-				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$this->provider->getName();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			
-			$plan = PlanDAO::getPlanById($plan_id);
+			$plan = PlanDAO::getPlanByInternalPlanId($internalPlan->getId(), $this->provider->getId());
 			if($plan == NULL) {
-				$msg = "unknown plan with id : ".$plan_id;
+				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$this->provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -410,16 +403,9 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
-			$plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internal_plan->getId(), $this->provider->getId());
-			if($plan_id == NULL) {
-				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$this->provider->getName();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			
-			$plan = PlanDAO::getPlanById($plan_id);
+			$plan = PlanDAO::getPlanByInternalPlanId($internal_plan->getId(), $this->provider->getId());
 			if($plan == NULL) {
-				$msg = "unknown plan with id : ".$plan_id;
+				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$this->provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -545,7 +531,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
 		if($internalPlan == NULL) {
 			$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider gocardless is not linked to an internal plan";
 			config::getLogger()->addError($msg);
@@ -734,13 +720,22 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					throw $e;
 				}
 				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], $this->provider->getPlatformId());
+					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], 'descending', $this->provider->getPlatformId());
 					if(count($transactionsResult['transactions']) == 1) {
 						$transaction = $transactionsResult['transactions'][0];
+						//
+						$amountInCents = NULL; //NULL = Refund ALL
+						if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+							$amountInCents = ceil($transaction->getAmountInCents() * ($subscription->getSubPeriodEndsDate()->getTimestamp() - (new DateTime())->getTimestamp())
+									/
+									($subscription->getSubPeriodEndsDate()->getTimestamp() - $subscription->getSubPeriodStartedDate()->getTimestamp()));
+						}
+						//
 						$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
 						$refundTransactionRequest = new RefundTransactionRequest();
 						$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
 						$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+						$refundTransactionRequest->setAmountInCents($amountInCents);
 						$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
 					}
 				}

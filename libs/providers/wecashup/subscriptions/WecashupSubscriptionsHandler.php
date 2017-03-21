@@ -316,7 +316,13 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				}
 			}
 			if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-				$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], $this->provider->getPlatformId());
+				if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+					//exception
+					$msg = "prorated refund is not supported";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], 'descending', $this->provider->getPlatformId());
 				if(count($transactionsResult['transactions']) == 1) {
 					$transaction = $transactionsResult['transactions'][0];
 					$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
@@ -356,7 +362,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-				$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+				$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 				if($internalPlan == NULL) {
 					$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 					config::getLogger()->addError($msg);
@@ -541,7 +547,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 		if($internalPlan == NULL) {
 			$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 			config::getLogger()->addError($msg);

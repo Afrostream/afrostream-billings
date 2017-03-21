@@ -199,7 +199,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider bachat is not linked to an internal plan";
 				ScriptsConfig::getLogger()->addError($msg);

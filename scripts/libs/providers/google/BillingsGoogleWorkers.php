@@ -112,7 +112,7 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 			}
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 			//check internalPlan
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$plan->getPlanUuid()." is not linked to an internal plan";
