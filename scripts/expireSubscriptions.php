@@ -78,9 +78,7 @@ FROM billing_subscriptions BS
 INNER JOIN
 billing_plans BP ON (BP._id = BS.planid)
 INNER JOIN
-billing_internal_plans_links BIPL ON (BIPL.provider_plan_id = BP._id)
-INNER JOIN
-billing_internal_plans BIP ON (BIP._id = BIPL.internal_plan_id)
+billing_internal_plans BIP ON (BIP._id = BP.internal_plan_id)
 INNER JOIN
 billing_users BU ON (BS.userid = BU._id)
 LEFT JOIN 

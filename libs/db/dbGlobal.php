@@ -591,8 +591,7 @@ class InternalPlanDAO {
 		$out = array();
 		
 		if(isset($providerId)) {
-			$query.= " INNER JOIN billing_internal_plans_links BIPL ON (BIP._id = BIPL.internal_plan_id)";
-			$query.= " INNER JOIN billing_plans BP ON (BIPL.provider_plan_id = BP._id)";
+			$query.= " INNER JOIN billing_plans BP ON (BIP._id = BP.internal_plan_id)";
 		}
 		
 		if(isset($contextId)) {
@@ -689,6 +688,23 @@ class InternalPlanDAO {
 		// free result
 		pg_free_result($result);
 		return(self::getInternalPlanById($row[0]));
+	}
+	
+	public static function getInternalPlanByProviderPlanId($providerPlanId) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_plans BIP";
+		$query.= " INNER JOIN billing_plans BP ON (BIP._id = BP.internal_plan_id)";
+		$query.= " WHERE BP._id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($providerPlanId));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getInternalPlanFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
 	}
 	
 }
@@ -948,7 +964,7 @@ class InternalPlan implements JsonSerializable {
 		];
 		if($this->showProviderPlans) {
 			// <-- by providerPlans -->
-			$providerPlans = PlanDAO::getPlansFromList(InternalPlanLinksDAO::getProviderPlanIdsFromInternalPlanId($this->_id, true));
+			$providerPlans = PlanDAO::getPlansByProviderNameFromInternalPlanId($this->_id, true);
 			$return['providerPlans'] = $providerPlans;
 			// <-- by paymentMethods -->
 			$providerPlansByPaymentMethodTypeArray = array();
@@ -1086,78 +1102,9 @@ class InternalPlanOptsDAO {
 	
 }
 
-class InternalPlanLinksDAO {
-	
-	public static function getProviderPlanIdFromInternalPlanId($internalplanid, $providerid) {
-		$query = "SELECT BP._id as billing_plan_id FROM billing_plans BP INNER JOIN billing_internal_plans_links BIPL ON (BP._id = BIPL.provider_plan_id)";
-		$query.= "WHERE BIPL.internal_plan_id = $1 AND BP.providerid = $2";
-		$result = pg_query_params(config::getDbConn(), $query, array($internalplanid, $providerid));
-		
-		$out = null;
-		
-		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = $row["billing_plan_id"];
-		}
-		// free result
-		pg_free_result($result);
-		
-		return($out);
-	}
-	
-	public static function getInternalPlanIdFromProviderPlanId($providerplanid) {
-		$query = "SELECT internal_plan_id as billing_internal_plan_id FROM billing_internal_plans_links BIPL WHERE BIPL.provider_plan_id = $1";
-		$result = pg_query_params(config::getDbConn(), $query, array($providerplanid));
-		
-		$out = null;
-		
-		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = $row["billing_internal_plan_id"];
-		}
-		// free result
-		pg_free_result($result);
-		
-		return($out);
-	}
-	
-	public static function addProviderPlanIdToInternalPlanId($internalplanid, $providerplanid) {
-		$query = "INSERT INTO billing_internal_plans_links (internal_plan_id, provider_plan_id)";
-		$query.= " VALUES ($1, $2) RETURNING _id";
-		$result = pg_query_params(config::getDbConn(), $query,
-				array($internalplanid,
-					$providerplanid));
-		$row = pg_fetch_row($result);
-		// free result
-		pg_free_result($result);
-		return($row[0]);
-	}
-	
-	public static function getProviderPlanIdsFromInternalPlanId($internalplanid, $isVisible = NULL) {
-		$query = "SELECT BP._id as billing_plan_id FROM billing_plans BP INNER JOIN billing_internal_plans_links BIPL ON (BP._id = BIPL.provider_plan_id)";
-		$query.= " WHERE BIPL.internal_plan_id = $1";
-		$params = array();
-		$params[] = $internalplanid;
-		if(isset($isVisible)) {
-			$params[] = $isVisible;
-			$query.= " AND BP.is_visible = $2";
-		}
-		$result = pg_query_params(config::getDbConn(), $query, $params);
-		
-		$out = array();
-		
-		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($out, $row["billing_plan_id"]);
-		}
-		// free result
-		pg_free_result($result);
-		
-		return($out);
-	}
-	
-}
-
 class PlanDAO {
 	
-	private static $sfields = "BP._id, BP.providerid, BP.plan_uuid, BP.name, BP.description, BP.is_visible";
+	private static $sfields = "BP._id, BP.providerid, BP.plan_uuid, BP.name, BP.description, BP.is_visible, BP.internal_plan_id";
 	
 	private static function getPlanFromRow($row) {
 		$out = new Plan();
@@ -1167,6 +1114,7 @@ class PlanDAO {
 		$out->setName($row["name"]);
 		$out->setDescription($row["description"]);
 		$out->setIsVisible($row["is_visible"] == 't' ? true : false);
+		$out->setInternalPlanId($row["internal_plan_id"]);
 		return($out);
 	}
 	
@@ -1236,54 +1184,60 @@ class PlanDAO {
 	
 		return($out);
 	}
+		
+	public static function addPlan(Plan $plan) {
+		$query = "INSERT INTO billing_plans (providerid, plan_uuid, name, description, internal_plan_id)";
+		$query.= " VALUES ($1, $2, $3, $4, $5) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array($plan->getProviderId(),
+					$plan->getPlanUuid(),
+					$plan->getName(),
+					$plan->getDescription(),
+					$plan->getInternalPlanId()
+				));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		return(self::getPlanById($row[0]));
+	}
 	
-	public static function getPlansFromList(array $list_of_billing_plan_ids) {
-		if(count($list_of_billing_plan_ids) == 0) return(array());
+	public static function getPlanByInternalPlanId($internalPlanId, $providerId) {
+		$query = "SELECT ".self::$sfields." FROM billing_plans BP WHERE BP.internal_plan_id = $1 AND BP.providerid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalPlanId, $providerId));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getPlanFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);
+	}
+	
+	public static function getPlansByProviderNameFromInternalPlanId($internalPlanId, $isVisible = NULL) {
 		$query = "SELECT P.name as provider_name, ".self::$sfields." FROM billing_plans BP";
 		$query.= " INNER JOIN billing_providers P ON (BP.providerid = P._id)";
+		$query.= " WHERE BP.internal_plan_id = $1";
 		$params = array();
-	
-		$out = array();
-	
-		$firstLoop = true;
-	
-		$i = 1;
-		foreach ($list_of_billing_plan_ids as $billing_plan_id) {
-			if($firstLoop == true) {
-				$firstLoop = false;
-				$query.= " WHERE BP._id in ($".$i;
-			} else {
-				$query.= ", $".$i;
-			}
-			$params[] = $billing_plan_id;
-			//done
-			$i++;
+		$params[] = $internalPlanId;
+		if(isset($isVisible)) {
+			$params[] = $isVisible;
+			$query.= " AND BP.is_visible = $2";
 		}
-		$query.= ")";
-	
+		
+		$out = array();
+		
 		$result = pg_query_params(config::getDbConn(), $query, $params);
-	
+		
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out[$row['provider_name']] = self::getPlanFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
-	
+		
 		return($out);
-	}
-	
-	public static function addPlan(Plan $plan) {
-		$query = "INSERT INTO billing_plans (providerid, plan_uuid, name, description)";
-		$query.= " VALUES ($1, $2, $3, $4) RETURNING _id";
-		$result = pg_query_params(config::getDbConn(), $query,
-				array($plan->getProviderId(),
-					$plan->getPlanUuid(),
-					$plan->getName(),
-					$plan->getDescription()));
-		$row = pg_fetch_row($result);
-		// free result
-		pg_free_result($result);
-		return(self::getPlanById($row[0]));
 	}
 	
 }
@@ -1296,6 +1250,7 @@ class Plan implements JsonSerializable {
 	private $description;
 	private $providerid;
 	private $isVisible;
+	private $internalPlanId;
 	
 	public function getId() {
 		return($this->_id);
@@ -1343,6 +1298,14 @@ class Plan implements JsonSerializable {
 	
 	public function getIsVisible() {
 		return($this->isVisible);
+	}
+	
+	public function setInternalPlanId($internalPlanId) {
+		$this->internalPlanId = $internalPlanId;
+	}
+	
+	public function getInternalPlanId() {
+		return($this->internalPlanId);
 	}
 	
 	public function jsonSerialize() {
@@ -1927,8 +1890,7 @@ class BillingsSubscriptionDAO {
 		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
 		if(isset($cycle_array)) {
 			$query.= " INNER JOIN billing_plans BP ON (BS.planid = BP._id)";
-			$query.= " INNER JOIN billing_internal_plans_links BIPL ON (BIPL.provider_plan_id = BP._id)";
-			$query.= " INNER JOIN billing_internal_plans BIP ON (BIPL.internal_plan_id = BIP._id)";
+			$query.= " INNER JOIN billing_internal_plans BIP ON (BP.internal_plan_id = BIP._id)";
 		}
 		$query.= " WHERE BU.deleted = false AND BS.deleted = false";
 		$query.= " AND BS.sub_status in (";
@@ -2312,7 +2274,7 @@ class BillingsSubscription implements JsonSerializable {
 			'subOpts' => (BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($this->_id)->jsonSerialize()),
 			'billingInfo' => ($this->billinginfoid == NULL) ? NULL : (BillingInfoDAO::getBillingInfoByBillingInfoId($this->billinginfoid)->jsonSerialize())
 		];
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($this->planid));
+		$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($this->planid);
 		$internalPlan->setShowProviderPlans(false);
 		$return['internalPlan'] = $internalPlan->jsonSerialize();
 		return($return);

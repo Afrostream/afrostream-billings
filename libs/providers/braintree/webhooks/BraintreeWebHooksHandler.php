@@ -87,7 +87,7 @@ class BraintreeWebHooksHandler extends ProviderWebHooksHandler {
 		}
 		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 		//internalPlan
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 		if($internalPlan == NULL) {
 			$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
 			config::getLogger()->addError($msg);
