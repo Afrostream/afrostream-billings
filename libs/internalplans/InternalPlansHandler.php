@@ -248,9 +248,8 @@ class InternalPlansHandler {
 				$provider_plan->setPlanUid($provider_plan_uuid);
 				$provider_plan->setName($db_internal_plan->getName());
 				$provider_plan->setDescription($db_internal_plan->getDescription());
+				$provider_plan->setInternalPlanId($db_internal_plan->getId());
 				$provider_plan = PlanDAO::addPlan($provider_plan);
-				//link it
-				InternalPlanLinksDAO::addProviderPlanIdToInternalPlanId($db_internal_plan->getId(), $provider_plan->getId());
 				//done
 				//COMMIT
 				pg_query("COMMIT");

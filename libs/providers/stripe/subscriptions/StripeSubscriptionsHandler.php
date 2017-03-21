@@ -203,7 +203,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             }
 
             $planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-            $internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+            $internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
             if($internalPlan == NULL) {
                 $msg = "plan with uuid=".$providerPlanId." for provider ".$this->provider->getName()." is not linked to an internal plan";
                 throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -292,8 +292,8 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         } else {
 	        // get user
 	        $user = UserDAO::getUserById($billingSubscription->getUserId());
-            $internalPlanId = InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($billingSubscription->getPlanId());
-            $internalPlan = InternalPlanDAO::getInternalPlanById($internalPlanId);
+	        $providerPlan = PlanDAO::getPlanById($billingSubscription->getPlanId());
+            $internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
             if ($internalPlan->getCycle() == PlanCycle::auto) {
            		$subscription = $this->getSubscription($billingSubscription->getSubUid(), $user);
              	$this->log('Cancel subscription id %s ', [$subscription['id']]);
@@ -772,7 +772,8 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 	    			}
     			}
     			if($expireSubscriptionRequest->getOrigin() == 'api') {
-    				$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
+    				$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
+    				$internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
     				if($internalPlan == NULL) {
     					$msg = "plan with id=".$subscription->getPlanId()." for provider ".$this->provider->getName()." is not linked to an internal plan";
     					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);

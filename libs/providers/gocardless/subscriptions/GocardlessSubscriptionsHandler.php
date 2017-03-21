@@ -531,7 +531,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
 		if($internalPlan == NULL) {
 			$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider gocardless is not linked to an internal plan";
 			config::getLogger()->addError($msg);
