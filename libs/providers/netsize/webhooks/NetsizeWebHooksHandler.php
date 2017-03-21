@@ -151,6 +151,7 @@ class NetsizeWebHooksHandler extends ProviderWebHooksHandler {
 		$subscriptionsHandler = new SubscriptionsHandler();
 		//NC : For the moment, Netsize renewing does not support to force $end_date, so we are not using $expirationDate.
 		$renewSubscriptionRequest = new RenewSubscriptionRequest();
+		$renewSubscriptionRequest->setPlatform($this->platform);
 		$renewSubscriptionRequest->setSubscriptionBillingUuid($db_subscription->getSubscriptionBillingUuid());
 		$renewSubscriptionRequest->setStartDate(NULL);
 		$renewSubscriptionRequest->setEndDate(NULL);//NC : should be $expirationDate, but date given by Netsize is not good

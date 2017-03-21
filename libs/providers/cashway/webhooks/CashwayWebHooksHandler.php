@@ -144,6 +144,7 @@ class CashwayWebHooksHandler extends ProviderWebHooksHandler {
 						$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($userInternalCoupon->getSubId());
 						if(isset($db_subscription)) {
 							$deleteSubscriptionRequest = new DeleteSubscriptionRequest();
+							$deleteSubscriptionRequest->setPlatform($this->platform);
 							$deleteSubscriptionRequest->setSubscriptionBillingUuid($db_subscription->getSubscriptionBillingUuid());
 							$deleteSubscriptionRequest->setOrigin('hook');
 							$subscriptionsHandler->doDeleteSubscription($deleteSubscriptionRequest);
