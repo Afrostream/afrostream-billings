@@ -9,6 +9,10 @@ use Monolog\Handler\StreamHandler;
 
 #General
 
+if(getEnv('PLATFORM_DEFAULT_ID') === false) {
+	putEnv('PLATFORM_DEFAULT_ID=1');/* AFROSTREAM */
+}
+
 if(getEnv('DYNO') === false) {
 	putEnv('DYNO=web-0');
 }
