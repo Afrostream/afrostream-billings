@@ -4435,7 +4435,7 @@ EOL;
 	}
 	
 	public static function getBillingsTransactionByTransactionBillingUuid($transactionBillingUuid, $platformId) {
-		$query = "SELECT ".self::$sfields." FROM billing_transactions WHERE transaction_billing_uuid = $1 AND plateformid = $2";
+		$query = "SELECT ".self::$sfields." FROM billing_transactions WHERE transaction_billing_uuid = $1 AND platformid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($transactionBillingUuid, $platformId));
 	
 		$out = null;
