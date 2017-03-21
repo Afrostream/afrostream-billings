@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 
 class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("wecashup subscription creation...");
@@ -20,7 +20,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			checkSubOptsArray($subOpts->getOpts(), 'wecashup', 'create');
-			$wecashupClient = new WecashupClient();
+			$wecashupClient = new WecashupClient($this->provider->getMerchantId(), $this->provider->getApiKey(), $this->provider->getApiSecret());
 			//Check
 			$wecashupTransactionRequest = new WecashupTransactionRequest();
 			$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
@@ -74,7 +74,19 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($sub_uuid);
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(
+			User $user, 
+			UserOpts $userOpts, 
+			InternalPlan $internalPlan = NULL, 
+			InternalPlanOpts $internalPlanOpts = NULL, 
+			Plan $plan = NULL, 
+			PlanOpts $planOpts = NULL, 
+			BillingsSubscriptionOpts $subOpts = NULL, 
+			BillingInfo $billingInfo = NULL, 
+			$subscription_billing_uuid, 
+			$sub_uuid, 
+			$update_type, 
+			$updateId) {
 		//
 		if($subOpts == NULL) {
 			//Exception
@@ -82,7 +94,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		/*$wecashupClient = new WecashupClient();
+		/*$wecashupClient = new WecashupClient($this->provider->getMerchantId(), $this->provider->getApiKey(), $this->provider->getApiSecret());
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
 		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
@@ -100,14 +112,49 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
 		}*/
 		//
+		$now = new DateTime();
 		$api_subscription = new BillingsSubscription();
-		$api_subscription->setCreationDate(new DateTime());
+		$api_subscription->setCreationDate($now);
 		$api_subscription->setSubUid($sub_uuid);
-		$api_subscription->setSubStatus('future');
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
+		//<-- USUAL
+		//$api_subscription->setSubStatus('future');
+		//-->
+		//<-- HACK
+		$api_subscription->setSubStatus('active');
+		$api_subscription->setSubActivatedDate($now);
+		$start_date = $now;
+		$api_subscription->setSubPeriodStartedDate($start_date);
+		$end_date = NULL;
+		if(isset($start_date)) {
+			switch($internalPlan->getPeriodUnit()) {
+				case PlanPeriodUnit::day :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."D"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				case PlanPeriodUnit::month :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."M"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				case PlanPeriodUnit::year :
+					$end_date = clone $start_date;
+					$end_date->add(new DateInterval("P".$internalPlan->getPeriodLength()."Y"));
+					$end_date->setTime(23, 59, 59);//force the time to the end of the day
+					break;
+				default :
+					$msg = "unsupported periodUnit : ".$internalPlan->getPeriodUnit()->getValue();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
+		}
+		$api_subscription->setSubPeriodEndsDate($end_date);
+		//-->
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, BillingsSubscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, BillingsSubscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("wecashup dbsubscription creation for userid=".$user->getId().", wecashup_subscription_uuid=".$api_subscription->getSubUid()."...");
 		//
 		if($subOpts == NULL) {
@@ -116,7 +163,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$wecashupClient = new WecashupClient();
+		$wecashupClient = new WecashupClient($this->provider->getMerchantId(), $this->provider->getApiKey(), $this->provider->getApiSecret());
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
 		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
@@ -131,7 +178,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		//SUBSCRIPTION CREATE
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
-		$db_subscription->setProviderId($provider->getId());
+		$db_subscription->setProviderId($this->provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription->setSubUid($api_subscription->getSubUid());
@@ -186,6 +233,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$billingsTransaction->setInvoiceProviderUuid(NULL);
 		$billingsTransaction->setMessage('');
 		$billingsTransaction->setUpdateType('api');
+		$billingsTransaction->setPlatformId($this->provider->getPlatformId());
 		//
 		$billingsTransactionOpts = new BillingsTransactionOpts();
 		$billingsTransactionOpts->setOpt('transaction_token', $subOpts->getOpt('transaction_token'));
@@ -196,6 +244,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
+		$db_subscription->setPlatformId($this->provider->getPlatformId());
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS
 		if(isset($subOpts)) {
@@ -226,11 +275,6 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			{
 				//nothing todo : already done or in process
 			} else {
-				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-					$msg = "cannot expire and refund a ".$this->provider->getName()." subscription";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_UNSUPPORTED);
-				}
 				//
 				$expiresDate = $expireSubscriptionRequest->getExpiresDate();
 				//
@@ -261,6 +305,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
 					BillingsSubscriptionDAO::updateSubExpiresDate($subscription);
 					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT
@@ -268,6 +313,23 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				} catch(Exception $e) {
 					pg_query("ROLLBACK");
 					throw $e;
+				}
+			}
+			if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
+				if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+					//exception
+					$msg = "prorated refund is not supported";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], 'descending', $this->provider->getPlatformId());
+				if(count($transactionsResult['transactions']) == 1) {
+					$transaction = $transactionsResult['transactions'][0];
+					$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
+					$refundTransactionRequest = new RefundTransactionRequest();
+					$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
+					$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+					$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
 				}
 			}
 			//
@@ -289,14 +351,8 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		config::getLogger()->addInfo("wecashup dbsubscriptions update for userid=".$user->getId()."...");
 		//ONLY UPDATE
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
-		$provider = ProviderDAO::getProviderById($user->getProviderId());
 		//
-		if($provider == NULL) {
-			$msg = "unknown provider id : ".$user->getProviderId();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		$wecashupClient = new WecashupClient();
+		$wecashupClient = new WecashupClient($this->provider->getMerchantId(), $this->provider->getApiKey(), $this->provider->getApiSecret());
 		foreach ($db_subscriptions as $db_subscription) {
 			try {
 				$plan = PlanDAO::getPlanById($db_subscription->getPlanId());
@@ -306,9 +362,9 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-				$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+				$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 				if($internalPlan == NULL) {
-					$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+					$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
@@ -333,7 +389,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					config::getLogger()->addError("wecashup subscription creation failed : ".$msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::provider), $msg);
 				}
-				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
+				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
 			} catch(Exception $e) {
 				$msg = "wecashup dbsubscription update failed for subscriptionBillingUuid=".$db_subscription->getSubscriptionBillingUuid().", message=".$e->getMessage();
 				config::getLogger()->addError($msg);
@@ -347,7 +403,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		//UPDATE
 		$db_subscription_before_update = clone $db_subscription;
 		//
-		//$db_subscription->setProviderId($provider->getId());//STATIC
+		//$db_subscription->setProviderId($this->provider->getId());//STATIC
 		//$db_subscription->setUserId($user->getId());//STATIC
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription = BillingsSubscriptionDAO::updatePlanId($db_subscription);
@@ -475,7 +531,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($subscription);
 	}
 	
-	public function doUpdateUserSubscription(BillingsSubscription $db_subscription) {
+	public function doUpdateUserSubscription(BillingsSubscription $db_subscription, UpdateSubscriptionRequest $updateSubscriptionRequest) {
 		$user = UserDAO::getUserById($db_subscription->getUserId());
 		if($user == NULL) {
 			$msg = "unknown user with id : ".$db_subscription->getUserId();
@@ -483,13 +539,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 		//
-		if($provider == NULL) {
-			$msg = "unknown provider id : ".$db_subscription->getProviderId();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
 		$plan = PlanDAO::getPlanById($db_subscription->getPlanId());
 		if($plan == NULL) {
 			$msg = "unknown plan with id : ".$db_subscription->getPlanId();
@@ -497,9 +547,9 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 		if($internalPlan == NULL) {
-			$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+			$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -508,7 +558,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		//
 		$api_subscription = clone $db_subscription;
 		//
-		$wecashupClient = new WecashupClient();
+		$wecashupClient = new WecashupClient($this->provider->getMerchantId(), $this->provider->getApiKey(), $this->provider->getApiSecret());
 		$wecashupTransactionRequest = new WecashupTransactionRequest();
 		$wecashupTransactionRequest->setTransactionUid($subOpts->getOpt('transaction_uid'));
 		$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
@@ -520,7 +570,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$paymentTransaction = $wecashupTransactionsResponseArray[0];
-		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($provider->getId(), $paymentTransaction->getTransactionUid());
+		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $paymentTransaction->getTransactionUid());
 		if($billingsTransaction == NULL) {
 			$msg = "no transaction with transaction_uid=".$paymentTransaction->getTransactionUid()." found";
 			config::getLogger()->addError($msg);
@@ -569,7 +619,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 		}		
-		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
+		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
 		$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		return($this->doFillSubscription($db_subscription));
 	}

@@ -12,9 +12,9 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			config::getLogger()->addInfo("updating braintree transactions...");
 			//
 			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-			Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-			Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+			Braintree_Configuration::merchantId($this->provider->getMerchantId());
+			Braintree_Configuration::publicKey($this->provider->getApiKey());
+			Braintree_Configuration::privateKey($this->provider->getApiSecret());
 			//
 			$search_query = [Braintree\TransactionSearch::customerId()->is($user->getUserProviderUuid())];
 			//NC : WARNING : greaterThanOrEqualTo / lessThanOrEqualTo does not seem to work...
@@ -107,6 +107,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setInvoiceProviderUuid($braintreeChargeTransaction->orderId);
 			$billingsTransaction->setMessage("provider_status=".$braintreeChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
+			$billingsTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -126,6 +127,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setInvoiceProviderUuid($braintreeChargeTransaction->orderId);
 			$billingsTransaction->setMessage("provider_status=".$braintreeChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		$this->updateRefundsFromProvider($user, $userOpts, $braintreeChargeTransaction, $billingsTransaction, $updateType);
@@ -136,9 +138,9 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 	private function updateRefundsFromProvider(User $user, UserOpts $userOpts, Braintree\Transaction $braintreeChargeTransaction, BillingsTransaction $billingsTransaction, $updateType) {
 		//
 		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-		Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-		Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+		Braintree_Configuration::merchantId($this->provider->getMerchantId());
+		Braintree_Configuration::publicKey($this->provider->getApiKey());
+		Braintree_Configuration::privateKey($this->provider->getApiSecret());
 		//
 		$braintreeRefundTransactions = array();
 		if(count($braintreeChargeTransaction->refundIds) > 0) {
@@ -175,6 +177,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid($braintreeRefundTransaction->orderId);
 			$billingsRefundTransaction->setMessage("provider_status=".$braintreeRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
+			$billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -195,6 +198,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid($braintreeRefundTransaction->orderId);
 			$billingsRefundTransaction->setMessage("provider_status=".$braintreeRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from braintree refund transaction id=".$braintreeRefundTransaction->id." done successfully");
@@ -271,9 +275,14 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
 			//
 			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-			Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-			Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+			Braintree_Configuration::merchantId($this->provider->getMerchantId());
+			Braintree_Configuration::publicKey($this->provider->getApiKey());
+			Braintree_Configuration::privateKey($this->provider->getApiSecret());
+			//
+			$amount = NULL;
+			if($refundTransactionRequest->getAmountInCents() != NULL) {
+				$amount = number_format((float) ($refundTransactionRequest->getAmountInCents() / 100), 2, '.', '');
+			}
 			//
 			$api_payment = Braintree\Transaction::find($transaction->getTransactionProviderUuid());
 			switch ($api_payment->status) {
@@ -291,7 +300,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 					break;
 				case Braintree\Transaction::SETTLING :
 				case Braintree\Transaction::SETTLED :
-					$result = Braintree\Transaction::refund($api_payment->id);
+					$result = Braintree\Transaction::refund($api_payment->id, $amount);
 					if (!$result->success) {
 						$msg = 'a braintree api error occurred : ';
 						$errorString = $result->message;

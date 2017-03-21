@@ -5,14 +5,16 @@ require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/coupons/ProviderCouponsHandler.php';
 
 use Money\Money;
 use Money\Currency;
 
-class AfrCouponsHandler {
+class AfrCouponsHandler extends ProviderCouponsHandler {
 	
-	public function __construct() {
-		\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+	public function __construct(Provider $provider) {
+		parent::__construct($provider);
+		\Stripe\Stripe::setApiKey($this->provider->getApiSecret());
 	}
 	
 	public function doCreateCoupon(User $user,
@@ -58,8 +60,9 @@ class AfrCouponsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$separator = $this->getSeparator($internalCouponsCampaign);
 			//
-			$couponCode = strtoupper($internalCouponsCampaign->getPrefix()."-".$this->getRandomString($internalCouponsCampaign->getGeneratedCodeLength()));
+			$couponCode = strtoupper($internalCouponsCampaign->getPrefix().$separator.$this->getRandomString($internalCouponsCampaign->getGeneratedCodeLength()));
 			
 			switch ($internalCouponsCampaign->getCouponType()) {
 				case CouponCampaignType::standard :
@@ -106,12 +109,12 @@ class AfrCouponsHandler {
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), 'self sponsorship is forbidden', ExceptionError::AFR_COUPON_SPS_SELF_FORBIDDEN);
 						}
 						//Check if user has not been already sponsored
-						$recipientEmailsTotalCounter = BillingUserInternalCouponDAO::getBillingUserInternalCouponsTotalNumberByRecipientEmails($recipentEmail, $internalCouponsCampaign->getCouponType());
+						$recipientEmailsTotalCounter = BillingUserInternalCouponDAO::getBillingUserInternalCouponsTotalNumberByRecipientEmails($recipentEmail, $internalCouponsCampaign->getCouponType(), $this->provider->getPlatformId());
 						if($recipientEmailsTotalCounter > 0) {
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), 'recipient has already been sponsored', ExceptionError::AFR_COUPON_SPS_RECIPIENT_ALREADY_SPONSORED);
 						}
 						//Check if user has not already an active subscription
-						$recipientUsers = UserDAO::getUsersByEmail($recipentEmail);
+						$recipientUsers = UserDAO::getUsersByEmail($recipentEmail, $this->provider->getPlatformId());
 						$subscriptionsHandler = new SubscriptionsHandler();
 						foreach ($recipientUsers as $recipientUser) {
 							$recipientSubscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($recipientUser);
@@ -136,6 +139,7 @@ class AfrCouponsHandler {
 			$internalCoupon->setCode($coupon_provider_uuid);
 			$internalCoupon->setUuid($coupon_billing_uuid);
 			$internalCoupon->setExpiresDate(NULL);
+			$internalCoupon->setPlatformId($this->provider->getPlatformId());
 			$internalCoupon = BillingInternalCouponDAO::addBillingInternalCoupon($internalCoupon);
 			//Create an userCoupon linked to the internalCoupon
 			$userInternalCoupon = new BillingUserInternalCoupon();
@@ -144,6 +148,7 @@ class AfrCouponsHandler {
 			$userInternalCoupon->setUuid($coupon_billing_uuid);
 			$userInternalCoupon->setUserId($user->getId());
 			$userInternalCoupon->setExpiresDate(NULL);
+			$userInternalCoupon->setPlatformId($this->provider->getPlatformId());
 			$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
 			//Cretate an userCouponOpts linked to the userCoupon
 			$billingUserInternalCouponOpts = new BillingUserInternalCouponOpts();
@@ -172,7 +177,7 @@ class AfrCouponsHandler {
 			InternalPlan $internalPlan = NULL,
 			$coupon_billing_uuid,
 			$coupon_provider_uuid) {
-		return(BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($coupon_billing_uuid));
+		return(BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($coupon_billing_uuid, $this->provider->getPlatformId()));
 	}
 	
 	protected function getRandomString($length) {
@@ -185,6 +190,19 @@ class AfrCouponsHandler {
 		}
 
 		return $strReturnString;
+	}
+	
+	protected function getSeparator(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$partner = NULL;
+		if($billingInternalCouponsCampaign->getPartnerId() != NULL) {
+			$partner = BillingPartnerDAO::getPartnerById($billingInternalCouponsCampaign->getPartnerId());
+		}
+		if($partner != NULL) {
+			if($partner->getName() == 'logista') {
+				return("");//logista = alphanumeric only
+			}
+		}
+		return("-");
 	}
 	
 	protected function sendMails(User $user, 
@@ -248,7 +266,7 @@ class AfrCouponsHandler {
 			$userMail = getenv('SENDGRID_TO_IFNULL');
 		}
 
-		$bcc  = getenv('SENDGRID_BCC');
+		$bcc = getenv('SENDGRID_BCC');
 		$template = NULL;
 		switch($internalCouponsCampaign->getCouponType()) {
 			case CouponCampaignType::sponsorship :
@@ -260,20 +278,26 @@ class AfrCouponsHandler {
 		}
 
 		$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
-		$email = new SendGrid\Email();
-
-		$email->addTo($userMail);
-		$email->setFrom(getenv('SENDGRID_FROM'))
-			->setFromName(getenv('SENDGRID_FROM_NAME'))
-			->setSubject(' ')
-			->setText(' ')
-			->setHtml(' ')
-			->setTemplateId($template)
-			->setSubstitutions($substitutions);
+		$mail = new SendGrid\Mail();
+		$email = new SendGrid\Email(getEnv('SENDGRID_FROM_NAME'), getEnv('SENDGRID_FROM'));
+		$mail->setFrom($email);
+		$personalization = new SendGrid\Personalization();
+		$personalization->addTo(new SendGrid\Email(NULL, $userMail));
 		if (!empty($bcc)) {
-			$email->setBcc($bcc);
+			$personalization->addBcc(new SendGrid\Email(NULL, $bcc));
 		}
-		$sendgrid->send($email);
+		foreach($substitutions as $var => $val) {
+			//NC $val."" NOT $val which forces to cast to string because of an issue with numerics : https://github.com/sendgrid/sendgrid-php/issues/350
+			$personalization->addSubstitution($var, $val."");
+		}
+		$mail->addPersonalization($personalization);
+		$mail->setTemplateId($template);
+		$response = $sendgrid->client->mail()->send()->post($mail);
+		if($response->statusCode() != 202) {
+			config::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
+			config::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
+			config::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
+		}
 	}
 	
 	protected function sendMailToRecipient($userMail, array $substitutions, BillingInternalCouponsCampaign $internalCouponsCampaign)
@@ -285,7 +309,7 @@ class AfrCouponsHandler {
 			$userMail = getenv('SENDGRID_TO_IFNULL');
 		}
 
-		$bcc  = getenv('SENDGRID_BCC');
+		$bcc = getenv('SENDGRID_BCC');
 		$template = NULL;
 		switch($internalCouponsCampaign->getCouponType()) {
 			case CouponCampaignType::sponsorship :
@@ -297,21 +321,26 @@ class AfrCouponsHandler {
 		}
 
 		$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
-		$email = new SendGrid\Email();
-
-		$email->addTo($userMail);
-		$email->setFrom(getenv('SENDGRID_FROM'))
-			->setFromName(getenv('SENDGRID_FROM_NAME'))
-			->setSubject(' ')
-			->setText(' ')
-			->setHtml(' ')
-			->setTemplateId($template)
-			->setSubstitutions($substitutions);
+		$mail = new SendGrid\Mail();
+		$email = new SendGrid\Email(getEnv('SENDGRID_FROM_NAME'), getEnv('SENDGRID_FROM'));
+		$mail->setFrom($email);
+		$personalization = new SendGrid\Personalization();
+		$personalization->addTo(new SendGrid\Email(NULL, $userMail));
 		if (!empty($bcc)) {
-			$email->setBcc($bcc);
+			$personalization->addBcc(new SendGrid\Email(NULL, $bcc));
 		}
-
-		$sendgrid->send($email);
+		foreach($substitutions as $var => $val) {
+			//NC $val."" NOT $val which forces to cast to string because of an issue with numerics : https://github.com/sendgrid/sendgrid-php/issues/350
+			$personalization->addSubstitution($var, $val."");
+		}
+		$mail->addPersonalization($personalization);
+		$mail->setTemplateId($template);
+		$response = $sendgrid->client->mail()->send()->post($mail);
+		if($response->statusCode() != 202) {
+			config::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
+			config::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
+			config::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
+		}
 	}
 	
 	/**

@@ -23,13 +23,23 @@ if(isset($_GET["-couponsCampaignInternalBillingUuid"])) {
 	exit;
 }
 
-print_r("using couponsCampaignInternalBillingUuid=".var_export($couponsCampaignInternalBillingUuid, true)."\n");
+$platformId = false;
+
+if(isset($_GET["-platformId"])) {
+	$platformId = $_GET["-platformId"];
+} else {
+	print_r("-platformId is missing\n");
+	exit;
+}
+
+
+print_r("using couponsCampaignInternalBillingUuid=".var_export($couponsCampaignInternalBillingUuid, true).", platformId=".var_export($platformId, true)."\n");
 
 print_r("processing...\n");
 
 $billingsCouponsGenerator = new BillingsCouponsGenerator();
 
-$billingsCouponsGenerator->doGenerateCoupons($couponsCampaignInternalBillingUuid);
+$billingsCouponsGenerator->doGenerateCoupons($couponsCampaignInternalBillingUuid, $platformId);
 
 print_r("processing done\n");
 

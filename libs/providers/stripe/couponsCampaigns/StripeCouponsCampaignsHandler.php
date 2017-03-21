@@ -4,12 +4,14 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
+require_once __DIR__ . '/../../global/couponsCampaigns/ProviderCouponsCampaignsHandler.php';
 
-class StripeCouponsCampaignsHandler {
+class StripeCouponsCampaignsHandler extends ProviderCouponsCampaignsHandler {
 	
-	public function __construct()
+	public function __construct(Provider $provider)
 	{
-		\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+		parent::__construct($provider);
+		\Stripe\Stripe::setApiKey($this->provider->getApiSecret());
 	}
 	
 	public function createProviderCouponsCampaign(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {

@@ -10,14 +10,14 @@ require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 		
 class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("netsize subscription creation...");
 			if(isset($subscription_provider_uuid)) {
 				checkSubOptsArray($subOpts->getOpts(), 'netsize', 'get');
 				//in netsize : user subscription is pre-created and must be finalized
-				$netsizeClient = new NetsizeClient();
+				$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 				
 				$finalizeRequest = new FinalizeRequest();
 				$finalizeRequest->setTransactionId($subscription_provider_uuid);
@@ -37,7 +37,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				/*checkSubOptsArray($subOpts->getOpts(), 'netsize', 'create');
 				// in netsize : user subscription is NOT pre-created
-				$netsizeClient = new NetsizeClient();
+				$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 				
 				$initializeSubscriptionRequest = new InitializeSubscriptionRequest();
 				$initializeSubscriptionRequest->setFlowId($subOpts->getOpts()['flowId']);
@@ -72,9 +72,21 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($sub_uuid);
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(
+			User $user, 
+			UserOpts $userOpts, 
+			InternalPlan $internalPlan = NULL, 
+			InternalPlanOpts $internalPlanOpts = NULL, 
+			Plan $plan = NULL, 
+			PlanOpts $planOpts = NULL, 
+			BillingsSubscriptionOpts $subOpts = NULL, 
+			BillingInfo $billingInfo = NULL, 
+			$subscription_billing_uuid, 
+			$sub_uuid, 
+			$update_type, 
+			$updateId) {
 		//
-		$netsizeClient = new NetsizeClient();
+		$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 		
 		$getStatusRequest = new GetStatusRequest();
 		$getStatusRequest->setTransactionId($sub_uuid);
@@ -82,17 +94,17 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 		//
 		$api_subscription = $getStatusResponse;
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, GetStatusResponse $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, GetStatusResponse $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("netsize dbsubscription creation for userid=".$user->getId().", netsize_subscription_uuid=".$api_subscription->getTransactionId()."...");
 		//CREATE
 		$now = new DateTime();
 		$now->setTimezone(new DateTimeZone(config::$timezone));
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
-		$db_subscription->setProviderId($provider->getId());
+		$db_subscription->setProviderId($this->provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription->setSubUid($api_subscription->getTransactionId());
@@ -164,6 +176,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
+		$db_subscription->setPlatformId($this->provider->getPlatformId());
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS
 		if(isset($subOpts)) {
@@ -175,7 +188,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($db_subscription));
 	}
 	
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("netsize subscription canceling...");
 			$doIt = false;
@@ -191,7 +204,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				} else {
 					//
 					$doIt = true;
-					$netsizeClient = new NetsizeClient();
+					$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 						
 					$closeSubscriptionRequest = new CloseSubscriptionRequest();
 					$closeSubscriptionRequest->setTransactionId($subscription->getSubUid());
@@ -215,7 +228,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					//nothing to do : already done or in process
 				} else {
 					$doIt = true;
-					$netsizeClient = new NetsizeClient();
+					$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 						
 					$getStatusRequest = new GetStatusRequest();
 					$getStatusRequest->setTransactionId($subscription->getSubUid());
@@ -232,7 +245,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				}
 			/*}*/
 			if($doIt == true) {
-				$subscription->setSubCanceledDate($cancel_date);
+				$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
 				/*if($is_a_request == true) {
 					$subscription->setSubStatus('requesting_canceled');
 				} else {*/
@@ -264,7 +277,9 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($subscription));
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+	public function doRenewSubscription(BillingsSubscription $subscription, RenewSubscriptionRequest $renewSubscriptionRequest) {
+		$start_date = $renewSubscriptionRequest->getStartDate();
+		$end_date = $renewSubscriptionRequest->getEndDate();
 		if($end_date != NULL) {
 			$msg = "renewing a netsize subscription does not support that end_date is already set";
 			config::getLogger()->addError($msg);
@@ -281,7 +296,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
 		if($internalPlan == NULL) {
 			$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider netsize is not linked to an internal plan";
 			config::getLogger()->addError($msg);
@@ -384,7 +399,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					}
 				}
 				$doIt = true;
-				$netsizeClient = new NetsizeClient();
+				$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 				
 				$getStatusRequest = new GetStatusRequest();
 				$getStatusRequest->setTransactionId($subscription->getSubUid());
@@ -434,14 +449,8 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		config::getLogger()->addInfo("netsize dbsubscriptions update for userid=".$user->getId()."...");
 		//ONLY UPDATE
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
-		$provider = ProviderDAO::getProviderById($user->getProviderId());
 		//
-		if($provider == NULL) {
-			$msg = "unknown provider id : ".$user->getProviderId();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		$netsizeClient = new NetsizeClient();
+		$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 		foreach ($db_subscriptions as $db_subscription) {
 			try {
 				$plan = PlanDAO::getPlanById($db_subscription->getPlanId());
@@ -451,9 +460,9 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-				$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+				$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 				if($internalPlan == NULL) {
-					$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+					$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
@@ -463,7 +472,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$getStatusRequest->setTransactionId($subscription->getSubUid());
 				$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 				$api_subscription = $getStatusResponse;
-				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
+				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
 			} catch(Exception $e) {
 				$msg = "netsize dbsubscription update failed for subscriptionBillingUuid=".$db_subscription->getSubscriptionBillingUuid().", message=".$e->getMessage();
 				config::getLogger()->addError($msg);
@@ -478,7 +487,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$db_subscription_before_update = clone $db_subscription;
 		//
 		$now = new DateTime();
-		//$db_subscription->setProviderId($provider->getId());//STATIC
+		//$db_subscription->setProviderId($this->provider->getId());//STATIC
 		//$db_subscription->setUserId($user->getId());//STATIC
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription = BillingsSubscriptionDAO::updatePlanId($db_subscription);
@@ -619,7 +628,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($subscription);
 	}
 	
-	public function doUpdateUserSubscription(BillingsSubscription $db_subscription) {
+	public function doUpdateUserSubscription(BillingsSubscription $db_subscription, UpdateSubscriptionRequest $updateSubscriptionRequest) {
 		$user = UserDAO::getUserById($db_subscription->getUserId());
 		if($user == NULL) {
 			$msg = "unknown user with id : ".$db_subscription->getUserId();
@@ -627,13 +636,7 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 		//
-		if($provider == NULL) {
-			$msg = "unknown provider id : ".$db_subscription->getProviderId();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
 		$plan = PlanDAO::getPlanById($db_subscription->getPlanId());
 		if($plan == NULL) {
 			$msg = "unknown plan with id : ".$subscription->getPlanId();
@@ -641,20 +644,20 @@ class NetsizeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 		if($internalPlan == NULL) {
-			$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+			$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 		//
-		$netsizeClient = new NetsizeClient();
+		$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 		$getStatusRequest = new GetStatusRequest();
 		$getStatusRequest->setTransactionId($db_subscription->getSubUid());
 		$getStatusResponse = $netsizeClient->getStatus($getStatusRequest);
 		$api_subscription = $getStatusResponse;
-		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
+		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
 		return($this->doFillSubscription($db_subscription));
 	}
 	

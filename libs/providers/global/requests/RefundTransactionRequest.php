@@ -1,10 +1,11 @@
 <?php
 
-require_once __DIR__ . '/ActionRequest.php';
+require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class RefundTransactionRequest extends ActionRequest {
 	
-	private $transactionBillingUuid = NULL;
+	protected $transactionBillingUuid = NULL;
+	protected $amountInCents = NULL;
 	
 	public function __construct() {
 		parent::__construct();
@@ -16,6 +17,14 @@ class RefundTransactionRequest extends ActionRequest {
 	
 	public function getTransactionBillingUuid() {
 		return($this->transactionBillingUuid);
+	}
+	
+	public function setAmountInCents($amountInCents) {
+		$this->amountInCents = $amountInCents;
+	}
+
+	public function getAmountInCents() {
+		return($this->amountInCents);
 	}
 	
 }

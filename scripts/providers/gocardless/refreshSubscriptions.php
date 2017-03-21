@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/providers/gocardless/BillingsGocardlessWorkers.php';
 
 /*
@@ -52,9 +53,12 @@ print_r("using force=".var_export($force, true)."\n");
 
 print_r("processing...\n");
 
-$billingsGocardlessWorkers = new BillingsGocardlessWorkers();
+$providers = ProviderDAO::getProvidersByName('gocardless');
 
-$billingsGocardlessWorkers->doRefreshSubscriptions();
+foreach ($providers as $provider) {
+	$billingsGocardlessWorkers = new BillingsGocardlessWorkers($provider);
+	$billingsGocardlessWorkers->doRefreshSubscriptions();
+}
 
 print_r("processing done\n");
 

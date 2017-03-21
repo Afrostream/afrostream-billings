@@ -11,10 +11,10 @@ use PayPal\Rest\ApiContext;
 
 class BillingsImportBraintreeBillingInfos {
 	
-	private $providerid = NULL;
+	private $provider = NULL;
 	
-	public function __construct() {
-		$this->providerid = ProviderDAO::getProviderByName('braintree')->getId();
+	public function __construct(Provider $provider) {
+		$this->provider = $provider;
 	}
 	
 	public function doImportBillingInfos() {
@@ -30,9 +30,9 @@ class BillingsImportBraintreeBillingInfos {
 			$apiContext->setConfig($config);
 			//BRAINTREE INIT
 			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-			Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-			Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+			Braintree_Configuration::merchantId($this->provider->getMerchantId());
+			Braintree_Configuration::publicKey($this->provider->getApiKey());
+			Braintree_Configuration::privateKey($this->provider->getApiSecret());
 			//
 			$braintreeCustomers = Braintree\Customer::all();
 				
@@ -58,7 +58,7 @@ class BillingsImportBraintreeBillingInfos {
 	}
 	
 	private function doImportSubscriptionBillingInfo(Braintree\Subscription $currentBraintreeSubscription, Braintree\Transaction $currentBraintreeTransaction, ApiContext $apiContext) {
-		$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($this->providerid, $currentBraintreeSubscription->id);
+		$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($this->provider->getId(), $currentBraintreeSubscription->id);
 		if($subscription == NULL) {
 			throw new Exception("subscription with subscription_provider_id=".$currentBraintreeSubscription->id." does not exist in billings database");
 		}

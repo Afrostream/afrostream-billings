@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../libs/global/BillingStatsWorkers.php';
 /*
  * Tool
@@ -90,8 +91,12 @@ print_r("using limit=".$limit."\n");
 
 print_r("processing...\n");
 
-$billingStatsWorkers = new BillingStatsWorkers();
-$billingStatsWorkers->doGenerateStats($from, $to);
+$platforms = BillingPlatformDAO::getPlatforms();
+
+foreach ($platforms as $platform) {
+	$billingStatsWorkers = new BillingStatsWorkers($platform);
+	$billingStatsWorkers->doGenerateStats($from, $to);
+}
 
 print_r("processing done");
 

@@ -1,13 +1,14 @@
 <?php
 
-require_once __DIR__ . '/ActionRequest.php';
+require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class ExpireSubscriptionRequest extends ActionRequest {
 	
-	private $subscriptionBillingUuid = NULL;
-	private $expiresDate = NULL;
-	private $forceBeforeEndsDate = false;
-	private $isRefundEnabled = false;
+	protected $subscriptionBillingUuid = NULL;
+	protected $expiresDate = NULL;
+	protected $forceBeforeEndsDate = false;
+	protected $isRefundEnabled = false;
+	protected $isRefundProrated = false;
 	
 	public function __construct() {
 		parent::__construct();
@@ -21,7 +22,7 @@ class ExpireSubscriptionRequest extends ActionRequest {
 		return($this->subscriptionBillingUuid);
 	}
 	
-	public function setExpiresDate(Datetime $date = NULL) {
+	public function setExpiresDate(DateTime $date = NULL) {
 		$this->expiresDate = $date;
 	}
 	
@@ -48,6 +49,14 @@ class ExpireSubscriptionRequest extends ActionRequest {
 	
 	public function getIsRefundEnabled() {
 		return($this->isRefundEnabled);
+	}
+	
+	public function setIsRefundProrated($isRefundProrated) {
+		$this->isRefundProrated = $isRefundProrated;
+	}
+	
+	public function getIsRefundProrated() {
+		return($this->isRefundProrated);
 	}
 	
 }

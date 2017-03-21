@@ -50,6 +50,7 @@ class TransactionsController extends BillingsController {
 	
 	public function refund(Request $request, Response $response, array $args) {
 		try {
+			$data = json_decode($request->getBody(), true);
 			$transactionBillingUuid = NULL;
 			if(!isset($args['transactionBillingUuid'])) {
 				//exception
@@ -57,11 +58,16 @@ class TransactionsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$amountInCents = NULL;
+			if(isset($data['amountInCents'])) {
+				$amountInCents = $data['amountInCents'];
+			}
 			$transactionBillingUuid = $args['transactionBillingUuid'];
 			$transactionsHandler = new TransactionsHandler();
 			$refundTransactionRequest = new RefundTransactionRequest();
 			$refundTransactionRequest->setOrigin('api');
 			$refundTransactionRequest->setTransactionBillingUuid($transactionBillingUuid);
+			$refundTransactionRequest->setAmountInCents($amountInCents);
 			$transaction = $transactionsHandler->doRefundTransaction($refundTransactionRequest);
 			return($this->returnObjectAsJson($response, 'transaction', $transaction));
 		} catch(BillingsException $e) {

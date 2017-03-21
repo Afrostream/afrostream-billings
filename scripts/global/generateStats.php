@@ -5,7 +5,13 @@ require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/db/dbStats.php';
 require_once __DIR__ . '/../../libs/slack/SlackHandler.php';
 
-print_r("starting tool to generate Stats...\n");
+/*
+ * Only for AFROSTREAM Platform
+ */
+
+$platform = BillingPlatformDAO::getPlatformById(1);
+
+print_r("starting tool to generate Stats for platform named : ".$platform->getName()."...\n");
 
 foreach ($argv as $arg) {
 	$e=explode("=",$arg);
@@ -34,26 +40,23 @@ $yesterdayBeginningOfDay->setTime(0,0,0);
 $yesterdayEndOfDay = clone $yesterday;
 $yesterdayEndOfDay->setTime(23,59,59);
 
-$numberOfSubscriptions = dbStats::getNumberOfSubscriptions($yesterdayEndOfDay);
-$numberOfActiveSubscriptions = dbStats::getNumberOfActiveSubscriptions($yesterdayEndOfDay);
+$numberOfSubscriptions = dbStats::getNumberOfSubscriptions($yesterdayEndOfDay, $platform->getId());
+$numberOfActiveSubscriptions = dbStats::getNumberOfActiveSubscriptions($yesterdayEndOfDay, NULL, NULL, $platform->getId());
 $providerIdsToIgnore = array();
 $providerNamesToIgnore = ['orange', 'bouygues'];
 foreach ($providerNamesToIgnore as $providerNameToIgnore) {
-	$provider = ProviderDAO::getProviderByName($providerNameToIgnore);
-	if($provider == NULL) {
-		$msg = "unknown provider named : ".$providerNameToIgnore;
-		ScriptsConfig::getLogger()->addError($msg);
-		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+	$provider = ProviderDAO::getProviderByName($providerNameToIgnore, $platform->getId());
+	if($provider != NULL) {
+		$providerIdsToIgnore[] = $provider->getId();
 	}
-	$providerIdsToIgnore[] = $provider->getId();
 }
-$numberOfActiveSubscriptionsExceptMultiscreen = dbStats::getNumberOfActiveSubscriptions($yesterdayEndOfDay, $providerIdsToIgnore);
-$numberOfExpiredSubscriptions = dbStats::getNumberOfExpiredSubscriptions(NULL, $yesterdayEndOfDay);
+$numberOfActiveSubscriptionsExceptMultiscreen = dbStats::getNumberOfActiveSubscriptions($yesterdayEndOfDay, $providerIdsToIgnore, NULL, $platform->getId());
+$numberOfExpiredSubscriptions = dbStats::getNumberOfExpiredSubscriptions(NULL, $yesterdayEndOfDay, NULL, $platform->getId());
 
-$numberOfActivatedSubscriptionsYesterday = dbStats::getNumberOfActivatedSubscriptions($yesterday);
-$numberOfExpiredSubscriptionsYesterday = dbStats::getNumberOfExpiredSubscriptions($yesterdayBeginningOfDay, $yesterdayEndOfDay);
-$numberOfCanceledSubscriptionsYesterday = dbStats::getNumberOfCanceledSubscriptions($yesterday);
-$numberOfFutureSubscriptionsYesterday = dbStats::getNumberOfFutureSubscriptions($yesterday);
+$numberOfActivatedSubscriptionsYesterday = dbStats::getNumberOfActivatedSubscriptions($yesterday, NULL, $platform->getId());
+$numberOfExpiredSubscriptionsYesterday = dbStats::getNumberOfExpiredSubscriptions($yesterdayBeginningOfDay, $yesterdayEndOfDay, NULL, $platform->getId());
+$numberOfCanceledSubscriptionsYesterday = dbStats::getNumberOfCanceledSubscriptions($yesterday, $platform->getId());
+$numberOfFutureSubscriptionsYesterday = dbStats::getNumberOfFutureSubscriptions($yesterday, $platform->getId());
 
 sendMessage("total since launch=".$numberOfSubscriptions['total']);
 
@@ -133,7 +136,7 @@ if($numberOfCanceledSubscriptionsYesterday['total'] > 0) {
 
 sendMessage("********** TRANSACTIONS **********");
 
-$numberOfTransactionEvents = dbStats::getNumberOfTransactions($yesterdayBeginningOfDay, $yesterdayEndOfDay, array('purchase', 'refund'), array('success'));
+$numberOfTransactionEvents = dbStats::getNumberOfTransactions($yesterdayBeginningOfDay, $yesterdayEndOfDay, array('purchase', 'refund'), array('success'), $platform->getId());
 
 sendMessage("*** YESTERDAY ***");
 
@@ -196,7 +199,7 @@ sendMessage("*** YESTERDAY ***");
 
 sendMessage("*** GENERATED ***");
 
-$numberOfCouponsGenerated = dbStats::getNumberOfCouponsGenerated($yesterdayBeginningOfDay, $yesterdayEndOfDay);
+$numberOfCouponsGenerated = dbStats::getNumberOfCouponsGenerated($yesterdayBeginningOfDay, $yesterdayEndOfDay, $platform->getId());
 
 sendMessage("total generated=".$numberOfCouponsGenerated['total']);
 
@@ -223,7 +226,7 @@ if($numberOfCouponsGenerated['total'] > 0) {
 
 sendMessage("*** ACTIVATED ***");
 
-$numberOfCouponsActivated = dbStats::getNumberOfCouponsActivated($yesterdayBeginningOfDay, $yesterdayEndOfDay);
+$numberOfCouponsActivated = dbStats::getNumberOfCouponsActivated($yesterdayBeginningOfDay, $yesterdayEndOfDay, $platform->getId());
 
 sendMessage("total activated=".$numberOfCouponsActivated['total']);
 

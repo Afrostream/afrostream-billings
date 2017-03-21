@@ -47,6 +47,10 @@ if(getEnv('BOUYGUES_BILLING_SYSTEM_URL') === false) {
 	putEnv('BOUYGUES_BILLING_SYSTEM_URL=https://vod.bouyguestelecom.fr/merchant/'.getEnv('BOUYGUES_MERCHANTID').'_'.getEnv('BOUYGUES_SERVICEID'));
 }
 
+if(getEnv('BOUYGUES_BILLING_SYSTEM_URL_PREFIX') === false) {
+	putEnv('BOUYGUES_BILLING_SYSTEM_URL_PREFIX=https://vod.bouyguestelecom.fr/merchant/');
+}
+
 if(getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER') === false) {
 	putEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER=admin');
 }
@@ -79,22 +83,34 @@ if(getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE') === false) {
 	putEnv('BOUYGUES_STORE_LAST_TIME_MINUTE=25');
 }
 
-#BOUYGUES (SFTP STATS)
+#BOUYGUES (FTP STATS)
 
-if(getEnv('BOUYGUES_SFTP_STATS_USER') === false) {
-	putEnv('BOUYGUES_SFTP_STATS_USER=svodafrostream');
+if(getEnv('BOUYGUES_FTP_STATS_USER') === false) {
+	putEnv('BOUYGUES_FTP_STATS_USER=bouygues');
 }
 
-if(getEnv('BOUYGUES_SFTP_STATS_HOST') === false) {
-	putEnv('BOUYGUES_SFTP_STATS_HOST=gas.bouyguesbox.fr');
+if(getEnv('BOUYGUES_FTP_STATS_PWD') === false) {
+	putEnv('BOUYGUES_FTP_STATS_PWD=dXCpHR0OUx');
 }
 
-if(getEnv('BOUYGUES_SFTP_STATS_PORT') === false) {
-	putEnv('BOUYGUES_SFTP_STATS_PORT=2222');
+if(getEnv('BOUYGUES_FTP_STATS_HOST') === false) {
+	putEnv('BOUYGUES_FTP_STATS_HOST=ftp.afrostream.net');
 }
 
-if(getEnv('BOUYGUES_SFTP_STATS_PRIVATE_KEY_FILE') === false) {
-	putEnv('BOUYGUES_SFTP_STATS_PRIVATE_KEY_FILE='.dirname(__FILE__).'/../libs/providers/bouygues/client-sftp-stats/bouygues-sftp-stats-rsa-private.pub');
+if(getEnv('BOUYGUES_FTP_STATS_PORT') === false) {
+	putEnv('BOUYGUES_FTP_STATS_PORT=21');
+}
+
+if(getEnv('BOUYGUES_FTP_STATS_PRIVATE_KEY_FILE') === false) {
+	putEnv('BOUYGUES_FTP_STATS_PRIVATE_KEY_FILE='.dirname(__FILE__).'/../libs/providers/bouygues/client-sftp-stats/bouygues-sftp-stats-rsa-private.pub');
+}
+
+if(getEnv('BOUYGUES_FTP_STATS_PROTOCOL') === false) {
+	putEnv('BOUYGUES_FTP_STATS_PROTOCOL=ftp');
+}
+
+if(getEnv('BOUYGUES_FTP_STATS_PROXY_ENABLED') === false) {
+	putEnv('BOUYGUES_FTP_STATS_PROXY_ENABLED=0');
 }
 
 #PAYPAL

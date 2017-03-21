@@ -1,10 +1,10 @@
 <?php
 
-require_once __DIR__ . '/ActionRequest.php';
+require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
 class GetTransactionRequest extends ActionRequest {
 	
-	private $transactionBillingUuid = NULL;
+	protected $transactionBillingUuid = NULL;
 	
 	public function __construct() {
 		parent::__construct();

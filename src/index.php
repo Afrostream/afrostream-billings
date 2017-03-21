@@ -12,6 +12,7 @@ require_once __DIR__ . '/../libs/site/InternalCouponsCampaignsController.php';
 require_once __DIR__ . '/../libs/site/ContextsController.php';
 require_once __DIR__ . '/../libs/site/TransactionsController.php';
 require_once __DIR__ . '/../libs/site/UtilsController.php';
+require_once __DIR__ . '/../libs/site/PartnerOrdersController.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -42,6 +43,7 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 		config::getLogger()->addInfo($msg);
 	}
 	$response = $next($req, $res);
+	$method = $req->getMethod();
 	$current_path = $req->getUri()->getPath();
 	$path_alive = '/alive';
 	$path_api = '/billings/api/';
@@ -50,60 +52,71 @@ $app->add(function (Request $req, Response $res, callable $next) use ($starttime
 	/* STATSD */
 	$array_status_code_ok = [200, 201, 202, 203, 204, 205, 206, 404];
 	$array_status_code_ko = [500];
+	$status = 'unknown';
+	if(in_array($response->getStatusCode(), $array_status_code_ok)) {
+		$status = 'success';
+	} else if(in_array($response->getStatusCode(), $array_status_code_ko)) {
+		$status = 'error';
+	}
 	/* route.all.hit */
 	BillingStatsd::inc('route.all.hit');
-	/* success */
-	if(in_array($response->getStatusCode(), $array_status_code_ok)) {
-		BillingStatsd::inc('route.all.success');
-		if(strpos($current_path, $path_api) === 0) {
-			BillingStatsd::inc('route.api.success');
-		} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix, $current_path)) {
-			BillingStatsd::inc('route.providers.all.webhooks.success');
-			$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
-			$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
-			BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.success');
-		} else if(strpos($current_path, $path_alive) === 0) {
-			BillingStatsd::inc('route.alive.success');
-		} else {
-			BillingStatsd::inc('route.others.success');
-		}
-	}
-	/* error */
-	if(in_array($response->getStatusCode(), $array_status_code_ko)) {
-		BillingStatsd::inc('route.all.error');
-		if(strpos($current_path, $path_api) === 0) {
-			BillingStatsd::inc('route.api.error');
-		} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix, $current_path)) {
-			BillingStatsd::inc('route.providers.all.webhooks.error');
-			$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
-			$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
-			BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.error');
-		} else if(strpos($current_path, $path_alive) === 0) {
-			BillingStatsd::inc('route.alive.error');
-		} else {
-			BillingStatsd::inc('route.others.error');
-		}
+	BillingStatsd::inc('route.all.method.'.$method.'.hit');
+	/* success / error / unknown */
+	BillingStatsd::inc('route.all.'.$status);
+	BillingStatsd::inc('route.all.method.'.$method.'.'.$status);
+	if(strpos($current_path, $path_api) === 0) {
+		BillingStatsd::inc('route.api.'.$status);
+		BillingStatsd::inc('route.api.method.'.$method.'.'.$status);
+	} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix.'*', $current_path)) {
+		BillingStatsd::inc('route.providers.all.webhooks.'.$status);
+		BillingStatsd::inc('route.providers.all.webhooks.method.'.$method.'.'.$status);
+		$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
+		$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
+		BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.'.$status);
+		BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.method.'.$method.'.'.$status);
+	} else if(strpos($current_path, $path_alive) === 0) {
+		BillingStatsd::inc('route.alive.'.$status);
+		BillingStatsd::inc('route.alive.method.'.$method.'.'.$status);
+	} else {
+		BillingStatsd::inc('route.others.'.$status);
+		BillingStatsd::inc('route.others.method.'.$method.'.'.$status);
 	}
 	/* anyway */
 	$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
 	BillingStatsd::timing('route.all.responsetime', $responseTimeInMillis);
+	BillingStatsd::timing('route.all.method.'.$method.'.responsetime', $responseTimeInMillis);
 	if(strpos($current_path, $path_api) === 0) {
 		BillingStatsd::inc('route.api.hit');
+		BillingStatsd::inc('route.api.method.'.$method.'.hit');
 		BillingStatsd::timing('route.api.responsetime', $responseTimeInMillis);
-	} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix, $current_path)) {
+		BillingStatsd::timing('route.api.method.'.$method.'.responsetime', $responseTimeInMillis);
+	} else if(fnmatch($path_webhooks_prefix.'*'.$path_webhooks_suffix.'*', $current_path)) {
 		BillingStatsd::timing('route.providers.all.webhooks.responsetime', $responseTimeInMillis);
+		BillingStatsd::timing('route.providers.all.webhooks.method.'.$method.'.responsetime', $responseTimeInMillis);
 		BillingStatsd::inc('route.providers.all.webhooks.hit');
+		BillingStatsd::inc('route.providers.all.webhooks.method.'.$method.'.hit');
 		$wilcard = substr($current_path, strlen($path_webhooks_prefix), strlen($current_path));
 		$wilcard = substr($wilcard, 0, strrpos($wilcard, $path_webhooks_suffix));
 		BillingStatsd::timing('route.providers.'.$wilcard.'.webhooks.responsetime', $responseTimeInMillis);
+		BillingStatsd::timing('route.providers.'.$wilcard.'.webhooks.method.'.$method.'.responsetime', $responseTimeInMillis);
 		BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.hit');
+		BillingStatsd::inc('route.providers.'.$wilcard.'.webhooks.method.'.$method.'.hit');
 	} else if(strpos($current_path, $path_alive) === 0) {
 		BillingStatsd::inc('route.alive.hit');
+		BillingStatsd::inc('route.alive.method.'.$method.'.hit');
 		BillingStatsd::timing('route.alive.responsetime', $responseTimeInMillis);
+		BillingStatsd::timing('route.alive.method.'.$method.'.responsetime', $responseTimeInMillis);
 	} else {
 		BillingStatsd::inc('route.others.hit');
+		BillingStatsd::inc('route.others.method.'.$method.'.hit');
 		BillingStatsd::timing('route.others.responsetime', $responseTimeInMillis);
+		BillingStatsd::timing('route.others.method.'.$method.'.responsetime', $responseTimeInMillis);
 	}
+	//CDN Support
+	// default no-cache header should be :
+	$response = $response->withHeader('Cache-Control', 'max-age=0,private,no-cache,no-store,must-revalidate');
+	$response = $response->withHeader('Pragma', 'no-cache');// http 1.0
+	$response = $response->withHeader('Expires', 'Thu, 01-Jan-1970 00:00:01 GMT');// proxy
 	return $response;
 });
 
@@ -1331,14 +1344,14 @@ $app->post("/billings/api/contexts/", function ($request, $response, $args) {
 	
 $app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/addinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
 	$contextsController = new ContextsController();
-	return($contextsController->AddInternalPlanToContext($request, $response, $args));
+	return($contextsController->addInternalPlanToContext($request, $response, $args));
 });
 	
 //actions to context : removeinternalplan
 
 $app->put("/billings/api/contexts/{contextBillingUuid}/{contextCountry}/removeinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
 	$contextsController = new ContextsController();
-	return($contextsController->RemoveInternalPlanFromContext($request, $response, $args));
+	return($contextsController->removeInternalPlanFromContext($request, $response, $args));
 });
 
 //actions to context : moveinternalplan
@@ -1362,60 +1375,18 @@ $app->put("/billings/api/transactions/{transactionBillingUuid}/refund", function
 
 //WebHooks
 
-//WebHooks - Recurly
+//sort of 'static' URL for each provider - no parameter - in order to be compatible with most of providers
 
-$app->post("/billings/providers/recurly/webhooks/", function ($request, $response, $args) {
+$app->post("/billings/providers/{providerName}/webhooks/{providerBillingUuid}/", function ($request, $response, $args) {
 	$webHooksController = new WebHooksController();
-	return($webHooksController->recurlyWebHooksPosting($request, $response, $args));
+	return($webHooksController->providerWebHooksPosting($request, $response, $args));
 });
 
-//WebHooks - Stripe
+//for backward compatibility, to be removed when all webhook notifications have been changed
 
-$app->post("/billings/providers/stripe/webhooks/", function ($request, $response, $args) {
+$app->post("/billings/providers/{providerName}/webhooks/", function ($request, $response, $args) {
 	$webHooksController = new WebHooksController();
-	return($webHooksController->stripeWebHooksPosting($request, $response, $args));
-});
-
-//WebHooks - Gocardless
-
-$app->post("/billings/providers/gocardless/webhooks/", function ($request, $response, $args) {
-	$webHooksController = new WebHooksController();
-	return($webHooksController->gocardlessWebHooksPosting($request, $response, $args));
-});
-
-//WebHooks - Bachat
-
-$app->post("/billings/providers/bachat/webhooks/", function ($request, $response, $args) {
-	$webHooksController = new WebHooksController();
-	return($webHooksController->bachatWebHooksPosting($request, $response, $args));
-});
-
-//WebHooks - Cashway
-
-$app->post("/billings/providers/cashway/webhooks/", function ($request, $response, $args) {
-	$webHooksController = new WebHooksController();
-	return($webHooksController->cashwayWebHooksPosting($request, $response, $args));
-});
-
-//WebHooks - braintree
-	
-$app->post("/billings/providers/braintree/webhooks/", function ($request, $response, $args) {
-	$webHooksController = new WebHooksController();
-	return($webHooksController->braintreeWebHooksPosting($request, $response, $args));
-});
-
-//WebHooks - Netsize
-	
-$app->post("/billings/providers/netsize/webhooks/", function ($request, $response, $args) {
-	$webHooksController = new WebHooksController();
-	return($webHooksController->netsizeWebHooksPosting($request, $response, $args));
-});
-
-//WebHooks - Wecashup
-
-$app->post("/billings/providers/wecashup/webhooks/", function ($request, $response, $args) {
-	$webHooksController = new WebHooksController();
-	return($webHooksController->wecashupWebHooksPosting($request, $response, $args));
+	return($webHooksController->providerWebHooksPosting($request, $response, $args));
 });
 
 //alive
@@ -1466,6 +1437,48 @@ $app->get("/alive", function ($request, $response, $args) {
 $app->get("/billings/utils/currency/quotes/{fromCurrency}/{toCurrencies}", function ($request, $response, $args) {
 	$utilsController = new UtilsController();
 	return($utilsController->getCurrencyQuotes($request, $response, $args));
+});
+
+//partnerOrders : get
+
+$app->get("/billings/api/partnerorders/{partnerOrderBillingUuid}", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->getOne($request, $response, $args));
+});
+
+//partnerOrders : create
+
+$app->post("/billings/api/partnerorders/", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->create($request, $response, $args));
+});
+
+//partnerOrders, actions : addInternalCouponsCampaign
+
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/addinternalcouponscampaign/{internalCouponsCampaignBillingUuid}/{wishedCouponsCounter}", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->addInternalCouponsCampaignToPartnerOrder($request, $response, $args));
+});
+
+//partnerOrders, actions : book
+
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/book", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->book($request, $response, $args));
+});
+
+//partnerOrders, actions : ready : name has to be changed... : mark here that order is ready to process
+	
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/ready", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->ready($request, $response, $args));
+});
+
+//partnerOrders, actions : process
+
+$app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/process", function ($request, $response, $args) {
+	$partnerOrdersController = new PartnerOrdersController();
+	return($partnerOrdersController->process($request, $response, $args));
 });
 
 $app->run();

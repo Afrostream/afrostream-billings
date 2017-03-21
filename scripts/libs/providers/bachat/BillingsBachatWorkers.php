@@ -5,6 +5,8 @@ require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/CancelSubscriptionRequest.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/RenewSubscriptionRequest.php';
 
 ini_set("auto_detect_line_endings", true);
 
@@ -16,9 +18,9 @@ class BillingsBachatWorkers extends BillingsWorkers {
 	private $processingTypeSubsRequestCancel = 'subs_request_cancel';
 	private $processingTypeSubsResponseCancel = 'subs_response_cancel';
 	
-	public function __construct() {
+	public function __construct(Provider $provider) {
 		parent::__construct();
-		$this->provider = ProviderDAO::getProviderByName('bachat');
+		$this->provider = $provider;
 	}
 	
 	public function doRequestRenewSubscriptions($force = true) {
@@ -29,12 +31,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$current_par_ren_file_res = NULL;
 		$billingsSubscriptionsOkToProceed = array();
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingTypeSubsRequestRenew, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsRequestRenew, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal bypassed - already done today -");
 				return;
 			}
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingTypeSubsRequestRenew);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsRequestRenew);
 			$now = (new DateTime())->setTimezone(new DateTimeZone(self::$timezone));
 			$lastAttemptDate = clone $now;
 			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
@@ -90,7 +92,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				}
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_REN uploading...");
-				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."PAR_REN_".$this->today->format("Ymd").".csv";
+				$url = $this->getBouyguesBillingSystemUrl()."/"."PAR_REN_".$this->today->format("Ymd").".csv";
 				$curl_options = array(
 						CURLOPT_URL => $url,
 						CURLOPT_PUT => true,
@@ -115,12 +117,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				) {
 					$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 				}
-				if(	null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER'))
+				if(	null !== ($this->provider->getApiKey())
 						&&
-					null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD'))
+					null !== ($this->provider->getApiSecret())
 				) {			
 					$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-					$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
+					$curl_options[CURLOPT_USERPWD] = $this->provider->getApiKey().":".$this->provider->getApiSecret();
 				}
 				$curl_options[CURLOPT_VERBOSE] = true;
 				$CURL = curl_init();
@@ -197,10 +199,10 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider bachat is not linked to an internal plan";
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$fields = array();
@@ -212,7 +214,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$time->setTimezone(new DateTimeZone(self::$timezone));
 			$time_str = $time->format("His");
 			$fields[] = $time_str;
-			$fields[] = getEnv("BOUYGUES_SERVICEID");//ServiceId
+			$fields[] = $this->provider->getServiceId();//ServiceId
 			$fields[] = $subscription->getSubscriptionBillingUuid();//SubscriptionServiceId
 			$fields[] = $subscription->getSubUid();//SubscriptionId
 			$fields[] = (string) number_format($internalPlan->getVatRate(), 2, '.', '');//VAT : "." for BACHAT not ","
@@ -270,12 +272,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$current_par_can_file_res = NULL;
 		$billingsSubscriptionsOkToProceed = array();
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingTypeSubsRequestCancel, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsRequestCancel, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions canceling bypassed - already done today -");
 				return;
 			}
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingTypeSubsRequestCancel);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsRequestCancel);
 			$now = (new DateTime())->setTimezone(new DateTimeZone(self::$timezone));
 			$lastAttemptDate = clone $now;
 			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
@@ -327,7 +329,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				}
 				//SEND FILE TO THE SYSTEM WEBDAV (PUT)
 				ScriptsConfig::getLogger()->addInfo("PAR_CAN uploading...");
-				$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."PAR_CAN_".$this->today->format("Ymd").".csv";
+				$url = $this->getBouyguesBillingSystemUrl()."/"."PAR_CAN_".$this->today->format("Ymd").".csv";
 				$curl_options = array(
 						CURLOPT_URL => $url,
 						CURLOPT_PUT => true,
@@ -352,12 +354,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				) {
 					$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 				}
-				if(	null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER'))
+				if(	null !== ($this->provider->getApiKey())
 					&&
-					null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD'))
+					null !== ($this->provider->getApiSecret())
 				) {
 					$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-					$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
+					$curl_options[CURLOPT_USERPWD] = $this->provider->getApiKey().":".$this->provider->getApiSecret();
 				}
 				$curl_options[CURLOPT_VERBOSE] = true;
 				$CURL = curl_init();
@@ -443,7 +445,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$time->setTimezone(new DateTimeZone(self::$timezone));
 			$time_str = $time->format("His");
 			$fields[] = $time_str;
-			$fields[] = getEnv("BOUYGUES_SERVICEID");//ServiceId
+			$fields[] = $this->provider->getServiceId();//ServiceId
 			$fields[] = $subscription->getSubscriptionBillingUuid();//SubscriptionServiceId
 			$fields[] = $subscription->getSubUid();//SubscriptionId
 			fputcsv($current_par_can_file_res, $fields);
@@ -463,15 +465,15 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$current_ren_file_path = NULL;
 		$current_ren_file_res = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingTypeSubsResponseRenew, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsResponseRenew, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
-				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal bypassed - already done today -");
+				ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions renewal bypassed - already done today -");
 				return;
 			}
 			
 			ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions renewal file...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingTypeSubsResponseRenew);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsResponseRenew);
 			
 			if(($current_ren_file_path = tempnam('', 'tmp')) === false) {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), "REN file cannot be created");
@@ -485,7 +487,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			//GET FILE FROM THE SYSTEM WEBDAV (GET)
 			ScriptsConfig::getLogger()->addInfo("REN downloading...");
-			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."REN_".$this->today->format("Ymd").".csv";
+			$url = $this->getBouyguesBillingSystemUrl()."/"."REN_".$this->today->format("Ymd").".csv";
 			$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_RETURNTRANSFER => true,
@@ -505,12 +507,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			) {
 				$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 			}
-			if(	null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER'))
+			if(	null !== ($this->provider->getApiKey())
 				&&
-				null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD'))
+				null !== ($this->provider->getApiSecret())
 			) {
 				$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-				$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
+				$curl_options[CURLOPT_USERPWD] = $this->provider->getApiKey().":".$this->provider->getApiSecret();
 			}
 			$curl_options[CURLOPT_VERBOSE] = true;
 			$CURL = curl_init();
@@ -598,7 +600,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$subscriptionId = $current_line_fields[4];
 			$transactionId = $current_line_fields[5];
 			$state = $current_line_fields[6];
-			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionServiceId);
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionServiceId, $this->provider->getPlatformId());
 			//check subscription does or not exist
 			if($subscription == NULL) {
 				$msg = "subscription with subscriptionServiceId=".$subscriptionServiceId." could not been found";
@@ -613,7 +615,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if($serviceId != getenv('BOUYGUES_SERVICEID')) {
+			if($serviceId != $this->provider->getServiceId()) {
 				$msg = "serviceId ".$serviceId." is unknown";
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -660,7 +662,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
-				$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
+				$renewSubscriptionRequest = new RenewSubscriptionRequest();
+				$renewSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+				$renewSubscriptionRequest->setStartDate(NULL);
+				$renewSubscriptionRequest->setEndDate(NULL);
+				$renewSubscriptionRequest->setOrigin('script');
+				$subscriptionsHandler->doRenewSubscription($renewSubscriptionRequest);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
 				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
@@ -700,7 +707,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$current_can_file_path = NULL;
 		$current_can_file_res = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingTypeSubsResponseCancel, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsResponseCancel, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions canceling bypassed - already done today -");
 				return;
@@ -708,7 +715,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions cancel file...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingTypeSubsResponseCancel);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsResponseCancel);
 			
 			if(($current_can_file_path = tempnam('', 'tmp')) === false) {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), "CAN file cannot be created");
@@ -722,7 +729,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			//GET FILE FROM THE SYSTEM WEBDAV (GET)
 			ScriptsConfig::getLogger()->addInfo("CAN downloading...");
-			$url = getEnv('BOUYGUES_BILLING_SYSTEM_URL')."/"."CAN_".$this->today->format("Ymd").".csv";
+			$url = $this->getBouyguesBillingSystemUrl()."/"."CAN_".$this->today->format("Ymd").".csv";
 			$curl_options = array(
 				CURLOPT_URL => $url,
 				CURLOPT_RETURNTRANSFER => true,
@@ -742,12 +749,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			) {
 				$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('BOUYGUES_PROXY_USER').":".getEnv('BOUYGUES_PROXY_PWD');
 			}
-			if(	null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER'))
+			if(	null !== ($this->provider->getApiKey())
 				&&
-				null !== (getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD'))
+				null !== ($this->provider->getApiSecret())
 			) {
 				$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-				$curl_options[CURLOPT_USERPWD] = getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_USER').":".getEnv('BOUYGUES_BILLING_SYSTEM_HTTP_AUTH_PWD');
+				$curl_options[CURLOPT_USERPWD] = $this->provider->getApiKey().":".$this->provider->getApiSecret();
 			}
 			$curl_options[CURLOPT_VERBOSE] = true;
 			$CURL = curl_init();
@@ -833,7 +840,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$subscriptionServiceId = $current_line_fields[3];
 			$subscriptionId = $current_line_fields[4];
 			$state = $current_line_fields[5];
-			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionServiceId);
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionServiceId, $this->provider->getPlatformId());
 			//check subscription does or not exist
 			if($subscription == NULL) {
 				$msg = "subscription with subscriptionServiceId=".$subscriptionServiceId." could not been found";
@@ -848,7 +855,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if($serviceId != getenv('BOUYGUES_SERVICEID')) {
+			if($serviceId != $this->provider->getServiceId()) {
 				$msg = "serviceId ".$serviceId." is unknown";
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -892,7 +899,11 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
-				$subscriptionsHandler->doCancelSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), $cancel_date, false);
+				$cancelSubscriptionRequest = new CancelSubscriptionRequest();
+				$cancelSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+				$cancelSubscriptionRequest->setOrigin('script');
+				$cancelSubscriptionRequest->setCancelDate($cancel_date);
+				$subscriptionsHandler->doCancelSubscription($cancelSubscriptionRequest);
 				$billingsSubscriptionActionLog->setProcessingStatus('done');
 				$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 				//COMMIT
@@ -924,7 +935,11 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 			}
 		}
-	}	
+	}
+	
+	private function getBouyguesBillingSystemUrl() {
+		return(getEnv('BOUYGUES_BILLING_SYSTEM_URL_PREFIX').$this->provider->getMerchantId().'_'.$this->provider->getServiceId());
+	}
 	
 }
 

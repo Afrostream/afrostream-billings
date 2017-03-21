@@ -4,12 +4,9 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
+require_once __DIR__ . '/../../global/couponsCampaigns/ProviderCouponsCampaignsHandler.php';
 
-class BraintreeCouponsCampaignsHandler {
-	
-	public function __construct()
-	{
-	}
+class BraintreeCouponsCampaignsHandler extends ProviderCouponsCampaignsHandler {
 	
 	public function createProviderCouponsCampaign(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
 		$couponsCampaignProviderBillingUuid = NULL;
@@ -17,9 +14,9 @@ class BraintreeCouponsCampaignsHandler {
 			$couponsCampaignProviderBillingUuid = 'AfrBillingApiDiscount';
 			//
 			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-			Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-			Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-			Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+			Braintree_Configuration::merchantId($this->provider->getMerchantId());
+			Braintree_Configuration::publicKey($this->provider->getApiKey());
+			Braintree_Configuration::privateKey($this->provider->getApiSecret());
 			//Check Only
 			$discount = $this->getDiscountByCouponCode(Braintree\Discount::all(), $couponsCampaignProviderBillingUuid);
 			if($discount == NULL) {

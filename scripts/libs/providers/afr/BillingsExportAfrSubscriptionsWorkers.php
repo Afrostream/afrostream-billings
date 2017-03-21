@@ -13,16 +13,16 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 	private $provider = NULL;
 	private $processingType = 'subscriptions_export';
 	
-	public function __construct() {
+	public function __construct(Provider $provider) {
 		parent::__construct();
-		$this->provider = ProviderDAO::getProviderByName('afr');
+		$this->provider = $provider;
 	}
 	
 	public function doExportSubscriptions() {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingType, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("exporting daily afr subscriptions bypassed - already done today -");
 				return;
@@ -31,9 +31,9 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 			
 			ScriptsConfig::getLogger()->addInfo("exporting daily afr subscriptions...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingType);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType);
 			//
-			$billingsExportAfrSubscriptions = new BillingsExportAfrSubscriptions();
+			$billingsExportAfrSubscriptions = new BillingsExportAfrSubscriptions($this->provider);
 			//
 					$s3 = S3Client::factory(array(
 							'region' => getEnv('AWS_REGION'),
@@ -71,15 +71,34 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 						//ONLY SEND BY EMAIL THE LAST ONE
 						if(getEnv('EXPORTS_DAILY_EMAIL_ACTIVATED') == 1) {
 							$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
-							$email = new SendGrid\Email();
-							$email->setTos(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_DAILY_EMAIL_TOS')))
-							->setBccs(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_DAILY_EMAIL_BCCS')))
-							->setFrom(getEnv('EXPORTS_EMAIL_FROM'))
-							->setFromName(getEnv('EXPORTS_EMAIL_FROMNAME'))
-							->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Daily Chartmogul Afr Subscriptions Export : '.$dayToProcessBeginningOfDay->format($dailyDateFormat))
-							->setText('See File(s) attached')
-							->addAttachment($export_subscriptions_file_path, $dailyFileName);
-							$sendgrid->send($email);
+							$mail = new SendGrid\Mail();
+							$email = new SendGrid\Email(getEnv('EXPORTS_EMAIL_FROMNAME'), getEnv('EXPORTS_EMAIL_FROM'));
+							$mail->setFrom($email);
+							$personalization = new SendGrid\Personalization();
+							$to_array = explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_DAILY_EMAIL_TOS'));
+							foreach ($to_array as $to) {
+								$personalization->addTo(new SendGrid\Email(NULL, $to));
+							}
+							$bcc_array = explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_DAILY_EMAIL_BCCS'));
+							foreach ($bcc_array as $bcc) {
+								$personalization->addBcc(new SendGrid\Email(NULL, $bcc));
+							}
+							$personalization->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Daily Chartmogul Afr Subscriptions Export : '.$dayToProcessBeginningOfDay->format($dailyDateFormat));
+							$mail->addPersonalization($personalization);
+							$content = new SendGrid\Content('text/plain', 'See File(s) attached');
+							$mail->addContent($content);
+							$attachment = new SendGrid\Attachment();
+							$attachment->setFilename($dailyFileName);
+							$attachment->setContentID($dailyFileName);
+							$attachment->setDisposition('attachment');
+							$attachment->setContent(base64_encode(file_get_contents($export_subscriptions_file_path)));
+							$mail->addAttachment($attachment);
+							$response = $sendgrid->client->mail()->send()->post($mail);
+							if($response->statusCode() != 202) {
+								ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
+								ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
+								ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
+							}
 						}
 					}
 					//
@@ -122,15 +141,34 @@ class BillingsExportAfrSubscriptionsWorkers extends BillingsWorkers {
 							//ONLY SEND BY EMAIL THE LAST ONE
 							if(getEnv('EXPORTS_MONTHLY_EMAIL_ACTIVATED') == 1) {
 								$sendgrid = new SendGrid(getenv('SENDGRID_API_KEY'));
-								$email = new SendGrid\Email();
-								$email->setTos(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_MONTHLY_EMAIL_TOS')))
-								->setBccs(explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_MONTHLY_EMAIL_BCCS')))
-								->setFrom(getEnv('EXPORTS_EMAIL_FROM'))
-								->setFromName(getEnv('EXPORTS_EMAIL_FROMNAME'))
-								->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Monthly Chartmogul Afr Subscriptions Export : '.$monthToProcessBeginning->format($monthlyDateFormat))
-								->setText('See File(s) attached')
-								->addAttachment($export_subscriptions_file_path, $monthyFileName);
-								$sendgrid->send($email);
+								$mail = new SendGrid\Mail();
+								$email = new SendGrid\Email(getEnv('EXPORTS_EMAIL_FROMNAME'), getEnv('EXPORTS_EMAIL_FROM'));
+								$mail->setFrom($email);
+								$personalization = new SendGrid\Personalization();
+								$to_array = explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_MONTHLY_EMAIL_TOS'));
+								foreach ($to_array as $to) {
+									$personalization->addTo(new SendGrid\Email(NULL, $to));
+								}
+								$bcc_array = explode(';', getEnv('EXPORTS_SUBSCRIPTIONS_MONTHLY_EMAIL_BCCS'));
+								foreach ($bcc_array as $bcc) {
+									$personalization->addBcc(new SendGrid\Email(NULL, $bcc));
+								}
+								$personalization->setSubject('['.getEnv('BILLINGS_ENV').'] Afrostream Monthly Chartmogul Afr Subscriptions Export : '.$monthToProcessBeginning->format($monthlyDateFormat));
+								$mail->addPersonalization($personalization);
+								$content = new SendGrid\Content('text/plain', 'See File(s) attached');
+								$mail->addContent($content);
+								$attachment = new SendGrid\Attachment();
+								$attachment->setFilename($monthyFileName);
+								$attachment->setContentID($monthyFileName);
+								$attachment->setDisposition('attachment');
+								$attachment->setContent(base64_encode(file_get_contents($export_subscriptions_file_path)));
+								$mail->addAttachment($attachment);
+								$response = $sendgrid->client->mail()->send()->post($mail);
+								if($response->statusCode() != 202) {
+									ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
+									ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
+									ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
+								}
 							}
 						}
 						//

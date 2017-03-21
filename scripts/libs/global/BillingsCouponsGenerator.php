@@ -9,13 +9,15 @@ class BillingsCouponsGenerator {
 
 	}
 	
-	public function doGenerateCoupons($couponsCampaignInternalBillingUuid) {
+	public function doGenerateCoupons($couponsCampaignInternalBillingUuid, $platformId) {
 		try {
 			ScriptsConfig::getLogger()->addInfo("generating coupons for couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid."...");
-			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid);
+			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid, $platformId);
 			if($internalCouponsCampaign == NULL) {
 				throw new Exception("internalCouponsCampaign with couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid." not found");
 			}
+			//
+			$separator = $this->getSeparator($internalCouponsCampaign);
 			//
 			$coupon_counter = BillingInternalCouponDAO::getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
 			$coupon_total_number = $internalCouponsCampaign->getGeneratedMode() == 'single' ? 1 : $internalCouponsCampaign->getTotalNumber();
@@ -26,13 +28,14 @@ class BillingsCouponsGenerator {
 				if($internalCouponsCampaign->getGeneratedMode() == 'single') {
 					$code = strtoupper($internalCouponsCampaign->getPrefix());
 				} else {
-					$code = strtoupper($internalCouponsCampaign->getPrefix()."-".$this->getRandomString($internalCouponsCampaign->getGeneratedCodeLength()));
+					$code = strtoupper($internalCouponsCampaign->getPrefix().$separator.$this->getRandomString($internalCouponsCampaign->getGeneratedCodeLength()));
 				}
 				$internalCoupon = new BillingInternalCoupon();
 				$internalCoupon->setInternalCouponsCampaignsId($internalCouponsCampaign->getId());
 				$internalCoupon->setCode($code);
 				$internalCoupon->setUuid(guid());
 				$internalCoupon->setExpiresDate($internalCouponsCampaign->getExpiresDate());
+				$internalCoupon->setPlatformId($platformId);
 				$internalCoupon = BillingInternalCouponDAO::addBillingInternalCoupon($internalCoupon);
 				$coupon_counter++;
 				ScriptsConfig::getLogger()->addInfo("(".$coupon_counter."/".$coupon_total_number.") coupon with code ".$internalCoupon->getCode()." for couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid." generated successfully");
@@ -44,13 +47,26 @@ class BillingsCouponsGenerator {
 		}
 	}
 	
-	public function getRandomString($length) {
+	protected function getRandomString($length) {
 		$strAlphaNumericString = '23456789bcdfghjkmnpqrstvwxz';
 		$strReturnString = '';
 		for ($intCounter = 0; $intCounter < $length; $intCounter++) {
 			$strReturnString .= $strAlphaNumericString[rand(0, strlen($strAlphaNumericString) - 1)];
 		}
 		return $strReturnString;
+	}
+	
+	protected function getSeparator(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$partner = NULL;
+		if($billingInternalCouponsCampaign->getPartnerId() != NULL) {
+			$partner = BillingPartnerDAO::getPartnerById($billingInternalCouponsCampaign->getPartnerId());
+		}
+		if($partner != NULL) {
+			if($partner->getName() == 'logista') {
+				return("");//logista = alphanumeric only
+			}
+		}
+		return("-");
 	}
 	
 }

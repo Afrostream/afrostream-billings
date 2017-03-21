@@ -175,6 +175,10 @@ if(getEnv('SENDGRID_VAR_couponAppliedSentence') === false) {
 	putEnv('SENDGRID_VAR_couponAppliedSentence=La réduction de %couponAmountForDisplay% liée au code promo %couponCode% sera appliquée lors du prélèvement.');
 }
 
+if(getEnv('SENDGRID_TEMPLATE_SUFFIX') === false) {
+	putEnv('SENDGRID_TEMPLATE_SUFFIX=');
+}
+
 #Event (MAIL)
 
 if(getEnv('EVENT_EMAIL_ACTIVATED') === false) {
@@ -423,6 +427,113 @@ if(getEnv('CURRENCY_CONVERSION_CACHE_TTL') === false) {
 
 if(getEnv('CURRENCY_CONVERSION_INTERNALPLAN_CURRENCY_TARGETS') === false) {
 	putEnv('CURRENCY_CONVERSION_INTERNALPLAN_CURRENCY_TARGETS=EUR;USD');
+}
+
+#AMAZON
+
+#AWS_ACCESS_KEY_ID
+
+if(getEnv('AWS_ACCESS_KEY_ID') === false) {
+	putEnv('AWS_ACCESS_KEY_ID=');
+}
+
+#AWS_SECRET_ACCESS_KEY
+
+if(getEnv('AWS_SECRET_ACCESS_KEY') === false) {
+	putEnv('AWS_SECRET_ACCESS_KEY=');
+}
+
+#AWS_ENV ( 'staging' / 'production' )
+
+if(getEnv('AWS_ENV') === false) {
+	putEnv('AWS_ENV=staging');
+}
+
+#AWS_BUCKET_BILLINGS
+
+if(getEnv('AWS_BUCKET_BILLINGS_EXPORTS') === false) {
+	putEnv('AWS_BUCKET_BILLINGS_EXPORTS=afrostream-exports-billings');
+}
+
+#AWS_REGION
+
+if(getEnv('AWS_REGION') === false) {
+	putEnv('AWS_REGION=eu-central-1');
+}
+
+#AWS_VERSION
+
+if(getEnv('AWS_VERSION') === false) {
+	putEnv('AWS_VERSION=latest');
+}
+
+#PARTNER_ORDERS
+if(getEnv('PARTNER_ORDERS_LOGISTA_FILE_SIZE_LIMIT') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FILE_SIZE_LIMIT=0');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_ID=055');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_PREFIX') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_OPERATOR_PREFIX=AFST');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_USER') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_USER=logista-staging');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_PWD=6rQOM9PLts');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST=ftp.afrostream.net');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_PORT') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_PORT=21');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_OUT') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_OUT=TOLOG');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_IN') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_FTP_FOLDER_IN=FLOG');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE='.dirname(__FILE__).'/../libs/partners/logista/pgp-public-key/logista-pgp-public-key.txt');
+}
+
+if(getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME') === false) {
+	putEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME=SAF_STRT');
+}
+
+#Known user-agents
+
+if(getEnv('AFROSTREAM_ANDROID_APP_CLIENT_IDS') === false) {
+	putEnv('AFROSTREAM_ANDROID_APP_CLIENT_IDS=85f700d9-4a80-4913-8223-e0d49fef3a05;');
+}
+
+if(getEnv('AFROSTREAM_IOS_APP_CLIENT_IDS') === false) {
+	putEnv('AFROSTREAM_IOS_APP_CLIENT_IDS=');
+}
+
+#Google
+
+#Given by google itself
+
+if(getEnv('GOOGLE_APPLICATION_CREDENTIALS') === false) {
+	putenv('GOOGLE_APPLICATION_CREDENTIALS='.__DIR__.'/../libs/providers/google/credentials/afrostream-billing-project-e6f27e14d70a.json');
+}
+
+#
+
+if(getEnv('GOOGLE_PACKAGENAME') === false) {
+	putenv('GOOGLE_PACKAGENAME=tv.afrostream.app');
 }
 
 #logger, #db_conn, ...
