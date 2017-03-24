@@ -47,6 +47,7 @@ class WecashupTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);
 			$billingsRefundTransaction->setMessage("provider_status=".$wecashupTransactionResponse->getTransactionStatus());
 			$billingsRefundTransaction->setUpdateType($updateType);
+			$billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -67,6 +68,7 @@ class WecashupTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);
 			$billingsRefundTransaction->setMessage("provider_status=".$wecashupTransactionResponse->getTransactionStatus());
 			$billingsRefundTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from wecashup refund transaction id=".$wecashupTransactionResponse->getTransactionUid()." done successfully");
@@ -98,6 +100,12 @@ class WecashupTransactionsHandler extends ProviderTransactionsHandler {
 	public function doRefundTransaction(BillingsTransaction $transaction, RefundTransactionRequest $refundTransactionRequest) {
 		try {
 			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
+			if($refundTransactionRequest->getAmountInCents() != NULL) {
+				//Exception
+				$msg = "partial refund is not supported";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			$user = UserDAO::getUserById($transaction->getUserId());
 			if($user == NULL) {
 				$msg = "unknown user with id : ".$transaction->getUserId();

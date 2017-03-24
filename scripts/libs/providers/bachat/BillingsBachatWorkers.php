@@ -18,9 +18,9 @@ class BillingsBachatWorkers extends BillingsWorkers {
 	private $processingTypeSubsRequestCancel = 'subs_request_cancel';
 	private $processingTypeSubsResponseCancel = 'subs_response_cancel';
 	
-	public function __construct() {
+	public function __construct(Provider $provider) {
 		parent::__construct();
-		$this->provider = ProviderDAO::getProviderByName('bachat');
+		$this->provider = $provider;
 	}
 	
 	public function doRequestRenewSubscriptions($force = true) {
@@ -31,12 +31,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$current_par_ren_file_res = NULL;
 		$billingsSubscriptionsOkToProceed = array();
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingTypeSubsRequestRenew, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsRequestRenew, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions renewal bypassed - already done today -");
 				return;
 			}
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingTypeSubsRequestRenew);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsRequestRenew);
 			$now = (new DateTime())->setTimezone(new DateTimeZone(self::$timezone));
 			$lastAttemptDate = clone $now;
 			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
@@ -199,7 +199,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider bachat is not linked to an internal plan";
 				ScriptsConfig::getLogger()->addError($msg);
@@ -272,12 +272,12 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$current_par_can_file_res = NULL;
 		$billingsSubscriptionsOkToProceed = array();
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingTypeSubsRequestCancel, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsRequestCancel, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("requesting bachat subscriptions canceling bypassed - already done today -");
 				return;
 			}
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingTypeSubsRequestCancel);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsRequestCancel);
 			$now = (new DateTime())->setTimezone(new DateTimeZone(self::$timezone));
 			$lastAttemptDate = clone $now;
 			$lastAttemptDate->setTime(getEnv('BOUYGUES_STORE_LAST_TIME_HOUR'), getEnv('BOUYGUES_STORE_LAST_TIME_MINUTE'));
@@ -465,7 +465,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$current_ren_file_path = NULL;
 		$current_ren_file_res = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingTypeSubsResponseRenew, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsResponseRenew, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions renewal bypassed - already done today -");
 				return;
@@ -473,7 +473,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions renewal file...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingTypeSubsResponseRenew);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsResponseRenew);
 			
 			if(($current_ren_file_path = tempnam('', 'tmp')) === false) {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), "REN file cannot be created");
@@ -600,7 +600,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$subscriptionId = $current_line_fields[4];
 			$transactionId = $current_line_fields[5];
 			$state = $current_line_fields[6];
-			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionServiceId);
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionServiceId, $this->provider->getPlatformId());
 			//check subscription does or not exist
 			if($subscription == NULL) {
 				$msg = "subscription with subscriptionServiceId=".$subscriptionServiceId." could not been found";
@@ -707,7 +707,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 		$current_can_file_path = NULL;
 		$current_can_file_res = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingTypeSubsResponseCancel, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsResponseCancel, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions canceling bypassed - already done today -");
 				return;
@@ -715,7 +715,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			
 			ScriptsConfig::getLogger()->addInfo("checking bachat subscriptions cancel file...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingTypeSubsResponseCancel);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingTypeSubsResponseCancel);
 			
 			if(($current_can_file_path = tempnam('', 'tmp')) === false) {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), "CAN file cannot be created");
@@ -840,7 +840,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 			$subscriptionServiceId = $current_line_fields[3];
 			$subscriptionId = $current_line_fields[4];
 			$state = $current_line_fields[5];
-			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionServiceId);
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionServiceId, $this->provider->getPlatformId());
 			//check subscription does or not exist
 			if($subscription == NULL) {
 				$msg = "subscription with subscriptionServiceId=".$subscriptionServiceId." could not been found";

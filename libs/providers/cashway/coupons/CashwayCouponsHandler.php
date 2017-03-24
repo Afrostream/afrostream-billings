@@ -139,6 +139,7 @@ class CashwayCouponsHandler extends ProviderCouponsHandler {
 			$internalCoupon->setCode($coupon_provider_uuid);
 			$internalCoupon->setUuid($coupon_billing_uuid);
 			$internalCoupon->setExpiresDate($expires_date);
+			$internalCoupon->setPlatformId($this->provider->getPlatformId());
 			$internalCoupon = BillingInternalCouponDAO::addBillingInternalCoupon($internalCoupon);
 			//Create an userCoupon linked to the internalCoupon
 			$userInternalCoupon = new BillingUserInternalCoupon();
@@ -147,6 +148,7 @@ class CashwayCouponsHandler extends ProviderCouponsHandler {
 			$userInternalCoupon->setUuid($coupon_billing_uuid);
 			$userInternalCoupon->setUserId($user->getId());
 			$userInternalCoupon->setExpiresDate($expires_date);
+			$userInternalCoupon->setPlatformId($this->provider->getPlatformId());
 			$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
 			//<-- DB -->
 			config::getLogger()->addInfo("cashway coupon creation done successfully, coupon_provider_uuid=".$coupon_provider_uuid);
@@ -170,7 +172,7 @@ class CashwayCouponsHandler extends ProviderCouponsHandler {
 			$coupon_billing_uuid, 
 			$coupon_provider_uuid) {
 		//LATER : cashway do not allow yet to have a status from an unique transaction
-		return(BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($coupon_billing_uuid));
+		return(BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($coupon_billing_uuid, $this->provider->getPlatformId()));
 	}
 	
 }

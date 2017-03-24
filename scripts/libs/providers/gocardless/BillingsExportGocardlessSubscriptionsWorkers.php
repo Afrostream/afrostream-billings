@@ -13,16 +13,16 @@ class BillingsExportGocardlessSubscriptionsWorkers extends BillingsWorkers {
 	private $provider = NULL;
 	private $processingType = 'subscriptions_export';
 	
-	public function __construct() {
+	public function __construct(Provider $provider) {
 		parent::__construct();
-		$this->provider = ProviderDAO::getProviderByName('gocardless');
+		$this->provider = $provider;
 	}
 	
 	public function doExportSubscriptions() {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingType, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("exporting daily gocardless subscriptions bypassed - already done today -");
 				return;
@@ -31,9 +31,9 @@ class BillingsExportGocardlessSubscriptionsWorkers extends BillingsWorkers {
 			
 			ScriptsConfig::getLogger()->addInfo("exporting daily gocardless subscriptions...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingType);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType);
 			//
-			$billingsExportGocardlessSubscriptions = new BillingsExportGocardlessSubscriptions();
+			$billingsExportGocardlessSubscriptions = new BillingsExportGocardlessSubscriptions($this->provider);
 			//
 			$s3 = S3Client::factory(array(
 							'region' => getEnv('AWS_REGION'),

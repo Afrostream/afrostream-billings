@@ -103,6 +103,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
 			$billingsTransaction->setMessage("provider_status=".$gocardlessChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
+			$billingsTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -123,6 +124,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
 			$billingsTransaction->setMessage("provider_status=".$gocardlessChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		$this->updateRefundsFromProvider($user, $userOpts, $gocardlessChargeTransaction, $billingsTransaction, $updateType);
@@ -171,6 +173,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
 			$billingsRefundTransaction->setMessage("provider_status=none");
 			$billingsRefundTransaction->setUpdateType($updateType);
+			$billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -191,6 +194,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
 			$billingsRefundTransaction->setMessage("provider_status=none");
 			$billingsRefundTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from gocardless refund transaction id=".$gocardlessRefundTransaction->id." done successfully");
@@ -254,8 +258,8 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 				case 'confirmed' :
 				case 'paid_out' :
 					$api_refund = $client->refunds()->create([
-						"params" => [	"amount" => $api_payment->amount,
-										"total_amount_confirmation" => $api_payment->amount,
+						"params" => [	"amount" => $refundTransactionRequest->getAmountInCents() == NULL ? $api_payment->amount : $refundTransactionRequest->getAmountInCents(),
+										"total_amount_confirmation" => $refundTransactionRequest->getAmountInCents() == NULL ? $api_payment->amount : $refundTransactionRequest->getAmountInCents(),
 										"links" => ["payment" => $api_payment->id]]
 								]);
 					//reload payment, in order to be up to date

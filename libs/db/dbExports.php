@@ -7,7 +7,7 @@ class dbExports {
 	
 	public static function getTransactionsInfos(
 			DateTime $dateStart, DateTime $dateEnd,
-			$limit = 0, $offset = 0) {
+			$limit = 0, $offset = 0, $platformId) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
@@ -65,11 +65,12 @@ class dbExports {
 		WHERE transaction_type in ('purchase', 'refund')
 		AND transaction_status = 'success'
 		AND BS.transaction_creation_date AT TIME ZONE 'Europe/Paris' BETWEEN '%s' AND '%s'
+		AND BS.platformid = '%s'
 		ORDER BY BS.transaction_creation_date ASC
 EOL;
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
-		$query = sprintf($query, $date_start_str, $date_end_str);
+		$query = sprintf($query, $date_start_str, $date_end_str, $platformId);
 		
 		$result = pg_query(config::getDbConn(), $query);
 		$out = array();
@@ -96,7 +97,7 @@ EOL;
 	 */
 	public static function getGocardlessSubscriptionsInfosForChartmogul(
 			DateTime $dateStart, DateTime $dateEnd,
-			$limit = 0, $offset = 0) {
+			$limit = 0, $offset = 0, $platformId) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
@@ -142,8 +143,7 @@ EOL;
 		FROM billing_subscriptions BS
 		INNER JOIN billing_providers BP ON (BS.providerid = BP._id)
 		INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)
-		INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)
-		INNER JOIN billing_internal_plans BIPL ON (BIPLL.internal_plan_id = BIPL._id)
+		INNER JOIN billing_internal_plans BIPL ON (BPL.internal_plan_id = BIPL._id)
 		INNER JOIN billing_users BU ON (BS.userid = BU._id)
 		LEFT JOIN billing_users_opts BUO ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)
 		LEFT JOIN billing_users_opts BUOF ON (BU._id = BUOF.userid AND BUOF.key = 'firstName' AND BUOF.deleted = false) 
@@ -152,12 +152,13 @@ EOL;
 		AND ((BS.sub_activated_date AT TIME ZONE 'Europe/Paris' BETWEEN '%s' AND '%s')
 			OR
 			(BS.sub_expires_date AT TIME ZONE 'Europe/Paris' BETWEEN '%s' AND '%s'))
+		AND BS.platformid = '%s'
 		) as TT 
 		WHERE TT.amount_paid > 0 AND TT.plan_interval in ('month', 'year') ORDER BY TT.billing_user_id ASC, TT.sub_activated_date ASC, TT.sub_expires_date ASC
 EOL;
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
-		$query = sprintf($query, $date_start_str, $date_end_str, $date_start_str, $date_end_str);
+		$query = sprintf($query, $date_start_str, $date_end_str, $date_start_str, $date_end_str, $platformId);
 		
 		$result = pg_query(config::getDbConn(), $query);
 		$out = array();
@@ -191,7 +192,7 @@ EOL;
 	
 	public static function getBachatSubscriptionsInfosForChartmogul(
 			DateTime $dateStart, DateTime $dateEnd,
-			$limit = 0, $offset = 0) {
+			$limit = 0, $offset = 0, $platformId) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
@@ -233,8 +234,7 @@ EOL;
 		FROM billing_subscriptions BS
 		INNER JOIN billing_providers BP ON (BS.providerid = BP._id)
 		INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)
-		INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)
-		INNER JOIN billing_internal_plans BIPL ON (BIPLL.internal_plan_id = BIPL._id)
+		INNER JOIN billing_internal_plans BIPL ON (BPL.internal_plan_id = BIPL._id)
 		INNER JOIN billing_users BU ON (BS.userid = BU._id)
 		LEFT JOIN billing_users_opts BUO ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)
 		LEFT JOIN billing_users_opts BUOF ON (BU._id = BUOF.userid AND BUOF.key = 'firstName' AND BUOF.deleted = false)
@@ -243,12 +243,13 @@ EOL;
 		AND ((BS.sub_activated_date AT TIME ZONE 'Europe/Paris' BETWEEN '%s' AND '%s')
 			OR
 			(BS.sub_expires_date AT TIME ZONE 'Europe/Paris' BETWEEN '%s' AND '%s'))
+		AND BS.platformid = '%s'
 		) as TT 
 		WHERE TT.amount_paid > 0 AND TT.plan_interval in ('month', 'year') ORDER BY TT.billing_user_id ASC, TT.sub_activated_date ASC, TT.sub_expires_date ASC
 EOL;
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
-		$query = sprintf($query, $date_start_str, $date_end_str, $date_start_str, $date_end_str);
+		$query = sprintf($query, $date_start_str, $date_end_str, $date_start_str, $date_end_str, $platformId);
 		
 		$result = pg_query(config::getDbConn(), $query);
 		$out = array();
@@ -282,7 +283,7 @@ EOL;
 	
 	public static function getAfrSubscriptionsInfosForChartmogul(
 			DateTime $dateStart, DateTime $dateEnd,
-			$limit = 0, $offset = 0) {
+			$limit = 0, $offset = 0, $platformId) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
@@ -324,8 +325,7 @@ EOL;
 		FROM billing_subscriptions BS
 		INNER JOIN billing_providers BP ON (BS.providerid = BP._id)
 		INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)
-		INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)
-		INNER JOIN billing_internal_plans BIPL ON (BIPLL.internal_plan_id = BIPL._id)
+		INNER JOIN billing_internal_plans BIPL ON (BPL.internal_plan_id = BIPL._id)
 		INNER JOIN billing_users BU ON (BS.userid = BU._id)
 		LEFT JOIN billing_users_opts BUO ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)
 		LEFT JOIN billing_users_opts BUOF ON (BU._id = BUOF.userid AND BUOF.key = 'firstName' AND BUOF.deleted = false)
@@ -334,12 +334,13 @@ EOL;
 		AND ((BS.sub_activated_date AT TIME ZONE 'Europe/Paris' BETWEEN '%s' AND '%s')
 			OR
 			(BS.sub_expires_date AT TIME ZONE 'Europe/Paris' BETWEEN '%s' AND '%s'))
+		AND BS.platformid = '%s'
 		) as TT
 		WHERE TT.amount_paid > 0 AND TT.plan_interval in ('month', 'year') ORDER BY TT.billing_user_id ASC, TT.sub_activated_date ASC, TT.sub_expires_date ASC
 EOL;
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
-		$query = sprintf($query, $date_start_str, $date_end_str, $date_start_str, $date_end_str);
+		$query = sprintf($query, $date_start_str, $date_end_str, $date_start_str, $date_end_str, $platformId);
 		
 		$result = pg_query(config::getDbConn(), $query);
 		$out = array();

@@ -154,7 +154,7 @@ class GocardlessWebHooksHandler extends ProviderWebHooksHandler {
 						//DO NOT CREATE ANYMORE : race condition when creating from API + from the webhook
 						//WAS :
 						//CREATE
-						//$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, NULL, NULL, $api_subscription, $update_type, $updateId);
+						//$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, NULL, NULL, $api_subscription, $update_type, $updateId);
 					} else {
 						//UPDATE
 						$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, $update_type, $updateId);
@@ -257,6 +257,7 @@ class GocardlessWebHooksHandler extends ProviderWebHooksHandler {
 					$subscriptionsHandler = new SubscriptionsHandler();
 					$expires_date = new DateTime($notification_as_array['created_at']);
 					$expireSubscriptionRequest = new ExpireSubscriptionRequest();
+					$expireSubscriptionRequest->setPlatform($this->platform);
 					$expireSubscriptionRequest->setOrigin('hook');
 					$expireSubscriptionRequest->setSubscriptionBillingUuid($db_subscription->getSubscriptionBillingUuid());
 					$expireSubscriptionRequest->setExpiresDate($expires_date);

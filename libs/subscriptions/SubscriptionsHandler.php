@@ -26,7 +26,7 @@ class SubscriptionsHandler {
 		try {
 			config::getLogger()->addInfo("subscription getting for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
 			//
-			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid, $getSubscriptionRequest->getPlatform()->getId());
 			if($db_subscription == NULL) {
 				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
 				config::getLogger()->addError($msg);
@@ -61,7 +61,7 @@ class SubscriptionsHandler {
 			$billingInfo->setBillingInfoBillingUuid(guid());
 			$subOpts = new BillingsSubscriptionOpts();
 			$subOpts->setOpts($getOrCreateSubscriptionRequest->getSubOptsArray());
-			$user = UserDAO::getUserByUserBillingUuid($getOrCreateSubscriptionRequest->getUserBillingUuid());
+			$user = UserDAO::getUserByUserBillingUuid($getOrCreateSubscriptionRequest->getUserBillingUuid(), $getOrCreateSubscriptionRequest->getPlatform()->getId());
 			if($user == NULL) {
 				$msg = "unknown user_billing_uuid : ".$getOrCreateSubscriptionRequest->getUserBillingUuid();
 				config::getLogger()->addError($msg);
@@ -70,7 +70,7 @@ class SubscriptionsHandler {
 			
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 			
-			$internal_plan = InternalPlanDAO::getInternalPlanByUuid($getOrCreateSubscriptionRequest->getInternalPlanUuid());
+			$internal_plan = InternalPlanDAO::getInternalPlanByUuid($getOrCreateSubscriptionRequest->getInternalPlanUuid(), $getOrCreateSubscriptionRequest->getPlatform()->getId());
 			if($internal_plan == NULL) {
 				$msg = "unknown internal_plan_uuid : ".$getOrCreateSubscriptionRequest->getInternalPlanUuid();
 				config::getLogger()->addError($msg);
@@ -86,16 +86,9 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
-			$provider_plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internal_plan->getId(), $provider->getId());
-			if($provider_plan_id == NULL) {
-				$msg = "unknown plan : ".$getOrCreateSubscriptionRequest->getInternalPlanUuid()." for provider : ".$provider->getName();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			
-			$provider_plan = PlanDAO::getPlanById($provider_plan_id);
+			$provider_plan = PlanDAO::getPlanByInternalPlanId($internal_plan->getId(), $provider->getId());
 			if($provider_plan == NULL) {
-				$msg = "unknown plan with id : ".$provider_plan_id;
+				$msg = "unknown plan : ".$getOrCreateSubscriptionRequest->getInternalPlanUuid()." for provider : ".$provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -137,7 +130,7 @@ class SubscriptionsHandler {
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
-					$db_subscription = $providerSubscriptionsHandlerInstance->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $provider, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
+					$db_subscription = $providerSubscriptionsHandlerInstance->createDbSubscriptionFromApiSubscriptionUuid($user, $userOpts, $internal_plan, $internal_plan_opts, $provider_plan, $provider_plan_opts, $subOpts, $billingInfo, $subscription_billing_uuid, $sub_uuid, 'api', 0);
 					//COMMIT
 					pg_query("COMMIT");
 					config::getLogger()->addInfo("subscription creating...database savings done successfully");
@@ -190,11 +183,11 @@ class SubscriptionsHandler {
 		return($subscriptions);
 	}
 	
-	public function doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid) {
+	public function doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid, $platformId) {
 		$subscriptions = array();
 		try {
 			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid."...");
-			$users = UserDAO::getUsersByUserReferenceUuid($userReferenceUuid);
+			$users = UserDAO::getUsersByUserReferenceUuid($userReferenceUuid, NULL, $platformId);
 			foreach ($users as $user) {
 				$subscriptions = array_merge($subscriptions, $this->doGetUserSubscriptionsByUser($user));
 			}
@@ -243,7 +236,7 @@ class SubscriptionsHandler {
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription updating for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
-			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid, $updateSubscriptionRequest->getPlatform()->getId());
 			if($db_subscription == NULL) {
 				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
 				config::getLogger()->addError($msg);
@@ -280,7 +273,7 @@ class SubscriptionsHandler {
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription renewing for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
-			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid, $renewSubscriptionRequest->getPlatform()->getId());
 			if($db_subscription == NULL) {
 				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
 				config::getLogger()->addError($msg);
@@ -317,7 +310,7 @@ class SubscriptionsHandler {
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription canceling for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
-			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid, $cancelSubscriptionRequest->getPlatform()->getId());
 			if($db_subscription == NULL) {
 				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
 				config::getLogger()->addError($msg);
@@ -359,7 +352,7 @@ class SubscriptionsHandler {
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription deleting for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
-			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid, $deleteSubscriptionRequest->getPlatform()->getId());
 			if($db_subscription == NULL) {
 				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
 				config::getLogger()->addError($msg);
@@ -395,7 +388,7 @@ class SubscriptionsHandler {
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription reactivating for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
-			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid, $reactivateSubscriptionRequest->getPlatform()->getId());
 			if($db_subscription == NULL) {
 				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
 				config::getLogger()->addError($msg);
@@ -431,7 +424,7 @@ class SubscriptionsHandler {
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription updating internalPlan for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
-			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid, $updateInternalPlanSubscriptionRequest->getPlatform()->getId());
 			if($db_subscription == NULL) {
 				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
 				config::getLogger()->addError($msg);
@@ -468,7 +461,7 @@ class SubscriptionsHandler {
 		$db_subscription = NULL;
 		try {
 			config::getLogger()->addInfo("dbsubscription expiring for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
-			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid);
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid, $expireSubscriptionRequest->getPlatform()->getId());
 			if($db_subscription == NULL) {
 				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
 				config::getLogger()->addError($msg);

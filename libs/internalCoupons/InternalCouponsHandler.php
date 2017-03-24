@@ -15,7 +15,7 @@ class InternalCouponsHandler {
 		try {
 			config::getLogger()->addInfo("internalCoupon getting, code=".$code."....");
 			//
-			$internal_coupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($code);
+			$internal_coupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($code, $getInternalCouponRequest->getPlatform()->getId());
 			//
 			config::getLogger()->addInfo("internalCoupon getting code=".$code." done successfully");
 		} catch(BillingsException $e) {

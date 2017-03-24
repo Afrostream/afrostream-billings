@@ -11,13 +11,13 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 	}
 	
 	public function doGetOrCreateSubscription(GetOrCreateSubscriptionRequest $getOrCreateSubscriptionRequest) {
-		$user = UserDAO::getUserByUserBillingUuid($getOrCreateSubscriptionRequest->getUserBillingUuid());
+		$user = UserDAO::getUserByUserBillingUuid($getOrCreateSubscriptionRequest->getUserBillingUuid(), $getOrCreateSubscriptionRequest->getPlatform()->getId());
 		if($user == NULL) {
 			$msg = "unknown user_billing_uuid : ".$getOrCreateSubscriptionRequest->getUserBillingUuid();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$subscriptions = $this->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid());
+		$subscriptions = $this->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid(), $user->getPlatformId());
 		if(count($subscriptions) > 0) {
 			//HACK / FIX : Remove check because of CASHWAY
 			/*if($this->haveSubscriptionsWithStatus($subscriptions, 'future')) {
@@ -27,7 +27,7 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 			$lastSubscription = $subscriptions[0];
 			if($lastSubscription->getIsActive() == 'yes') {
 				//NC : CAN BLOCK NOW  (WAS DO NOT BLOCK UNTIL WE REALLY KNOW THAT SUBSCRIPTIONS AUTO-RENEW OR NOT (VERY SOON !!!))
-				$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($lastSubscription->getPlanId()));
+				$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($lastSubscription->getPlanId());
 				if($internalPlan->getCycle() == PlanCycle::auto) {
 					$msg = "you already have an active subscription that's auto renew, you can't take a new subscription";
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_AUTO_ALREADY_EXISTS);

@@ -6,7 +6,13 @@ require_once __DIR__ . '/../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/db/dbStats.php';
 require_once __DIR__ . '/../../libs/slack/SlackHandler.php';
 
-print_r("starting tool to generate Stats...\n");
+/*
+ * Only for AFROSTREAM Platform
+ */
+
+$platform = BillingPlatformDAO::getPlatformById(1);
+
+print_r("starting tool to generate Stats for platform named : ".$platform->getName()."...\n");
 
 foreach ($argv as $arg) {
 	$e=explode("=",$arg);
@@ -45,7 +51,7 @@ $end_date->setTime($end_date->format('H'), 59, 59);
 $channelSubscriptions = getEnv('SLACK_STATS_CHANNEL');
 //activated subscriptions
 sendMessage("**************************************************", $channelSubscriptions);
-$subscriptions = dbStats::getActivatedSubscriptions($start_date, $end_date);
+$subscriptions = dbStats::getActivatedSubscriptions($start_date, $end_date, $platform->getId());
 sendMessage(count($subscriptions)." new subscriptions between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelSubscriptions);
 
 foreach ($subscriptions as $subscription) {
@@ -54,7 +60,7 @@ foreach ($subscriptions as $subscription) {
 
 //future subscriptions
 sendMessage("**************************************************", $channelSubscriptions);
-$futureSubscriptions = dbStats::getFutureSubscriptions($start_date, $end_date);
+$futureSubscriptions = dbStats::getFutureSubscriptions($start_date, $end_date, $platform->getId());
 sendMessage(count($futureSubscriptions)." new subscriptions in future between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelSubscriptions);
 
 foreach ($futureSubscriptions as $futureSubscription) {
@@ -65,7 +71,7 @@ foreach ($futureSubscriptions as $futureSubscription) {
 $channelCoupons = getEnv('SLACK_STATS_COUPONS_CHANNEL');
 //activated coupons
 sendMessage("**************************************************", $channelCoupons);
-$couponsActivated = dbStats::getCouponsActivation($start_date, $end_date);
+$couponsActivated = dbStats::getCouponsActivation($start_date, $end_date, $platform->getId());
 sendMessage(count($couponsActivated)." activated coupons between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
@@ -81,7 +87,7 @@ foreach ($couponsActivated as $coupon) {
 
 //cashway coupons
 sendMessage("**************************************************", $channelCoupons);
-$couponsActivated = dbStats::getCouponsCashwayGenerated($start_date, $end_date);
+$couponsActivated = dbStats::getCouponsCashwayGenerated($start_date, $end_date, $platform->getId());
 sendMessage(count($couponsActivated)." generated cashway coupons between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
@@ -97,7 +103,7 @@ foreach ($couponsActivated as $coupon) {
 
 //afr sponsorship coupons
 sendMessage("**************************************************", $channelCoupons);
-$couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new CouponCampaignType(CouponCampaignType::sponsorship));
+$couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new CouponCampaignType(CouponCampaignType::sponsorship), $platform->getId());
 sendMessage(count($couponsActivated)." generated sponsorship coupons between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
@@ -113,7 +119,7 @@ foreach ($couponsActivated as $coupon) {
 
 //afr standard coupons
 sendMessage("**************************************************", $channelCoupons);
-$couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new CouponCampaignType(CouponCampaignType::standard));
+$couponsActivated = dbStats::getCouponsAfrGenerated($start_date, $end_date, new CouponCampaignType(CouponCampaignType::standard), $platform->getId());
 sendMessage(count($couponsActivated)." generated standard coupons between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelCoupons);
 
 foreach ($couponsActivated as $coupon) {
@@ -130,7 +136,7 @@ foreach ($couponsActivated as $coupon) {
 //transactions
 $channelTransactions = getEnv('SLACK_STATS_TRANSACTIONS_CHANNEL');
 sendMessage("**************************************************", $channelTransactions);
-$transactionEvents = dbStats::getTransactions($start_date, $end_date, array('purchase', 'refund'), array('success', 'declined', 'void', 'failed', 'canceled'));
+$transactionEvents = dbStats::getTransactions($start_date, $end_date, array('purchase', 'refund'), array('success', 'declined', 'void', 'failed', 'canceled'), $platform->getId());
 sendMessage(count($transactionEvents)." transactions between ".$start_date->format('H')."h".$start_date->format('i')." and ".$end_date->format('H')."h".$end_date->format('i')." : ", $channelTransactions);
 
 foreach ($transactionEvents as $transactionEvent) {
@@ -144,20 +150,17 @@ foreach ($transactionEvents as $transactionEvent) {
 
 //Grafana
 
-$numberOfActiveSubscriptions = dbStats::getNumberOfActiveSubscriptions($now);
+$numberOfActiveSubscriptions = dbStats::getNumberOfActiveSubscriptions($now, NULL, NULL, $platform->getId());
 $providerIdsToIgnore = array();
 $providerNamesToIgnore = ['orange', 'bouygues'];
 foreach ($providerNamesToIgnore as $providerNameToIgnore) {
-	$provider = ProviderDAO::getProviderByName($providerNameToIgnore);
-	if($provider == NULL) {
-		$msg = "unknown provider named : ".$providerNameToIgnore;
-		ScriptsConfig::getLogger()->addError($msg);
-		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+	$provider = ProviderDAO::getProviderByName($providerNameToIgnore, $platform->getId());
+	if($provider != NULL) {
+		$providerIdsToIgnore[] = $provider->getId();
 	}
-	$providerIdsToIgnore[] = $provider->getId();
 }
 
-$numberOfActiveSubscriptionsExceptMultiscreen = dbStats::getNumberOfActiveSubscriptions($now, $providerIdsToIgnore);
+$numberOfActiveSubscriptionsExceptMultiscreen = dbStats::getNumberOfActiveSubscriptions($now, $providerIdsToIgnore, NULL, $platform->getId());
 
 //Active Subscriptions Number
 BillingStatsd::gauge('route.providers.all.subscriptions.status.active.counter', $numberOfActiveSubscriptions['total']);

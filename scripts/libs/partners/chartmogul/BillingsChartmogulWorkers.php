@@ -13,16 +13,21 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 	private $supportedProviderNames = ['celery', 'recurly', 'braintree', 'bachat', 'gocardless', 'afr'];
 	private $supportedProviders = array();
 	private $supportedProvidersIds = array();
+	private $platform = NULL;
 	
-	public function __construct() {
+	public function __construct(BillingPlatform $platform) {
 		parent::__construct();
+		//TODO : 1 ChartMogul by platform
 		ChartMogul\Configuration::getDefaultConfiguration()
 		->setAccountToken(getEnv('CHARTMOGUL_API_ACCOUNT_TOKEN'))
 		->setSecretKey(getEnv('CHARTMOGUL_API_SECRET_KEY'));
+		$this->platform = $platform;
 		foreach ($this->supportedProviderNames as $providerName) {
-			$provider = ProviderDAO::getProviderByName($providerName);
-			$this->supportedProviders[] = $provider;
-			$this->supportedProvidersIds[] = $provider->getId();
+			$provider = ProviderDAO::getProviderByName($providerName, $this->platform->getId());
+			if($provider != NULL) {
+				$this->supportedProviders[] = $provider;
+				$this->supportedProvidersIds[] = $provider->getId();
+			}
 		}
 	}
 	
@@ -30,7 +35,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingTypeMergeCustomers, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->platform->getId(), NULL, $this->processingTypeMergeCustomers, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("merging chartmogul customers bypassed - already done today -");
 				return;
@@ -39,7 +44,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 			
 			ScriptsConfig::getLogger()->addInfo("merging chartmogul customers...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, $this->processingTypeMergeCustomers);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->platform->getId(), NULL, $this->processingTypeMergeCustomers);
 			//
 			$chartmogulStatus_array = ['pending'];
 			//
@@ -49,7 +54,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 			$lastId = NULL;
 			$totalCounter = NULL;
 			do {
-				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $this->supportedProvidersIds, $chartmogulStatus_array);
+				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $this->supportedProvidersIds, $chartmogulStatus_array, $this->platform->getId());
 				if(is_null($totalCounter)) {$totalCounter = $users['total_counter'];}
 				$idx+= count($users['users']);
 				$lastId = $users['lastId'];
@@ -91,7 +96,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingTypeSyncCustomers, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->platform->getId(), NULL, $this->processingTypeSyncCustomers, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("syncing chartmogul customers bypassed - already done today -");
 				return;
@@ -100,7 +105,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 				
 			ScriptsConfig::getLogger()->addInfo("syncing chartmogul customers...");
 			
-			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, $this->processingTypeSyncCustomers);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->platform->getId(), NULL, $this->processingTypeSyncCustomers);
 			//
 			$chartmogulStatus_array = ['waiting', 'failed'];
 			//
@@ -110,7 +115,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 			$lastId = NULL;
 			$totalCounter = NULL;
 			do {
-				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $this->supportedProvidersIds, $chartmogulStatus_array);
+				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $this->supportedProvidersIds, $chartmogulStatus_array, $this->platform->getId());
 				if(is_null($totalCounter)) {$totalCounter = $users['total_counter'];}
 				$idx+= count($users['users']);
 				$lastId = $users['lastId'];
@@ -195,7 +200,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 		try {
 			ScriptsConfig::getLogger()->addInfo("merging chartmogul customer for user with id=".$user->getId()."...");
 			//get users
-			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid()), $this->supportedProvidersIds);
+			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid(), NULL, $this->platform->getId()), $this->supportedProvidersIds);
 			$masterUser = self::getFirstUserByChartmogulMergeStatus($users, 'master');
 			if($masterUser == NULL) {
 				$masterUser = self::getFirstUserByChartmogulMergeStatus($users, 'pending');
@@ -203,7 +208,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 				$masterUser = UserDAO::updateChartmogulStatus($masterUser);
 			}
 			//update users
-			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid()), $this->supportedProvidersIds);
+			$users = self::filterUsersBySupportedProvidersIds(UserDAO::getUsersByUserReferenceUuid($user->getUserReferenceUuid(), NULL, $this->platform->getId()), $this->supportedProvidersIds);
 			$pendingUsers = self::getUsersByChartmogulMergeStatus($users, 'pending');
 			foreach ($pendingUsers as $pendingUser) {
 				try {

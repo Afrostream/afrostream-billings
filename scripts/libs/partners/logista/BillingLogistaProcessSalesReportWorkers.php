@@ -14,9 +14,9 @@ class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
 	protected $partner;
 	protected $billingLogistaProcessSalesReport;
 
-	public function __construct() {
+	public function __construct(BillingPartner $partner) {
 		parent::__construct();
-		$this->partner = BillingPartnerDAO::getPartnerByName('logista');
+		$this->partner = $partner;
 		$this->billingLogistaProcessSalesReport = new BillingLogistaProcessSalesReport($this->partner);
 	}
 	
@@ -24,7 +24,7 @@ class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingType, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->partner->getPlatformId(), NULL, $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo($this->processingType." bypassed - already done today -");
 				return;
@@ -33,7 +33,7 @@ class BillingLogistaProcessSalesReportWorkers extends BillingsWorkers {
 		
 			ScriptsConfig::getLogger()->addInfo($this->processingType." processing...");
 		
-			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, $this->processingType);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->partner->getPlatformId(), NULL, $this->processingType);
 			$filesystem = new Filesystem(new Ftp([
 					'host' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_HOST'),
 					'username' => getEnv('PARTNER_ORDERS_LOGISTA_FTP_USER'),

@@ -18,7 +18,7 @@ foreach ($argv as $arg) {
 			$_GET[$e[0]]=0;
 }
 
-$possible_providers = array('all', 'celery', 'recurly');
+$possible_providers = array('all', 'recurly');
 
 $current_providers = NULL;
 
@@ -67,10 +67,6 @@ print_r("using limit=".$limit."\n");
 
 print_r("processing...\n");
 
-$celery_todo_count = 0;
-$celery_done_count = 0;
-$celery_error_count = 0;
-
 $recurly_todo_count = 0;
 $recurly_done_count = 0;
 $recurly_error_count = 0;
@@ -87,20 +83,6 @@ try {
 			$last_id = $afrUser->getId();
 			$accountCode = $afrUser->getAccountCode();
 			switch($afrUser->getBillingProvider()) {
-				case 'celery' :
-					if(in_array('celery', $current_providers)) {
-						//if(isset($accountCode)) {
-							try {
-								$celery_todo_count++;
-								$billingsImportUsers->doImportCeleryUser($afrUser);
-								$celery_done_count++;
-							} catch(Exception $e) {
-								$celery_error_count++;
-								ScriptsConfig::getLogger()->addError("an error occurred while importing a celery user, message=".$e->getMessage());
-							}
-						//}
-					}
-					break;
 				case 'recurly' :
 					if(in_array('recurly', $current_providers)) {
 						if(isset($accountCode)) {
@@ -141,7 +123,6 @@ try {
 }
 
 print_r("processing done	:	last_id=".$last_id.", last offset=".$offset." \n"
-		."celery	:	(".$celery_done_count."/".$celery_todo_count.")	(".$celery_error_count." errors) \n"
 		."recurly	:	(".$recurly_done_count."/".$recurly_todo_count.")	(".$recurly_error_count." errors) \n");
 
 ?>

@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/utils/utils.php';
 require_once __DIR__ . '/../../../../libs/transactions/TransactionsHandler.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/UpdateTransactionRequest.php';
 
 class BillingsImportStripeTransactions
 {
@@ -11,9 +12,9 @@ class BillingsImportStripeTransactions
 
     const STRIPE_LIMIT = 50;
 
-    public function __construct()
+    public function __construct(Provider $provider)
     {
-        $this->provider = ProviderDAO::getProviderByName('stripe');
+        $this->provider = $provider;
         \Stripe\Stripe::setApiKey($this->provider->getApiSecret());
     }
 
@@ -83,7 +84,11 @@ class BillingsImportStripeTransactions
     {
     	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe...");
     	$transactionHandler = new TransactionsHandler();
-    	$transactionHandler->doUpdateTransactionByTransactionProviderUuid($this->provider->getName(), $charge->id, 'import');
+    	$updateTransactionRequest = new UpdateTransactionRequest();
+    	$updateTransactionRequest->setProviderName($this->provider->getName());
+    	$updateTransactionRequest->setTransactionProviderUuid($charge->id);
+    	$updateTransactionRequest->setOrigin('import');
+    	$transactionHandler->doUpdateTransactionByTransactionProviderUuid($updateTransactionRequest);
     	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe done successfully");
     }
     

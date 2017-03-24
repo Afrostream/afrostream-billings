@@ -18,9 +18,11 @@ use Money\Currency;
 class ProviderSubscriptionsHandler {
 	
 	protected $provider = NULL;
+	protected $platform = NULL;
 	
 	public function __construct(Provider $provider) {
 		$this->provider = $provider;
+		$this->platform = BillingPlatformDAO::getPlatformById($this->provider->getPlatformId());
 	}
 	
 	public function doGetUserSubscriptions(User $user) {
@@ -35,7 +37,7 @@ class ProviderSubscriptionsHandler {
 		}
 		//--> DEFAULT
 		// check if subscription still in trial to provide information in boolean mode through inTrial() method
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($subscription->getPlanId());
 	
 		if ($internalPlan->getTrialEnabled() && !is_null($subscription->getSubActivatedDate())) {
 	
@@ -71,7 +73,7 @@ class ProviderSubscriptionsHandler {
 		return($subscriptions);
 	}
 
-	protected function getCouponInfos($couponCode, Provider $provider, User $user, InternalPlan $internalPlan) {
+	protected function getCouponInfos($couponCode, User $user, InternalPlan $internalPlan) {
 		//
 		$out = array();
 		$internalCoupon = NULL;
@@ -79,7 +81,7 @@ class ProviderSubscriptionsHandler {
 		$providerCouponsCampaign = NULL;
 		$userInternalCoupon = NULL;
 		//
-		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode, $this->provider->getPlatformId());
 		if($internalCoupon == NULL) {
 			$msg = "coupon : code=".$couponCode." NOT FOUND";
 			config::getLogger()->addError($msg);
@@ -117,7 +119,7 @@ class ProviderSubscriptionsHandler {
 		$isProviderCompatible = false;
 		$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
 		foreach ($providerCouponsCampaigns as $currentProviderCouponsCampaign) {
-			if($currentProviderCouponsCampaign->getProviderId() == $provider->getId()) {
+			if($currentProviderCouponsCampaign->getProviderId() == $this->provider->getId()) {
 				$providerCouponsCampaign = $currentProviderCouponsCampaign;
 				$isProviderCompatible = true;
 				break;
@@ -125,7 +127,7 @@ class ProviderSubscriptionsHandler {
 		}
 		if($isProviderCompatible == false) {
 			//Exception
-			$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$provider->getName();
+			$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$this->provider->getName();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PROVIDER_INCOMPATIBLE);
 		}
@@ -154,6 +156,7 @@ class ProviderSubscriptionsHandler {
 			$userInternalCoupon->setUuid(guid());
 			$userInternalCoupon->setUserId($user->getId());
 			$userInternalCoupon->setExpiresDate($internalCoupon->getExpiresDate());
+			$userInternalCoupon->setPlatformId($this->provider->getPlatformId());
 			$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
 		}
 		//Check userInternalCoupon
@@ -260,9 +263,13 @@ class ProviderSubscriptionsHandler {
 	}
 	
 	private function selectSendgridTemplateId(BillingsSubscription $subscription_after_update, $event) {
+		$suffix = getEnv('SENDGRID_TEMPLATE_SUFFIX');
 		$templateNames = array();
 		$defaultTemplateName = 'SUBSCRIPTION'.'_'.$event;
 		$templateNames[] = $defaultTemplateName;
+		$templateNames[] = $defaultTemplateName.$suffix;
+		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName;
+		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName.$suffix;
 		//SPECIFIC
 		$specific = NULL;
 		if($this->isSponsorshipSubscription($subscription_after_update)) {
@@ -272,13 +279,22 @@ class ProviderSubscriptionsHandler {
 		if(isset($specific)) {
 			$specificTemplateName = 'SUBSCRIPTION'.'_'.$specific.'_'.$event;
 			$templateNames[] = $specificTemplateName;
+			$templateNames[] = $specificTemplateName.$suffix;
+			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName;
+			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName.$suffix;
 		}
 		$providerTemplateName = $defaultTemplateName.'_'.strtoupper($this->provider->getName());
 		$templateNames[] = $providerTemplateName;
+		$templateNames[] = $providerTemplateName.$suffix;
+		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName;
+		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName.$suffix;
 		$specificProviderTemplateName = NULL;
 		if(isset($specificTemplateName)) {
 			$specificProviderTemplateName = $specificTemplateName.'_'.strtoupper($this->provider->getName());
 			$templateNames[] = $specificProviderTemplateName;
+			$templateNames[] = $specificProviderTemplateName.$suffix;
+			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName;
+			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName.$suffix;
 		}
 		//NOW SEARCH TEMPLATE IN DATABASE
 		$billingMailTemplate = NULL;
@@ -307,14 +323,8 @@ class ProviderSubscriptionsHandler {
 				return;
 			}
 			$eventEmailProvidersExceptionArray = explode(";", getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION'));
-			$provider = ProviderDAO::getProviderById($subscription_after_update->getProviderId());
-			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$subscription_after_update->getProviderId();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			if(in_array($provider->getName(), $eventEmailProvidersExceptionArray)) {
-				config::getLogger()->addInfo("event by email : ignored for providerName=".$provider->getName()." for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event);
+			if(in_array($this->provider->getName(), $eventEmailProvidersExceptionArray)) {
+				config::getLogger()->addInfo("event by email : ignored for providerName=".$this->provider->getName()." for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event);
 				return;
 			}
 			$user = UserDAO::getUserById($subscription_after_update->getUserId());
@@ -341,9 +351,9 @@ class ProviderSubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
 			if($internalPlan == NULL) {
-				$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+				$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -472,7 +482,7 @@ class ProviderSubscriptionsHandler {
 	
 	protected function hasFutureSubscription(User $user, BillingsSubscription $currentBillingsSubscription) {
 		$subscriptionsHandler = new SubscriptionsHandler();
-		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid());
+		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid(), $user->getPlatformId());
 		if(count($subscriptions) > 0) {
 			foreach ($subscriptions as $subscription) {
 				if($subscription->getId() != $currentBillingsSubscription->getId()) {
@@ -561,7 +571,6 @@ class ProviderSubscriptionsHandler {
 	
 	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, 
 			UserOpts $userOpts, 
-			Provider $provider, 
 			InternalPlan $internalPlan = NULL, 
 			InternalPlanOpts $internalPlanOpts = NULL, 
 			Plan $plan = NULL, 

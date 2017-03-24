@@ -139,7 +139,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 				case 'subscription' :
 					if(array_key_exists('AfrSubscriptionBillingUuid', $metadata)) {
 						$subscription_billing_uuid = $metadata['AfrSubscriptionBillingUuid'];
-						$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscription_billing_uuid);
+						$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscription_billing_uuid, $this->provider->getPlatformId());
 						if($subscription == NULL) {
 							if($stripeChargeTransaction->status != 'failed') {
 								$msg = "AfrSubscriptionBillingUuid=".$subscription_billing_uuid." in metadata cannot be found";
@@ -160,7 +160,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 					if($userId == NULL) {
 						if(array_key_exists('AfrUserBillingUuid', $metadata)) {
 							$user_billing_uuid = $metadata['AfrUserBillingUuid'];
-							$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
+							$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid, $this->provider->getPlatformId());
 							if($user == NULL) {
 								$msg = "AfrUserBillingUuid=".$user_billing_uuid." in metadata cannot be found";
 								config::getLogger()->addError($msg);
@@ -177,7 +177,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 				case 'coupon' :
 					if(array_key_exists('AfrCouponBillingUuid', $metadata)) {
 						$coupon_billing_uuid = $metadata['AfrCouponBillingUuid'];
-						$coupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($coupon_billing_uuid);
+						$coupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($coupon_billing_uuid, $this->provider->getPlatformId());
 						if($coupon == NULL) {
 							$msg = "AfrCouponBillingUuid=".$coupon_billing_uuid." in metadata cannot be found";
 							config::getLogger()->addError($msg);
@@ -192,7 +192,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 					if($userId == NULL) {
 						if(array_key_exists('AfrUserBillingUuid', $metadata)) {
 							$user_billing_uuid = $metadata['AfrUserBillingUuid'];
-							$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid);
+							$user = UserDAO::getUserByUserBillingUuid($user_billing_uuid, $this->provider->getPlatformId());
 							if($user == NULL) {
 								$msg = "AfrUserBillingUuid=".$user_billing_uuid." in metadata cannot be found";
 								config::getLogger()->addError($msg);
@@ -240,7 +240,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 			//should not happen
 			if($userId == NULL) {
 				if(isset($stripeChargeTransaction->customer)) {
-					$user = UserDAO::getUserByUserProviderUuid($providerid, $stripeChargeTransaction->customer);
+					$user = UserDAO::getUserByUserProviderUuid($this->provider->getId(), $stripeChargeTransaction->customer);
 					if($user == NULL) {
 						$msg = "user with user_provider_uuid=".$stripeChargeTransaction->customer." not found";
 						config::getLogger()->addError($msg);
@@ -275,6 +275,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 			}
 			$billingsTransaction->setMessage("provider_status=".$stripeChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
+			$billingsTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -299,6 +300,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 			}
 			$billingsTransaction->setMessage("provider_status=".$stripeChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		$this->updateRefundsFromProvider($user, $userOpts, $stripeChargeTransaction, $billingsTransaction, $updateType);
@@ -350,6 +352,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid($billingsTransaction->getInvoiceProviderUuid());
 			$billingsRefundTransaction->setMessage("provider_status=".$stripeRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
+			$billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -370,13 +373,16 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid($billingsTransaction->getInvoiceProviderUuid());
 			$billingsRefundTransaction->setMessage("provider_status=".$stripeRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from stripe refund transaction id=".$stripeRefundTransaction->id." done successfully");
 		return($billingsRefundTransaction);
 	}
 	
-	public function doUpdateTransactionByTransactionProviderUuid($transactionProviderUuid, $updateType) {
+	public function doUpdateTransactionByTransactionProviderUuid(UpdateTransactionRequest $updateTransactionRequest) {
+		$transactionProviderUuid = $updateTransactionRequest->getTransactionProviderUuid();
+		$updateType = $updateTransactionRequest->getOrigin();
 		try {
 			$stripeChargeTransaction = \Stripe\Charge::retrieve($transactionProviderUuid);
 			if(isset($stripeChargeTransaction->customer)) {
@@ -418,7 +424,12 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 		try {
 			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
 			
-			$api_refund = \Stripe\Refund::create(["charge" => $transaction->getTransactionProviderUuid()]);
+			$api_params = array();
+			$api_params["charge"] = $transaction->getTransactionProviderUuid();
+			if($refundTransactionRequest->getAmountInCents() != NULL) {
+				$api_params["amount"] = $refundTransactionRequest->getAmountInCents();
+			}
+			$api_refund = \Stripe\Refund::create($api_params);
 			//reload payment, in order to be up to date
 			$api_payment = \Stripe\Charge::retrieve($transaction->getTransactionProviderUuid());
 			//

@@ -5,10 +5,9 @@ require_once __DIR__ . '/../../db/dbGlobal.php';
 class ActionRequest {
 
 	protected $origin = 'api';//other possible values : hook, script, import, sync, etc...
-	protected $platform = NULL; 
+	protected $platform = NULL;
 	
 	public function __construct() {
-		$platform = BillingPlatformDAO::getPlatformById(1);/* 1 = www.afrostream.tv */
 	}
 	
 	public function setOrigin($origin) {
@@ -20,7 +19,18 @@ class ActionRequest {
 	}
 	
 	public function getPlatform() {
+		if($this->platform == NULL) {
+			if($this->origin == 'api') {
+				$this->platform = BillingPlatformDAO::getPlatformById(getEnv('PLATFORM_DEFAULT_ID'));
+			} else {
+				throw new Exception("platform has not been correctly initialized");
+			}
+		}
 		return($this->platform);
+	}
+	
+	public function setPlatform(BillingPlatform $platform) {
+		$this->platform = $platform;
 	}
 	
 }

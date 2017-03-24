@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/providers/afr/BillingsExportAfrSubscriptionsWorkers.php';
 
 /*
@@ -18,9 +19,30 @@ foreach ($argv as $arg) {
         $_GET[$e[0]]=0;
 }
 
+$provider = NULL;
+$providerUuid = NULL;
+
+if(isset($_GET["-providerUuid"])) {
+	$providerUuid = $_GET["-providerUuid"];
+	$provider = ProviderDAO::getProviderByUuid($providerUuid);
+} else {
+	$msg = "-providerUuid field is missing";
+	die($msg);
+}
+
+if($provider == NULL) {
+	$msg = "provider with uuid=".$providerUuid." not found";
+	die($msg);
+}
+
+if($provider->getName() != 'afr') {
+	$msg = "provider with uuid=".$providerUuid." is not connected to bachat";
+	die($msg);
+}
+
 print_r("processing...\n");
 
-$billingsExportAfrSubscriptionsWorkers = new BillingsExportAfrSubscriptionsWorkers();
+$billingsExportAfrSubscriptionsWorkers = new BillingsExportAfrSubscriptionsWorkers($provider);
 $billingsExportAfrSubscriptionsWorkers->doExportSubscriptions();
 
 print_r("processing done\n");

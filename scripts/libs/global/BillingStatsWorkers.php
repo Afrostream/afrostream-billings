@@ -8,26 +8,28 @@ require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 
 class BillingStatsWorkers extends BillingsWorkers {
 	
+	private $platform;
 	private $processingType = 'stats_generator';
 	
-	public function __construct() {
+	public function __construct(BillingPlatform $platform) {
 		parent::__construct();
+		$this->platform = $platform;
 	}
 	
 	public function doGenerateStats(DateTime $from, DateTime $to) {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingType, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->platform->getId(), NULL, $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("generating stats bypassed - already done today -");
 				return;
 			}
 			BillingStatsd::inc('route.scripts.workers.providers.global.workertype.'.$this->processingType.'.hit');
 			ScriptsConfig::getLogger()->addInfo("generating stats...");
-			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, $this->processingType);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->platform->getId(), NULL, $this->processingType);
 			//
-			$providers = ProviderDAO::getProviders();
+			$providers = ProviderDAO::getProviders($this->platform->getId());
 			foreach ($providers as $provider) {
 				$providerBillingStats = BillingStatsFactory::getBillingStats($provider);
 				$providerBillingStats->doUpdateStats($from, $to);

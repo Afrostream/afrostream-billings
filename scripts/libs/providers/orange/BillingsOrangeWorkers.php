@@ -12,16 +12,16 @@ class BillingsOrangeWorkers extends BillingsWorkers {
 	private $provider = NULL;
 	private $processingType = 'subs_refresh';
 	
-	public function __construct() {
+	public function __construct(Provider $provider) {
 		parent::__construct();
-		$this->provider = ProviderDAO::getProviderByName('orange');
+		$this->provider = $provider;
 	}
 	
 	public function doRefreshSubscriptions() {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingType, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("refreshing orange subscriptions bypassed - already done today -");
 				return;
@@ -30,7 +30,7 @@ class BillingsOrangeWorkers extends BillingsWorkers {
 				
 			ScriptsConfig::getLogger()->addInfo("refreshing orange subscriptions...");
 				
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingType);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType);
 			//
 			$limit = 100;
 			//will select all day strictly before today

@@ -103,7 +103,7 @@ class RecurlyWebHooksHandler extends ProviderWebHooksHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 		if($internalPlan == NULL) {
 			$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
 			config::getLogger()->addError($msg);
@@ -132,7 +132,7 @@ class RecurlyWebHooksHandler extends ProviderWebHooksHandler {
 				//DO NOT CREATE ANYMORE : race condition when creating from API + from the webhook
 				//WAS :
 				//CREATE
-				//$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
+				//$db_subscription = $recurlySubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 			} else {
 				//UPDATE
 				$db_subscription = $recurlySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);

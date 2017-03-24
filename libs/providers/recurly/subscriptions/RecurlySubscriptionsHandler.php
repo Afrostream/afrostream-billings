@@ -58,7 +58,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
 					if(strlen($couponCode) > 0) {
-						$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
+						$couponsInfos = $this->getCouponInfos($couponCode,  $user, $internalPlan);
 						$subscription->coupon_code = $couponsInfos['providerCouponsCampaign']->getExternalUuid();
 					}
 				}
@@ -163,7 +163,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);
@@ -173,7 +173,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->uuid);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
 				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
@@ -191,7 +191,6 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
 	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, 
 			UserOpts $userOpts, 
-			Provider $provider, 
 			InternalPlan $internalPlan = NULL, 
 			InternalPlanOpts $internalPlanOpts = NULL, 
 			Plan $plan = NULL, 
@@ -208,15 +207,15 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		//
 		$api_subscription = Recurly_Subscription::get($sub_uuid);
 		//
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, Recurly_Subscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, Recurly_Subscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("recurly dbsubscription creation for userid=".$user->getId().", recurly_subscription_uuid=".$api_subscription->uuid."...");
 		//CREATE
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
-		$db_subscription->setProviderId($provider->getId());
+		$db_subscription->setProviderId($this->provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription->setSubUid($api_subscription->uuid);
@@ -260,7 +259,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			}
 		}
 		if(isset($couponCode)) {
-			$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+			$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
 		}
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
@@ -269,6 +268,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
+		$db_subscription->setPlatformId($this->provider->getPlatformId());
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS (NOT MANDATORY)
 		if(isset($subOpts)) {
@@ -307,7 +307,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		//UPDATE
 		$db_subscription_before_update = clone $db_subscription;
 		//
-		//$db_subscription->setProviderId($provider->getId());//STATIC
+		//$db_subscription->setProviderId($this->provider->getId());//STATIC
 		//$db_subscription->setUserId($user->getId());//STATIC
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription = BillingsSubscriptionDAO::updatePlanId($db_subscription);
@@ -519,21 +519,15 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 	public function doUpdateInternalPlanSubscription(BillingsSubscription $subscription, UpdateInternalPlanSubscriptionRequest $updateInternalPlanSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("recurly subscription updating Plan...");
-			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid());
+			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid(), $updateInternalPlanSubscriptionRequest->getPlatform()->getId());
 			if($internalPlan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$updateInternalPlanSubscriptionRequest->getInternalPlanUuid();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$providerPlanId = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internalPlan->getId(), $this->provider->getId());
-			if($providerPlanId == NULL) {
-				$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$this->provider->getName();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			$providerPlan = PlanDAO::getPlanById($providerPlanId);
+			$providerPlan = PlanDAO::getPlanByInternalPlanId($internalPlan->getId(), $this->provider->getId());
 			if($providerPlan == NULL) {
-				$msg = "unknown plan with id : ".$providerPlanId;
+				$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$this->provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -604,7 +598,11 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
 				//
 				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-					$api_subscription->terminateAndRefund();
+					if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+						$api_subscription->terminateAndPartialRefund();
+					} else {
+						$api_subscription->terminateAndRefund();
+					}
 				} else {
 					$api_subscription->terminateWithoutRefund();
 				}

@@ -75,7 +75,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
 					if(strlen($couponCode) > 0) {
-						$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
+						$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
 						$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
 						$billingProviderCouponsCampaign = $couponsInfos['providerCouponsCampaign'];
 						$discountArray = array();
@@ -209,7 +209,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);
@@ -219,7 +219,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->id);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
 				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
@@ -238,7 +238,6 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	public function createDbSubscriptionFromApiSubscriptionUuid(
 			User $user, 
 			UserOpts $userOpts, 
-			Provider $provider, 
 			InternalPlan $internalPlan = NULL, 
 			InternalPlanOpts $internalPlanOpts = NULL, 
 			Plan $plan = NULL, 
@@ -257,15 +256,15 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		//
 		$api_subscription = Braintree\Subscription::find($sub_uuid);
 		//
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, Braintree\Subscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, Braintree\Subscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("braintree dbsubscription creation for userid=".$user->getId().", braintree_subscription_uuid=".$api_subscription->id."...");
 		//CREATE
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
-		$db_subscription->setProviderId($provider->getId());
+		$db_subscription->setProviderId($this->provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription->setSubUid($api_subscription->id);
@@ -339,7 +338,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			}
 		}
 		if(isset($couponCode)) {
-			$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
+			$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
 		}
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
@@ -348,6 +347,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
+		$db_subscription->setPlatformId($this->provider->getPlatformId());
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS
 		if(isset($subOpts)) {
@@ -387,7 +387,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$db_subscription_before_update = clone $db_subscription;
 		//
 		$now = new DateTime();
-		//$db_subscription->setProviderId($provider->getId());//STATIC
+		//$db_subscription->setProviderId($this->provider->getId());//STATIC
 		//$db_subscription->setUserId($user->getId());//STATIC
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription = BillingsSubscriptionDAO::updatePlanId($db_subscription);
@@ -589,21 +589,15 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		try {
 			config::getLogger()->addInfo("braintree subscription updating Plan...");
 			//
-			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid());
+			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid(), $this->provider->getPlatformId());
 			if($internalPlan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$updateInternalPlanSubscriptionRequest->getInternalPlanUuid();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$providerPlanId = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internalPlan->getId(), $this->provider->getId());
-			if($providerPlanId == NULL) {
-				$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$this->provider->getName();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			$providerPlan = PlanDAO::getPlanById($providerPlanId);
+			$providerPlan = PlanDAO::getPlanByInternalPlanId($internalPlan->getId(), $this->provider->getId());
 			if($providerPlan == NULL) {
-				$msg = "unknown plan with id : ".$providerPlanId;
+				$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$this->provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -725,13 +719,22 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					throw $e;
 				}
 				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase']);
+					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], 'descending', $this->provider->getPlatformId());
 					if(count($transactionsResult['transactions']) == 1) {
 						$transaction = $transactionsResult['transactions'][0];
+						//
+					    $amountInCents = NULL; //NULL = Refund ALL
+    					if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+    						$amountInCents = ceil($transaction->getAmountInCents() * ($subscription->getSubPeriodEndsDate()->getTimestamp() - (new DateTime())->getTimestamp())
+    						/
+    						($subscription->getSubPeriodEndsDate()->getTimestamp() - $subscription->getSubPeriodStartedDate()->getTimestamp()));
+    					}
+						//
 						$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
 						$refundTransactionRequest = new RefundTransactionRequest();
 						$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
 						$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+						$refundTransactionRequest->setAmountInCents($amountInCents);
 						$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
 					}
 				}

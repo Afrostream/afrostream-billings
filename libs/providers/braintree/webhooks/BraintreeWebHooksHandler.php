@@ -87,7 +87,7 @@ class BraintreeWebHooksHandler extends ProviderWebHooksHandler {
 		}
 		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 		//internalPlan
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 		if($internalPlan == NULL) {
 			$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
 			config::getLogger()->addError($msg);
@@ -119,7 +119,7 @@ class BraintreeWebHooksHandler extends ProviderWebHooksHandler {
 				//DO NOT CREATE ANYMORE : race condition when creating from API + from the webhook
 				//WAS :
 				//CREATE
-				//$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
+				//$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 			} else {
 				//UPDATE
 				$db_subscription = $braintreeSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);

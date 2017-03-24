@@ -11,7 +11,7 @@ class WebHooksHander {
 	public function doSaveWebHook(Provider $provider, $post_data) {
 		try {
 			config::getLogger()->addInfo("post_data saving...");
-			$billingsWebHook = BillingsWebHookDAO::addBillingsWebHook($provider->getId(), $post_data);
+			$billingsWebHook = BillingsWebHookDAO::addBillingsWebHook($provider->getPlatformId(), $provider->getId(), $post_data);
 			config::getLogger()->addInfo("post_data saving done successfully, id=".$billingsWebHook->getId());
 			return($billingsWebHook);
 		} catch (Exception $e) {
