@@ -4,29 +4,31 @@ require_once __DIR__ . '/../../../../vendor/autoload.php';
 
 class GoogleClient {
 	
-	public function __construct() {
-		
+	private $config;
+	
+	public function __construct($config) {
+		$this->config = $config;
 	}
 	
 	public function getSubscription(GoogleGetSubscriptionRequest $getSubscriptionRequest) {
-		$client = new Google_Client();
-		$client->useApplicationDefaultCredentials();
+		$client = new Google_Client($this->config);
+		//$client->useApplicationDefaultCredentials();
 		$client->addScope(Google_Service_AndroidPublisher::ANDROIDPUBLISHER);
 		$androidPublisher = new Google_Service_AndroidPublisher($client);
 		return($androidPublisher->purchases_subscriptions->get($getSubscriptionRequest->getPackageName(), $getSubscriptionRequest->getSubscriptionId(), $getSubscriptionRequest->getToken()));
 	}
 	
 	public function cancelSubscription(GoogleCancelSubscriptionRequest $cancelSubscriptionRequest) {
-		$client = new Google_Client();
-		$client->useApplicationDefaultCredentials();
+		$client = new Google_Client($this->config);
+		//$client->useApplicationDefaultCredentials();
 		$client->addScope(Google_Service_AndroidPublisher::ANDROIDPUBLISHER);
 		$androidPublisher = new Google_Service_AndroidPublisher($client);
 		return($androidPublisher->purchases_subscriptions->cancel($cancelSubscriptionRequest->getPackageName(), $cancelSubscriptionRequest->getSubscriptionId(), $cancelSubscriptionRequest->getToken()));
 	}
 	
 	public function expireSubscription(GoogleExpireSubscriptionRequest $expireSubscriptionRequest) {
-		$client = new Google_Client();
-		$client->useApplicationDefaultCredentials();
+		$client = new Google_Client($this->config);
+		//$client->useApplicationDefaultCredentials();
 		$client->addScope(Google_Service_AndroidPublisher::ANDROIDPUBLISHER);
 		$androidPublisher = new Google_Service_AndroidPublisher($client);
 		return($androidPublisher->purchases_subscriptions->revoke($expireSubscriptionRequest->getPackageName(), $expireSubscriptionRequest->getSubscriptionId(), $expireSubscriptionRequest->getToken()));
@@ -44,7 +46,10 @@ class GoogleSubscriptionRequest extends GoogleClientRequest {
 	private $token;
 	
 	public function __construct() {
-		$this->packageName = getEnv('GOOGLE_PACKAGENAME');
+	}
+	
+	public function setPackageName($packageName) {
+		$this->packageName = $packageName;
 	}
 	
 	public function getPackageName() {

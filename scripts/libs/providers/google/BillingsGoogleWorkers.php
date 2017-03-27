@@ -96,8 +96,9 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
-			$googleClient = new GoogleClient();
+			$googleClient = new GoogleClient($this->provider->getConfigFile());
 			$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
+			$googleGetSubscriptionRequest->setPackageName($this->provider->getOpts()["packageName"]);
 			$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
 			$googleGetSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 			$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
