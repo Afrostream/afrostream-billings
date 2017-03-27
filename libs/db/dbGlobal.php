@@ -1375,7 +1375,7 @@ class ProviderDAO {
 	
 	private static $providersById = array();
 	
-	private static $sfields = "_id, name, uuid, platformid, merchantid, serviceid, api_key, api_secret, webhook_key, webhook_secret";
+	private static $sfields = "_id, name, uuid, platformid, merchantid, serviceid, api_key, api_secret, webhook_key, webhook_secret, config_file, opts";
 	
 	private static function getProviderFromRow($row) {
 		$out = new Provider();
@@ -1389,6 +1389,8 @@ class ProviderDAO {
 		$out->setApiSecret($row["api_secret"]);
 		$out->setWebhookKey($row["webhook_key"]);
 		$out->setWebhookSecret($row["webhook_secret"]);
+		$out->setConfigFile(pg_unescape_bytea($row["config_file"]));
+		$out->setOpts(json_decode($row["opts"], true));
 		//<-- cache -->
 		self::$providersById[$out->getId()] = $out;
 		//<-- cache -->
@@ -1484,6 +1486,9 @@ class Provider implements JsonSerializable {
 	private $apiSecret;
 	private $webhookKey;
 	private $webhookSecret;
+	//
+	private $configFile;
+	private $opts;
 	
 	public function getId() {
 		return($this->_id);
@@ -1563,6 +1568,22 @@ class Provider implements JsonSerializable {
 	
 	public function getWebhookSecret() {
 		return($this->webhookSecret);
+	}
+	
+	public function setConfigFile($configFile) {
+		$this->configFile = $configFile;
+	}
+	
+	public function getConfigFile() {
+		return($this->configFile);
+	}
+	
+	public function setOpts($opts) {
+		$this->opts = $opts;
+	}
+	
+	public function getOpts() {
+		return($this->opts);
 	}
 	
 	public function jsonSerialize() {
