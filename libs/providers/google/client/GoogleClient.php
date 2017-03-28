@@ -11,8 +11,8 @@ class GoogleClient {
 	}
 	
 	public function getSubscription(GoogleGetSubscriptionRequest $getSubscriptionRequest) {
-		$client = new Google_Client($this->config);
-		//$client->useApplicationDefaultCredentials();
+		$client = new Google_Client();//$this->config);
+		$client->useApplicationDefaultCredentials();
 		$client->addScope(Google_Service_AndroidPublisher::ANDROIDPUBLISHER);
 		$androidPublisher = new Google_Service_AndroidPublisher($client);
 		return($androidPublisher->purchases_subscriptions->get($getSubscriptionRequest->getPackageName(), $getSubscriptionRequest->getSubscriptionId(), $getSubscriptionRequest->getToken()));
