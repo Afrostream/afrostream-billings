@@ -439,8 +439,9 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 	   		if($subscription->getSubStatus() == "active") {
 	   			//nothing to do
 	   		} else if ($subscription->getSubStatus() == "canceled") {
+	   			$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
 	   			$api_subscription = \Stripe\Subscription::retrieve($subscription->getSubUid());
-		        $api_subscription->cancel_at_period_end = false;
+		        $api_subscription->plan = $providerPlan->getPlanUuid();
 		        $api_subscription->save();
 		        //
 		        $subscription->setSubCanceledDate(NULL);
