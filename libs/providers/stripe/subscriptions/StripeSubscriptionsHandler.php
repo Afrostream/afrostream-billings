@@ -438,7 +438,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 			config::getLogger()->addInfo($this->provider->getName()." subscription reactivating...");
 	   		if($subscription->getSubStatus() == "active") {
 	   			//nothing to do
-	   		} else if ($subscription->getStatus() == "canceled") {
+	   		} else if ($subscription->getSubStatus() == "canceled") {
 	   			$api_subscription = \Stripe\Subscription::retrieve($subscription->getSubUid());
 		        $api_subscription->cancel_at_period_end = false;
 		        $api_subscription->save();
