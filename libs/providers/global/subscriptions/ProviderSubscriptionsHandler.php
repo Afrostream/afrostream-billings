@@ -18,9 +18,11 @@ use Money\Currency;
 class ProviderSubscriptionsHandler {
 	
 	protected $provider = NULL;
+	protected $platform = NULL;
 	
 	public function __construct(Provider $provider) {
 		$this->provider = $provider;
+		$this->platform = BillingPlatformDAO::getPlatformById($this->provider->getPlatformId());
 	}
 	
 	public function doGetUserSubscriptions(User $user) {
@@ -35,7 +37,7 @@ class ProviderSubscriptionsHandler {
 		}
 		//--> DEFAULT
 		// check if subscription still in trial to provide information in boolean mode through inTrial() method
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($subscription->getPlanId());
 	
 		if ($internalPlan->getTrialEnabled() && !is_null($subscription->getSubActivatedDate())) {
 	
@@ -261,11 +263,13 @@ class ProviderSubscriptionsHandler {
 	}
 	
 	private function selectSendgridTemplateId(BillingsSubscription $subscription_after_update, $event) {
-		$platform = BillingPlatformDAO::getPlatformById($this->provider->getPlatformId());
+		$suffix = getEnv('SENDGRID_TEMPLATE_SUFFIX');
 		$templateNames = array();
 		$defaultTemplateName = 'SUBSCRIPTION'.'_'.$event;
 		$templateNames[] = $defaultTemplateName;
-		$templateNames[] = strtoupper($platform->getName()).'_'.$defaultTemplateName;
+		$templateNames[] = $defaultTemplateName.$suffix;
+		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName;
+		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName.$suffix;
 		//SPECIFIC
 		$specific = NULL;
 		if($this->isSponsorshipSubscription($subscription_after_update)) {
@@ -275,16 +279,22 @@ class ProviderSubscriptionsHandler {
 		if(isset($specific)) {
 			$specificTemplateName = 'SUBSCRIPTION'.'_'.$specific.'_'.$event;
 			$templateNames[] = $specificTemplateName;
-			$templateNames[] = strtoupper($platform->getName()).'_'.$specificTemplateName;
+			$templateNames[] = $specificTemplateName.$suffix;
+			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName;
+			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName.$suffix;
 		}
 		$providerTemplateName = $defaultTemplateName.'_'.strtoupper($this->provider->getName());
 		$templateNames[] = $providerTemplateName;
-		$templateNames[] = strtoupper($platform->getName()).'_'.$providerTemplateName;
+		$templateNames[] = $providerTemplateName.$suffix;
+		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName;
+		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName.$suffix;
 		$specificProviderTemplateName = NULL;
 		if(isset($specificTemplateName)) {
 			$specificProviderTemplateName = $specificTemplateName.'_'.strtoupper($this->provider->getName());
 			$templateNames[] = $specificProviderTemplateName;
-			$templateNames[] = strtoupper($platform->getName()).'_'.$specificProviderTemplateName;
+			$templateNames[] = $specificProviderTemplateName.$suffix;
+			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName;
+			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName.$suffix;
 		}
 		//NOW SEARCH TEMPLATE IN DATABASE
 		$billingMailTemplate = NULL;
@@ -341,7 +351,7 @@ class ProviderSubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);

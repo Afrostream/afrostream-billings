@@ -248,6 +248,7 @@ class GocardlessWebHooksHandler extends ProviderWebHooksHandler {
 					$subscriptionsHandler = new SubscriptionsHandler();
 					$expires_date = new DateTime($notification_as_array['created_at']);
 					$expireSubscriptionRequest = new ExpireSubscriptionRequest();
+					$expireSubscriptionRequest->setPlatform($this->platform);
 					$expireSubscriptionRequest->setOrigin('hook');
 					$expireSubscriptionRequest->setSubscriptionBillingUuid($db_subscription->getSubscriptionBillingUuid());
 					$expireSubscriptionRequest->setExpiresDate($expires_date);

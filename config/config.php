@@ -9,6 +9,10 @@ use Monolog\Handler\StreamHandler;
 
 #General
 
+if(getEnv('PLATFORM_DEFAULT_ID') === false) {
+	putEnv('PLATFORM_DEFAULT_ID=1');/* AFROSTREAM */
+}
+
 if(getEnv('DYNO') === false) {
 	putEnv('DYNO=web-0');
 }
@@ -173,6 +177,10 @@ if(getEnv('SENDGRID_TO_IFNULL') === false) {
 
 if(getEnv('SENDGRID_VAR_couponAppliedSentence') === false) {
 	putEnv('SENDGRID_VAR_couponAppliedSentence=La réduction de %couponAmountForDisplay% liée au code promo %couponCode% sera appliquée lors du prélèvement.');
+}
+
+if(getEnv('SENDGRID_TEMPLATE_SUFFIX') === false) {
+	putEnv('SENDGRID_TEMPLATE_SUFFIX=');
 }
 
 #Event (MAIL)

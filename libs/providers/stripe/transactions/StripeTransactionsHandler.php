@@ -424,7 +424,12 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 		try {
 			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
 			
-			$api_refund = \Stripe\Refund::create(["charge" => $transaction->getTransactionProviderUuid()]);
+			$api_params = array();
+			$api_params["charge"] = $transaction->getTransactionProviderUuid();
+			if($refundTransactionRequest->getAmountInCents() != NULL) {
+				$api_params["amount"] = $refundTransactionRequest->getAmountInCents();
+			}
+			$api_refund = \Stripe\Refund::create($api_params);
 			//reload payment, in order to be up to date
 			$api_payment = \Stripe\Charge::retrieve($transaction->getTransactionProviderUuid());
 			//

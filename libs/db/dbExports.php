@@ -143,8 +143,7 @@ EOL;
 		FROM billing_subscriptions BS
 		INNER JOIN billing_providers BP ON (BS.providerid = BP._id)
 		INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)
-		INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)
-		INNER JOIN billing_internal_plans BIPL ON (BIPLL.internal_plan_id = BIPL._id)
+		INNER JOIN billing_internal_plans BIPL ON (BPL.internal_plan_id = BIPL._id)
 		INNER JOIN billing_users BU ON (BS.userid = BU._id)
 		LEFT JOIN billing_users_opts BUO ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)
 		LEFT JOIN billing_users_opts BUOF ON (BU._id = BUOF.userid AND BUOF.key = 'firstName' AND BUOF.deleted = false) 
@@ -235,8 +234,7 @@ EOL;
 		FROM billing_subscriptions BS
 		INNER JOIN billing_providers BP ON (BS.providerid = BP._id)
 		INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)
-		INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)
-		INNER JOIN billing_internal_plans BIPL ON (BIPLL.internal_plan_id = BIPL._id)
+		INNER JOIN billing_internal_plans BIPL ON (BPL.internal_plan_id = BIPL._id)
 		INNER JOIN billing_users BU ON (BS.userid = BU._id)
 		LEFT JOIN billing_users_opts BUO ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)
 		LEFT JOIN billing_users_opts BUOF ON (BU._id = BUOF.userid AND BUOF.key = 'firstName' AND BUOF.deleted = false)
@@ -327,8 +325,7 @@ EOL;
 		FROM billing_subscriptions BS
 		INNER JOIN billing_providers BP ON (BS.providerid = BP._id)
 		INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)
-		INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)
-		INNER JOIN billing_internal_plans BIPL ON (BIPLL.internal_plan_id = BIPL._id)
+		INNER JOIN billing_internal_plans BIPL ON (BPL.internal_plan_id = BIPL._id)
 		INNER JOIN billing_users BU ON (BS.userid = BU._id)
 		LEFT JOIN billing_users_opts BUO ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)
 		LEFT JOIN billing_users_opts BUOF ON (BU._id = BUOF.userid AND BUOF.key = 'firstName' AND BUOF.deleted = false)

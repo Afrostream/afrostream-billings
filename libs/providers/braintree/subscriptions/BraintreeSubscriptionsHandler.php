@@ -209,7 +209,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);
@@ -595,15 +595,9 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$providerPlanId = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internalPlan->getId(), $this->provider->getId());
-			if($providerPlanId == NULL) {
-				$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$this->provider->getName();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			$providerPlan = PlanDAO::getPlanById($providerPlanId);
+			$providerPlan = PlanDAO::getPlanByInternalPlanId($internalPlan->getId(), $this->provider->getId());
 			if($providerPlan == NULL) {
-				$msg = "unknown plan with id : ".$providerPlanId;
+				$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$this->provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -716,13 +710,22 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					throw $e;
 				}
 				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], $this->provider->getPlatformId());
+					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], 'descending', $this->provider->getPlatformId());
 					if(count($transactionsResult['transactions']) == 1) {
 						$transaction = $transactionsResult['transactions'][0];
+						//
+					    $amountInCents = NULL; //NULL = Refund ALL
+    					if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+    						$amountInCents = ceil($transaction->getAmountInCents() * ($subscription->getSubPeriodEndsDate()->getTimestamp() - (new DateTime())->getTimestamp())
+    						/
+    						($subscription->getSubPeriodEndsDate()->getTimestamp() - $subscription->getSubPeriodStartedDate()->getTimestamp()));
+    					}
+						//
 						$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
 						$refundTransactionRequest = new RefundTransactionRequest();
 						$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
 						$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+						$refundTransactionRequest->setAmountInCents($amountInCents);
 						$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
 					}
 				}

@@ -258,7 +258,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             }
 
             $planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-            $internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+            $internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
             if($internalPlan == NULL) {
                 $msg = "plan with uuid=".$providerPlanId." for provider ".$this->provider->getName()." is not linked to an internal plan";
                 throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -347,8 +347,8 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         } else {
 	        // get user
 	        $user = UserDAO::getUserById($billingSubscription->getUserId());
-            $internalPlanId = InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($billingSubscription->getPlanId());
-            $internalPlan = InternalPlanDAO::getInternalPlanById($internalPlanId);
+	        $providerPlan = PlanDAO::getPlanById($billingSubscription->getPlanId());
+            $internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
             if ($internalPlan->getCycle() == PlanCycle::auto) {
            		$subscription = $this->getSubscription($billingSubscription->getSubUid(), $user);
              	$this->log('Cancel subscription id %s ', [$subscription['id']]);
@@ -383,15 +383,9 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 	    		config::getLogger()->addError($msg);
 	    		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 	    	}
-	    	$providerPlanId = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internalPlan->getId(), $this->provider->getId());
-	    	if($providerPlanId == NULL) {
-	    		$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$this->provider->getName();
-	    		config::getLogger()->addError($msg);
-	    		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-	    	}
-	    	$providerPlan = PlanDAO::getPlanById($providerPlanId);
+	    	$providerPlan = PlanDAO::getPlanByInternalPlanId($internalPlan->getId(), $this->provider->getId());
 	    	if($providerPlan == NULL) {
-	    		$msg = "unknown plan with id : ".$providerPlanId;
+	    		$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$this->provider->getName();
 	    		config::getLogger()->addError($msg);
 	    		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 	    	}
@@ -833,7 +827,8 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 	    			}
     			}
     			if($expireSubscriptionRequest->getOrigin() == 'api') {
-    				$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
+    				$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
+    				$internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
     				if($internalPlan == NULL) {
     					$msg = "plan with id=".$subscription->getPlanId()." for provider ".$this->provider->getName()." is not linked to an internal plan";
     					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -870,13 +865,24 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     			}
     		}
     		if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-    			$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], $this->provider->getPlatformId());
+    			$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], 'descending', $this->provider->getPlatformId());
     			if(count($transactionsResult['transactions']) == 1) {
     				$transaction = $transactionsResult['transactions'][0];
+    				//
+    				$amountInCents = NULL; //NULL = Refund ALL
+    				if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+    					$amountInCents = ceil($transaction->getAmountInCents() * ($subscription->getSubPeriodEndsDate()->getTimestamp() - (new DateTime())->getTimestamp())
+    					/
+    					($subscription->getSubPeriodEndsDate()->getTimestamp() - $subscription->getSubPeriodStartedDate()->getTimestamp()));
+    					
+    				}
+    				//
 					$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
 					$refundTransactionRequest = new RefundTransactionRequest();
+					$refundTransactionRequest->setPlatform($this->platform);
 					$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
 					$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+					$refundTransactionRequest->setAmountInCents($amountInCents);
 					$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
     			}
     		}

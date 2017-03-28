@@ -99,11 +99,11 @@ class InternalCouponsCampaignsHandler {
 			}
 			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid, $addProviderToInternalCouponsCampaignRequest->getPlatform()->getId());
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while adding provider : ".$provider->getName()." to internalCouponsCampaign with couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while adding provider : ".$providerName." to internalCouponsCampaign with couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("adding a provider to an internalCouponsCampaign failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while adding provider : ".$provider->getName()." to internalCouponsCampaign with couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while adding provider : ".$providerName." to internalCouponsCampaign with couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("adding a provider to an internalCouponsCampaign failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}

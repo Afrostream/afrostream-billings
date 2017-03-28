@@ -96,8 +96,9 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
-			$googleClient = new GoogleClient();
+			$googleClient = new GoogleClient(json_decode($this->provider->getConfigFile(), true));
 			$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
+			$googleGetSubscriptionRequest->setPackageName($this->provider->getOpts()["packageName"]);
 			$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
 			$googleGetSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 			$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
@@ -112,7 +113,7 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 			}
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 			//check internalPlan
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$plan->getPlanUuid()." is not linked to an internal plan";

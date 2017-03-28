@@ -95,9 +95,9 @@ class NetsizeWebHooksHandler extends ProviderWebHooksHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 			if($internalPlan == NULL) {
-				$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
+				$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -151,6 +151,7 @@ class NetsizeWebHooksHandler extends ProviderWebHooksHandler {
 		$subscriptionsHandler = new SubscriptionsHandler();
 		//NC : For the moment, Netsize renewing does not support to force $end_date, so we are not using $expirationDate.
 		$renewSubscriptionRequest = new RenewSubscriptionRequest();
+		$renewSubscriptionRequest->setPlatform($this->platform);
 		$renewSubscriptionRequest->setSubscriptionBillingUuid($db_subscription->getSubscriptionBillingUuid());
 		$renewSubscriptionRequest->setStartDate(NULL);
 		$renewSubscriptionRequest->setEndDate(NULL);//NC : should be $expirationDate, but date given by Netsize is not good

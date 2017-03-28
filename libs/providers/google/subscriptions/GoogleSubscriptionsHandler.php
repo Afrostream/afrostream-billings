@@ -30,8 +30,9 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			checkSubOptsArray($subOpts->getOpts(), $this->provider->getName(), 'create');
 			//** in google : user subscription is pre-created **/
 			//
-			$googleClient = new GoogleClient();
+			$googleClient = new GoogleClient(json_decode($this->provider->getConfigFile(), true));
 			$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
+			$googleGetSubscriptionRequest->setPackageName($this->provider->getOpts()["packageName"]);
 			$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
 			$googleGetSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 			$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
@@ -71,8 +72,9 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$googleClient = new GoogleClient();
+		$googleClient = new GoogleClient(json_decode($this->provider->getConfigFile(), true));
 		$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
+		$googleGetSubscriptionRequest->setPackageName($this->provider->getOpts()["packageName"]);
 		$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
 		$googleGetSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 		$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
@@ -230,8 +232,9 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				if($cancelSubscriptionRequest->getOrigin() == 'api') {
 					$plan = PlanDAO::getPlanById($subscription->getPlanId());
 					$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
-					$googleClient = new GoogleClient();
+					$googleClient = new GoogleClient(json_decode($this->provider->getConfigFile(), true));
 					$googleCancelSubscriptionRequest = new GoogleCancelSubscriptionRequest();
+					$googleCancelSubscriptionRequest->setPackageName($this->provider->getOpts()["packageName"]);
 					$googleCancelSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
 					$googleCancelSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 					$api_subscription = $googleClient->cancelSubscription($googleCancelSubscriptionRequest);
@@ -295,8 +298,9 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					}
 					$plan = PlanDAO::getPlanById($subscription->getPlanId());
 					$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
-					$googleClient = new GoogleClient();
+					$googleClient = new GoogleClient(json_decode($this->provider->getConfigFile(), true));
 					$googleExpireSubscriptionRequest = new GoogleExpireSubscriptionRequest();
+					$googleExpireSubscriptionRequest->setPackageName($this->provider->getOpts()["packageName"]);
 					$googleExpireSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
 					$googleExpireSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 					$api_subscription = $googleClient->expireSubscription($googleExpireSubscriptionRequest);
@@ -390,7 +394,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 		if($internalPlan == NULL) {
 			$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 			config::getLogger()->addError($msg);
@@ -399,8 +403,9 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 		$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($db_subscription->getId());
 		//
-		$googleClient = new GoogleClient();
+		$googleClient = new GoogleClient(json_decode($this->provider->getConfigFile(), true));
 		$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
+		$googleGetSubscriptionRequest->setPackageName($this->provider->getOpts()["packageName"]);
 		$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
 		$googleGetSubscriptionRequest->setToken($subOpts->getOpts()['customerBankAccountToken']);
 		$api_subscription = $googleClient->getSubscription($googleGetSubscriptionRequest);
