@@ -141,8 +141,8 @@ class GocardlessWebHooksHandler extends ProviderWebHooksHandler {
 				}
 				$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 				$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
-				$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 				$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler($this->provider);
+				$db_subscription = $gocardlessSubscriptionsHandler->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
@@ -170,16 +170,7 @@ class GocardlessWebHooksHandler extends ProviderWebHooksHandler {
 				break;
 		}
 	}
-	
-	private function getDbSubscriptionByUuid(array $db_subscriptions, $subUuid) {
-		foreach ($db_subscriptions as $db_subscription) {
-			if($db_subscription->getSubUid() == $subUuid) {
-				return($db_subscription);
-			}
-		}
-		return(NULL);
-	}
-	
+		
 	private function doProcessMandate(array $notification_as_array, $update_type, $updateId) {
 		switch($notification_as_array['action']) {
 			case 'cancelled' :

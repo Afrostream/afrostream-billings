@@ -106,8 +106,8 @@ class BraintreeWebHooksHandler extends ProviderWebHooksHandler {
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
-		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler($this->provider);
+		$db_subscription = $braintreeSubscriptionsHandler->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		try {
 			//START TRANSACTION
 			pg_query("BEGIN");
@@ -133,16 +133,7 @@ class BraintreeWebHooksHandler extends ProviderWebHooksHandler {
 		//
 		config::getLogger()->addInfo('Processing braintree hook subscription, notification_kind='.$notification->kind.' done successfully');
 	}
-	
-	private function getDbSubscriptionByUuid(array $db_subscriptions, $subUuid) {
-		foreach ($db_subscriptions as $db_subscription) {
-			if($db_subscription->getSubUid() == $subUuid) {
-				return($db_subscription);
-			}
-		}
-		return(NULL);
-	}
-	
+		
 	private function doProcessCharge(Braintree\WebhookNotification $notification, $update_type, $updateId) {
 		config::getLogger()->addInfo('Processing braintree hook charge, notification_kind='.$notification->kind.'...');
 		//
