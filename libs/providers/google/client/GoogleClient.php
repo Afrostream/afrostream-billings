@@ -11,7 +11,7 @@ class GoogleClient {
 	}
 	
 	public function getSubscription(GoogleGetSubscriptionRequest $getSubscriptionRequest) {
-		$client = new Google_Client();//$this->config);
+		$client = new Google_Client();
 		$client->setAuthConfig($this->config);
 		//$client->useApplicationDefaultCredentials();
 		$client->addScope(Google_Service_AndroidPublisher::ANDROIDPUBLISHER);
@@ -20,7 +20,8 @@ class GoogleClient {
 	}
 	
 	public function cancelSubscription(GoogleCancelSubscriptionRequest $cancelSubscriptionRequest) {
-		$client = new Google_Client($this->config);
+		$client = new Google_Client();
+		$client->setAuthConfig($this->config);
 		//$client->useApplicationDefaultCredentials();
 		$client->addScope(Google_Service_AndroidPublisher::ANDROIDPUBLISHER);
 		$androidPublisher = new Google_Service_AndroidPublisher($client);
@@ -28,7 +29,8 @@ class GoogleClient {
 	}
 	
 	public function expireSubscription(GoogleExpireSubscriptionRequest $expireSubscriptionRequest) {
-		$client = new Google_Client($this->config);
+		$client = new Google_Client();
+		$client->setAuthConfig($this->config);
 		//$client->useApplicationDefaultCredentials();
 		$client->addScope(Google_Service_AndroidPublisher::ANDROIDPUBLISHER);
 		$androidPublisher = new Google_Service_AndroidPublisher($client);
