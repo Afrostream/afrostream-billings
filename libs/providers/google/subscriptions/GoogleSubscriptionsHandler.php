@@ -30,7 +30,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			checkSubOptsArray($subOpts->getOpts(), $this->provider->getName(), 'create');
 			//** in google : user subscription is pre-created **/
 			//
-			$googleClient = new GoogleClient($this->provider->getConfigFile());
+			$googleClient = new GoogleClient(json_decode($this->provider->getConfigFile(), true));
 			$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
 			$googleGetSubscriptionRequest->setPackageName($this->provider->getOpts()["packageName"]);
 			$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
@@ -72,7 +72,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$googleClient = new GoogleClient($this->provider->getConfigFile());
+		$googleClient = new GoogleClient(json_decode($this->provider->getConfigFile(), true));
 		$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
 		$googleGetSubscriptionRequest->setPackageName($this->provider->getOpts()["packageName"]);
 		$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
@@ -232,7 +232,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				if($cancelSubscriptionRequest->getOrigin() == 'api') {
 					$plan = PlanDAO::getPlanById($subscription->getPlanId());
 					$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
-					$googleClient = new GoogleClient($this->provider->getConfigFile());
+					$googleClient = new GoogleClient(json_decode($this->provider->getConfigFile(), true));
 					$googleCancelSubscriptionRequest = new GoogleCancelSubscriptionRequest();
 					$googleCancelSubscriptionRequest->setPackageName($this->provider->getOpts()["packageName"]);
 					$googleCancelSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
@@ -298,7 +298,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					}
 					$plan = PlanDAO::getPlanById($subscription->getPlanId());
 					$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
-					$googleClient = new GoogleClient($this->provider->getConfigFile());
+					$googleClient = new GoogleClient(json_decode($this->provider->getConfigFile(), true));
 					$googleExpireSubscriptionRequest = new GoogleExpireSubscriptionRequest();
 					$googleExpireSubscriptionRequest->setPackageName($this->provider->getOpts()["packageName"]);
 					$googleExpireSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
@@ -403,7 +403,7 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
 		$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($db_subscription->getId());
 		//
-		$googleClient = new GoogleClient($this->provider->getConfigFile());
+		$googleClient = new GoogleClient(json_decode($this->provider->getConfigFile(), true));
 		$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
 		$googleGetSubscriptionRequest->setPackageName($this->provider->getOpts()["packageName"]);
 		$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
