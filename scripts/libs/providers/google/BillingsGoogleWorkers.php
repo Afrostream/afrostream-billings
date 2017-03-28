@@ -96,7 +96,7 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
-			$googleClient = new GoogleClient($this->provider->getConfigFile());
+			$googleClient = new GoogleClient(json_decode($this->provider->getConfigFile(), true));
 			$googleGetSubscriptionRequest = new GoogleGetSubscriptionRequest();
 			$googleGetSubscriptionRequest->setPackageName($this->provider->getOpts()["packageName"]);
 			$googleGetSubscriptionRequest->setSubscriptionId($plan->getPlanUuid());
