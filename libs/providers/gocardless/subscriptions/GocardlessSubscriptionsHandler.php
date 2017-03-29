@@ -60,15 +60,25 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$interval_unit = NULL;
+				$interval = NULL;
 				switch ($internalPlan->getPeriodUnit()) {
 					case PlanPeriodUnit::day :
-						$interval_unit = 'daily';
+						if($internalPlan->getPeriodLength() == 7) {
+							$interval_unit = 'weekly';
+							$interval = 1;
+						} else {
+							$msg = "unsupported period length : ".$internalPlan->getPeriodLength();
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						}
 						break;
 					case PlanPeriodUnit::month :
 						$interval_unit = 'monthly';
+						$interval = $internalPlan->getPeriodLength();
 						break;
 					case PlanPeriodUnit::year :
 						$interval_unit = 'yearly';
+						$interval = $internalPlan->getPeriodLength();
 						break;
 					default :
 						$msg = "unsupported period unit, must be in : ".implode(', ', array_keys(GocardlessPlansHandler::$supported_periods));
@@ -151,7 +161,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					 				'currency' => $internalPlan->getCurrency(),
 					 				'name' => $plan->getName(),
 					 				'interval_unit' => $interval_unit,
-					 				'interval' => $internalPlan->getPeriodLength(),
+					 				'interval' => $interval,
 					 				'links' => ['mandate' => $mandate->id],
 					 				'metadata' => ['internal_plan_uuid' => $internalPlan->getInternalPlanUuid()]
 					 		]
