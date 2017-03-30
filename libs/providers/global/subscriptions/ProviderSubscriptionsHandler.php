@@ -341,6 +341,8 @@ class ProviderSubscriptionsHandler {
 	}
 	
 	private function addLocales(array $templateNames, $prefix, $defaultCountryCode, $defaultLanguageCode, $userCountryCode, $userLanguageCode) {
+		$templateNames[] = $prefix.'_'.$defaultLanguageCode;
+		$templateNames[] = $prefix.'_'.$userLanguageCode;
 		$templateNames[] = $prefix.'_'.$defaultCountryCode;
 		$templateNames[] = $prefix.'_'.$defaultCountryCode.'_'.$defaultLanguageCode;
 		$templateNames[] = $prefix.'_'.$defaultCountryCode.'_'.$userLanguageCode;
