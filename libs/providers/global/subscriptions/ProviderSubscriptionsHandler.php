@@ -267,25 +267,26 @@ class ProviderSubscriptionsHandler {
 		$userOpts = UserOptsDAO::getUserOptsByUserId($subscription_after_update->getUserId());
 		//
 		$suffix = getEnv('SENDGRID_TEMPLATE_SUFFIX');
-		$locale_language_default = strtoupper(getEnv('LOCALE_LANGUAGE_DEFAULT'));
+		$locale_country_default = strtoupper(getEnv('LOCALE_COUNTRY_DEFAULT'));
+		$locale_country_user = $locale_country_default;
+		if($userOpts->getOpt('countryCode') != NULL) {
+			$locale_country_user = strtoupper($userOpts->getOpt('countryCode'));
+		}
+		$locale_language_default = strtolower(getEnv('LOCALE_LANGUAGE_DEFAULT'));
 		$locale_language_user = $locale_language_default;
 		if($userOpts->getOpt('languageCode') != NULL) {
-			$locale_language_user = strtoupper($userOpts->getOpt('languageCode'));
+			$locale_language_user = strtolower($userOpts->getOpt('languageCode'));
 		}
 		$templateNames = array();
 		$defaultTemplateName = 'SUBSCRIPTION'.'_'.$event;
 		$templateNames[] = $defaultTemplateName;
-		$templateNames[] = $defaultTemplateName.'_'.$locale_language_default;
-		$templateNames[] = $defaultTemplateName.'_'.$locale_language_user;
+		$this->addLocales($templateNames, $defaultTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$templateNames[] = $defaultTemplateName.$suffix;
-		$templateNames[] = $defaultTemplateName.$suffix.'_'.$locale_language_default;
-		$templateNames[] = $defaultTemplateName.$suffix.'_'.$locale_language_user;
+		$this->addLocales($templateNames, $defaultTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName;
-		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName.'_'.$locale_language_default;
-		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName.'_'.$locale_language_user;
+		$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$defaultTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName.$suffix;
-		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName.$suffix.'_'.$locale_language_default;
-		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName.$suffix.'_'.$locale_language_user;
+		$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$defaultTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		//SPECIFIC
 		$specific = NULL;
 		if($this->isSponsorshipSubscription($subscription_after_update)) {
@@ -295,46 +296,34 @@ class ProviderSubscriptionsHandler {
 		if(isset($specific)) {
 			$specificTemplateName = 'SUBSCRIPTION'.'_'.$specific.'_'.$event;
 			$templateNames[] = $specificTemplateName;
-			$templateNames[] = $specificTemplateName.'_'.$locale_language_default;
-			$templateNames[] = $specificTemplateName.'_'.$locale_language_user;
+			$this->addLocales($templateNames, $specificTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 			$templateNames[] = $specificTemplateName.$suffix;
-			$templateNames[] = $specificTemplateName.$suffix.'_'.$locale_language_default;
-			$templateNames[] = $specificTemplateName.$suffix.'_'.$locale_language_user;
+			$this->addLocales($templateNames, $specificTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName;
-			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName.'_'.$locale_language_default;
-			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName.'_'.$locale_language_user;
+			$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$specificTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName.$suffix;
-			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName.$suffix.'_'.$locale_language_default;
-			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName.$suffix.'_'.$locale_language_user;
+			$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$specificTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		}
 		$providerTemplateName = $defaultTemplateName.'_'.strtoupper($this->provider->getName());
 		$templateNames[] = $providerTemplateName;
-		$templateNames[] = $providerTemplateName.'_'.$locale_language_default;
-		$templateNames[] = $providerTemplateName.'_'.$locale_language_user;
+		$this->addLocales($templateNames, $providerTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$templateNames[] = $providerTemplateName.$suffix;
-		$templateNames[] = $providerTemplateName.$suffix.'_'.$locale_language_default;
-		$templateNames[] = $providerTemplateName.$suffix.'_'.$locale_language_user;
+		$this->addLocales($templateNames, $providerTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName;
-		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName.'_'.$locale_language_default;
-		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName.'_'.$locale_language_user;
+		$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$providerTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName.$suffix;
-		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName.$suffix.'_'.$locale_language_default;
-		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName.$suffix.'_'.$locale_language_user;
+		$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$providerTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$specificProviderTemplateName = NULL;
 		if(isset($specificTemplateName)) {
 			$specificProviderTemplateName = $specificTemplateName.'_'.strtoupper($this->provider->getName());
 			$templateNames[] = $specificProviderTemplateName;
-			$templateNames[] = $specificProviderTemplateName.'_'.$locale_language_default;
-			$templateNames[] = $specificProviderTemplateName.'_'.$locale_language_user;
+			$this->addLocales($templateNames, $specificProviderTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 			$templateNames[] = $specificProviderTemplateName.$suffix;
-			$templateNames[] = $specificProviderTemplateName.$suffix.'_'.$locale_language_default;
-			$templateNames[] = $specificProviderTemplateName.$suffix.'_'.$locale_language_user;
+			$this->addLocales($templateNames, $specificProviderTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName;
-			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName.'_'.$locale_language_default;
-			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName.'_'.$locale_language_user;
+			$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName.$suffix;
-			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName.$suffix.'_'.$locale_language_default;
-			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName.$suffix.'_'.$locale_language_user;
+			$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		}
 		//NOW SEARCH TEMPLATE IN DATABASE
 		$billingMailTemplate = NULL;
@@ -349,6 +338,15 @@ class ProviderSubscriptionsHandler {
 		config::getLogger()->addError($msg);
 		//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		return(NULL);
+	}
+	
+	private function addLocales(array $templateNames, $prefix, $defaultCountryCode, $defaultLanguageCode, $userCountryCode, $userLanguageCode) {
+		$templateNames[] = $prefix.'_'.$defaultCountryCode;
+		$templateNames[] = $prefix.'_'.$defaultCountryCode.'_'.$defaultLanguageCode;
+		$templateNames[] = $prefix.'_'.$defaultCountryCode.'_'.$userLanguageCode;
+		$templateNames[] = $prefix.'_'.$userCountryCode;
+		$templateNames[] = $prefix.'_'.$userCountryCode.'_'.$defaultLanguageCode;
+		$templateNames[] = $prefix.'_'.$userCountryCode.'_'.$userLanguageCode;
 	}
 	
 	private function doSendEmail(BillingsSubscription $subscription_after_update, $event, $sendgrid_template_id) {
