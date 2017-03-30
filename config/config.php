@@ -9,6 +9,10 @@ use Monolog\Handler\StreamHandler;
 
 #General
 
+if(getEnv('LOCALE_LANGUAGE_DEFAULT') === false) {
+	putEnv('LOCALE_LANGUAGE_DEFAULT=fr');
+}
+
 if(getEnv('PLATFORM_DEFAULT_ID') === false) {
 	putEnv('PLATFORM_DEFAULT_ID=1');/* AFROSTREAM */
 }
