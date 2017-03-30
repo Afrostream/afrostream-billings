@@ -9,6 +9,10 @@ use Monolog\Handler\StreamHandler;
 
 #General
 
+if(getEnv('LOCALE_COUNTRY_DEFAULT') === false) {
+	putEnv('LOCALE_COUNTRY_DEFAULT=FR');
+}
+
 if(getEnv('LOCALE_LANGUAGE_DEFAULT') === false) {
 	putEnv('LOCALE_LANGUAGE_DEFAULT=fr');
 }
