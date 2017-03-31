@@ -110,6 +110,7 @@ do {
 		try {
 			$subscriptionsHandler = new SubscriptionsHandler();
 			$expireSubscriptionRequest = new ExpireSubscriptionRequest();
+			$expireSubscriptionRequest->setPlatform($platform);
 			$expireSubscriptionRequest->setSubscriptionBillingUuid($row['subscription_billing_uuid']);
 			$expireSubscriptionRequest->setOrigin('script');
 			$expireSubscriptionRequest->setExpiresDate(new DateTime());
