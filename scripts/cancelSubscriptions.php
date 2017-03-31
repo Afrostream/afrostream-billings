@@ -95,6 +95,7 @@ do {
 		try {
 			$subscriptionsHandler = new SubscriptionsHandler();
 			$cancelSubscriptionRequest = new CancelSubscriptionRequest();
+			$cancelSubscriptionRequest->setPlatform($platform);
 			$cancelSubscriptionRequest->setSubscriptionBillingUuid($row['subscription_billing_uuid']);
 			$cancelSubscriptionRequest->setOrigin('script');
 			$cancelSubscriptionRequest->setCancelDate(new DateTime());

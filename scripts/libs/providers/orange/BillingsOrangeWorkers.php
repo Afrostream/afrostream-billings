@@ -10,11 +10,13 @@ require_once __DIR__ . '/../../../../libs/providers/global/requests/RenewSubscri
 class BillingsOrangeWorkers extends BillingsWorkers {
 	
 	private $provider = NULL;
+	private $platform = NULL;
 	private $processingType = 'subs_refresh';
 	
 	public function __construct(Provider $provider) {
 		parent::__construct();
 		$this->provider = $provider;
+		$this->platform = BillingPlatformDAO::getPlatformById($this->provider->getPlatformId());
 	}
 	
 	public function doRefreshSubscriptions() {
@@ -91,6 +93,7 @@ class BillingsOrangeWorkers extends BillingsWorkers {
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
 				$renewSubscriptionRequest = new RenewSubscriptionRequest();
+				$renewSubscriptionRequest->setPlatform($this->platform);
 				$renewSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
 				$renewSubscriptionRequest->setStartDate(NULL);
 				$renewSubscriptionRequest->setEndDate(NULL);

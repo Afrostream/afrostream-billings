@@ -13,6 +13,7 @@ ini_set("auto_detect_line_endings", true);
 class BillingsBachatWorkers extends BillingsWorkers {
 	
 	private $provider = NULL;
+	private $platform = NULL;
 	private $processingTypeSubsRequestRenew = 'subs_request_renew';
 	private $processingTypeSubsResponseRenew = 'subs_response_renew';
 	private $processingTypeSubsRequestCancel = 'subs_request_cancel';
@@ -21,6 +22,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 	public function __construct(Provider $provider) {
 		parent::__construct();
 		$this->provider = $provider;
+		$this->platform = BillingPlatformDAO::getPlatformById($this->provider->getPlatformId());
 	}
 	
 	public function doRequestRenewSubscriptions($force = true) {
@@ -663,6 +665,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
 				$renewSubscriptionRequest = new RenewSubscriptionRequest();
+				$renewSubscriptionRequest->setPlatform($this->platform);
 				$renewSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
 				$renewSubscriptionRequest->setStartDate(NULL);
 				$renewSubscriptionRequest->setEndDate(NULL);
@@ -900,6 +903,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
 				$cancelSubscriptionRequest = new CancelSubscriptionRequest();
+				$cancelSubscriptionRequest->setPlatform($this->platform);
 				$cancelSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
 				$cancelSubscriptionRequest->setOrigin('script');
 				$cancelSubscriptionRequest->setCancelDate($cancel_date);

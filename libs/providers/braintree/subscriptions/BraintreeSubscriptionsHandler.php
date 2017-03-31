@@ -723,6 +723,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 						//
 						$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
 						$refundTransactionRequest = new RefundTransactionRequest();
+						$refundTransactionRequest->setPlatform($this->platform);
 						$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
 						$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
 						$refundTransactionRequest->setAmountInCents($amountInCents);

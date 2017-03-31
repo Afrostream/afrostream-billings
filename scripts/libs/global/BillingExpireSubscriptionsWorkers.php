@@ -170,6 +170,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 				pg_query("BEGIN");
 				$subscriptionsHandler = new SubscriptionsHandler();
 				$expireSubscriptionRequest = new ExpireSubscriptionRequest();
+				$expireSubscriptionRequest->setPlatform($this->platform);
 				$expireSubscriptionRequest->setOrigin('script');
 				$expireSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
 				$expireSubscriptionRequest->setExpiresDate($subscription->getSubPeriodEndsDate());
