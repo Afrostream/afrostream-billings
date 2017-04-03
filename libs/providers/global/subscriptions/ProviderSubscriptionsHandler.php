@@ -328,11 +328,13 @@ class ProviderSubscriptionsHandler {
 		//NOW SEARCH TEMPLATE IN DATABASE
 		$billingMailTemplate = NULL;
 		while(($templateName = array_pop($templateNames)) != NULL) {
+			config::getLogger()->addInfo("template named : ".$templateName." searching...");
 			$billingMailTemplate = BillingMailTemplateDAO::getBillingMailTemplateByTemplateName($templateName);
 			if(isset($billingMailTemplate)) {
-				config::getLogger()->addInfo("found template named : ".$templateName);
+				config::getLogger()->addInfo("template named : ".$templateName." found");
 				return($billingMailTemplate->getTemplatePartnerUuid());
 			}
+			config::getLogger()->addInfo("template named : ".$templateName." NOT found");
 		}
 		$msg = "event by email : no template was found";
 		config::getLogger()->addError($msg);
