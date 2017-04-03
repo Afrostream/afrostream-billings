@@ -342,7 +342,8 @@ class ProviderSubscriptionsHandler {
 		return(NULL);
 	}
 	
-	private function addLocales(array $templateNames, $prefix, $defaultCountryCode, $defaultLanguageCode, $userCountryCode, $userLanguageCode) {
+	//passage par référence !!!
+	private function addLocales(array &$templateNames, $prefix, $defaultCountryCode, $defaultLanguageCode, $userCountryCode, $userLanguageCode) {
 		$templateNames[] = $prefix.'_'.$defaultLanguageCode;
 		$templateNames[] = $prefix.'_'.$userLanguageCode;
 		$templateNames[] = $prefix.'_'.$defaultCountryCode;
