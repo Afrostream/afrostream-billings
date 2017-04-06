@@ -75,9 +75,9 @@ class InternalPlansHandler {
 					if($contextBillingUuid == 'mobile') {
 						$contextBillingUuid = 'common';
 					}
-					//switch country
+					//switch country -> REMOVED (See below)
 					$oldContextCountry = $contextCountry;
-					$contextCountry = "FR";//back to France
+					//$contextCountry = "FR";//back to France -> REMOVED
 					config::getLogger()->addInfo("unknown context with contextBillingUuid=".$oldContextBillingUuid.", contextCountry=".$oldContextCountry.
 							", rollback to contextBillingUuid=".$contextBillingUuid.", contextCountry=".$contextCountry);
 					$context = ContextDAO::getContext($contextBillingUuid, $contextCountry, $getInternalPlansRequest->getPlatform()->getId());
