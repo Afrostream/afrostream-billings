@@ -7,9 +7,11 @@ require_once __DIR__ . '/../../../utils/BillingsException.php';
 class ProviderCouponsHandler {
 	
 	protected $provider = NULL;
+	protected $platform = NULL;
 	
 	public function __construct(Provider $provider) {
 		$this->provider = $provider;
+		$this->platform = BillingPlatformDAO::getPlatformById($this->provider->getPlatformId());
 	}
 	
 	public function doCreateCoupon(User $user,
