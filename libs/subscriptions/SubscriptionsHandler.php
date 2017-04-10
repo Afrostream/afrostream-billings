@@ -159,7 +159,7 @@ class SubscriptionsHandler {
 		$subscriptions = NULL;
 		try {
 			config::getLogger()->addInfo("subscriptions getting for userBillingUuid=".$getUserSubscriptionsRequest->getUserBillingUuid()."...");
-			$user = UserDAO::getUserByUserBillingUuid($getUserSubscriptionsRequest->getUserBillingUuid(), $getSubscriptionRequest->getPlatform()->getId());
+			$user = UserDAO::getUserByUserBillingUuid($getUserSubscriptionsRequest->getUserBillingUuid(), $getUserSubscriptionsRequest->getPlatform()->getId());
 			if($user == NULL) {
 				$msg = "unknown userBillingUuid : ".$getUserSubscriptionsRequest->getUserBillingUuid();
 				config::getLogger()->addError($msg);
