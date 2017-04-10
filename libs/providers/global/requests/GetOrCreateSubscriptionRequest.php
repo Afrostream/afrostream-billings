@@ -9,6 +9,7 @@ class GetOrCreateSubscriptionRequest extends ActionRequest {
 	protected $subscriptionProviderUuid = NULL;
 	protected $billingInfoArray = array();
 	protected $subOptsArray = array();
+	protected $clientId = NULL;
 	
 	public function __construct() {
 		parent::__construct();
@@ -52,6 +53,14 @@ class GetOrCreateSubscriptionRequest extends ActionRequest {
 	
 	public function getSubOptsArray() {
 		return($this->subOptsArray);
+	}
+	
+	public function setClientId($clientId) {
+		$this->clientId = $clientId;
+	}
+	
+	public function getClientId() {
+		return($this->clientId);
 	}
 	
 }

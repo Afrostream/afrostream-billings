@@ -117,7 +117,11 @@ class AfrCouponsHandler extends ProviderCouponsHandler {
 						$recipientUsers = UserDAO::getUsersByEmail($recipentEmail, $this->provider->getPlatformId());
 						$subscriptionsHandler = new SubscriptionsHandler();
 						foreach ($recipientUsers as $recipientUser) {
-							$recipientSubscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($recipientUser);
+							$getUserSubscriptionsRequest = new GetUserSubscriptionsRequest();
+							$getUserSubscriptionsRequest->setOrigin('api');
+							$getUserSubscriptionsRequest->setUserBillingUuid($recipientUser->getUserBillingUuid());
+							$getUserSubscriptionsRequest->setPlatform($this->platform);
+							$recipientSubscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($getUserSubscriptionsRequest);
 							if(count($recipientSubscriptions) > 0) {
 								$lastSubscription = $recipientSubscriptions[0];
 								if($lastSubscription->getIsActive()) {
