@@ -66,7 +66,7 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 	}
 	
 	public function doGetUserSubscriptionsByUser(GetUserSubscriptionsRequest $getUserSubscriptionsRequest) {
-		$user = UserDAO::getUserByUserBillingUuid($getUserSubscriptionsRequest->getUserBillingUuid(), $getUserSubscriptionsRequest->getPlatform()->getId());
+		/*$user = UserDAO::getUserByUserBillingUuid($getUserSubscriptionsRequest->getUserBillingUuid(), $getUserSubscriptionsRequest->getPlatform()->getId());
 		if($user == NULL) {
 			$msg = "unknown userBillingUuid : ".$getUserSubscriptionsRequest->getUserBillingUuid();
 			config::getLogger()->addError($msg);
@@ -96,7 +96,7 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 				$getOrCreateSubscriptionRequest->setSubOptsArray(['couponCode' => $db_coupon->getCode()]);
 				$this->doGetOrCreateSubscription($getOrCreateSubscriptionRequest);
 			}
-		}
+		}*/
 		return(parent::doGetUserSubscriptionsByUser($getUserSubscriptionsRequest));
 	}
 	
