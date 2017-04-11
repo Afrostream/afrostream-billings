@@ -116,25 +116,29 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 		//if($clientId == 'blabla') {
 			if(count($subscriptions) == 0) {
 				//NEVER SUBSCRIBED
-				//CREATE COUPON
-				$usersInternalCouponsHandler = new UsersInternalCouponsHandler();
-				$createUsersInternalCouponRequest = new CreateUsersInternalCouponRequest();
-				$createUsersInternalCouponRequest->setOrigin($getSubscriptionsRequest->getOrigin());
-				$createUsersInternalCouponRequest->setPlatform($getSubscriptionsRequest->getPlatform());
-				$createUsersInternalCouponRequest->setUserBillingUuid($user->getUserBillingUuid());
-				$createUsersInternalCouponRequest->setInternalCouponsCampaignBillingUuid('e40028fa-ab18-4ec8-a573-b396c3165758');
-				$createUsersInternalCouponRequest->setInternalPlanUuid(NULL);
-				$db_coupon = $usersInternalCouponsHandler->doCreateCoupon($createUsersInternalCouponRequest);
-				//USE COUPON
-				$getOrCreateSubscriptionRequest = new GetOrCreateSubscriptionRequest();
-				$getOrCreateSubscriptionRequest->setOrigin($getSubscriptionsRequest->getOrigin());
-				$getOrCreateSubscriptionRequest->setPlatform($getSubscriptionsRequest->getPlatform());
-				$getOrCreateSubscriptionRequest->setClientId($getSubscriptionsRequest->getClientId());
-				$getOrCreateSubscriptionRequest->setUserBillingUuid($user->getUserBillingUuid());
-				$getOrCreateSubscriptionRequest->setInternalPlanUuid('bonus');
-				$getOrCreateSubscriptionRequest->setSubOptsArray(['couponCode' => $db_coupon->getCode()]);
-				$this->doGetOrCreateSubscription($getOrCreateSubscriptionRequest);
-				$subscriptions = parent::doGetUserSubscriptionsByUserReferenceUuid($getSubscriptionsRequest);
+				$provider = ProviderDAO::getProviderByName('afr', $getSubscriptionsRequest->getPlatform()->getId());
+				$user = UserDAO::getUsersByUserReferenceUuid($getSubscriptionsRequest->getUserReferenceUuid(), $provider->getId(), $getSubscriptionsRequest->getPlatform()->getId());
+				if($user != NULL) {
+					//CREATE COUPON
+					$usersInternalCouponsHandler = new UsersInternalCouponsHandler();
+					$createUsersInternalCouponRequest = new CreateUsersInternalCouponRequest();
+					$createUsersInternalCouponRequest->setOrigin($getSubscriptionsRequest->getOrigin());
+					$createUsersInternalCouponRequest->setPlatform($getSubscriptionsRequest->getPlatform());
+					$createUsersInternalCouponRequest->setUserBillingUuid($user->getUserBillingUuid());
+					$createUsersInternalCouponRequest->setInternalCouponsCampaignBillingUuid('e40028fa-ab18-4ec8-a573-b396c3165758');
+					$createUsersInternalCouponRequest->setInternalPlanUuid(NULL);
+					$db_coupon = $usersInternalCouponsHandler->doCreateCoupon($createUsersInternalCouponRequest);
+					//USE COUPON
+					$getOrCreateSubscriptionRequest = new GetOrCreateSubscriptionRequest();
+					$getOrCreateSubscriptionRequest->setOrigin($getSubscriptionsRequest->getOrigin());
+					$getOrCreateSubscriptionRequest->setPlatform($getSubscriptionsRequest->getPlatform());
+					$getOrCreateSubscriptionRequest->setClientId($getSubscriptionsRequest->getClientId());
+					$getOrCreateSubscriptionRequest->setUserBillingUuid($user->getUserBillingUuid());
+					$getOrCreateSubscriptionRequest->setInternalPlanUuid('bonus');
+					$getOrCreateSubscriptionRequest->setSubOptsArray(['couponCode' => $db_coupon->getCode()]);
+					$this->doGetOrCreateSubscription($getOrCreateSubscriptionRequest);
+					$subscriptions = parent::doGetUserSubscriptionsByUserReferenceUuid($getSubscriptionsRequest);
+				}
 			}
 		//}
 		return($subscriptions);
