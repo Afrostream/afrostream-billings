@@ -90,7 +90,7 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 							$createUsersInternalCouponRequest = new CreateUsersInternalCouponRequest();
 							$createUsersInternalCouponRequest->setOrigin($getSubscriptionsRequest->getOrigin());
 							$createUsersInternalCouponRequest->setPlatform($getSubscriptionsRequest->getPlatform());
-							$createUsersInternalCouponRequest->setUserBillingUuid('b626841d-aeca-6bdc-08e9-94be00472b96');
+							$createUsersInternalCouponRequest->setUserBillingUuid($user->getUserBillingUuid());
 							$createUsersInternalCouponRequest->setInternalCouponsCampaignBillingUuid(getEnv('BONUS_INTERNAL_COUPON_CAMPAIGN_BILLING_UUID'));
 							$createUsersInternalCouponRequest->setInternalPlanUuid(NULL);
 							$db_coupon = $usersInternalCouponsHandler->doCreateCoupon($createUsersInternalCouponRequest);
