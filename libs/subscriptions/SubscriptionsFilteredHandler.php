@@ -75,8 +75,10 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 		if(getEnv('BONUS_ENABLED') == 1) {
 			$clientId = $getSubscriptionsRequest->getClientId();
 			if($clientId != NULL) {
+				config::getLogger()->addInfo("clientId=".$clientId." found...");
 				$bonusClientIdArray = explode(';', getEnv('BONUS_CLIENT_IDS'));
 				if(in_array($clientId, $bonusClientIdArray)) {
+					config::getLogger()->addInfo("clientId=".$clientId." is in the BONUS_CLIENT_IDS list...");
 					if(count($subscriptions) == 0) {
 						//NEVER SUBSCRIBED
 						$provider = ProviderDAO::getProviderByName('afr', $getSubscriptionsRequest->getPlatform()->getId());
@@ -100,10 +102,12 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 							$getOrCreateSubscriptionRequest->setUserBillingUuid($user->getUserBillingUuid());
 							$getOrCreateSubscriptionRequest->setInternalPlanUuid(getEnv('BONUS_INTERNAL_PLAN_BILLING_UUID'));
 							$getOrCreateSubscriptionRequest->setSubOptsArray(['couponCode' => $db_coupon->getCode()]);
-							$this->doGetOrCreateSubscription($getOrCreateSubscriptionRequest);
+							parent::doGetOrCreateSubscription($getOrCreateSubscriptionRequest);
 							$subscriptions = parent::doGetUserSubscriptionsByUserReferenceUuid($getSubscriptionsRequest);
 						}
 					}
+				} else {
+					config::getLogger()->addInfo("clientId=".$clientId." is NOT in the BONUS_CLIENT_IDS list...");
 				}
 			}
 		}
