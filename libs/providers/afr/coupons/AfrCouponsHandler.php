@@ -131,6 +131,11 @@ class AfrCouponsHandler extends ProviderCouponsHandler {
 						}
 					}
 					break;
+				case CouponCampaignType::prepaid :
+					if($internalPlan->getAmount() > 0) {
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), 'prepaid coupons cannot be created here if amount > 0');
+					}
+					break;
 				default :
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), 'unsupported feature for couponsCampaignType='.$internalCouponsCampaign->getCouponType()->getValue());
 					break;
