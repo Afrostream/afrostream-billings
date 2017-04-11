@@ -26,6 +26,7 @@ class GetUserSubscriptionsRequest extends ActionRequest {
 	public function getClientId() {
 		return($this->clientId);
 	}
+	
 }
 
 ?>

@@ -525,7 +525,12 @@ class ProviderSubscriptionsHandler {
 	
 	protected function hasFutureSubscription(User $user, BillingsSubscription $currentBillingsSubscription) {
 		$subscriptionsHandler = new SubscriptionsHandler();
-		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid(), $user->getPlatformId());
+		$getSubscriptionsRequest = new GetSubscriptionsRequest();
+		$getSubscriptionsRequest->setOrigin('api');
+		$getSubscriptionsRequest->setClientId(NULL);
+		$getSubscriptionsRequest->setPlatform($this->platform);
+		$getSubscriptionsRequest->setUserReferenceUuid($user->getUserReferenceUuid());
+		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($getSubscriptionsRequest);
 		if(count($subscriptions) > 0) {
 			foreach ($subscriptions as $subscription) {
 				if($subscription->getId() != $currentBillingsSubscription->getId()) {
