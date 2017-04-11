@@ -199,7 +199,7 @@ class SubscriptionsHandler {
 				$getUserSubscriptionsRequest = new GetUserSubscriptionsRequest();
 				$getUserSubscriptionsRequest->setOrigin('api');
 				$getUserSubscriptionsRequest->setUserBillingUuid($user->getUserBillingUuid());
-				$getUserSubscriptionsRequest->setPlatform(BillingPlatformDAO::getPlatformById($platformId));
+				$getUserSubscriptionsRequest->setPlatform($getSubscriptionsRequest->getPlatform());
 				$current_subscriptions = $this->doGetUserSubscriptionsByUser($getUserSubscriptionsRequest);
 				$subscriptions = array_merge($subscriptions, $current_subscriptions);
 			}
