@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 class GetSubscriptionsRequest extends ActionRequest {
 	
 	protected $userReferenceUuid = NULL;
+	protected $clientId = NULL;
 	
 	public function __construct() {
 		parent::__construct();
@@ -16,6 +17,14 @@ class GetSubscriptionsRequest extends ActionRequest {
 	
 	public function getUserReferenceUuid() {
 		return($this->userReferenceUuid);
+	}
+	
+	public function setClientId($clientId) {
+		$this->clientId = $clientId;
+	}
+	
+	public function getClientId() {
+		return($this->clientId);
 	}
 	
 }
