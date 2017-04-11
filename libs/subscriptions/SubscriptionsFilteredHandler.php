@@ -119,17 +119,17 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 				//CREATE COUPON
 				$usersInternalCouponsHandler = new UsersInternalCouponsHandler();
 				$createUsersInternalCouponRequest = new CreateUsersInternalCouponRequest();
-				$createUsersInternalCouponRequest->setOrigin($getUserSubscriptionsRequest->getOrigin());
-				$createUsersInternalCouponRequest->setPlatform($getUserSubscriptionsRequest->getPlatform());
+				$createUsersInternalCouponRequest->setOrigin($getSubscriptionsRequest->getOrigin());
+				$createUsersInternalCouponRequest->setPlatform($getSubscriptionsRequest->getPlatform());
 				$createUsersInternalCouponRequest->setUserBillingUuid($user->getUserBillingUuid());
 				$createUsersInternalCouponRequest->setInternalCouponsCampaignBillingUuid('e40028fa-ab18-4ec8-a573-b396c3165758');
 				$createUsersInternalCouponRequest->setInternalPlanUuid(NULL);
 				$db_coupon = $usersInternalCouponsHandler->doCreateCoupon($createUsersInternalCouponRequest);
 				//USE COUPON
 				$getOrCreateSubscriptionRequest = new GetOrCreateSubscriptionRequest();
-				$getOrCreateSubscriptionRequest->setOrigin($getUserSubscriptionsRequest->getOrigin());
-				$getOrCreateSubscriptionRequest->setPlatform($getUserSubscriptionsRequest->getPlatform());
-				$getOrCreateSubscriptionRequest->setClientId($getUserSubscriptionsRequest->getClientId());
+				$getOrCreateSubscriptionRequest->setOrigin($getSubscriptionsRequest->getOrigin());
+				$getOrCreateSubscriptionRequest->setPlatform($getSubscriptionsRequest->getPlatform());
+				$getOrCreateSubscriptionRequest->setClientId($getSubscriptionsRequest->getClientId());
 				$getOrCreateSubscriptionRequest->setUserBillingUuid($user->getUserBillingUuid());
 				$getOrCreateSubscriptionRequest->setInternalPlanUuid('bonus');
 				$getOrCreateSubscriptionRequest->setSubOptsArray(['couponCode' => $db_coupon->getCode()]);
