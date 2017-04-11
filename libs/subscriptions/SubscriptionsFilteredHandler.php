@@ -117,8 +117,9 @@ class SubscriptionsFilteredHandler extends SubscriptionsHandler {
 			if(count($subscriptions) == 0) {
 				//NEVER SUBSCRIBED
 				$provider = ProviderDAO::getProviderByName('afr', $getSubscriptionsRequest->getPlatform()->getId());
-				$user = UserDAO::getUsersByUserReferenceUuid($getSubscriptionsRequest->getUserReferenceUuid(), $provider->getId(), $getSubscriptionsRequest->getPlatform()->getId());
-				if($user != NULL) {
+				$users = UserDAO::getUsersByUserReferenceUuid($getSubscriptionsRequest->getUserReferenceUuid(), $provider->getId(), $getSubscriptionsRequest->getPlatform()->getId());
+				if(count($users) == 1) {
+					$user = $users[0];
 					//CREATE COUPON
 					$usersInternalCouponsHandler = new UsersInternalCouponsHandler();
 					$createUsersInternalCouponRequest = new CreateUsersInternalCouponRequest();
