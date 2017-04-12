@@ -17,6 +17,8 @@ require_once __DIR__ . '/../providers/global/requests/RenewSubscriptionRequest.p
 require_once __DIR__ . '/../providers/global/requests/UpdateInternalPlanSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetOrCreateSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetUserSubscriptionsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetSubscriptionsRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -74,6 +76,10 @@ class SubscriptionsController extends BillingsController {
 				$requestIsOk = true;
 				$userBillingUuid = $data['userBillingUuid'];
 			}
+			$clientId = NULL;
+			if(isset($data['clientId'])) {
+				$clientId = $data['clientId'];
+			}
 			if(!$requestIsOk) {
 				//exception
 				$msg = "field 'userReferenceUuid' or field 'userBillingUuid' are missing";
@@ -91,10 +97,11 @@ class SubscriptionsController extends BillingsController {
 				if(count($users) == 0) {
 					return($this->returnNotFoundAsJson($response));
 				}
-				foreach($users as $user) {
-					$current_subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($user);
-					$subscriptions = array_merge($subscriptions, $current_subscriptions);
-				}
+				$getSubscriptionsRequest = new GetSubscriptionsRequest();
+				$getSubscriptionsRequest->setOrigin('api');
+				$getSubscriptionsRequest->setClientId($clientId);
+				$getSubscriptionsRequest->setUserReferenceUuid($userReferenceUuid);
+				$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($getSubscriptionsRequest);
 			} else if(isset($userBillingUuid)) {
 				$getUserRequest = new GetUserRequest();
 				$getUserRequest->setOrigin('api');
@@ -103,7 +110,11 @@ class SubscriptionsController extends BillingsController {
 				if($user == NULL) {
 					return($this->returnNotFoundAsJson($response));
 				}
-				$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($user);
+				$getUserSubscriptionsRequest = new GetUserSubscriptionsRequest();
+				$getUserSubscriptionsRequest->setOrigin('api');
+				$getUserSubscriptionsRequest->setUserBillingUuid($user->getUserBillingUuid());
+				$getUserSubscriptionsRequest->setClientId($clientId);
+				$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($getUserSubscriptionsRequest);
 			} else {
 				//exception (should not happen)
 				$msg = "field 'userReferenceUuid' or field 'userBillingUuid' are missing";
@@ -238,7 +249,10 @@ class SubscriptionsController extends BillingsController {
 					$subscriptionsHandler->doUpdateUserSubscriptionsByUser($user);
 				}
 				foreach($users as $user) {
-					$current_subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($user);
+					$getUserSubscriptionsRequest = new GetUserSubscriptionsRequest();
+					$getUserSubscriptionsRequest->setOrigin('api');
+					$getUserSubscriptionsRequest->setUserBillingUuid($user->getUserBillingUuid());
+					$current_subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($getUserSubscriptionsRequest);
 					$subscriptions = array_merge($subscriptions, $current_subscriptions);
 				}
 			} else if(isset($userBillingUuid)) {
@@ -250,7 +264,10 @@ class SubscriptionsController extends BillingsController {
 					return($this->returnNotFoundAsJson($response));
 				}
 				$subscriptionsHandler->doUpdateUserSubscriptionsByUser($user);
-				$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($user);
+				$getUserSubscriptionsRequest = new GetUserSubscriptionsRequest();
+				$getUserSubscriptionsRequest->setOrigin('api');
+				$getUserSubscriptionsRequest->setUserBillingUuid($user->getUserBillingUuid());
+				$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($getUserSubscriptionsRequest);
 			} else {
 				//exception (should not happen)
 				$msg = "field 'userReferenceUuid' or field 'userBillingUuid' are missing";

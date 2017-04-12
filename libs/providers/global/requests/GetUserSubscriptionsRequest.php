@@ -2,21 +2,21 @@
 
 require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
-class GetSubscriptionsRequest extends ActionRequest {
+class GetUserSubscriptionsRequest extends ActionRequest {
 	
-	protected $userReferenceUuid = NULL;
+	protected $userBillingUuid = NULL;
 	protected $clientId = NULL;
 	
 	public function __construct() {
 		parent::__construct();
 	}
 	
-	public function setUserReferenceUuid($userReferenceUuid) {
-		$this->userReferenceUuid = $userReferenceUuid;
+	public function setUserBillingUuid($userBillingUuid) {
+		$this->userBillingUuid = $userBillingUuid;
 	}
 	
-	public function getUserReferenceUuid() {
-		return($this->userReferenceUuid);
+	public function getUserBillingUuid() {
+		return($this->userBillingUuid);
 	}
 	
 	public function setClientId($clientId) {
