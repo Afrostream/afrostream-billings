@@ -119,7 +119,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		//<-- USUAL
 		//$api_subscription->setSubStatus('future');
 		//-->
-		//<-- HACK
+		//<-- HACK : IMMEDIATELY ACTIVE
 		$api_subscription->setSubStatus('active');
 		$api_subscription->setSubActivatedDate($now);
 		$start_date = $now;
@@ -150,7 +150,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			}
 		}
 		$api_subscription->setSubPeriodEndsDate($end_date);
-		//-->
+		//--> HACK : IMMEDIATELY ACTIVE
 		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
