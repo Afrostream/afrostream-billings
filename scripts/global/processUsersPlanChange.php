@@ -8,7 +8,7 @@ require_once __DIR__ . '/../libs/global/BillingUsersInternalPlanChangeHandler.ph
 
 $platform = BillingPlatformDAO::getPlatformById(1);
 
-print_r("starting tool to notify plan change for platform named : ".$platform->getName()."...\n");
+print_r("starting tool to process plan change for platform named : ".$platform->getName()."...\n");
 
 foreach ($argv as $arg) {
 	$e=explode("=",$arg);
@@ -19,7 +19,6 @@ foreach ($argv as $arg) {
 }
 
 $fromInternalPlanUuid = NULL;
-$toInternalPlanUuid = NULL;
 
 if(isset($_GET["-fromInternalPlanUuid"])) {
 	$fromInternalPlanUuid = $_GET["-fromInternalPlanUuid"];
@@ -27,16 +26,10 @@ if(isset($_GET["-fromInternalPlanUuid"])) {
 	die("field 'fromInternalPlanUuid' is missing\n");
 }
 
-if(isset($_GET["-toInternalPlanUuid"])) {
-	$toInternalPlanUuid = $_GET["-toInternalPlanUuid"];
-} else {
-	die("field 'toInternalPlanUuid' is missing\n");
-}
-
 print_r("processing...\n");
 
 $billingUsersInternalPlanChangeHandler = new BillingUsersInternalPlanChangeHandler($platform);
-$billingUsersInternalPlanChangeHandler->notifyUsersPlanChange($fromInternalPlanUuid, $toInternalPlanUuid);
+$billingUsersInternalPlanChangeHandler->doUsersPlanChange($fromInternalPlanUuid);
 
 print_r("processing done\n");
 

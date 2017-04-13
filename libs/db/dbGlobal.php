@@ -1601,7 +1601,7 @@ class BillingsSubscriptionDAO {
 	public static function init() {
 		BillingsSubscriptionDAO::$sfields = "BS._id, BS.subscription_billing_uuid, BS.providerid, BS.userid, BS.planid, BS.creation_date, BS.updated_date, BS.sub_uuid, BS.sub_status,".
 			" BS.sub_activated_date, BS.sub_canceled_date, BS.sub_expires_date, BS.sub_period_started_date, BS.sub_period_ends_date,".
-			" BS.update_type, BS.updateid, BS.deleted, BS.billinginfoid, BS.platformid";
+			" BS.update_type, BS.updateid, BS.deleted, BS.billinginfoid, BS.platformid, BS.plan_change_notified, BS.plan_change_processed, BS.plan_change_id";
 	}
 	
 	private static function getBillingsSubscriptionFromRow($row) {
@@ -1626,6 +1626,9 @@ class BillingsSubscriptionDAO {
 		$out->setBillingsSubscriptionOpts(BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($row["_id"]));
 		$out->setBillingInfoId($row["billinginfoid"]);
 		$out->setPlatformId($row["platformid"]);
+		$out->setPlanChangeNotified($row["plan_change_notified"] == 't' ? true : false);
+		$out->setPlanChangeProcessed($row["plan_change_processed"] == 't' ? true : false);
+		$out->setPlanChangeId($row["plan_change_id"]);
 		return($out);
 	}
 	
@@ -1858,6 +1861,54 @@ class BillingsSubscriptionDAO {
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
 	
+	//updatePlanChangeNotified
+	public static function updatePlanChangeNotified(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, plan_change_notified = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getPlanChangeNotified() === true ? 'true' : 'false',
+						$subscription->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//updatePlanChangeProcessed
+	public static function updatePlanChangeProcessed(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, plan_change_processed = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getPlanChangeProcessed() === true ? 'true' : 'false',
+						$subscription->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//updatePlanChangeId
+	public static function updatePlanChangeId(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, plan_change_id = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getPlanChangeId(),
+						$subscription->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	public static function getBillingsSubscriptionsByPlanId($planId) {
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS WHERE BS.deleted = false AND BS.planid = $1 ORDER BY BS._id ASC";
+		$result = pg_query_params(config::getDbConn(), $query, array($planId));
+	
+		$out = array();
+	
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getBillingsSubscriptionFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 	public static function getBillingsSubscriptionsByUserId($userId) {
 		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS WHERE BS.deleted = false AND BS.userid = $1 ORDER BY BS.sub_activated_date DESC";
 		$result = pg_query_params(config::getDbConn(), $query, array($userId));
@@ -2066,7 +2117,11 @@ class BillingsSubscription implements JsonSerializable {
 	//
 	private $billinginfoid;
 	private $platformId;
-
+	//
+	private $plan_change_notified = false;
+	private $plan_change_processed = false;
+	private $plan_change_id = NULL;
+	
 	public function getId() {
 		return($this->_id);
 	}
@@ -2271,6 +2326,30 @@ class BillingsSubscription implements JsonSerializable {
 	
 	public function getPlatformId() {
 		return($this->platformId);
+	}
+	
+	public function setPlanChangeNotified($bool) {
+		$this->plan_change_notified = $bool;
+	}
+	
+	public function getPlanChangeNotified() {
+		return($this->plan_change_notified);
+	}
+	
+	public function setPlanChangeProcessed($bool) {
+		$this->plan_change_processed = $bool;
+	}
+	
+	public function getPlanChangeProcessed() {
+		return($this->plan_change_processed);
+	}
+	
+	public function setPlanChangeId($planid) {
+		$this->plan_change_id = $planid;
+	}
+	
+	public function getPlanChangeId() {
+		return($this->plan_change_id);
 	}
 	
 	public function jsonSerialize() {
