@@ -10,11 +10,13 @@ use Money\Currency;
 class BillingUsersInternalPlanChangeHandler {
 
 	private $platform;
-	private $notifyDaysAgoCounter = 35;
-	private $changeDaysAgoCounter = 1;
+	private $notifyDaysAgoCounter;
+	private $processDaysAgoCounter;
 
 	public function __construct(BillingPlatform $platform) {
 		$this->platform = $platform;
+		$this->notifyDaysAgoCounter = getEnv('PLAN_CHANGE_NOTIFY_DAYS_AGO_COUNTER');
+		$this->processDaysAgoCounter = getEnv('PLAN_CHANGE_PROCESS_DAYS_AGO_COUNTER');
 	}
 	
 	public function notifyUsersPlanChange($fromInternalPlanUuid, $toInternalPlanUuid) {
@@ -247,7 +249,7 @@ class BillingUsersInternalPlanChangeHandler {
 									$subPeriodEndsDate = $subscription->getSubPeriodEndsDate();
 									//
 									$diffInDays = $now->diff($subPeriodEndsDate)->days;
-									if($subPeriodEndsDate > $now && $diffInDays < $this->changeDaysAgoCounter) {
+									if($subPeriodEndsDate > $now && $diffInDays < $this->processDaysAgoCounter) {
 										$this->doUserPlanChange($subscription);
 									} else  {
 										ScriptsConfig::getLogger()->addInfo("subscription with uuid=".$subscription->getSubscriptionBillingUuid()." ignored, because it is too early, diffInDays=".$diffInDays);
@@ -263,7 +265,7 @@ class BillingUsersInternalPlanChangeHandler {
 						}
 						//
 					} catch(Exception $e) {
-						ScriptsConfig::getLogger()->addError("subscription with uuid=".$subscription->getSubscriptionBillingUuid()." failed to be notified, error_code=".$e->getCode().", error_message=".$e->getMessage());
+						ScriptsConfig::getLogger()->addError("subscription with uuid=".$subscription->getSubscriptionBillingUuid()." Plan Change failed, error_code=".$e->getCode().", error_message=".$e->getMessage());
 					}
 				}
 			}

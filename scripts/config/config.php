@@ -263,6 +263,16 @@ if(getEnv('CHARTMOGUL_API_SECRET_KEY') === false) {
 	putEnv('CHARTMOGUL_API_SECRET_KEY=7f7d1e2011fc11860adcfb30492a8e3f');
 }
 
+#PLAN_CHANGE
+
+if(getEnv('PLAN_CHANGE_NOTIFY_DAYS_AGO_COUNTER') === false) {
+	putEnv('PLAN_CHANGE_NOTIFY_DAYS_AGO_COUNTER=35');
+}
+
+if(getEnv('PLAN_CHANGE_PROCESS_DAYS_AGO_COUNTER') === false) {
+	putEnv('PLAN_CHANGE_PROCESS_DAYS_AGO_COUNTER=3');
+}
+
 #logger, #db_conn, ...
 
 class ScriptsConfig {
