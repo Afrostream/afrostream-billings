@@ -452,11 +452,27 @@ class SubscriptionsController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanUuid = $args['internalPlanUuid'];
+			$timeframe = NULL;
+			if(!isset($data['timeframe'])) {
+				//exception
+				$msg = "field 'timeframe' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			}
+			$timeframe = $data['timeframe'];
+			$timeframeValues = ['now', 'onRenewal'];
+			if(!in_array($timeframe, $timeframeValues)) {
+				//exception
+				$msg = "field 'timeframe' value must be one of follows : ".implode(', ', $timeframeValues);
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			}
 			//
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$updateInternalPlanSubscriptionRequest = new UpdateInternalPlanSubscriptionRequest();
 			$updateInternalPlanSubscriptionRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
 			$updateInternalPlanSubscriptionRequest->setInternalPlanUuid($internalPlanUuid);
+			$updateInternalPlanSubscriptionRequest->setTimeframe($timeframe);
 			$updateInternalPlanSubscriptionRequest->setOrigin('api');
 			$subscription = $subscriptionsHandler->doUpdateInternalPlanSubscription($updateInternalPlanSubscriptionRequest);
 			if($subscription == NULL) {

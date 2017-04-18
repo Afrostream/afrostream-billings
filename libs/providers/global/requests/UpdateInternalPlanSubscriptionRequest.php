@@ -6,6 +6,7 @@ class UpdateInternalPlanSubscriptionRequest extends ActionRequest {
 	
 	protected $subscriptionBillingUuid = NULL;
 	protected $internalPlanUuid = NULL;
+	protected $timeframe = NULL;
 	
 	public function __construct() {
 		parent::__construct();
@@ -25,6 +26,14 @@ class UpdateInternalPlanSubscriptionRequest extends ActionRequest {
 	
 	public function getInternalPlanUuid() {
 		return($this->internalPlanUuid);
+	}
+	
+	public function setTimeframe($timeframe) {
+		$this->timeframe = $timeframe;
+	}
+	
+	public function getTimeframe() {
+		return($this->timeframe);
 	}
 	
 }
