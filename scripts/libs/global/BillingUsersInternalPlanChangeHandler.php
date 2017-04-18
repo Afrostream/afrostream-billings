@@ -296,9 +296,8 @@ class BillingUsersInternalPlanChangeHandler {
 			$updateInternalPlanSubscriptionRequest->setPlatform($this->platform);
 			$updateInternalPlanSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
 			$updateInternalPlanSubscriptionRequest->setInternalPlanUuid($toInternalPlan->getInternalPlanUuid());
-			//LATER
-			//MISSING : IMMEDIATELY OR ON RENEWAL
-			//$subscription = $subscriptionsHandler->doUpdateInternalPlanSubscription($updateInternalPlanSubscriptionRequest);
+			$updateInternalPlanSubscriptionRequest->setTimeframe('atRenewal');
+			$subscription = $subscriptionsHandler->doUpdateInternalPlanSubscription($updateInternalPlanSubscriptionRequest);
 			//done
 			$subscription->setPlanChangeProcessed(true);
 			$subscription = BillingsSubscriptionDAO::updatePlanChangeProcessed($subscription);
