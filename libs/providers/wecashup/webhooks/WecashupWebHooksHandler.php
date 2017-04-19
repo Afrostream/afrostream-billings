@@ -155,9 +155,11 @@ class WecashupWebHooksHandler extends ProviderWebHooksHandler {
 					}
 					break;
 				case 'PAID' :
-					$api_subscription->setSubStatus('active');
-					$api_subscription->setSubActivatedDate($now);
-					$api_subscription->setSubPeriodStartedDate($now);
+					//<-- HACK : IMMEDIATELY ACTIVE : DON'T TOUCH THE CURRENT STATUS
+					//$api_subscription->setSubStatus('active');
+					//$api_subscription->setSubActivatedDate($now);
+					//$api_subscription->setSubPeriodStartedDate($now);
+					//--> HACK : IMMEDIATELY ACTIVE
 					$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
 					$billingsTransaction->setUpdateType($update_type);
 					if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
