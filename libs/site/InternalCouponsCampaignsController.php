@@ -2,7 +2,10 @@
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../internalCouponsCampaigns/InternalCouponsCampaignsHandler.php';
-require_once __DIR__ .'/BillingsController.php';
+require_once __DIR__ . '/BillingsController.php';
+require_once __DIR__ . '/../providers/global/requests/GetInternalCouponsCampaignRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetInternalCouponsCampaignsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/AddProviderToInternalCouponsCampaignRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -12,16 +15,15 @@ class InternalCouponsCampaignsController extends BillingsController {
 	public function getMulti(Request $request, Response $response, array $args) {
 		try {
 			$data = $request->getQueryParams();
-			$provider_name = NULL;
-			if(isset($data['providerName'])) {
-				$provider_name = $data['providerName'];
-			}
 			$couponsCampaignType = NULL;
 			if(isset($data['couponsCampaignType'])) {
 				$couponsCampaignType = $data['couponsCampaignType'];
 			}
 			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
-			$internalCouponsCampaigns = $internalCouponsCampaignsHandler->doGetInternalCouponsCampaigns($couponsCampaignType);
+			$getInternalCouponsCampaignsRequest = new GetInternalCouponsCampaignsRequest();
+			$getInternalCouponsCampaignsRequest->setCouponsCampaignType($couponsCampaignType);
+			$getInternalCouponsCampaignsRequest->setOrigin('api');
+			$internalCouponsCampaigns = $internalCouponsCampaignsHandler->doGetInternalCouponsCampaigns($getInternalCouponsCampaignsRequest);
 			return($this->returnObjectAsJson($response, 'couponsCampaigns', $internalCouponsCampaigns));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while getting internalCouponsCampaigns, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -50,7 +52,10 @@ class InternalCouponsCampaignsController extends BillingsController {
 			}
 			$couponsCampaignInternalBillingUuid = $args['couponsCampaignInternalBillingUuid'];
 			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
-			$internalCouponsCampaign = $internalCouponsCampaignsHandler->doGetInternalCouponsCampaign($couponsCampaignInternalBillingUuid);
+			$getInternalCouponsCampaignRequest = new GetInternalCouponsCampaignRequest();
+			$getInternalCouponsCampaignRequest->setCouponsCampaignInternalBillingUuid($couponsCampaignInternalBillingUuid);
+			$getInternalCouponsCampaignRequest->setOrigin('api');
+			$internalCouponsCampaign = $internalCouponsCampaignsHandler->doGetInternalCouponsCampaign($getInternalCouponsCampaignRequest);
 			
 			if($internalCouponsCampaign == NULL) {
 				return($this->returnNotFoundAsJson($response));
@@ -89,14 +94,12 @@ class InternalCouponsCampaignsController extends BillingsController {
 			}
 			$providerName = $args['providerName'];
 			//
-			$provider = ProviderDAO::getProviderByName($providerName);
-			if($provider == NULL) {
-				$msg = "unknown provider named : ".$providerName;
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
 			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
-			$couponsCampaign = $internalCouponsCampaignsHandler->doAddToProvider($couponsCampaignInternalBillingUuid, $provider);
+			$addProviderToInternalCouponsCampaignRequest = new AddProviderToInternalCouponsCampaignRequest();
+			$addProviderToInternalCouponsCampaignRequest->setCouponsCampaignInternalBillingUuid($couponsCampaignInternalBillingUuid);
+			$addProviderToInternalCouponsCampaignRequest->setProviderName($providerName);
+			$addProviderToInternalCouponsCampaignRequest->setOrigin('api');
+			$couponsCampaign = $internalCouponsCampaignsHandler->doAddToProvider($addProviderToInternalCouponsCampaignRequest);
 			return($this->returnObjectAsJson($response, 'couponsCampaign', $couponsCampaign));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while linking an internalCouponsCampaign to a provider, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();

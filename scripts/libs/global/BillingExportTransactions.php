@@ -5,7 +5,10 @@ require_once __DIR__ . '/../../../libs/db/dbExports.php';
 
 class BillingExportTransactions {
 	
-	public function __construct() {
+	private $platform;
+	
+	public function __construct(BillingPlatform $platform) {
+		$this->platform = $platform;
 	}
 	
 	public function doExportTransactions(DateTime $from, DateTime $to, $export_transactions_file_path) {
@@ -37,7 +40,7 @@ class BillingExportTransactions {
 		fputcsv($export_transactions_file_res, $fields, $csvDelimiter);
 		$offset = 0;
 		$limit = 1000;
-		while(count($transactions = dbExports::getTransactionsInfos($from, $to, $limit, $offset)) > 0) {
+		while(count($transactions = dbExports::getTransactionsInfos($from, $to, $limit, $offset, $this->platform->getId())) > 0) {
 			$offset = $offset + $limit;
 			//
 			foreach($transactions as $transaction) {

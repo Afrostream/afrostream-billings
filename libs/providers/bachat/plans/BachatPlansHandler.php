@@ -1,6 +1,8 @@
 <?php
 
-class BachatPlansHandler {
+require_once __DIR__ . '/../../global/plans/ProviderPlansHandler.php';
+
+class BachatPlansHandler extends ProviderPlansHandler {
 	
 	public static $supported_currencies = array();
 	public static $supported_cycles = array();
@@ -15,9 +17,6 @@ class BachatPlansHandler {
 		self::$supported_periods = array(
 				(new PlanPeriodUnit(PlanPeriodUnit::day))->getValue() => array(1,30)
 		);
-	}
-	
-	public function __construct() {
 	}
 	
 	public function createProviderPlan(InternalPlan $internalPlan) {

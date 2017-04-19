@@ -5,14 +5,9 @@ require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/WecashupSubscriptionsHandler.php';
 require_once __DIR__ . '/../transactions/WecashupTransactionsHandler.php';
 require_once __DIR__ . '/../client/WecashupClient.php';
+require_once __DIR__ . '/../../global/webhooks/ProviderWebHooksHandler.php';
 
-class WecashupWebHooksHandler {
-	
-	private $provider = NULL;
-	
-	public function __construct() {
-		$this->provider = ProviderDAO::getProviderByName('wecashup');
-	}
+class WecashupWebHooksHandler extends ProviderWebHooksHandler {
 	
 	public function doProcessWebHook(BillingsWebHook $billingsWebHook, $update_type = 'hook') {
 		try {
@@ -41,12 +36,12 @@ class WecashupWebHooksHandler {
 				$received_transaction_token = $post_data_as_array['transaction_token'];
 			}
 			//check merchant
-			if(getEnv('WECASHUP_MERCHANT_SECRET') != $received_transaction_merchant_secret) {
+			if($this->provider->getApiSecret() != $received_transaction_merchant_secret) {
 				$msg = "merchant secret given does not match";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$wecashupClient = new WecashupClient();
+			$wecashupClient = new WecashupClient($this->provider->getMerchantId(), $this->provider->getApiKey(), $this->provider->getApiSecret());
 			$wecashupTransactionRequest = new WecashupTransactionRequest();
 			$wecashupTransactionRequest->setTransactionUid($received_transaction_uid);
 			$wecashupTransactionsResponse = $wecashupClient->getTransaction($wecashupTransactionRequest);
@@ -129,7 +124,7 @@ class WecashupWebHooksHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$plan->getPlanUuid()." for provider wecashup is not linked to an internal plan";
 				config::getLogger()->addError($msg);
@@ -140,7 +135,9 @@ class WecashupWebHooksHandler {
 			$now = new DateTime();
 			switch ($paymentTransaction->getTransactionStatus()) {
 				case 'TOVALIDATE' :
-					$api_subscription->setSubStatus('future');
+					//<-- HACK : IMMEDIATELY ACTIVE : DON'T TOUCH THE CURRENT STATUS
+					//$api_subscription->setSubStatus('future');
+					//--> HACK : IMMEDIATELY ACTIVE
 					$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
 					$billingsTransaction->setUpdateType($update_type);
 					if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
@@ -148,7 +145,9 @@ class WecashupWebHooksHandler {
 					}
 					break;
 				case 'PENDING' :
-					$api_subscription->setSubStatus('future');
+					//<-- HACK : IMMEDIATELY ACTIVE : DON'T TOUCH THE CURRENT STATUS
+					//$api_subscription->setSubStatus('future');
+					//--> HACK : IMMEDIATELY ACTIVE
 					$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
 					$billingsTransaction->setUpdateType($update_type);
 					if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
@@ -156,9 +155,11 @@ class WecashupWebHooksHandler {
 					}
 					break;
 				case 'PAID' :
-					$api_subscription->setSubStatus('active');
-					$api_subscription->setSubActivatedDate($now);
-					$api_subscription->setSubPeriodStartedDate($now);
+					//<-- HACK : IMMEDIATELY ACTIVE : DON'T TOUCH THE CURRENT STATUS
+					//$api_subscription->setSubStatus('active');
+					//$api_subscription->setSubActivatedDate($now);
+					//$api_subscription->setSubPeriodStartedDate($now);
+					//--> HACK : IMMEDIATELY ACTIVE
 					$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
 					$billingsTransaction->setUpdateType($update_type);
 					if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {

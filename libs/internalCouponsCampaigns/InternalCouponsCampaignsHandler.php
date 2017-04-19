@@ -2,21 +2,22 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
-require_once __DIR__ . '/../providers/recurly/couponsCampaigns/RecurlyCouponsCampaignsHandler.php';
-require_once __DIR__ . '/../providers/stripe/couponsCampaigns/StripeCouponsCampaignsHandler.php';
-require_once __DIR__ . '/../providers/braintree/couponsCampaigns/BraintreeCouponsCampaignsHandler.php';
-require_once __DIR__ . '/../providers/afr/couponsCampaigns/AfrCouponsCampaignsHandler.php';
+require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
+require_once __DIR__ . '/../providers/global/requests/GetInternalCouponsCampaignRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetInternalCouponsCampaignsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/AddProviderToInternalCouponsCampaignRequest.php';
 
 class InternalCouponsCampaignsHandler {
 	
 	public function __construct() {
 	}
 	
-	public function doGetInternalCouponsCampaigns($couponsCampaignType = NULL) {
+	public function doGetInternalCouponsCampaigns(GetInternalCouponsCampaignsRequest $getInternalCouponsCampaignsRequest) {
+		$couponsCampaignType = $getInternalCouponsCampaignsRequest->getCouponsCampaignType();
 		$db_internal_coupons_campaigns = NULL;
 		try {
 			config::getLogger()->addInfo("internalCouponsCampaigns getting...");
-			$db_internal_coupons_campaigns = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaigns($couponsCampaignType);
+			$db_internal_coupons_campaigns = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaigns($couponsCampaignType, $getInternalCouponsCampaignsRequest->getPlatform()->getId());
 			config::getLogger()->addInfo("internalCouponsCampaigns getting done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting internalCouponsCampaigns, error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -30,12 +31,13 @@ class InternalCouponsCampaignsHandler {
 		return($db_internal_coupons_campaigns);
 	}
 	
-	public function doGetInternalCouponsCampaign($couponsCampaignInternalBillingUuid) {
+	public function doGetInternalCouponsCampaign(GetInternalCouponsCampaignRequest $getInternalCouponsCampaignRequest) {
+		$couponsCampaignInternalBillingUuid = $getInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid();
 		$db_internal_coupons_campaign = NULL;
 		try {
 			config::getLogger()->addInfo("internalCouponsCampaign getting, couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid."....");
 			//
-			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid);
+			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid, $getInternalCouponsCampaignRequest->getPlatform()->getId());
 			//
 			config::getLogger()->addInfo("internalCouponsCampaign getting, couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid." done successfully");
 		} catch(BillingsException $e) {
@@ -50,12 +52,20 @@ class InternalCouponsCampaignsHandler {
 		return($db_internal_coupons_campaign);
 	}
 	
-	public function doAddToProvider($couponsCampaignInternalBillingUuid, Provider $provider) {
+	public function doAddToProvider(AddProviderToInternalCouponsCampaignRequest $addProviderToInternalCouponsCampaignRequest) {
+		$couponsCampaignInternalBillingUuid = $addProviderToInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid();
+		$providerName = $addProviderToInternalCouponsCampaignRequest->getProviderName();
 		$db_internal_coupons_campaign = NULL;
 		try {
-			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid);
+			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid, $addProviderToInternalCouponsCampaignRequest->getPlatform()->getId());
 			if($db_internal_coupons_campaign == NULL) {
 				$msg = "unknown couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$provider = ProviderDAO::getProviderByName($providerName, $addProviderToInternalCouponsCampaignRequest->getPlatform()->getId());
+			if($provider == NULL) {
+				$msg = "unknown provider named : ".$providerName;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -68,33 +78,9 @@ class InternalCouponsCampaignsHandler {
  					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
  				}
 			}
-			//already exist ?
-			//TODO : ???
 			//create provider side
-			$couponsCampaignProviderBillingUuid = NULL;
-			switch($provider->getName()) {
-				case 'afr' :
-					$afrCouponsCampaignsHandler = new AfrCouponsCampaignsHandler();
-					$couponsCampaignProviderBillingUuid = $afrCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
-					break;
-				case 'recurly' :
-					$recurlyCouponsCampaignsHandler = new RecurlyCouponsCampaignsHandler();
-					$couponsCampaignProviderBillingUuid = $recurlyCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
-					break;
-				case 'stripe':
-					$stripeCouponsCampaignsHandler = new StripeCouponsCampaignsHandler();
-					$couponsCampaignProviderBillingUuid = $stripeCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
-					break;
-				case 'braintree':
-					$braintreeCouponsCampaignsHandler = new BraintreeCouponsCampaignsHandler();
-					$couponsCampaignProviderBillingUuid = $braintreeCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
-					break;
-				default:
-					$msg = "unsupported feature for provider named : ".$provider->getName();
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-			}
+			$providerCouponsCampaignsHandler = ProviderHandlersBuilder::getProviderCouponsCampaignsHandlerInstance($provider);
+			$couponsCampaignProviderBillingUuid = $providerCouponsCampaignsHandler->createProviderCouponsCampaign($db_internal_coupons_campaign);
 			//create it in DB
 			try {
 				//START TRANSACTION
@@ -111,13 +97,13 @@ class InternalCouponsCampaignsHandler {
 				pg_query("ROLLBACK");
 				throw $e;
 			}
-			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid);
+			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid, $addProviderToInternalCouponsCampaignRequest->getPlatform()->getId());
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while adding provider : ".$provider->getName()." to internalCouponsCampaign with couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while adding provider : ".$providerName." to internalCouponsCampaign with couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("adding a provider to an internalCouponsCampaign failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while adding provider : ".$provider->getName()." to internalCouponsCampaign with couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while adding provider : ".$providerName." to internalCouponsCampaign with couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("adding a provider to an internalCouponsCampaign failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}

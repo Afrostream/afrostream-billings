@@ -21,8 +21,8 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
 			}
 			//
-			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			Recurly_Client::$subdomain = $this->provider->getMerchantId();
+			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			//
 			$recurlyAccount = Recurly_Account::get($user->getUserProviderUuid());
 			//
@@ -124,6 +124,7 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 			}
 			$billingsTransaction->setMessage("provider_status=".$recurlyTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
+			$billingsTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -147,6 +148,7 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 			}
 			$billingsTransaction->setMessage("provider_status=".$recurlyTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		if($recurlyTransaction->action == 'purchase') {
@@ -218,6 +220,7 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 			}
 			$billingsRefundTransaction->setMessage("provider_status=".$recurlyRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
+			$billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -242,6 +245,7 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 			}
 			$billingsRefundTransaction->setMessage("provider_status=".$recurlyRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from recurly refund transaction id=".$recurlyRefundTransaction->uuid." done successfully");
@@ -290,8 +294,8 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 		try {
 			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
 			//
-			Recurly_Client::$subdomain = getEnv('RECURLY_API_SUBDOMAIN');
-			Recurly_Client::$apiKey = getEnv('RECURLY_API_KEY');
+			Recurly_Client::$subdomain = $this->provider->getMerchantId();
+			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			//
 			$api_payment = Recurly_Transaction::get($transaction->getTransactionProviderUuid());
 			$api_invoice = $api_payment->invoice->get();

@@ -4,14 +4,9 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/BraintreeSubscriptionsHandler.php';
 require_once __DIR__ . '/../transactions/BraintreeTransactionsHandler.php';
+require_once __DIR__ . '/../../global/webhooks/ProviderWebHooksHandler.php';
 
-class BraintreeWebHooksHandler {
-	
-	protected $provider = NULL;
-	
-	public function __construct() {
-		$this->provider = ProviderDAO::getProviderByName('braintree');
-	}
+class BraintreeWebHooksHandler extends ProviderWebHooksHandler {
 	
 	public function doProcessWebHook(BillingsWebHook $billingsWebHook, $update_type = 'hook') {
 		try {
@@ -59,9 +54,9 @@ class BraintreeWebHooksHandler {
 		config::getLogger()->addInfo('Processing braintree hook subscription, notification_kind='.$notification->kind.'...');
 		//
 		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-		Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-		Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+		Braintree_Configuration::merchantId($this->provider->getMerchantId());
+		Braintree_Configuration::publicKey($this->provider->getApiKey());
+		Braintree_Configuration::privateKey($this->provider->getApiSecret());
 		//
 		$subscription_provider_uuid = $notification->subscription->id;
 		config::getLogger()->addInfo('Processing braintree hook subscription, subscription_provider_uuid='.$subscription_provider_uuid);
@@ -92,7 +87,7 @@ class BraintreeWebHooksHandler {
 		}
 		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 		//internalPlan
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 		if($internalPlan == NULL) {
 			$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
 			config::getLogger()->addError($msg);
@@ -111,8 +106,8 @@ class BraintreeWebHooksHandler {
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
-		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		$braintreeSubscriptionsHandler = new BraintreeSubscriptionsHandler($this->provider);
+		$db_subscription = $braintreeSubscriptionsHandler->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 		try {
 			//START TRANSACTION
 			pg_query("BEGIN");
@@ -124,7 +119,7 @@ class BraintreeWebHooksHandler {
 				//DO NOT CREATE ANYMORE : race condition when creating from API + from the webhook
 				//WAS :
 				//CREATE
-				//$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
+				//$db_subscription = $braintreeSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $update_type, $updateId);
 			} else {
 				//UPDATE
 				$db_subscription = $braintreeSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, $update_type, $updateId);
@@ -138,23 +133,14 @@ class BraintreeWebHooksHandler {
 		//
 		config::getLogger()->addInfo('Processing braintree hook subscription, notification_kind='.$notification->kind.' done successfully');
 	}
-	
-	private function getDbSubscriptionByUuid(array $db_subscriptions, $subUuid) {
-		foreach ($db_subscriptions as $db_subscription) {
-			if($db_subscription->getSubUid() == $subUuid) {
-				return($db_subscription);
-			}
-		}
-		return(NULL);
-	}
-	
+		
 	private function doProcessCharge(Braintree\WebhookNotification $notification, $update_type, $updateId) {
 		config::getLogger()->addInfo('Processing braintree hook charge, notification_kind='.$notification->kind.'...');
 		//
 		Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
-		Braintree_Configuration::merchantId(getenv('BRAINTREE_MERCHANT_ID'));
-		Braintree_Configuration::publicKey(getenv('BRAINTREE_PUBLIC_KEY'));
-		Braintree_Configuration::privateKey(getenv('BRAINTREE_PRIVATE_KEY'));
+		Braintree_Configuration::merchantId($this->provider->getMerchantId());
+		Braintree_Configuration::publicKey($this->provider->getApiKey());
+		Braintree_Configuration::privateKey($this->provider->getApiSecret());
 		//
 		$subscription_provider_uuid = $notification->subscription->id;
 		config::getLogger()->addInfo('Processing braintree hook charge, subscription_provider_uuid='.$subscription_provider_uuid);

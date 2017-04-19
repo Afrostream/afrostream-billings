@@ -9,6 +9,18 @@ use Monolog\Handler\StreamHandler;
 
 #General
 
+if(getEnv('LOCALE_COUNTRY_DEFAULT') === false) {
+	putEnv('LOCALE_COUNTRY_DEFAULT=FR');
+}
+
+if(getEnv('LOCALE_LANGUAGE_DEFAULT') === false) {
+	putEnv('LOCALE_LANGUAGE_DEFAULT=fr');
+}
+
+if(getEnv('PLATFORM_DEFAULT_ID') === false) {
+	putEnv('PLATFORM_DEFAULT_ID=1');/* AFROSTREAM */
+}
+
 if(getEnv('DYNO') === false) {
 	putEnv('DYNO=web-0');
 }
@@ -173,6 +185,10 @@ if(getEnv('SENDGRID_TO_IFNULL') === false) {
 
 if(getEnv('SENDGRID_VAR_couponAppliedSentence') === false) {
 	putEnv('SENDGRID_VAR_couponAppliedSentence=La réduction de %couponAmountForDisplay% liée au code promo %couponCode% sera appliquée lors du prélèvement.');
+}
+
+if(getEnv('SENDGRID_TEMPLATE_SUFFIX') === false) {
+	putEnv('SENDGRID_TEMPLATE_SUFFIX=');
 }
 
 #Event (MAIL)
@@ -505,7 +521,7 @@ if(getEnv('PARTNER_ORDERS_LOGISTA_PUBLIC_KEY_FILE') === false) {
 }
 
 if(getEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME') === false) {
-	putEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME=ALTA_STRT');
+	putEnv('PARTNER_ORDERS_LOGISTA_REPORT_FILE_BASENAME=SAF_STRT');
 }
 
 #Known user-agents
@@ -516,6 +532,38 @@ if(getEnv('AFROSTREAM_ANDROID_APP_CLIENT_IDS') === false) {
 
 if(getEnv('AFROSTREAM_IOS_APP_CLIENT_IDS') === false) {
 	putEnv('AFROSTREAM_IOS_APP_CLIENT_IDS=');
+}
+
+#Google
+
+#Given by google itself
+
+if(getEnv('GOOGLE_APPLICATION_CREDENTIALS') === false) {
+	putenv('GOOGLE_APPLICATION_CREDENTIALS='.__DIR__.'/../libs/providers/google/credentials/afrostream-billing-project-e6f27e14d70a.json');
+}
+
+#
+
+if(getEnv('GOOGLE_PACKAGENAME') === false) {
+	putenv('GOOGLE_PACKAGENAME=tv.afrostream.app');
+}
+
+#Bonus
+
+if(getEnv('BONUS_ENABLED') === false) {
+	putEnv('BONUS_ENABLED=0');
+}
+
+if(getEnv('BONUS_CLIENT_IDS') === false) {
+	putEnv('BONUS_CLIENT_IDS=85f700d9-4a80-4913-8223-e0d49fef3a05;');
+}
+
+if(getEnv('BONUS_INTERNAL_COUPON_CAMPAIGN_BILLING_UUID') === false) {
+	putEnv('BONUS_INTERNAL_COUPON_CAMPAIGN_BILLING_UUID=e40028fa-ab18-4ec8-a573-b396c3165758');
+}
+
+if(getEnv('BONUS_INTERNAL_PLAN_BILLING_UUID') === false) {
+	putEnv('BONUS_INTERNAL_PLAN_BILLING_UUID=bonus');
 }
 
 #logger, #db_conn, ...

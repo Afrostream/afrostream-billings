@@ -4,11 +4,10 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../subscriptions/CashwaySubscriptionsHandler.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/requests/DeleteSubscriptionRequest.php';
+require_once __DIR__ . '/../../global/webhooks/ProviderWebHooksHandler.php';
 
-class CashwayWebHooksHandler {
-	
-	public function __construct() {
-	}
+class CashwayWebHooksHandler extends ProviderWebHooksHandler {
 	
 	public function doProcessWebHook(BillingsWebHook $billingsWebHook, $update_type = 'hook') {
 		try {
@@ -25,22 +24,14 @@ class CashwayWebHooksHandler {
 	private function doProcessNotification($post_data, $update_type, $updateId) {
 		config::getLogger()->addInfo('Processing cashway hook notification...');
 		$data = json_decode($post_data, true);
-		
-		$provider_name = "cashway";
-		
-		$provider = ProviderDAO::getProviderByName($provider_name);
-		if($provider == NULL) {
-			$msg = "unknown provider named : ".$provider_name;
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}		
+				
 		//TODO : Merge to be done later
-		$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler($provider);
+		$cashwaySubscriptionsHandler = new CashwaySubscriptionsHandler($this->provider);
 		$subscriptionsHandler = new SubscriptionsHandler();
 		switch($data['event']) {
 			case 'transaction_paid' :
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].'...');
-				$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($data['order_id']);
+				$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($data['order_id'], $this->provider->getPlatformId());
 				if($userInternalCoupon == NULL) {
 					$msg = "no user coupon found with coupon_billing_uuid=".$data['order_id'];
 					config::getLogger()->addError($msg);
@@ -80,9 +71,9 @@ class CashwayWebHooksHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-					$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+					$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 					if($internalPlan == NULL) {
-						$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+						$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
@@ -99,7 +90,7 @@ class CashwayWebHooksHandler {
 							$api_subscription->setSubStatus('active');
 							$api_subscription->setSubActivatedDate($now);
 							$api_subscription->setSubPeriodStartedDate($now);
-							$db_subscription = $cashwaySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription_before_update, $update_type, $updateId);
+							$db_subscription = $cashwaySubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription_before_update, $update_type, $updateId);
 						}
 						//userInternalCoupon
 						$userInternalCoupon->setStatus("redeemed");
@@ -122,7 +113,7 @@ class CashwayWebHooksHandler {
 				break;
 			case 'transaction_expired' :
 				config::getLogger()->addInfo('Processing cashway hook notification...event='.$data['event'].'...');
-				$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($data['order_id']);
+				$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($data['order_id'], $this->provider->getPlatformId());
 				if($userInternalCoupon == NULL) {
 					$msg = "no user coupon found with coupon_billing_uuid=".$data['order_id'];
 					config::getLogger()->addError($msg);
@@ -152,7 +143,11 @@ class CashwayWebHooksHandler {
 						//
 						$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($userInternalCoupon->getSubId());
 						if(isset($db_subscription)) {
-							$subscriptionsHandler->doDeleteSubscriptionByUuid($db_subscription->getSubscriptionBillingUuid(), false);
+							$deleteSubscriptionRequest = new DeleteSubscriptionRequest();
+							$deleteSubscriptionRequest->setPlatform($this->platform);
+							$deleteSubscriptionRequest->setSubscriptionBillingUuid($db_subscription->getSubscriptionBillingUuid());
+							$deleteSubscriptionRequest->setOrigin('hook');
+							$subscriptionsHandler->doDeleteSubscription($deleteSubscriptionRequest);
 						}
 						//COMMIT
 						pg_query("COMMIT");

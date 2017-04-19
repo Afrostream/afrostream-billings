@@ -7,23 +7,20 @@ require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../global/ProviderHandlersBuilder.php';
 require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
 require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.php';
-require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
-require_once __DIR__ . '/../../global/requests/RefundTransactionRequest.php';
 
 class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 {
 	
     public function __construct($provider) {
     	parent::__construct($provider);
-    	\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+    	\Stripe\Stripe::setApiKey($this->provider->getApiSecret());
     }
 
     /**
-     * Create new subscription to provider if subscriptionProviderUuid does not set
+     * Create new subscription to provider if subscriptionProviderUuid is not set
      *
      * @param User                     $user
      * @param UserOpts                 $userOpts
-     * @param Provider                 $provider
      * @param InternalPlan             $internalPlan
      * @param InternalPlanOpts         $internalPlanOpts
      * @param Plan                     $plan
@@ -35,12 +32,11 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      *
      * @throws BillingsException
      *
-     * @return BillingsSubscription
+     * @return BillingsSubscriptionId
      */
     public function doCreateUserSubscription(
         User $user,
         UserOpts $userOpts,
-        Provider $provider,
         InternalPlan $internalPlan,
         InternalPlanOpts $internalPlanOpts,
         Plan $plan,
@@ -51,8 +47,10 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         BillingsSubscriptionOpts $subOpts
     )
     {
+    	$subscriptionId = NULL;
     	if (isset($subscriptionProviderUuid)) {
     		$subscription = $this->getSubscription($subscriptionProviderUuid, $user);
+    		$subscriptionId = $subscription['id'];
     	} else {
     		$metadata = [
     				'AfrSource' => 'afrBillingApi',
@@ -61,13 +59,12 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     				'AfrUserBillingUuid' => $user->getUserBillingUuid()
     		];
 	        if ($internalPlan->getCycle() == PlanCycle::once) {
-	            $subscription = $this->chargeCustomer($user, $plan, $subOpts, $internalPlan, $metadata);
+	            $subscriptionId = $this->chargeCustomer($user, $plan, $subOpts, $internalPlan, $metadata);
             } else {
-                $subscription = $this->createSubscription($user, $plan, $subOpts, $internalPlan, $metadata);
+                $subscriptionId = $this->createSubscription($user, $plan, $subOpts, $internalPlan, $metadata);
             }
         }
-
-        return $this->doFillSubscription($this->getNewBillingSubscription($provider, $user, $plan, $subscription, $subscription_billing_uuid));
+        return $subscriptionId;
     }
 
     /**
@@ -81,89 +78,117 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      * @return BillingsSubscription
      */
     
-    
+    public function createDbSubscriptionFromApiSubscriptionUuid(
+			User $user, 
+			UserOpts $userOpts, 
+			InternalPlan $internalPlan = NULL, 
+			InternalPlanOpts $internalPlanOpts = NULL, 
+			Plan $plan = NULL, 
+			PlanOpts $planOpts = NULL, 
+			BillingsSubscriptionOpts $subOpts = NULL, 
+			BillingInfo $billingInfo = NULL, 
+			$subscription_billing_uuid, 
+			$sub_uuid, 
+			$updateType, 
+			$updateId) {
+    	$api_subscription = NULL;
+    	if ($internalPlan->getCycle() == PlanCycle::once) {
+    		/* EMULATE API */
+    		$currentTimeStamp = time();
+    		$api_subscription = new \Stripe\Subscription();
+    		$api_subscription['id'] = $sub_uuid;
+    		$api_subscription['created'] = $currentTimeStamp;
+    		$api_subscription['canceled_at'] = NULL;
+    		$api_subscription['current_period_start'] = $currentTimeStamp;
+    		$api_subscription['current_period_end'] = $this->calculateSubscriptionDateEnd($internalPlan, $currentTimeStamp);
+    		$api_subscription['status'] = 'active';
+    	} else {
+    		/* GET FROM API */
+    		$api_subscription = $this->getSubscription($sub_uuid, $user);
+    	}
+    	return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $updateType, $updateId));
+    }
+
     public function createDbSubscriptionFromApiSubscription(User $user,
     		UserOpts $userOpts,
-    		Provider $provider,
-    		InternalPlan $internalPlan,
-    		InternalPlanOpts $internalPlanOpts,
-    		Plan $plan,
-    		PlanOpts $planOpts,
+    		InternalPlan $internalPlan = NULL,
+    		InternalPlanOpts $internalPlanOpts = NULL,
+    		Plan $plan = NULL,
+    		PlanOpts $planOpts = NULL,
     		BillingsSubscriptionOpts $subOpts = NULL,
     		BillingInfo $billingInfo = NULL,
     		$subscription_billing_uuid,
-    		$billingSubscription,
+    		\Stripe\Subscription $api_subscription,
     		$updateType,
-    		$updateId)
-    {
-        $billingSubscription->setUpdateType($updateType);
-        $billingSubscription->setUpdateId($updateId);
-
-        $subscriptionInfos = $billingSubscription->jsonSerialize();
-        $this->log(
-            'record subscription. providerUuid: %s, user billing uuid: %s, user provider uuid: %s, internal plan: %s',
-            [
-                $subscriptionInfos['subscriptionProviderUuid'],
-                $subscriptionInfos['user']['userBillingUuid'],
-                $subscriptionInfos['user']['userProviderUuid'],
-                $subscriptionInfos['internalPlan']['internalPlanUuid']
-            ]
-        );
-        //?COUPON?
-        $couponsInfos = NULL;
-        $couponCode = NULL;
-        if(isset($subOpts)) {
-        	if(array_key_exists('couponCode', $subOpts->getOpts())) {
-        		$str = $subOpts->getOpts()['couponCode'];
-        		if(strlen($str) > 0) {
-        			$couponCode = $str;
-        		}
-        	}
-        }
-        if(isset($couponCode)) {
-        	$couponsInfos = $this->getCouponInfos($couponCode, $provider, $user, $internalPlan);
-        }
-        //<-- DATABASE -->
-        //BILLING_INFO (NOT MANDATORY)
-        if(isset($billingInfo)) {
-        	$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
-        	$billingSubscription->setBillingInfoId($billingInfo->getId());
-        }
-        
-        $billingSubscription = BillingsSubscriptionDAO::addBillingsSubscription($billingSubscription);
-
-        $this->log('Subscription id : '.$billingSubscription->getId());
-        //SUB_OPTS (NOT MANDATORY)
-        if(isset($subOpts)) {
-            $subOpts->setSubId($billingSubscription->getId());
-            BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
-        }
-        //COUPON (NOT MANDATORY)
-        if(isset($couponsInfos)) {
-        	$userInternalCoupon = $couponsInfos['userInternalCoupon'];
-        	$internalCoupon = $couponsInfos['internalCoupon'];
-        	$internalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
-        	//
-        	$now = new DateTime();
-        	//userInternalCoupon
-        	$userInternalCoupon->setStatus("redeemed");
-        	$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
-        	$userInternalCoupon->setRedeemedDate($now);
-        	$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
-        	$userInternalCoupon->setSubId($billingSubscription->getId());
-        	$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
-        	//internalCoupon
-        	if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
-        		$internalCoupon->setStatus("redeemed");
-        		$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
-        		$internalCoupon->setRedeemedDate($now);
-        		$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
-        	}
-        }
-        //<-- DATABASE -->
-        return $this->doFillSubscription($billingSubscription);
+    		$updateId) {
+    	$billingSubscription = $this->getNewBillingSubscription($user, $plan, $api_subscription, $subscription_billing_uuid);
+    	$billingSubscription->setUpdateType($updateType);
+    	$billingSubscription->setUpdateId($updateId);
+    			
+    	$subscriptionInfos = $billingSubscription->jsonSerialize();
+    	$this->log('record subscription. providerUuid: %s, user billing uuid: %s, user provider uuid: %s, internal plan: %s',
+    					[
+    						$subscriptionInfos['subscriptionProviderUuid'],
+    						$subscriptionInfos['user']['userBillingUuid'],
+    						$subscriptionInfos['user']['userProviderUuid'],
+    						$subscriptionInfos['internalPlan']['internalPlanUuid']
+    					]
+    	);
+    	//?COUPON?
+    	$couponsInfos = NULL;
+    	$couponCode = NULL;
+    	if(isset($subOpts)) {
+    		if(array_key_exists('couponCode', $subOpts->getOpts())) {
+    			$str = $subOpts->getOpts()['couponCode'];
+    			if(strlen($str) > 0) {
+    				$couponCode = $str;
+    			}
+    		}
+    	}
+    	if(isset($couponCode)) {
+    		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
+    	}
+    	//<-- DATABASE -->
+    	//BILLING_INFO (NOT MANDATORY)
+    	if(isset($billingInfo)) {
+    		$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
+    		$billingSubscription->setBillingInfoId($billingInfo->getId());
+    	}
+    	$billingSubscription->setPlatformId($this->provider->getPlatformId());
+    	$billingSubscription = BillingsSubscriptionDAO::addBillingsSubscription($billingSubscription);
+    		
+    	$this->log('Subscription id : '.$billingSubscription->getId());
+    	//SUB_OPTS (NOT MANDATORY)
+    	if(isset($subOpts)) {
+    		$subOpts->setSubId($billingSubscription->getId());
+    		BillingsSubscriptionOptsDAO::addBillingsSubscriptionOpts($subOpts);
+    	}
+    	//COUPON (NOT MANDATORY)
+    	if(isset($couponsInfos)) {
+    		$userInternalCoupon = $couponsInfos['userInternalCoupon'];
+    		$internalCoupon = $couponsInfos['internalCoupon'];
+    		$internalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+    		//
+    		$now = new DateTime();
+    		//userInternalCoupon
+    		$userInternalCoupon->setStatus("redeemed");
+    		$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
+    		$userInternalCoupon->setRedeemedDate($now);
+    		$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
+    		$userInternalCoupon->setSubId($billingSubscription->getId());
+    		$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+    		//internalCoupon
+    		if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
+    			$internalCoupon->setStatus("redeemed");
+    			$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
+    			$internalCoupon->setRedeemedDate($now);
+    			$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+    		}
+    	}
+    	//<-- DATABASE -->
+    	return $this->doFillSubscription($billingSubscription);
     }
-
+	    
     /**
      * Synchronize subscription between afrostream and provider for the given user
      * 
@@ -172,13 +197,49 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      *
      * @throws BillingsException
      */
-    public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts)
-    {
-        $provider = ProviderDAO::getProviderById($user->getProviderId());
-        if($provider == NULL) {
-            throw new BillingsException(new ExceptionType(ExceptionType::internal), "Unknow provider id {$user->getProviderId()}");
-        }
-		
+    public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
+    	config::getLogger()->addInfo($this->provider->getName()." dbsubscriptions update for userid=".$user->getId()."...");
+    	$customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
+    	///!\ 
+    	///!\ *** DO NOT FORGET : subscriptions that are not recurrent are not present in Stripe side ***
+    	///!\
+    	$api_subscriptions = $customer['subscriptions']['data'];
+    	$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
+    	foreach ($api_subscriptions as $api_subscription) {
+    		$plan = PlanDAO::getPlanByUuid($this->provider->getId(), $subscription['plan']['id']);
+    		if($plan == NULL) {
+    			$msg = "plan with uuid=".$subscription['plan']['id']." not found";
+    			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    		}
+    		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
+    		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+    		if($internalPlan == NULL) {
+    			$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
+    			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    		}
+    		$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
+    		$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription['id']);
+    		if($db_subscription == NULL) {
+    			//CREATE
+    			$this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $api_subscription, 'api', 0);
+    		} else {
+    			//UPDATE
+    			$this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
+    		}
+    	}
+    	//DELETE UNUSED SUBSCRIPTIONS (DELETED FROM THIRD PARTY) (ONLY RECURRENT ONES)
+    	foreach ($db_subscriptions as $db_subscription) {
+    		$plan = $db_subscription->getPlanId();
+    		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+    		if ($internalPlan->getCycle()->getValue() === PlanCycle::auto) {
+    			$api_subscription = $this->getApiSubscriptionByUuid($api_subscriptions, $db_subscription->getSubUid());
+    			if($api_subscription == NULL) {
+    				BillingsSubscriptionDAO::deleteBillingsSubscriptionById($db_subscription->getId());
+    			}
+    		}
+    	}
+    	config::getLogger()->addInfo($this->provider->getName()." dbsubscriptions update for userid=".$user->getId()." done successfully");
+    	/*
         $customer = \Stripe\Customer::retrieve($user->getUserProviderUuid());
         if (empty($customer['id'])) {
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unknow customer');
@@ -190,16 +251,16 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         foreach ($subscriptionList as $subscription) {
             $providerPlanId = $subscription['plan']['id'];
 
-            $plan = PlanDAO::getPlanByUuid($provider->getId(), $providerPlanId);
+            $plan = PlanDAO::getPlanByUuid($this->provider->getId(), $providerPlanId);
             if($plan == NULL) {
                 $msg = "plan with uuid=".$providerPlanId." not found";
                 throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
             }
 
             $planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-            $internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+            $internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
             if($internalPlan == NULL) {
-                $msg = "plan with uuid=".$providerPlanId." for provider ".$provider->getName()." is not linked to an internal plan";
+                $msg = "plan with uuid=".$providerPlanId." for provider ".$this->provider->getName()." is not linked to an internal plan";
                 throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
             }
             $internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
@@ -209,8 +270,8 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             // subscription not found, so we create it
             if (is_null($billingSubscription)) {
             	$subscription_billing_uuid = guid();
-                $billingSubscription = $this->getNewBillingSubscription($provider, $user, $plan, $subscription, $subscription_billing_uuid);
-                $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider,
+                $billingSubscription = $this->getNewBillingSubscription($user, $plan, $subscription, $subscription_billing_uuid);
+                $this->createDbSubscriptionFromApiSubscription($user, $userOpts,
                 		$internalPlan, $internalPlanOpts, $plan, $planOpts, 
                 		NULL, NULL, $subscription_billing_uuid, $billingSubscription, 'api', 0);
             } else {
@@ -230,7 +291,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             if (!$this->findProviderSubscriptionById($subscriptionList, $billingSubscription->getSubUid())) {
                 BillingsSubscriptionDAO::deleteBillingsSubscriptionById($billingSubscription->getId());
             }
-        }
+        }*/
     }
 
     /**
@@ -279,15 +340,15 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      * @param BillingsSubscription $billingSubscription
      * @param DateTime             $cancelDate
      */
-    public function doCancelSubscription(BillingsSubscription $billingSubscription, DateTime $cancelDate)
+    public function doCancelSubscription(BillingsSubscription $billingSubscription, CancelSubscriptionRequest $cancelSubscriptionRequest)
     {
         if (in_array($billingSubscription->getSubStatus(), ['canceled', 'expired'])) {
         	//nothing todo : already done or in process
         } else {
 	        // get user
 	        $user = UserDAO::getUserById($billingSubscription->getUserId());
-            $internalPlanId = InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($billingSubscription->getPlanId());
-            $internalPlan   = InternalPlanDAO::getInternalPlanById($internalPlanId);
+	        $providerPlan = PlanDAO::getPlanById($billingSubscription->getPlanId());
+            $internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
             if ($internalPlan->getCycle() == PlanCycle::auto) {
            		$subscription = $this->getSubscription($billingSubscription->getSubUid(), $user);
              	$this->log('Cancel subscription id %s ', [$subscription['id']]);
@@ -296,7 +357,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             } else {
             	throw new BillingsException(new ExceptionType(ExceptionType::internal), "Subscription with cycle=".$internalPlan->getCycle()." cannot be canceled");
             }
-            $billingSubscription->setSubCanceledDate($cancelDate);
+            $billingSubscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
             $billingSubscription->setSubStatus('canceled');
             try {
             	//START TRANSACTION
@@ -312,35 +373,69 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         }
         return($this->doFillSubscription(BillingsSubscriptionDAO::getBillingsSubscriptionById($billingSubscription->getId())));
     }
-
-
-    /**
-     * Change subscription owned by user
-     *
-     * @param BillingsSubscription $billingSubscription
-     * @param InternalPlan         $internalPlan
-     * @param InternalPlanOpts     $internalPlanOpts
-     * @param Plan                 $plan
-     * @param PlanOpts             $planOpts
-     */
-    public function doUpdateInternalPlan(
-        BillingsSubscription $billingSubscription,
-        InternalPlan $internalPlan,
-        InternalPlanOpts $internalPlanOpts,
-        Plan $plan,
-        PlanOpts $planOpts
-    )
-    {
-        $user = UserDAO::getUserById($billingSubscription->getUserId());
-
-        $subscription = $this->getSubscription($billingSubscription, $user);
-        $subscription->plan = $plan->getPlanUuid();
-
-        $subscription->save();
-
-        $billingSubscription->setPlanId($plan->getId());
-		$billingSubscription = BillingsSubscriptionDAO::updatePlanId($subscription);
-        return($this->doFillSubscription($billingSubscription));
+	
+    public function doUpdateInternalPlanSubscription(BillingsSubscription $subscription, UpdateInternalPlanSubscriptionRequest $updateInternalPlanSubscriptionRequest) {
+	    try {
+	    	config::getLogger()->addInfo("stripe subscription updating Plan...");
+	    	$internalPlan = InternalPlanDAO::getInternalPlanByUuid($updateInternalPlanSubscriptionRequest->getInternalPlanUuid(), $updateInternalPlanSubscriptionRequest->getPlatform()->getId());
+	    	if($internalPlan == NULL) {
+	    		$msg = "unknown internalPlanUuid : ".$updateInternalPlanSubscriptionRequest->getInternalPlanUuid();
+	    		config::getLogger()->addError($msg);
+	    		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+	    	}
+	    	$providerPlan = PlanDAO::getPlanByInternalPlanId($internalPlan->getId(), $this->provider->getId());
+	    	if($providerPlan == NULL) {
+	    		$msg = "unknown plan : ".$internalPlan->getInternalPlanUuid()." for provider : ".$this->provider->getName();
+	    		config::getLogger()->addError($msg);
+	    		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+	    	}
+	    	switch ($updateInternalPlanSubscriptionRequest->getTimeframe()) {
+	    		case 'now' :
+	    			break;
+	    		case 'atRenewal' :
+	    			//Exception
+	    			$msg = "unsupported timeframe : ".$updateInternalPlanSubscriptionRequest->getTimeframe()." for provider named : ".$this->provider->getName();
+	    			config::getLogger()->addError($msg);
+	    			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+	    			break;	    			
+	    		default :
+	    			//Exception
+	    			$msg = "unknown timeframe : ".$updateInternalPlanSubscriptionRequest->getTimeframe();
+	    			config::getLogger()->addError($msg);
+	    			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+	    			break;
+	    	}
+	        
+	    	$user = UserDAO::getUserById($subscription->getUserId());
+	
+	        $api_subscription = $this->getSubscription($subscription->getSubUid(), $user);
+	        $api_subscription->plan = $providerPlan->getPlanUuid();
+	        $api_subscription->save();
+			//
+			$subscription->setPlanId($providerPlan->getId());
+			//
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				BillingsSubscriptionDAO::updatePlanId($subscription);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("stripe subscription updating Plan done successfully for stripe_subscription_uuid=".$subscription->getSubUid());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while updating a Plan stripe subscription for stripe_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("stripe subscription updating Plan failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while updating a Plan stripe subscription for stripe_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("stripe subscription updating Plan failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($this->doFillSubscription($subscription));
     }
 
     /**
@@ -354,40 +449,46 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      *
      * @throws BillingsException
      */
-   public function doReactivateSubscription(BillingsSubscription $billingSubscription)
-   {
-       // fill the subscription to set needed informations
-       $this->doFillSubscription($billingSubscription);
-
-       // always active , nothing to do
-        if ($billingSubscription->getStatus() != 'active') {
-	       try {
-	           // reactivable and canceled but still active, we rollback the canceling
-	           if ($billingSubscription->isReactivable() && $billingSubscription->getSubStatus() == 'canceled' && $billingSubscription->getIsActive() == 'yes') {
-	               $subscription = \Stripe\Subscription::retrieve($billingSubscription->getSubUid());
-	               $subscription->cancel_at_period_end = false;
-	               $subscription->save();
-	           }
-	           $billingSubscription->setSubStatus('active');
-	           $billingSubscription->setSubCanceledDate(NULL);
-	       		try {
+	public function doReactivateSubscription(BillingsSubscription $subscription, ReactivateSubscriptionRequest $reactivateSubscriptionRequest) {
+		try {
+			config::getLogger()->addInfo($this->provider->getName()." subscription reactivating...");
+	   		if($subscription->getSubStatus() == "active") {
+	   			//nothing to do
+	   		} else if ($subscription->getSubStatus() == "canceled") {
+	   			$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
+	   			$api_subscription = \Stripe\Subscription::retrieve($subscription->getSubUid());
+		        $api_subscription->plan = $providerPlan->getPlanUuid();
+		        $api_subscription->save();
+		        //
+		        $subscription->setSubCanceledDate(NULL);
+		        $subscription->setSubStatus('active');
+		       	try {
 					//START TRANSACTION
 					pg_query("BEGIN");
-					BillingsSubscriptionDAO::updateSubCanceledDate($billingSubscription);
-					BillingsSubscriptionDAO::updateSubStatus($billingSubscription);
+					BillingsSubscriptionDAO::updateSubCanceledDate($subscription);
+					BillingsSubscriptionDAO::updateSubStatus($subscription);
 					//COMMIT
 					pg_query("COMMIT");
 				} catch(Exception $e) {
 					pg_query("ROLLBACK");
 					throw $e;
 				}
-	       } catch (Exception $e) {
-	           throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage());
-	       }
-       }
-       $billingSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($billingSubscription->getId());
-       return($this->doFillSubscription($billingSubscription));
-   }
+	       	} else {
+	    		$msg = "cannot reactivate subscription with status=".$subscription->getSubStatus();
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+	       	$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+	    } catch(BillingsException $e) {
+	    	$msg = "a billings exception occurred while reactivating a ".$this->provider->getName()." subscription for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+	       	config::getLogger()->addError($this->provider->getName()." subscription reactivating failed : ".$msg);
+	       	throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while reactivating a ".$this->provider->getName()." subscription for ".$this->provider->getName()."_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($this->provider->getName()." subscription reactivating failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+       	return($this->doFillSubscription($subscription));
+	}
 
     /**
      * Get internal status from provider status
@@ -508,7 +609,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         if(array_key_exists('couponCode', $subOpts->getOpts())) {
         	$couponCode = $subOpts->getOpts()['couponCode'];
         	if(strlen($couponCode) > 0) {
-        		$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
+        		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
         		$subscriptionData['coupon'] = $couponsInfos['providerCouponsCampaign']->getExternalUuid();
         		$logMessage = 'Create subscription : customer : %s, plan : %s, source : %s, coupon : %s';
         	}
@@ -523,7 +624,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription.');
         }
 
-        return $subscription;
+        return $subscription[id];
 
     }
 
@@ -542,7 +643,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     protected function chargeCustomer(User $user, Plan $plan, BillingsSubscriptionOpts $subOpts, InternalPlan $internalPlan, array $metadata)
     {
         if (is_null($subOpts->getOpt('customerBankAccountToken'))) {
-            throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription. Missing stripe token');
+            throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Error while creating subscription. customerBankAccountToken field is missing');
         }
         try {
             $this->log('Update customer : set source : '.$subOpts->getOpt('customerBankAccountToken'));
@@ -557,7 +658,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             if(array_key_exists('couponCode', $subOpts->getOpts())) {
             	$couponCode = $subOpts->getOpts()['couponCode'];
             	if(strlen($couponCode) > 0) {
-            		$couponsInfos = $this->getCouponInfos($couponCode, $this->provider, $user, $internalPlan);
+            		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
             		$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
             		$billingInternalCoupon = $couponsInfos['internalCoupon'];
             		$billingUserInternalCoupon = $couponsInfos['userInternalCoupon'];
@@ -609,21 +710,12 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             }
 
             $subOpts->setOpt('chargeId', $charge['id']);
-
-            $subscription = new Subscription();
-            $subscription['id'] = guid();
-            $subscription['created'] = $charge['created'];
-            $subscription['canceled_at'] = null;
-            $subscription['current_period_start'] = $charge['created'];
-            $subscription['current_period_end'] = $this->calculateSubscriptionDateEnd($internalPlan, $charge['created']);
-            $subscription['status'] = 'active';
-
-            return $subscription;
+            
+            return guid();
 
         } catch (\Exception $e) {
             throw new BillingsException(new ExceptionType(ExceptionType::internal), "Error while charging customer : ".$e->getMessage());
         }
-
     }
 
     /**
@@ -650,7 +742,8 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
                 $interval = new DateInterval("P".$internalPlan->getPeriodLength()."Y");
                 break;
             default:
-                new BillingsException(new ExceptionType(ExceptionType::internal), 'Unsupported plan period unit');
+                throw new BillingsException(new ExceptionType(ExceptionType::internal), 'Unsupported plan period unit : '.$internalPlan->getPeriodUnit());
+                break;
         }
 
         $date->add($interval);
@@ -705,11 +798,11 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
      *
      * @return BillingsSubscription
      */
-    protected function getNewBillingSubscription(Provider $provider, User $user, Plan $plan, Stripe\Subscription $subscription, $subscription_billing_uuid)
+    protected function getNewBillingSubscription(User $user, Plan $plan, Stripe\Subscription $subscription, $subscription_billing_uuid)
     {
         $billingSubscription = new BillingsSubscription();
         $billingSubscription->setSubscriptionBillingUuid($subscription_billing_uuid);
-        $billingSubscription->setProviderId($provider->getId());
+        $billingSubscription->setProviderId($this->provider->getId());
         $billingSubscription->setUserId($user->getId());
         $billingSubscription->setPlanId($plan->getId());
         $billingSubscription->setSubUid($subscription['id']);
@@ -751,7 +844,8 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 	    			}
     			}
     			if($expireSubscriptionRequest->getOrigin() == 'api') {
-    				$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
+    				$providerPlan = PlanDAO::getPlanById($subscription->getPlanId());
+    				$internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
     				if($internalPlan == NULL) {
     					$msg = "plan with id=".$subscription->getPlanId()." for provider ".$this->provider->getName()." is not linked to an internal plan";
     					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -788,13 +882,24 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     			}
     		}
     		if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-    			$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase']);
+    			$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], 'descending', $this->provider->getPlatformId());
     			if(count($transactionsResult['transactions']) == 1) {
     				$transaction = $transactionsResult['transactions'][0];
+    				//
+    				$amountInCents = NULL; //NULL = Refund ALL
+    				if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+    					$amountInCents = ceil($transaction->getAmountInCents() * ($subscription->getSubPeriodEndsDate()->getTimestamp() - (new DateTime())->getTimestamp())
+    					/
+    					($subscription->getSubPeriodEndsDate()->getTimestamp() - $subscription->getSubPeriodStartedDate()->getTimestamp()));
+    					
+    				}
+    				//
 					$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
 					$refundTransactionRequest = new RefundTransactionRequest();
+					$refundTransactionRequest->setPlatform($this->platform);
 					$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
 					$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+					$refundTransactionRequest->setAmountInCents($amountInCents);
 					$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
     			}
     		}
@@ -811,6 +916,32 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
     	}
     	return($this->doFillSubscription($subscription));
+    }
+    
+    private function getApiSubscriptionByUuid(array $api_subscriptions, $subUuid) {
+    	foreach ($api_subscriptions as $api_subscription) {
+    		if($api_subscription['id'] == $subUuid) {
+    			return($api_subscription);
+    		}
+    	}
+    	return(NULL);
+    }
+    
+    public function updateDbSubscriptionFromApiSubscription(User $user, 
+    		UserOpts $userOpts, 
+    		Provider $provider, 
+    		InternalPlan $internalPlan, 
+    		InternalPlanOpts $internalPlanOpts, 
+    		Plan $plan, PlanOpts $planOpts, 
+    		\Stripe\Subscription $api_subscription, 
+    		BillingsSubscription $db_subscription, 
+    		$updateType, $updateId) 
+    {
+    	config::getLogger()->addInfo($this->provider->getName()." dbsubscription update for userid=".$user->getId().", ".$this->provider->getName()."_subscription_uuid=".$api_subscription['id'].", id=".$db_subscription->getId()."...");
+    	//UPDATE
+    	
+    	config::getLogger()->addInfo($this->provider->getName()." dbsubscription update for userid=".$user->getId().", ".$this->provider->getName()."_subscription_uuid=".$api_subscription['id'].", id=".$db_subscription->getId()." done successfully");
+    	return($this->doFillSubscription($db_subscription));
     }
     
 }

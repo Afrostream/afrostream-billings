@@ -4,8 +4,13 @@ require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../ProviderHandlersBuilder.php';
-require_once __DIR__ . '/../requests/ExpireSubscriptionRequest.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../requests/ExpireSubscriptionRequest.php';
+require_once __DIR__ . '/../requests/ReactivateSubscriptionRequest.php';
+require_once __DIR__ . '/../requests/CancelSubscriptionRequest.php';
+require_once __DIR__ . '/../requests/DeleteSubscriptionRequest.php';
+require_once __DIR__ . '/../requests/RenewSubscriptionRequest.php';
+require_once __DIR__ . '/../requests/UpdateInternalPlanSubscriptionRequest.php';
 
 use Money\Money;
 use Money\Currency;
@@ -13,9 +18,11 @@ use Money\Currency;
 class ProviderSubscriptionsHandler {
 	
 	protected $provider = NULL;
+	protected $platform = NULL;
 	
 	public function __construct(Provider $provider) {
 		$this->provider = $provider;
+		$this->platform = BillingPlatformDAO::getPlatformById($this->provider->getPlatformId());
 	}
 	
 	public function doGetUserSubscriptions(User $user) {
@@ -30,7 +37,7 @@ class ProviderSubscriptionsHandler {
 		}
 		//--> DEFAULT
 		// check if subscription still in trial to provide information in boolean mode through inTrial() method
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($subscription->getPlanId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($subscription->getPlanId());
 	
 		if ($internalPlan->getTrialEnabled() && !is_null($subscription->getSubActivatedDate())) {
 	
@@ -66,7 +73,7 @@ class ProviderSubscriptionsHandler {
 		return($subscriptions);
 	}
 
-	protected function getCouponInfos($couponCode, Provider $provider, User $user, InternalPlan $internalPlan) {
+	protected function getCouponInfos($couponCode, User $user, InternalPlan $internalPlan) {
 		//
 		$out = array();
 		$internalCoupon = NULL;
@@ -74,7 +81,7 @@ class ProviderSubscriptionsHandler {
 		$providerCouponsCampaign = NULL;
 		$userInternalCoupon = NULL;
 		//
-		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode);
+		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode, $this->provider->getPlatformId());
 		if($internalCoupon == NULL) {
 			$msg = "coupon : code=".$couponCode." NOT FOUND";
 			config::getLogger()->addError($msg);
@@ -112,7 +119,7 @@ class ProviderSubscriptionsHandler {
 		$isProviderCompatible = false;
 		$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
 		foreach ($providerCouponsCampaigns as $currentProviderCouponsCampaign) {
-			if($currentProviderCouponsCampaign->getProviderId() == $provider->getId()) {
+			if($currentProviderCouponsCampaign->getProviderId() == $this->provider->getId()) {
 				$providerCouponsCampaign = $currentProviderCouponsCampaign;
 				$isProviderCompatible = true;
 				break;
@@ -120,7 +127,7 @@ class ProviderSubscriptionsHandler {
 		}
 		if($isProviderCompatible == false) {
 			//Exception
-			$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$provider->getName();
+			$msg = "internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid()." is not associated with provider : ".$this->provider->getName();
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_PROVIDER_INCOMPATIBLE);
 		}
@@ -149,6 +156,7 @@ class ProviderSubscriptionsHandler {
 			$userInternalCoupon->setUuid(guid());
 			$userInternalCoupon->setUserId($user->getId());
 			$userInternalCoupon->setExpiresDate($internalCoupon->getExpiresDate());
+			$userInternalCoupon->setPlatformId($this->provider->getPlatformId());
 			$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
 		}
 		//Check userInternalCoupon
@@ -185,7 +193,7 @@ class ProviderSubscriptionsHandler {
 	}
 	
 	public function doExpireSubscription(BillingsSubscription $subscription, ExpireSubscriptionRequest $expireSubscriptionRequest) {
-		$msg = "unsupported feature for provider named : ".$this->provider->getName();
+		$msg = "unsupported feature - expire subscription - for provider named : ".$this->provider->getName();
 		config::getLogger()->addError($msg);
 		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}
@@ -196,7 +204,8 @@ class ProviderSubscriptionsHandler {
 			$event = NULL;
 			//check subscription_is_new_event
 			$switchEvent = NULL;
-			switch($subscription_after_update->getSubStatus()) {
+			$afterUpdateMergedStatus = self::mergeStatus($subscription_after_update->getSubStatus());
+			switch($afterUpdateMergedStatus) {
 				case 'active' :
 					$switchEvent = 'NEW';
 					break;
@@ -215,9 +224,15 @@ class ProviderSubscriptionsHandler {
 					break;
 			}
 			if(isset($switchEvent)) {
-				//There is only a real event, if object was NULL or SubStatus was different
-				if($subscription_before_update == NULL || $subscription_before_update->getSubStatus() != $subscription_after_update->getSubStatus()) {
+				//There is only a real event, if object was NULL or SubStatus are different
+				if($subscription_before_update == NULL) {
 					$event = $switchEvent;
+				} else {
+					//subStatus are 'merged' before comparing
+					$beforeUpdateMergedStatus = self::mergeStatus($subscription_before_update->getSubStatus());
+					if($beforeUpdateMergedStatus != $afterUpdateMergedStatus) {
+						$event = $switchEvent;
+					}
 				}
 			}
 			$hasEvent = ($event != NULL);
@@ -248,9 +263,30 @@ class ProviderSubscriptionsHandler {
 	}
 	
 	private function selectSendgridTemplateId(BillingsSubscription $subscription_after_update, $event) {
+		//
+		$userOpts = UserOptsDAO::getUserOptsByUserId($subscription_after_update->getUserId());
+		//
+		$suffix = getEnv('SENDGRID_TEMPLATE_SUFFIX');
+		$locale_country_default = strtoupper(getEnv('LOCALE_COUNTRY_DEFAULT'));
+		$locale_country_user = $locale_country_default;
+		if($userOpts->getOpt('countryCode') != NULL) {
+			$locale_country_user = strtoupper($userOpts->getOpt('countryCode'));
+		}
+		$locale_language_default = strtolower(getEnv('LOCALE_LANGUAGE_DEFAULT'));
+		$locale_language_user = $locale_language_default;
+		if($userOpts->getOpt('languageCode') != NULL) {
+			$locale_language_user = strtolower($userOpts->getOpt('languageCode'));
+		}
 		$templateNames = array();
 		$defaultTemplateName = 'SUBSCRIPTION'.'_'.$event;
 		$templateNames[] = $defaultTemplateName;
+		$this->addLocales($templateNames, $defaultTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
+		$templateNames[] = $defaultTemplateName.$suffix;
+		$this->addLocales($templateNames, $defaultTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
+		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName;
+		$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$defaultTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
+		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName.$suffix;
+		$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$defaultTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		//SPECIFIC
 		$specific = NULL;
 		if($this->isSponsorshipSubscription($subscription_after_update)) {
@@ -260,27 +296,62 @@ class ProviderSubscriptionsHandler {
 		if(isset($specific)) {
 			$specificTemplateName = 'SUBSCRIPTION'.'_'.$specific.'_'.$event;
 			$templateNames[] = $specificTemplateName;
+			$this->addLocales($templateNames, $specificTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
+			$templateNames[] = $specificTemplateName.$suffix;
+			$this->addLocales($templateNames, $specificTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
+			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName;
+			$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$specificTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
+			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName.$suffix;
+			$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$specificTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		}
 		$providerTemplateName = $defaultTemplateName.'_'.strtoupper($this->provider->getName());
 		$templateNames[] = $providerTemplateName;
+		$this->addLocales($templateNames, $providerTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
+		$templateNames[] = $providerTemplateName.$suffix;
+		$this->addLocales($templateNames, $providerTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
+		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName;
+		$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$providerTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
+		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName.$suffix;
+		$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$providerTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$specificProviderTemplateName = NULL;
 		if(isset($specificTemplateName)) {
 			$specificProviderTemplateName = $specificTemplateName.'_'.strtoupper($this->provider->getName());
 			$templateNames[] = $specificProviderTemplateName;
+			$this->addLocales($templateNames, $specificProviderTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
+			$templateNames[] = $specificProviderTemplateName.$suffix;
+			$this->addLocales($templateNames, $specificProviderTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
+			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName;
+			$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
+			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName.$suffix;
+			$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		}
 		//NOW SEARCH TEMPLATE IN DATABASE
 		$billingMailTemplate = NULL;
 		while(($templateName = array_pop($templateNames)) != NULL) {
+			//config::getLogger()->addInfo("template named : ".$templateName." searching...");
 			$billingMailTemplate = BillingMailTemplateDAO::getBillingMailTemplateByTemplateName($templateName);
 			if(isset($billingMailTemplate)) {
-				config::getLogger()->addInfo("found template named : ".$templateName);
+				config::getLogger()->addInfo("template named : ".$templateName." found");
 				return($billingMailTemplate->getTemplatePartnerUuid());
 			}
+			//config::getLogger()->addInfo("template named : ".$templateName." NOT found");
 		}
 		$msg = "event by email : no template was found";
 		config::getLogger()->addError($msg);
 		//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		return(NULL);
+	}
+	
+	//passage par référence !!!
+	private function addLocales(array &$templateNames, $prefix, $defaultCountryCode, $defaultLanguageCode, $userCountryCode, $userLanguageCode) {
+		$templateNames[] = $prefix.'_'.$defaultLanguageCode;
+		$templateNames[] = $prefix.'_'.$userLanguageCode;
+		$templateNames[] = $prefix.'_'.$defaultCountryCode;
+		$templateNames[] = $prefix.'_'.$defaultCountryCode.'_'.$defaultLanguageCode;
+		$templateNames[] = $prefix.'_'.$defaultCountryCode.'_'.$userLanguageCode;
+		$templateNames[] = $prefix.'_'.$userCountryCode;
+		$templateNames[] = $prefix.'_'.$userCountryCode.'_'.$defaultLanguageCode;
+		$templateNames[] = $prefix.'_'.$userCountryCode.'_'.$userLanguageCode;
 	}
 	
 	private function doSendEmail(BillingsSubscription $subscription_after_update, $event, $sendgrid_template_id) {
@@ -295,14 +366,8 @@ class ProviderSubscriptionsHandler {
 				return;
 			}
 			$eventEmailProvidersExceptionArray = explode(";", getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION'));
-			$provider = ProviderDAO::getProviderById($subscription_after_update->getProviderId());
-			if($provider == NULL) {
-				$msg = "unknown provider with id : ".$subscription_after_update->getProviderId();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			if(in_array($provider->getName(), $eventEmailProvidersExceptionArray)) {
-				config::getLogger()->addInfo("event by email : ignored for providerName=".$provider->getName()." for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event);
+			if(in_array($this->provider->getName(), $eventEmailProvidersExceptionArray)) {
+				config::getLogger()->addInfo("event by email : ignored for providerName=".$this->provider->getName()." for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event);
 				return;
 			}
 			$user = UserDAO::getUserById($subscription_after_update->getUserId());
@@ -329,9 +394,9 @@ class ProviderSubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
+			$internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
 			if($internalPlan == NULL) {
-				$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider ".$provider->getName()." is not linked to an internal plan";
+				$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -460,7 +525,12 @@ class ProviderSubscriptionsHandler {
 	
 	protected function hasFutureSubscription(User $user, BillingsSubscription $currentBillingsSubscription) {
 		$subscriptionsHandler = new SubscriptionsHandler();
-		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid());
+		$getSubscriptionsRequest = new GetSubscriptionsRequest();
+		$getSubscriptionsRequest->setOrigin('api');
+		$getSubscriptionsRequest->setClientId(NULL);
+		$getSubscriptionsRequest->setPlatform($this->platform);
+		$getSubscriptionsRequest->setUserReferenceUuid($user->getUserReferenceUuid());
+		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($getSubscriptionsRequest);
 		if(count($subscriptions) > 0) {
 			foreach ($subscriptions as $subscription) {
 				if($subscription->getId() != $currentBillingsSubscription->getId()) {
@@ -500,6 +570,104 @@ class ProviderSubscriptionsHandler {
 			}
 		}
 		return(false);
+	}
+	
+	public function doReactivateSubscription(BillingsSubscription $subscription, ReactivateSubscriptionRequest $reactivateSubscriptionRequest) {
+		$msg = "unsupported feature - reactivate subscription - for provider named : ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
+		$msg = "unsupported feature - cancel subscription - for provider named : ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
+	public function doDeleteSubscription(BillingsSubscription $subscription, DeleteSubscriptionRequest $deleteSubscriptionRequest) {
+		$msg = "unsupported feature - delete subscription - for provider named : ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
+	public function doRenewSubscription(BillingsSubscription $subscription, RenewSubscriptionRequest $renewSubscriptionRequest) {
+		$msg = "unsupported feature - renew subscription - for provider named : ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
+	public function doUpdateInternalPlanSubscription(BillingsSubscription $subscription, UpdateInternalPlanSubscriptionRequest $updateInternalPlanSubscriptionRequest) {
+		$msg = "unsupported feature - update internalplan subscription - for provider named : ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
+	public function doCreateUserSubscription(User $user, 
+			UserOpts $userOpts, 
+			InternalPlan $internalPlan, 
+			InternalPlanOpts $internalPlanOpts, 
+			Plan $plan, 
+			PlanOpts $planOpts, 
+			$subscription_billing_uuid, 
+			$subscription_provider_uuid, 
+			BillingInfo $billingInfo, 
+			BillingsSubscriptionOpts $subOpts) {
+		$msg = "unsupported feature - create user subscription - for provider named : ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
+	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, 
+			UserOpts $userOpts, 
+			InternalPlan $internalPlan = NULL, 
+			InternalPlanOpts $internalPlanOpts = NULL, 
+			Plan $plan = NULL, 
+			PlanOpts $planOpts = NULL, 
+			BillingsSubscriptionOpts $subOpts = NULL, 
+			BillingInfo $billingInfo = NULL, 
+			$subscription_billing_uuid, 
+			$sub_uuid, 
+			$update_type, 
+			$updateId) {
+		$msg = "unsupported feature - create user subscription from api subscription uuid - for provider named : ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
+	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
+		$msg = "unsupported feature - update user subscriptions - for provider named : ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
+	public function doUpdateUserSubscription(BillingsSubscription $db_subscription, UpdateSubscriptionRequest $updateSubscriptionRequest) {
+		$msg = "unsupported feature - update subscription - for provider named : ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
+	/*
+	 * active, pending_active => active
+	 * canceled, requesting_canceled, pending_canceled => canceled
+	 * future => future
+	 * expired => pending_expired => expired
+	 */
+	private static function mergeStatus($subStatus) {
+		$pos = strrpos($subStatus, "_");
+		if($pos === false) {
+			return($subStatus);
+		} else {
+			return(substr($subStatus, $pos + 1));
+		}
+	}
+	
+	public function getDbSubscriptionByUuid(array $db_subscriptions, $subUuid) {
+		foreach ($db_subscriptions as $db_subscription) {
+			if($db_subscription->getSubUid() == $subUuid) {
+				return($db_subscription);
+			}
+		}
+		return(NULL);
 	}
 	
 }

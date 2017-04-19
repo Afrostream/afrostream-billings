@@ -12,9 +12,10 @@ class dbStats {
 	 * 				"gocardless" => 2222,
 	 * 				"bachat" => 2222
 	 */
-	public static function getNumberOfSubscriptions(DateTime $date) {
+	public static function getNumberOfSubscriptions(DateTime $date, $platformId) {
 		$date->setTimezone(new DateTimeZone(config::$timezone));
 		$date_as_str = dbGlobal::toISODate($date);
+		$params = array();
 		$query = "SELECT BP.name as provider_name, count(*) as counter FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
@@ -24,8 +25,10 @@ class dbStats {
 		$query.= " ON (BU._id = BUO.userid AND BUO.key = 'email' AND BUO.deleted = false)";
 		$query.= " WHERE (BUO.value not like '%yopmail.com' OR BUO.value is null)";
 		$query.= " AND BS.creation_date <='".$date_as_str."'";
+		$params[] = $platformId;
+		$query.= " AND BP.platformid = $".(count($params));
 		$query.= " GROUP BY BP._id";
-		$result = pg_query(config::getDbConn(), $query);
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$total = 0;
 		$out = array();
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
@@ -44,7 +47,7 @@ class dbStats {
 	 * 				"gocardless" => 2222,
 	 * 				"bachat" => 2222 
 	 */
-	public static function getNumberOfActiveSubscriptions(DateTime $date, $providerIdsToIgnore_array = NULL, $providerId = NULL) {
+	public static function getNumberOfActiveSubscriptions(DateTime $date, $providerIdsToIgnore_array = NULL, $providerId = NULL, $platformId) {
 		$date->setTimezone(new DateTimeZone(config::$timezone));
 		$date_as_str = dbGlobal::toISODate($date);
 		$params = array();
@@ -76,6 +79,8 @@ class dbStats {
 			$params[] = $providerId;
 			$query.= " AND BS.providerid = $".(count($params));
 		}
+		$params[] = $platformId;
+		$query.= " AND BP.platformid = $".(count($params));
 		$query.= " GROUP BY BP._id";
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$total = 0;
@@ -90,7 +95,7 @@ class dbStats {
 		return($out);
 	}
 	
-	public static function getNumberOfActivatedSubscriptions(DateTime $date, $providerId = NULL) {
+	public static function getNumberOfActivatedSubscriptions(DateTime $date, $providerId = NULL, $platformId) {
 		$date->setTimezone(new DateTimeZone(config::$timezone));
 		$date_as_str = dbGlobal::toISODate($date);
 		$params = array();
@@ -118,6 +123,8 @@ class dbStats {
 			$params[] = $providerId;
 			$query.= " AND BS.providerid = $".(count($params));
 		}
+		$params[] = $platformId;
+		$query.= " AND BP.platformid = $".(count($params));
 		$query.= " GROUP BY BP._id";
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$total = 0;
@@ -140,15 +147,15 @@ class dbStats {
 		return($out);
 	}
 	
-	public static function getActivatedSubscriptions(DateTime $date_start, DateTime $date_end) {
+	public static function getActivatedSubscriptions(DateTime $date_start, DateTime $date_end, $platformId) {
 		$date_start->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($date_start);
 		$date_end->setTimezone(new DateTimeZone(config::$timezone));
 		$date_end_str = dbGlobal::toISODate($date_end);
+		$params = array();
 		$query = "SELECT BU._id as userid, (CASE WHEN length(BUO.value) = 0 OR BUO.value IS NULL THEN 'unknown@domain.com' ELSE BUO.value END) as email, BIPL.name as internal_plan_name, BP.name as provider_name FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)";
-		$query.= " INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)";
-		$query.= " INNER JOIN billing_internal_plans BIPL ON (BIPLL.internal_plan_id = BIPL._id)";
+		$query.= " INNER JOIN billing_internal_plans BIPL ON (BPL.internal_plan_id = BIPL._id)";
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
 		$query.= " INNER JOIN billing_users BU";
@@ -160,7 +167,9 @@ class dbStats {
 		$query.= " (BS.sub_activated_date AT TIME ZONE 'Europe/Paris') >= '".$date_start_str."'";
 		$query.= " AND";
 		$query.= " (BS.sub_activated_date AT TIME ZONE 'Europe/Paris') < '".$date_end_str."'";
-		$result = pg_query(config::getDbConn(), $query);
+		$params[] = $platformId;
+		$query.= " AND BP.platformid = $".(count($params));
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$sub = array();
@@ -175,16 +184,16 @@ class dbStats {
 		return($out);
 	}
 	
-	public static function getFutureSubscriptions(DateTime $date_start, DateTime $date_end) {
+	public static function getFutureSubscriptions(DateTime $date_start, DateTime $date_end, $platformId) {
 		$date_start->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($date_start);
 		$date_end->setTimezone(new DateTimeZone(config::$timezone));
 		$date_end_str = dbGlobal::toISODate($date_end);
+		$params = array();
 		$query = "SELECT BU._id as userid, (CASE WHEN length(BUO.value) = 0 OR BUO.value IS NULL THEN 'unknown@domain.com' ELSE BUO.value END) as email, BIPL.name as internal_plan_name, BP.name as provider_name,";
 		$query.= " BS.sub_activated_date as sub_activated_date FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_plans BPL ON (BS.planid = BPL._id)";
-		$query.= " INNER JOIN billing_internal_plans_links BIPLL ON (BIPLL.provider_plan_id = BPL._id)";
-		$query.= " INNER JOIN billing_internal_plans BIPL ON (BIPLL.internal_plan_id = BIPL._id)";
+		$query.= " INNER JOIN billing_internal_plans BIPL ON (BPL.internal_plan_id = BIPL._id)";
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
 		$query.= " INNER JOIN billing_users BU";
@@ -198,7 +207,9 @@ class dbStats {
 		$query.= " (BS.creation_date AT TIME ZONE 'Europe/Paris') >= '".$date_start_str."'";
 		$query.= " AND";
 		$query.= " (BS.creation_date AT TIME ZONE 'Europe/Paris') < '".$date_end_str."'";
-		$result = pg_query(config::getDbConn(), $query);
+		$params[] = $platformId;
+		$query.= " AND BP.platformid = $".(count($params));
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$sub = array();
@@ -214,7 +225,7 @@ class dbStats {
 		return($out);
 	}
 	
-	public static function getNumberOfExpiredSubscriptions(DateTime $dateStart = NULL, DateTime $dateEnd = NULL, $providerId = NULL) {
+	public static function getNumberOfExpiredSubscriptions(DateTime $dateStart = NULL, DateTime $dateEnd = NULL, $providerId = NULL, $platformId) {
 		$date_start_str = NULL;
 		if(isset($dateStart)) {
 			$dateStart->setTimezone(new DateTimeZone(config::$timezone));
@@ -250,6 +261,8 @@ class dbStats {
 			$params[] = $providerId;
 			$query.= " AND BS.providerid = $".(count($params));
 		}
+		$params[] = $platformId;
+		$query.= " AND BP.platformid = $".(count($params));
 		$query.= " GROUP BY BP._id";
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$total = 0;
@@ -272,9 +285,10 @@ class dbStats {
 		return($out);	
 	}
 	
-	public static function getNumberOfCanceledSubscriptions(DateTime $date) {
+	public static function getNumberOfCanceledSubscriptions(DateTime $date, $platformId) {
 		$date->setTimezone(new DateTimeZone(config::$timezone));
 		$date_as_str = dbGlobal::toISODate($date);
+		$params = array();
 		$query = "SELECT BP.name as provider_name, count(*) as counter FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
@@ -288,8 +302,10 @@ class dbStats {
 		$query.= " BS.sub_status = 'canceled'";
 		$query.= " AND";
 		$query.= " date(BS.sub_canceled_date AT TIME ZONE 'Europe/Paris') = date('".$date_as_str."')";
+		$params[] = $platformId;
+		$query.= " AND BP.platformid = $".(count($params));
 		$query.= " GROUP BY BP._id";
-		$result = pg_query(config::getDbConn(), $query);
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$total = 0;
 		$out = array();
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
@@ -302,9 +318,10 @@ class dbStats {
 		return($out);
 	}
 	
-	public static function getNumberOfFutureSubscriptions(DateTime $date) {
+	public static function getNumberOfFutureSubscriptions(DateTime $date, $platformId) {
 		$date->setTimezone(new DateTimeZone(config::$timezone));
 		$date_as_str = dbGlobal::toISODate($date);
+		$params = array();
 		$query = "SELECT BP.name as provider_name, count(*) as counter FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_providers BP";
 		$query.= " ON (BS.providerid = BP._id)";
@@ -318,8 +335,10 @@ class dbStats {
 		$query.= " BS.sub_status = 'future'";
 		$query.= " AND";
 		$query.= " date(BS.creation_date AT TIME ZONE 'Europe/Paris') = date('".$date_as_str."')";
+		$params[] = $platformId;
+		$query.= " AND BP.platformid = $".(count($params));
 		$query.= " GROUP BY BP._id";
-		$result = pg_query(config::getDbConn(), $query);
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$total = 0;
 		$out = array();
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
@@ -341,7 +360,7 @@ class dbStats {
 	 *
 	 * @return array
 	 */
-	public static function getCouponsActivation(DateTime $dateStart, DateTime $dateEnd)
+	public static function getCouponsActivation(DateTime $dateStart, DateTime $dateEnd, $platformId)
 	{
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
@@ -365,8 +384,9 @@ class dbStats {
 		(BUIC.redeemed_date  AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
 		AND BUO.key = 'email'
 		AND BUO.deleted = false
+		AND BICC.platformid = '%s'
 EOL;
-		$query = sprintf($query, $date_start_str, $date_end_str);
+		$query = sprintf($query, $date_start_str, $date_end_str, $platformId);
 
 		$result = pg_query(config::getDbConn(), $query);
 		$out = array();
@@ -387,7 +407,7 @@ EOL;
 	 *
 	 * @return array
 	 */
-	public static function getCouponsCashwayGenerated(DateTime $dateStart, DateTime $dateEnd)
+	public static function getCouponsCashwayGenerated(DateTime $dateStart, DateTime $dateEnd, $platformId)
 	{
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
@@ -414,9 +434,10 @@ EOL;
 		AND (BUIC.creation_date  AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
 		AND BUO.key = 'email'
 		AND BUO.deleted = false
+		AND BP.platformid = '%s'
 EOL;
 
-		$query = sprintf($query, $date_start_str, $date_end_str);
+		$query = sprintf($query, $date_start_str, $date_end_str, $platformId);
 
 		$result = pg_query(config::getDbConn(), $query);
 		$out = array();
@@ -428,7 +449,7 @@ EOL;
 		return $out;
 	}
 	
-	public static function getCouponsAfrGenerated(DateTime $dateStart, DateTime $dateEnd, CouponCampaignType $couponCampaignType)
+	public static function getCouponsAfrGenerated(DateTime $dateStart, DateTime $dateEnd, CouponCampaignType $couponCampaignType, $platformId)
 	{
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
@@ -456,8 +477,9 @@ EOL;
 		AND BUO.key = 'email'
 		AND BUO.deleted = false
 		AND BICC.coupon_type = '%s'
+		AND BP.platformid = '%s'
 EOL;
-		$query = sprintf($query, $date_start_str, $date_end_str, $couponCampaignType->getValue());
+		$query = sprintf($query, $date_start_str, $date_end_str, $couponCampaignType->getValue(), $platformId);
 		
 		$result = pg_query(config::getDbConn(), $query);
 		$out = array();
@@ -469,13 +491,12 @@ EOL;
 		return $out;		
 	}
 	
-	public static function getTransactions(DateTime $dateStart, DateTime $dateEnd, array $transactionTypes, array $transactionStatus) {
+	public static function getTransactions(DateTime $dateStart, DateTime $dateEnd, array $transactionTypes, array $transactionStatus, $platformId) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
 		$date_end_str = dbGlobal::toISODate($dateEnd);
 		$params = array();
-		$i = 1;
 		$query = "SELECT BP.name as provider_name,";
 		$query.= " BT.transaction_billing_uuid as transaction_billing_uuid,	BT.transaction_provider_uuid as transaction_provider_uuid,";
 		$query.= " BT.transaction_type as transaction_type,	BT.transaction_status as transaction_status,";
@@ -483,33 +504,33 @@ EOL;
 		$query.= " FROM billing_transactions BT";
 		$query.= " INNER JOIN billing_providers BP ON (BT.providerid = BP._id)";
 		$query.= " WHERE (BT.status_changed_date AT TIME ZONE 'Europe/Paris') BETWEEN '".$date_start_str."' AND '".$date_end_str."'";
+		$params[] = $platformId;
+		$query.= " AND BT.platformid = $".(count($params));
 		$firstLoop = true;
 		if(count($transactionTypes) > 0) {
 			foreach ($transactionTypes as $transactionTypeEntry) {
+				$params[] = $transactionTypeEntry;
 				if($firstLoop == true) {
 					$firstLoop = false;
-					$query.= " AND BT.transaction_type IN ($".$i;
+					$query.= " AND BT.transaction_type IN ($".(count($params));
 				} else {
-					$query.= ", $".$i;
+					$query.= ", $".(count($params));
 				}
-				$params[] = $transactionTypeEntry;
 				//done
-				$i++;
 			}
 			$query.= ")";
 		}
 		$firstLoop = true;
 		if(count($transactionStatus) > 0) {
 			foreach ($transactionStatus as $transactionStatusEntry) {
+				$params[] = $transactionStatusEntry;
 				if($firstLoop == true) {
 					$firstLoop = false;
-					$query.= " AND BT.transaction_status IN ($".$i;
+					$query.= " AND BT.transaction_status IN ($".(count($params));
 				} else {
-					$query.= ", $".$i;
+					$query.= ", $".(count($params));
 				}
-				$params[] = $transactionStatusEntry;
 				//done
-				$i++;
 			}
 			$query.= ")";
 		}
@@ -524,46 +545,45 @@ EOL;
 		return $out;
 	}
 	
-	public static function getNumberOfTransactions(DateTime $dateStart, DateTime $dateEnd, array $transactionTypes, array $transactionStatus) {
+	public static function getNumberOfTransactions(DateTime $dateStart, DateTime $dateEnd, array $transactionTypes, array $transactionStatus, $platformId) {
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
 		$dateEnd->setTimezone(new DateTimeZone(config::$timezone));
 		$date_end_str = dbGlobal::toISODate($dateEnd);
 		$params = array();
-		$i = 1;
 		$query = "SELECT BP.name as provider_name, BT.transaction_type as transaction_type,";
 		$query.= " count(*) as counter,CAST(sum(amount_in_cents) AS FLOAT)/100 as amount,";
 		$query.= " BT.currency as currency";
 		$query.= " FROM billing_transactions BT";
 		$query.= " INNER JOIN billing_providers BP ON (BT.providerid = BP._id)";
 		$query.= " WHERE (BT.status_changed_date AT TIME ZONE 'Europe/Paris') BETWEEN '".$date_start_str."' AND '".$date_end_str."'";
+		$params[] = $platformId;
+		$query.= " AND BT.platformid = $".(count($params));
 		$firstLoop = true;
 		if(count($transactionTypes) > 0) {
 			foreach ($transactionTypes as $transactionTypeEntry) {
+				$params[] = $transactionTypeEntry;
 				if($firstLoop == true) {
 					$firstLoop = false;
-					$query.= " AND BT.transaction_type IN ($".$i;
+					$query.= " AND BT.transaction_type IN ($".(count($params));
 				} else {
-					$query.= ", $".$i;
+					$query.= ", $".(count($params));
 				}
-				$params[] = $transactionTypeEntry;
 				//done
-				$i++;
 			}
 			$query.= ")";
 		}
 		$firstLoop = true;
 		if(count($transactionStatus) > 0) {
 			foreach ($transactionStatus as $transactionStatusEntry) {
+				$params[] = $transactionStatusEntry;
 				if($firstLoop == true) {
 					$firstLoop = false;
-					$query.= " AND BT.transaction_status IN ($".$i;
+					$query.= " AND BT.transaction_status IN ($".(count($params));
 				} else {
-					$query.= ", $".$i;
+					$query.= ", $".(count($params));
 				}
-				$params[] = $transactionStatusEntry;
 				//done
-				$i++;
 			}
 			$query.= ")";
 		}
@@ -619,7 +639,7 @@ EOL;
 		return($out);
 	}
 	
-	public static function getNumberOfCouponsGenerated(DateTime $dateStart, DateTime $dateEnd) {
+	public static function getNumberOfCouponsGenerated(DateTime $dateStart, DateTime $dateEnd, $platformId) {
 		
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
@@ -630,14 +650,14 @@ EOL;
 		SELECT BICC.coupon_type AS coupon_type,
 		count(*) as counter
 		FROM
-		billing_users_internal_coupons BUIC
-		INNER JOIN billing_internal_coupons BIC ON (BUIC.internalcouponsid = BIC._id)
+		billing_internal_coupons BIC 
 		INNER JOIN billing_internal_coupons_campaigns BICC ON (BIC.internalcouponscampaignsid = BICC._id)
 		WHERE
-		(BUIC.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
-		GROUP BY BICC._id ORDER BY BICC._id
+		(BIC.creation_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		AND BICC.platformid = '%s'
+		GROUP BY BICC.coupon_type
 EOL;
-		$query = sprintf($query, $date_start_str, $date_end_str);
+		$query = sprintf($query, $date_start_str, $date_end_str, $platformId);
 		
 		$result = pg_query(config::getDbConn(), $query);
 		$out = array();
@@ -670,7 +690,7 @@ EOL;
 		return $out;	
 	}
 	
-	public static function getNumberOfCouponsActivated(DateTime $dateStart, DateTime $dateEnd) {
+	public static function getNumberOfCouponsActivated(DateTime $dateStart, DateTime $dateEnd, $platformId) {
 
 		$dateStart->setTimezone(new DateTimeZone(config::$timezone));
 		$date_start_str = dbGlobal::toISODate($dateStart);
@@ -686,9 +706,10 @@ EOL;
 		INNER JOIN billing_internal_coupons_campaigns BICC ON (BIC.internalcouponscampaignsid = BICC._id)
 		WHERE
 		(BUIC.redeemed_date AT TIME ZONE 'Europe/Paris') BETWEEN '%s' AND '%s'
+		AND BICC.platformid = '%s'
 		GROUP BY BICC._id ORDER BY BICC._id
 EOL;
-		$query = sprintf($query, $date_start_str, $date_end_str);
+		$query = sprintf($query, $date_start_str, $date_end_str, $platformId);
 		
 		$result = pg_query(config::getDbConn(), $query);
 		$out = array();

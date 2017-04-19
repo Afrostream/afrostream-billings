@@ -2,9 +2,13 @@
 
 class OrangeTVClient {
 	
+	private $apiKey;
+	private $apiSecret;
 	private $orangeAPIToken = null;
 	
-	public function __construct($orangeAPIToken) {
+	public function __construct($apiKey, $apiSecret, $orangeAPIToken) {
+		$this->apiKey = $apiKey;
+		$this->apiSecret = $apiSecret;
 		self::checkOrangeAPIToken($orangeAPIToken);
 		$this->orangeAPIToken = $orangeAPIToken;
 	}
@@ -75,12 +79,12 @@ class OrangeTVClient {
 		) {
 			$curl_options[CURLOPT_PROXYUSERPWD] = getEnv('PROXY_USER').":".getEnv('PROXY_PWD');
 		}
-		if(	null !== (getEnv('ORANGE_TV_HTTP_AUTH_USER'))
+		if(	null !== ($this->apiKey)
 			&&
-			null !== (getEnv('ORANGE_TV_HTTP_AUTH_PWD'))
+			null !== ($this->apiSecret)
 		) {
 			$curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-			$curl_options[CURLOPT_USERPWD] = getEnv('ORANGE_TV_HTTP_AUTH_USER').":".getEnv('ORANGE_TV_HTTP_AUTH_PWD');
+			$curl_options[CURLOPT_USERPWD] = $this->apiKey.":".$this->apiSecret;
 		}
 		$curl_options[CURLOPT_VERBOSE] = true;
 		$CURL = curl_init();

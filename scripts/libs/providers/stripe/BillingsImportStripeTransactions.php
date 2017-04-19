@@ -4,17 +4,20 @@ require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/utils/utils.php';
 require_once __DIR__ . '/../../../../libs/transactions/TransactionsHandler.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/UpdateTransactionRequest.php';
 
 class BillingsImportStripeTransactions
 {
-    private $providerId = NULL;
+    private $provider = NULL;
+    private $platform = NULL;
 
     const STRIPE_LIMIT = 50;
 
-    public function __construct()
+    public function __construct(Provider $provider)
     {
-        $this->providerId = ProviderDAO::getProviderByName('stripe')->getId();
-        \Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+        $this->provider = $provider;
+        $this->platform = BillingPlatformDAO::getPlatformById($this->provider->getPlatformId());
+        \Stripe\Stripe::setApiKey($this->provider->getApiSecret());
     }
 
     public function doImportTransactions(DateTime $from = NULL, DateTime $to = NULL)
@@ -83,7 +86,12 @@ class BillingsImportStripeTransactions
     {
     	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe...");
     	$transactionHandler = new TransactionsHandler();
-    	$transactionHandler->doUpdateTransactionByTransactionProviderUuid('stripe', $charge->id);
+    	$updateTransactionRequest = new UpdateTransactionRequest();
+    	$updateTransactionRequest->setPlatform($this->platform);
+    	$updateTransactionRequest->setProviderName($this->provider->getName());
+    	$updateTransactionRequest->setTransactionProviderUuid($charge->id);
+    	$updateTransactionRequest->setOrigin('import');
+    	$transactionHandler->doUpdateTransactionByTransactionProviderUuid($updateTransactionRequest);
     	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe done successfully");
     }
     
@@ -98,7 +106,7 @@ class BillingsImportStripeTransactions
         }
         $hasToBeProcessed = !$isRecurlyCustomer;
         if($hasToBeProcessed) {
-	        $user = UserDAO::getUserByUserProviderUuid($this->providerId, $customer->id);
+	        $user = UserDAO::getUserByUserProviderUuid($this->provider->getId(), $customer->id);
 	        if($user == NULL) {
 	            throw new Exception("user with account_code=".$customer->id." does not exist in billings database");
 	        }

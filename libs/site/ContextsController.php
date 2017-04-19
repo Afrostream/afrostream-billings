@@ -2,7 +2,13 @@
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../contexts/ContextsHandler.php';
-require_once __DIR__ .'/BillingsController.php';
+require_once __DIR__ . '/BillingsController.php';
+require_once __DIR__ . '/../providers/global/requests/GetContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetContextsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CreateContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromContextRequest.php';
+require_once __DIR__ . '/../providers/global/requests/SetInternalPlanIndexInContextRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -28,7 +34,11 @@ class ContextsController extends BillingsController {
 			$contextCountry = $args['contextCountry'];
 			//
 			$contextHandler = new ContextsHandler();
-			$context = $contextHandler->doGetContext($contextBillingUuid, $contextCountry);
+			$getContextRequest = new GetContextRequest();
+			$getContextRequest->setContextBillingUuid($contextBillingUuid);
+			$getContextRequest->setContextCountry($contextCountry);
+			$getContextRequest->setOrigin('api');
+			$context = $contextHandler->doGetContext($getContextRequest);
 			if($context == NULL) {
 				return($this->returnNotFoundAsJson($response));
 			} else {
@@ -58,7 +68,10 @@ class ContextsController extends BillingsController {
 			}
 			//
 			$contextHandler = new ContextsHandler();
-			$contexts = $contextHandler->doGetContexts($contextCountry);
+			$getContextsRequest = new GetContextsRequest();
+			$getContextsRequest->setContextCountry($contextCountry);
+			$getContextsRequest->setOrigin('api');
+			$contexts = $contextHandler->doGetContexts($getContextsRequest);
 			return($this->returnObjectAsJson($response, 'contexts', $contexts));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while getting contexts, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -107,12 +120,13 @@ class ContextsController extends BillingsController {
 			}
 			$description = $data["description"];
 			$contextsHandler = new ContextsHandler();
-			$context = $contextsHandler->doCreate(
-					$contextBillingUuid,
-					$contextCountry,
-					$name,
-					$description
-					);
+			$createContextRequest = new CreateContextRequest();
+			$createContextRequest->setContextBillingUuid($contextBillingUuid);
+			$createContextRequest->setContextCountry($contextCountry);
+			$createContextRequest->setName($name);
+			$createContextRequest->setDescription($description);
+			$createContextRequest->setOrigin('api');
+			$context = $contextsHandler->doCreate($createContextRequest);
 			return($this->returnObjectAsJson($response, 'context', $context));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while creating a context, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -153,7 +167,12 @@ class ContextsController extends BillingsController {
 			}
 			$contextCountry = $args['contextCountry'];
 			$contextsHandler = new ContextsHandler();
-			$context = $contextsHandler->doAddInternalPlanToContext($contextBillingUuid, $contextCountry,$internalPlanUuid);
+			$addInternalPlanToContextRequest = new AddInternalPlanToContextRequest();
+			$addInternalPlanToContextRequest->setContextBillingUuid($contextBillingUuid);
+			$addInternalPlanToContextRequest->setContextCountry($contextCountry);
+			$addInternalPlanToContextRequest->setInternalPlanUuid($internalPlanUuid);
+			$addInternalPlanToContextRequest->setOrigin('api');
+			$context = $contextsHandler->doAddInternalPlanToContext($addInternalPlanToContextRequest);
 			return($this->returnObjectAsJson($response, 'context', $context));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while linking an internal plan to a context, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -194,7 +213,12 @@ class ContextsController extends BillingsController {
 			}
 			$contextCountry = $args['contextCountry'];
 			$contextsHandler = new ContextsHandler();
-			$context = $contextsHandler->doRemoveInternalPlanFromContext($contextBillingUuid, $contextCountry, $internalPlanUuid);
+			$removeInternalPlanFromContextRequest = new RemoveInternalPlanFromContextRequest();
+			$removeInternalPlanFromContextRequest->setContextBillingUuid($contextBillingUuid);
+			$removeInternalPlanFromContextRequest->setContextCountry($contextCountry);
+			$removeInternalPlanFromContextRequest->setInternalPlanUuid($internalPlanUuid);
+			$removeInternalPlanFromContextRequest->setOrigin('api');
+			$context = $contextsHandler->doRemoveInternalPlanFromContext($removeInternalPlanFromContextRequest);
 			return($this->returnObjectAsJson($response, 'context', $context));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while removing an internal plan from a context, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
@@ -242,7 +266,13 @@ class ContextsController extends BillingsController {
 			}
 			$index = $args['index'];			
 			$contextsHandler = new ContextsHandler();
-			$context = $contextsHandler->doSetInternalPlanIndexInContext($contextBillingUuid, $contextCountry, $internalPlanUuid, $index);
+			$setInternalPlanIndexInContextRequest = new SetInternalPlanIndexInContextRequest();
+			$setInternalPlanIndexInContextRequest->setContextBillingUuid($contextBillingUuid);
+			$setInternalPlanIndexInContextRequest->setContextCountry($contextCountry);
+			$setInternalPlanIndexInContextRequest->setInternalPlanUuid($internalPlanUuid);
+			$setInternalPlanIndexInContextRequest->setIndex($index);
+			$setInternalPlanIndexInContextRequest->setOrigin('api');
+			$context = $contextsHandler->doSetInternalPlanIndexInContext($setInternalPlanIndexInContextRequest);
 			return($this->returnObjectAsJson($response, 'context', $context));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while moving an internal plan in a context, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();

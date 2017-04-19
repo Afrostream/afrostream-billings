@@ -5,14 +5,16 @@ require_once __DIR__ . '/../../../db/dbGlobal.php';
 require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../../../utils/utils.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
+require_once __DIR__ . '/../../global/coupons/ProviderCouponsHandler.php';
 
 use Money\Money;
 use Money\Currency;
 
-class AfrCouponsHandler {
+class AfrCouponsHandler extends ProviderCouponsHandler {
 	
-	public function __construct() {
-		\Stripe\Stripe::setApiKey(getenv('STRIPE_API_KEY'));
+	public function __construct(Provider $provider) {
+		parent::__construct($provider);
+		\Stripe\Stripe::setApiKey($this->provider->getApiSecret());
 	}
 	
 	public function doCreateCoupon(User $user,
@@ -107,15 +109,19 @@ class AfrCouponsHandler {
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), 'self sponsorship is forbidden', ExceptionError::AFR_COUPON_SPS_SELF_FORBIDDEN);
 						}
 						//Check if user has not been already sponsored
-						$recipientEmailsTotalCounter = BillingUserInternalCouponDAO::getBillingUserInternalCouponsTotalNumberByRecipientEmails($recipentEmail, $internalCouponsCampaign->getCouponType());
+						$recipientEmailsTotalCounter = BillingUserInternalCouponDAO::getBillingUserInternalCouponsTotalNumberByRecipientEmails($recipentEmail, $internalCouponsCampaign->getCouponType(), $this->provider->getPlatformId());
 						if($recipientEmailsTotalCounter > 0) {
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), 'recipient has already been sponsored', ExceptionError::AFR_COUPON_SPS_RECIPIENT_ALREADY_SPONSORED);
 						}
 						//Check if user has not already an active subscription
-						$recipientUsers = UserDAO::getUsersByEmail($recipentEmail);
+						$recipientUsers = UserDAO::getUsersByEmail($recipentEmail, $this->provider->getPlatformId());
 						$subscriptionsHandler = new SubscriptionsHandler();
 						foreach ($recipientUsers as $recipientUser) {
-							$recipientSubscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($recipientUser);
+							$getUserSubscriptionsRequest = new GetUserSubscriptionsRequest();
+							$getUserSubscriptionsRequest->setOrigin('api');
+							$getUserSubscriptionsRequest->setUserBillingUuid($recipientUser->getUserBillingUuid());
+							$getUserSubscriptionsRequest->setPlatform($this->platform);
+							$recipientSubscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUser($getUserSubscriptionsRequest);
 							if(count($recipientSubscriptions) > 0) {
 								$lastSubscription = $recipientSubscriptions[0];
 								if($lastSubscription->getIsActive()) {
@@ -123,6 +129,11 @@ class AfrCouponsHandler {
 								}
 							}
 						}
+					}
+					break;
+				case CouponCampaignType::prepaid :
+					if($internalPlan->getAmount() > 0) {
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), 'prepaid coupons cannot be created here if amount > 0');
 					}
 					break;
 				default :
@@ -137,6 +148,7 @@ class AfrCouponsHandler {
 			$internalCoupon->setCode($coupon_provider_uuid);
 			$internalCoupon->setUuid($coupon_billing_uuid);
 			$internalCoupon->setExpiresDate(NULL);
+			$internalCoupon->setPlatformId($this->provider->getPlatformId());
 			$internalCoupon = BillingInternalCouponDAO::addBillingInternalCoupon($internalCoupon);
 			//Create an userCoupon linked to the internalCoupon
 			$userInternalCoupon = new BillingUserInternalCoupon();
@@ -145,6 +157,7 @@ class AfrCouponsHandler {
 			$userInternalCoupon->setUuid($coupon_billing_uuid);
 			$userInternalCoupon->setUserId($user->getId());
 			$userInternalCoupon->setExpiresDate(NULL);
+			$userInternalCoupon->setPlatformId($this->provider->getPlatformId());
 			$userInternalCoupon = BillingUserInternalCouponDAO::addBillingUserInternalCoupon($userInternalCoupon);
 			//Cretate an userCouponOpts linked to the userCoupon
 			$billingUserInternalCouponOpts = new BillingUserInternalCouponOpts();
@@ -173,7 +186,7 @@ class AfrCouponsHandler {
 			InternalPlan $internalPlan = NULL,
 			$coupon_billing_uuid,
 			$coupon_provider_uuid) {
-		return(BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($coupon_billing_uuid));
+		return(BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($coupon_billing_uuid, $this->provider->getPlatformId()));
 	}
 	
 	protected function getRandomString($length) {

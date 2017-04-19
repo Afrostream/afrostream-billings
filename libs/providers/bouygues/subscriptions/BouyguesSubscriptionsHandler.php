@@ -10,18 +10,30 @@ require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
 
 class BouyguesSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
-		$api_subscription = self::checkApiSubscriptionByProviderPlanUuid($user->getUserProviderUuid(), $plan->getPlanUuid());
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
+	public function createDbSubscriptionFromApiSubscriptionUuid(
+			User $user, 
+			UserOpts $userOpts, 
+			InternalPlan $internalPlan = NULL, 
+			InternalPlanOpts $internalPlanOpts = NULL, 
+			Plan $plan = NULL, 
+			PlanOpts $planOpts = NULL, 
+			BillingsSubscriptionOpts $subOpts = NULL, 
+			BillingInfo $billingInfo = NULL, 
+			$subscription_billing_uuid, 
+			$sub_uuid, 
+			$update_type, 
+			$updateId) {
+		$api_subscription = $this->checkApiSubscriptionByProviderPlanUuid($user->getUserProviderUuid(), $plan->getPlanUuid());
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, BouyguesSubscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, BouyguesSubscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("bouygues dbsubscription creation for userid=".$user->getId().", providerPlanUuid=".$plan->getPlanUuid()."...");
 		//CREATE
 		$start_date = (new DateTime())->setTimezone(new DateTimeZone(config::$timezone));
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
-		$db_subscription->setProviderId($provider->getId());
+		$db_subscription->setProviderId($this->provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription->setSubUid(guid());
@@ -45,6 +57,7 @@ class BouyguesSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
+		$db_subscription->setPlatformId($this->provider->getPlatformId());
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS
 		if(isset($subOpts)) {
@@ -150,7 +163,9 @@ class BouyguesSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($subscription);
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+	public function doRenewSubscription(BillingsSubscription $subscription, RenewSubscriptionRequest $renewSubscriptionRequest) {
+		$start_date = $renewSubscriptionRequest->getStartDate();
+		$end_date = $renewSubscriptionRequest->getEndDate();
 		if($end_date != NULL) {
 			$msg = "renewing a bouygues subscription does not support that end_date is already set";
 			config::getLogger()->addError($msg);
@@ -175,7 +190,7 @@ class BouyguesSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		//VERIFY THAT SUBSCRIPTION IS STILL ACTIVE BEFORE RENEWING
-		self::checkApiSubscriptionByProviderPlanUuid($user->getUserProviderUuid(), $providerPlan->getPlanUuid());
+		$this->checkApiSubscriptionByProviderPlanUuid($user->getUserProviderUuid(), $providerPlan->getPlanUuid());
 		$today = new DateTime();
 		$today->setTimezone(new DateTimeZone(config::$timezone));
 		$today->setTime(23, 59, 59);//consider all the day
@@ -219,17 +234,8 @@ class BouyguesSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		config::getLogger()->addInfo("bouygues dbsubscriptions update for userid=".$user->getId()."...");
 		//
 		$bouyguesTVClient = new BouyguesTVClient($user->getUserProviderUuid());
-		//
-		$provider = ProviderDAO::getProviderById($user->getProviderId());
-		//
-		if($provider == NULL) {
-			$msg = "unknown provider id : ".$user->getProviderId();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		
 		//On doit récuperer les plans puis faire les requêtes
-		$providerPlans = PlanDAO::getPlans($provider->getId());
+		$providerPlans = PlanDAO::getPlans($this->provider->getId());
 		
 		$bouyguesSubscriptions = array();
 		
@@ -245,16 +251,16 @@ class BouyguesSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			if($bouygues_subscription->getResultMessage() == 'SubscribedNotCoupled') {
 				//plan
 				$plan_uuid = $bouygues_subscription->getSubscriptionId();
-				$plan = PlanDAO::getPlanByUuid($provider->getId(), $plan_uuid);
+				$plan = PlanDAO::getPlanByUuid($this->provider->getId(), $plan_uuid);
 				if($plan == NULL) {
 					$msg = "plan with uuid=".$plan_uuid." not found";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-				$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+				$internalPlan = InternalPlanDAO::getInternalPlanById($plan->getInternalPlanId());
 				if($internalPlan == NULL) {
-					$msg = "plan with uuid=".$plan_uuid." for provider ".$provider->getName()." is not linked to an internal plan";
+					$msg = "plan with uuid=".$plan_uuid." for provider ".$this->provider->getName()." is not linked to an internal plan";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
@@ -262,10 +268,10 @@ class BouyguesSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$db_subscription = self::getDbSubscriptionByProviderPlanId($db_subscriptions, $plan->getId());
 				if($db_subscription == NULL) {
 					//CREATE
-					$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $bouygues_subscription, 'api', 0);
+					$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, NULL, NULL, guid(), $bouygues_subscription, 'api', 0);
 				} else {
 					//UPDATE
-					$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $bouygues_subscription, $db_subscription, 'api', 0);
+					$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $bouygues_subscription, $db_subscription, 'api', 0);
 				}
 			}
 		}
@@ -358,7 +364,7 @@ class BouyguesSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		}
 	}
 	
-	private static function checkApiSubscriptionByProviderPlanUuid($userProviderUuid, $providerPlanUuid) {
+	private function checkApiSubscriptionByProviderPlanUuid($userProviderUuid, $providerPlanUuid) {
 		$bouyguesTVClient = new BouyguesTVClient($userProviderUuid);
 		$bouyguesSubscriptionsResponse = $bouyguesTVClient->getSubscription($providerPlanUuid);
 		$bouyguesSubscription = $bouyguesSubscriptionsResponse->getBouyguesSubscription();

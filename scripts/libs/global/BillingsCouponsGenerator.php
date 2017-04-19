@@ -9,10 +9,10 @@ class BillingsCouponsGenerator {
 
 	}
 	
-	public function doGenerateCoupons($couponsCampaignInternalBillingUuid) {
+	public function doGenerateCoupons($couponsCampaignInternalBillingUuid, $platformId) {
 		try {
 			ScriptsConfig::getLogger()->addInfo("generating coupons for couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid."...");
-			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid);
+			$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid, $platformId);
 			if($internalCouponsCampaign == NULL) {
 				throw new Exception("internalCouponsCampaign with couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid." not found");
 			}
@@ -35,6 +35,7 @@ class BillingsCouponsGenerator {
 				$internalCoupon->setCode($code);
 				$internalCoupon->setUuid(guid());
 				$internalCoupon->setExpiresDate($internalCouponsCampaign->getExpiresDate());
+				$internalCoupon->setPlatformId($platformId);
 				$internalCoupon = BillingInternalCouponDAO::addBillingInternalCoupon($internalCoupon);
 				$coupon_counter++;
 				ScriptsConfig::getLogger()->addInfo("(".$coupon_counter."/".$coupon_total_number.") coupon with code ".$internalCoupon->getCode()." for couponsCampaignInternalBillingUuid=".$couponsCampaignInternalBillingUuid." generated successfully");

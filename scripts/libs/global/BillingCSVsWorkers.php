@@ -9,17 +9,19 @@ use Aws\S3\S3Client;
 
 class BillingCSVsWorkers extends BillingsWorkers {
 	
+	private $platform;
 	private $processingType = 'csvs_generator';
 	
-	public function __construct() {
+	public function __construct(BillingPlatform $platform) {
 		parent::__construct();
+		$this->platform = $platform;
 	}
 	
 	public function doGenerateCSVs() {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay(NULL, $this->processingType, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->platform->getId(), NULL, $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("generating csvs bypassed - already done today -");
 				return;
@@ -28,7 +30,7 @@ class BillingCSVsWorkers extends BillingsWorkers {
 		
 			ScriptsConfig::getLogger()->addInfo("generating csvs...");
 		
-			$processingLog = ProcessingLogDAO::addProcessingLog(NULL, $this->processingType);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->platform->getId(), NULL, $this->processingType);
 			$s3 = S3Client::factory(array(
 					'region' => getEnv('AWS_REGION'),
 					'version' => getEnv('AWS_VERSION')));

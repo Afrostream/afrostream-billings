@@ -9,11 +9,9 @@ require_once __DIR__ . '/../subscriptions/GocardlessSubscriptionsHandler.php';
 require_once __DIR__ . '/../transactions/GocardlessTransactionsHandler.php';
 require_once __DIR__ . '/../../../subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ . '/../../../providers/global/requests/ExpireSubscriptionRequest.php';
+require_once __DIR__ . '/../../global/webhooks/ProviderWebHooksHandler.php';
 
-class GocardlessWebHooksHandler {
-	
-	public function __construct() {
-	}
+class GocardlessWebHooksHandler extends ProviderWebHooksHandler {
 	
 	public function doProcessWebHook(BillingsWebHook $billingsWebHook, $update_type = 'hook') {
 		try {
@@ -76,7 +74,7 @@ class GocardlessWebHooksHandler {
 				config::getLogger()->addInfo('Processing gocardless hook subscription, action='.$notification_as_array['action'].'...');
 				//
 				$client = new Client(array(
-						'access_token' => getEnv('GOCARDLESS_API_KEY'),
+						'access_token' => $this->provider->getApiSecret(),
 						'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//
@@ -114,13 +112,6 @@ class GocardlessWebHooksHandler {
 					config::getLogger()->addError("getting gocardless subscription failed : ".$msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 				}
-				//provider
-				$provider = ProviderDAO::getProviderByName('gocardless');
-				if($provider == NULL) {
-					$msg = "provider named 'gocardless' not found";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
 				//plan (in metadata !!!)
 				/*$plan_uuid = $api_subscription->plan->plan_code;
 				if($plan_uuid == NULL) {
@@ -128,7 +119,7 @@ class GocardlessWebHooksHandler {
 					config::getLogger()->addError($msg);
 					throw new Exception($msg);
 				}
-				$plan = PlanDAO::getPlanByUuid($provider->getId(), $plan_uuid);
+				$plan = PlanDAO::getPlanByUuid($this->provider->getId(), $plan_uuid);
 				if($plan == NULL) {
 					$msg = "plan with uuid=".$plan_uuid." not found";
 					config::getLogger()->addError($msg);
@@ -142,7 +133,7 @@ class GocardlessWebHooksHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				config::getLogger()->addInfo('searching user with account_code='.$account_code.'...');
-				$user = UserDAO::getUserByUserProviderUuid($provider->getId(), $account_code);
+				$user = UserDAO::getUserByUserProviderUuid($this->provider->getId(), $account_code);
 				if($user == NULL) {
 					$msg = 'searching user with account_code='.$account_code.' failed, no user found';
 					config::getLogger()->addError($msg);
@@ -150,8 +141,8 @@ class GocardlessWebHooksHandler {
 				}
 				$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
 				$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
-				$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
-				$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler($provider);
+				$gocardlessSubscriptionsHandler = new GocardlessSubscriptionsHandler($this->provider);
+				$db_subscription = $gocardlessSubscriptionsHandler->getDbSubscriptionByUuid($db_subscriptions, $subscription_provider_uuid);
 				try {
 					//START TRANSACTION
 					pg_query("BEGIN");
@@ -163,10 +154,10 @@ class GocardlessWebHooksHandler {
 						//DO NOT CREATE ANYMORE : race condition when creating from API + from the webhook
 						//WAS :
 						//CREATE
-						//$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, $api_subscription, $update_type, $updateId);
+						//$db_subscription = $gocardlessSubscriptionsHandler->createDbSubscriptionFromApiSubscription($user, $userOpts, NULL, NULL, $api_subscription, $update_type, $updateId);
 					} else {
 						//UPDATE
-						$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, $update_type, $updateId);
+						$db_subscription = $gocardlessSubscriptionsHandler->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, $update_type, $updateId);
 					}
 					//COMMIT
 					pg_query("COMMIT");
@@ -179,16 +170,7 @@ class GocardlessWebHooksHandler {
 				break;
 		}
 	}
-	
-	private function getDbSubscriptionByUuid(array $db_subscriptions, $subUuid) {
-		foreach ($db_subscriptions as $db_subscription) {
-			if($db_subscription->getSubUid() == $subUuid) {
-				return($db_subscription);
-			}
-		}
-		return(NULL);
-	}
-	
+		
 	private function doProcessMandate(array $notification_as_array, $update_type, $updateId) {
 		switch($notification_as_array['action']) {
 			case 'cancelled' :
@@ -230,7 +212,7 @@ class GocardlessWebHooksHandler {
 			case 'failed' :
 				config::getLogger()->addInfo('Processing gocardless hook payment, action='.$notification_as_array['action'].'...');
 				$client = new Client(array(
-						'access_token' => getEnv('GOCARDLESS_API_KEY'),
+						'access_token' => $this->provider->getApiSecret(),
 						'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				$api_payment = NULL;
@@ -256,14 +238,7 @@ class GocardlessWebHooksHandler {
 				}
 				//verify status
 				if($api_payment->status == 'cancelled' || $api_payment->status == 'failed') {
-					//provider
-					$provider = ProviderDAO::getProviderByName('gocardless');
-					if($provider == NULL) {
-						$msg = "provider named 'gocardless' not found";
-						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					}
-					$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $api_subscription->id);
+					$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($this->provider->getId(), $api_subscription->id);
 					if($db_subscription == NULL) {
 						$msg = "subscription with subscription_provider_uuid=".$api_subscription->id." not found";
 						config::getLogger()->addError($msg);
@@ -273,6 +248,7 @@ class GocardlessWebHooksHandler {
 					$subscriptionsHandler = new SubscriptionsHandler();
 					$expires_date = new DateTime($notification_as_array['created_at']);
 					$expireSubscriptionRequest = new ExpireSubscriptionRequest();
+					$expireSubscriptionRequest->setPlatform($this->platform);
 					$expireSubscriptionRequest->setOrigin('hook');
 					$expireSubscriptionRequest->setSubscriptionBillingUuid($db_subscription->getSubscriptionBillingUuid());
 					$expireSubscriptionRequest->setExpiresDate($expires_date);
@@ -291,7 +267,7 @@ class GocardlessWebHooksHandler {
 		config::getLogger()->addInfo('Processing gocardless hook payment for backup, action='.$notification_as_array['action'].'...');
 		//
 		$client = new Client(array(
-				'access_token' => getEnv('GOCARDLESS_API_KEY'),
+				'access_token' => $this->provider->getApiSecret(),
 				'environment' => getEnv('GOCARDLESS_API_ENV')
 		));
 		//
@@ -327,21 +303,14 @@ class GocardlessWebHooksHandler {
 			config::getLogger()->addError("getting gocardless informations failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
-		//provider
-		$provider = ProviderDAO::getProviderByName('gocardless');
-		if($provider == NULL) {
-			$msg = "provider named 'gocardless' not found";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		$user = UserDAO::getUserByUserProviderUuid($provider->getId(), $api_customer->id);
+		$user = UserDAO::getUserByUserProviderUuid($this->provider->getId(), $api_customer->id);
 		if($user == NULL) {
 			$msg = 'searching user with customer_provider_uuid='.$api_customer->id.' failed, no user found';
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler($provider);
+		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler($this->provider);
 		$gocardlessTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment, 'hook');
 		config::getLogger()->addInfo('Processing gocardless hook payment for backup, action='.$notification_as_array['action'].' done successfully');
 	}
@@ -354,7 +323,7 @@ class GocardlessWebHooksHandler {
 		config::getLogger()->addInfo('Processing gocardless hook refund for backup, action='.$notification_as_array['action'].'...');
 		//
 		$client = new Client(array(
-				'access_token' => getEnv('GOCARDLESS_API_KEY'),
+				'access_token' => $this->provider->getApiSecret(),
 				'environment' => getEnv('GOCARDLESS_API_ENV')
 		));
 		//
@@ -395,21 +364,14 @@ class GocardlessWebHooksHandler {
 			config::getLogger()->addError("getting gocardless informations failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
-		//provider
-		$provider = ProviderDAO::getProviderByName('gocardless');
-		if($provider == NULL) {
-			$msg = "provider named 'gocardless' not found";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		$user = UserDAO::getUserByUserProviderUuid($provider->getId(), $api_customer->id);
+		$user = UserDAO::getUserByUserProviderUuid($this->provider->getId(), $api_customer->id);
 		if($user == NULL) {
 			$msg = 'searching user with customer_provider_uuid='.$api_customer->id.' failed, no user found';
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
-		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler($provider);
+		$gocardlessTransactionsHandler = new GocardlessTransactionsHandler($this->provider);
 		$gocardlessTransactionsHandler->createOrUpdateChargeFromProvider($user, $userOpts, $api_customer, $api_payment, 'hook');
 		config::getLogger()->addInfo('Processing gocardless hook refund for backup, action='.$notification_as_array['action'].' done successfully');
 	}

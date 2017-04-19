@@ -17,7 +17,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 			config::getLogger()->addInfo("updating gocardless transactions...");
 			//
 			$client = new Client(array(
-					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'access_token' => $this->provider->getApiSecret(),
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 			));
 			//
@@ -63,7 +63,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 		$country = $gocardlessCustomer->country_code;
 		if($country == NULL) {
 			$client = new Client(array(
-					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'access_token' => $this->provider->getApiSecret(),
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 			));
 			$api_mandate = $client->mandates()->get($gocardlessChargeTransaction->links->mandate);
@@ -103,6 +103,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
 			$billingsTransaction->setMessage("provider_status=".$gocardlessChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
+			$billingsTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -123,6 +124,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
 			$billingsTransaction->setMessage("provider_status=".$gocardlessChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		$this->updateRefundsFromProvider($user, $userOpts, $gocardlessChargeTransaction, $billingsTransaction, $updateType);
@@ -132,7 +134,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 	
 	private function updateRefundsFromProvider(User $user, UserOpts $userOpts, Payment $gocardlessChargeTransaction, BillingsTransaction $billingsTransaction, $updateType) {
 		$client = new Client(array(
-				'access_token' => getEnv('GOCARDLESS_API_KEY'),
+				'access_token' => $this->provider->getApiSecret(),
 				'environment' => getEnv('GOCARDLESS_API_ENV')
 		));
 		//
@@ -171,6 +173,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
 			$billingsRefundTransaction->setMessage("provider_status=none");
 			$billingsRefundTransaction->setUpdateType($updateType);
+			$billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -191,6 +194,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);//NO INVOICE...
 			$billingsRefundTransaction->setMessage("provider_status=none");
 			$billingsRefundTransaction->setUpdateType($updateType);
+			//NO !!! : $billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from gocardless refund transaction id=".$gocardlessRefundTransaction->id." done successfully");
@@ -242,7 +246,7 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 		try {
 			config::getLogger()->addInfo("refunding a ".$this->provider->getName()." transaction with transactionBillingUuid=".$transaction->getTransactionBillingUuid()."...");
 			$client = new Client(array(
-					'access_token' => getEnv('GOCARDLESS_API_KEY'),
+					'access_token' => $this->provider->getApiSecret(),
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 			));
 			$api_payment = $client->payments()->get($transaction->getTransactionProviderUuid());
@@ -254,8 +258,8 @@ class GocardlessTransactionsHandler extends ProviderTransactionsHandler {
 				case 'confirmed' :
 				case 'paid_out' :
 					$api_refund = $client->refunds()->create([
-						"params" => [	"amount" => $api_payment->amount,
-										"total_amount_confirmation" => $api_payment->amount,
+						"params" => [	"amount" => $refundTransactionRequest->getAmountInCents() == NULL ? $api_payment->amount : $refundTransactionRequest->getAmountInCents(),
+										"total_amount_confirmation" => $refundTransactionRequest->getAmountInCents() == NULL ? $api_payment->amount : $refundTransactionRequest->getAmountInCents(),
 										"links" => ["payment" => $api_payment->id]]
 								]);
 					//reload payment, in order to be up to date

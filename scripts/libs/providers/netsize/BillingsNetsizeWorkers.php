@@ -6,22 +6,26 @@ require_once __DIR__ . '/../../BillingsWorkers.php';
 require_once __DIR__ . '/../../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../../../libs/subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ . '/../../../../libs/providers/global/requests/ExpireSubscriptionRequest.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/CancelSubscriptionRequest.php';
+require_once __DIR__ . '/../../../../libs/providers/global/requests/RenewSubscriptionRequest.php';
 
 class BillingsNetsizeWorkers extends BillingsWorkers {
 	
 	private $provider = NULL;
+	private $platform = NULL;
 	private $processingType = 'subs_refresh';
 	
-	public function __construct() {
+	public function __construct(Provider $provider) {
 		parent::__construct();
-		$this->provider = ProviderDAO::getProviderByName('netsize');
+		$this->provider = $provider;
+		$this->platform = BillingPlatformDAO::getPlatformById($this->provider->getPlatformId());
 	}
 	
 	public function doRefreshSubscriptions() {
 		$starttime = microtime(true);
 		$processingLog  = NULL;
 		try {
-			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getId(), $this->processingType, $this->today);
+			$processingLogsOfTheDay = ProcessingLogDAO::getProcessingLogByDay($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType, $this->today);
 			if(self::hasProcessingStatus($processingLogsOfTheDay, 'done')) {
 				ScriptsConfig::getLogger()->addInfo("refreshing netsize subscriptions bypassed - already done today -");
 				return;
@@ -30,7 +34,7 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 				
 			ScriptsConfig::getLogger()->addInfo("refreshing netsize subscriptions...");
 				
-			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getId(), $this->processingType);
+			$processingLog = ProcessingLogDAO::addProcessingLog($this->provider->getPlatformId(), $this->provider->getId(), $this->processingType);
 			//
 			$limit = 100;
 			//will select all day strictly before today
@@ -86,7 +90,7 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 		try {
 			//
 			ScriptsConfig::getLogger()->addInfo("refreshing netsize subscription for billings_subscription_uuid=".$subscription->getSubscriptionBillingUuid()."...");
-			$netsizeClient = new NetsizeClient();
+			$netsizeClient = new NetsizeClient($this->provider->getApiSecret(), $this->provider->getServiceId());
 			
 			$getStatusRequest = new GetStatusRequest();
 			$getStatusRequest->setTransactionId($subscription->getSubUid());
@@ -107,7 +111,13 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 				try {
 					pg_query("BEGIN");
 					$subscriptionsHandler = new SubscriptionsHandler();
-					$subscriptionsHandler->doRenewSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), NULL, NULL);
+					$renewSubscriptionRequest = new RenewSubscriptionRequest();
+					$renewSubscriptionRequest->setPlatform($this->platform);
+					$renewSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+					$renewSubscriptionRequest->setStartDate(NULL);
+					$renewSubscriptionRequest->setEndDate(NULL);
+					$renewSubscriptionRequest->setOrigin('script');
+					$subscriptionsHandler->doRenewSubscription($renewSubscriptionRequest);
 					$billingsSubscriptionActionLog->setProcessingStatus('done');
 					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 					//COMMIT
@@ -121,7 +131,12 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 				try {
 					pg_query("BEGIN");
 					$subscriptionsHandler = new SubscriptionsHandler();
-					$subscriptionsHandler->doCancelSubscriptionByUuid($subscription->getSubscriptionBillingUuid(), new DateTime(), false);
+					$cancelSubscriptionRequest = new CancelSubscriptionRequest();
+					$cancelSubscriptionRequest->setPlatform($this->platform);
+					$cancelSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+					$cancelSubscriptionRequest->setOrigin('script');
+					$cancelSubscriptionRequest->setCancelDate(new DateTime());
+					$subscriptionsHandler->doCancelSubscription($cancelSubscriptionRequest);
 					$billingsSubscriptionActionLog->setProcessingStatus('done');
 					$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::updateBillingsSubscriptionActionLogProcessingStatus($billingsSubscriptionActionLog);
 					//COMMIT
@@ -136,6 +151,7 @@ class BillingsNetsizeWorkers extends BillingsWorkers {
 					pg_query("BEGIN");
 					$subscriptionsHandler = new SubscriptionsHandler();
 					$expireSubscriptionRequest = new ExpireSubscriptionRequest();
+					$expireSubscriptionRequest->setPlatform($this->platform);
 					$expireSubscriptionRequest->setOrigin('script');
 					$expireSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
 					$expireSubscriptionRequest->setExpiresDate(new DateTime());

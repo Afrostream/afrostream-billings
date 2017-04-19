@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/../../../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../../libs/partners/logista/BillingLogistaProcessStocksReportWorkers.php';
 
 /*
@@ -20,8 +21,12 @@ foreach ($argv as $arg) {
 
 print_r("processing...\n");
 
-$billingLogistaProcessStocksReportWorkers = new BillingLogistaProcessStocksReportWorkers();
-$billingLogistaProcessStocksReportWorkers->doProcessStocksReports();
+$partners = BillingPartnerDAO::getPartnersByName('logista');
+
+foreach ($partners as $partner) {
+	$billingLogistaProcessStocksReportWorkers = new BillingLogistaProcessStocksReportWorkers($partner);
+	$billingLogistaProcessStocksReportWorkers->doProcessStocksReports();
+}
 
 print_r("processing done\n");
 

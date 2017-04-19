@@ -13,12 +13,10 @@ require_once __DIR__ . '/../plans/GocardlessPlansHandler.php';
 require_once __DIR__ . '/../../global/ProviderHandlersBuilder.php';
 require_once __DIR__ . '/../../global/subscriptions/ProviderSubscriptionsHandler.php';
 require_once __DIR__ . '/../../global/transactions/ProviderTransactionsHandler.php';
-require_once __DIR__ . '/../../global/requests/ExpireSubscriptionRequest.php';
-require_once __DIR__ . '/../../global/requests/RefundTransactionRequest.php';
 
 class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	
-	public function doCreateUserSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
+	public function doCreateUserSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan, InternalPlanOpts $internalPlanOpts, Plan $plan, PlanOpts $planOpts, $subscription_billing_uuid, $subscription_provider_uuid, BillingInfo $billingInfo, BillingsSubscriptionOpts $subOpts) {
 		$sub_uuid = NULL;
 		try {
 			config::getLogger()->addInfo("gocardless subscription creation...");
@@ -27,7 +25,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//Verify that subscription belongs to the current customer
 				//
 				$client = new Client(array(
-						'access_token' => getEnv('GOCARDLESS_API_KEY'),
+						'access_token' => $this->provider->getApiSecret(),
 						'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//
@@ -62,15 +60,25 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 				$interval_unit = NULL;
+				$interval = NULL;
 				switch ($internalPlan->getPeriodUnit()) {
 					case PlanPeriodUnit::day :
-						$interval_unit = 'daily';
+						if($internalPlan->getPeriodLength() == 7) {
+							$interval_unit = 'weekly';
+							$interval = 1;
+						} else {
+							$msg = "unsupported period length : ".$internalPlan->getPeriodLength();
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						}
 						break;
 					case PlanPeriodUnit::month :
 						$interval_unit = 'monthly';
+						$interval = $internalPlan->getPeriodLength();
 						break;
 					case PlanPeriodUnit::year :
 						$interval_unit = 'yearly';
+						$interval = $internalPlan->getPeriodLength();
 						break;
 					default :
 						$msg = "unsupported period unit, must be in : ".implode(', ', array_keys(GocardlessPlansHandler::$supported_periods));
@@ -105,7 +113,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$customer_bank_account_token = $subOpts->getOpts()['customerBankAccountToken'];
 				//
 				$client = new Client(array(
-						'access_token' => getEnv('GOCARDLESS_API_KEY'),
+						'access_token' => $this->provider->getApiSecret(),
 						'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//HACK : Disable current Bank Accounts (Create will be enable existing accounts)
@@ -153,7 +161,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					 				'currency' => $internalPlan->getCurrency(),
 					 				'name' => $plan->getName(),
 					 				'interval_unit' => $interval_unit,
-					 				'interval' => $internalPlan->getPeriodLength(),
+					 				'interval' => $interval,
 					 				'links' => ['mandate' => $mandate->id],
 					 				'metadata' => ['internal_plan_uuid' => $internalPlan->getInternalPlanUuid()]
 					 		]
@@ -187,17 +195,10 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		config::getLogger()->addInfo("gocardless dbsubscriptions update for userid=".$user->getId()."...");
 		//
 		$client = new Client(array(
-			'access_token' => getEnv('GOCARDLESS_API_KEY'),
+			'access_token' => $this->provider->getApiSecret(),
 			'environment' => getEnv('GOCARDLESS_API_ENV')
 		));
 		//
-		$provider = ProviderDAO::getProviderById($user->getProviderId());
-		//
-		if($provider == NULL) {
-			$msg = "unknown provider id : ".$user->getProviderId();
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
 		try {
 			//
 			$api_subscriptions = $client->subscriptions()->all(
@@ -222,26 +223,13 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
 		//ADD OR UPDATE
 		foreach ($api_subscriptions as $api_subscription) {
-			//plan
-			/*$plan_uuid = $api_subscription->plan->plan_code;
-			if($plan_uuid == NULL) {
-				$msg = "plan uuid not found";
-				config::getLogger()->addError($msg);
-				throw new Exception($msg);
-			}
-			$plan = PlanDAO::getPlanByUuid($provider->getId(), $plan_uuid);
-			if($plan == NULL) {
-				$msg = "plan with uuid=".$plan_uuid." not found";
-				config::getLogger()->addError($msg);
-				throw new Exception($msg);
-			}*/
 			$db_subscription = $this->getDbSubscriptionByUuid($db_subscriptions, $api_subscription->id);
 			if($db_subscription == NULL) {
 				//CREATE
-				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, NULL, NULL, guid(), $api_subscription, 'api', 0);
+				$db_subscription = $this->createDbSubscriptionFromApiSubscription($user, $userOpts, NULL, NULL, NULL, NULL, NULL, NULL, guid(), $api_subscription, 'api', 0);
 			} else {
 				//UPDATE
-				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
+				$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, NULL, NULL, NULL, NULL, $api_subscription, $db_subscription, 'api', 0);
 			}
 		}
 		//DELETE UNUSED SUBSCRIPTIONS (DELETED FROM THIRD PARTY)
@@ -254,18 +242,30 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		config::getLogger()->addInfo("gocardless dbsubscriptions update for userid=".$user->getId()." done successfully");
 	}
 	
-	public function createDbSubscriptionFromApiSubscriptionUuid(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan = NULL, InternalPlanOpts $internalPlanOpts = NULL, Plan $plan = NULL , PlanOpts $planOpts = NULL, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, $sub_uuid, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscriptionUuid(
+			User $user, 
+			UserOpts $userOpts, 
+			InternalPlan $internalPlan = NULL, 
+			InternalPlanOpts $internalPlanOpts = NULL, 
+			Plan $plan = NULL, 
+			PlanOpts $planOpts = NULL, 
+			BillingsSubscriptionOpts $subOpts = NULL, 
+			BillingInfo $billingInfo = NULL, 
+			$subscription_billing_uuid, 
+			$sub_uuid, 
+			$update_type, 
+			$updateId) {
 		//
 		$client = new Client(array(
-			'access_token' => getEnv('GOCARDLESS_API_KEY'),
+			'access_token' => $this->provider->getApiSecret(),
 			'environment' => getEnv('GOCARDLESS_API_ENV')
 		));
 		//
 		$api_subscription = $client->subscriptions()->get($sub_uuid);
-		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
+		return($this->createDbSubscriptionFromApiSubscription($user, $userOpts, $internalPlan, $internalPlanOpts, $plan, $planOpts, $subOpts, $billingInfo, $subscription_billing_uuid, $api_subscription, $update_type, $updateId));
 	}
 	
-	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, Provider $provider, InternalPlan $internalPlan = NULL, InternalPlanOpts $internalPlanOpts = NULL, Plan $plan = NULL, PlanOpts $planOpts = NULL, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, Subscription $api_subscription, $update_type, $updateId) {
+	public function createDbSubscriptionFromApiSubscription(User $user, UserOpts $userOpts, InternalPlan $internalPlan = NULL, InternalPlanOpts $internalPlanOpts = NULL, Plan $plan = NULL, PlanOpts $planOpts = NULL, BillingsSubscriptionOpts $subOpts = NULL, BillingInfo $billingInfo = NULL, $subscription_billing_uuid, Subscription $api_subscription, $update_type, $updateId) {
 		config::getLogger()->addInfo("gocardless dbsubscription creation for userid=".$user->getId().", gocardless_subscription_uuid=".$api_subscription->id."...");
 		if($plan == NULL) {
 			if(!isset($api_subscription->metadata->internal_plan_uuid)) {
@@ -276,7 +276,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			
 			$internal_plan_uuid = $api_subscription->metadata->internal_plan_uuid;
 			
-			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid);
+			$internalPlan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid, $this->provider->getPlatformId());
 			
 			if($internalPlan == NULL) {
 				$msg = "unknown internal_plan_uuid : ".$internal_plan_uuid;
@@ -284,16 +284,9 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
-			$plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internalPlan->getId(), $provider->getId());
-			if($plan_id == NULL) {
-				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$provider->getName();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			
-			$plan = PlanDAO::getPlanById($plan_id);
+			$plan = PlanDAO::getPlanByInternalPlanId($internalPlan->getId(), $this->provider->getId());
 			if($plan == NULL) {
-				$msg = "unknown plan with id : ".$plan_id;
+				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$this->provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -307,7 +300,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		//CREATE
 		$db_subscription = new BillingsSubscription();
 		$db_subscription->setSubscriptionBillingUuid($subscription_billing_uuid);
-		$db_subscription->setProviderId($provider->getId());
+		$db_subscription->setProviderId($this->provider->getId());
 		$db_subscription->setUserId($user->getId());
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription->setSubUid($api_subscription->id);
@@ -384,6 +377,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$billingInfo = BillingInfoDAO::addBillingInfo($billingInfo);
 			$db_subscription->setBillingInfoId($billingInfo->getId());
 		}
+		$db_subscription->setPlatformId($this->provider->getPlatformId());
 		$db_subscription = BillingsSubscriptionDAO::addBillingsSubscription($db_subscription);
 		//SUB_OPTS
 		if(isset($subOpts)) {
@@ -411,7 +405,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			
 			$internal_plan_uuid = $api_subscription->metadata->internal_plan_uuid;
 			
-			$internal_plan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid);
+			$internal_plan = InternalPlanDAO::getInternalPlanByUuid($internal_plan_uuid, $this->provider->getPlatformId());
 			
 			if($internal_plan == NULL) {
 				$msg = "unknown internal_plan_uuid : ".$internal_plan_uuid;
@@ -419,16 +413,9 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			
-			$plan_id = InternalPlanLinksDAO::getProviderPlanIdFromInternalPlanId($internal_plan->getId(), $provider->getId());
-			if($plan_id == NULL) {
-				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$provider->getName();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			
-			$plan = PlanDAO::getPlanById($plan_id);
+			$plan = PlanDAO::getPlanByInternalPlanId($internal_plan->getId(), $this->provider->getId());
 			if($plan == NULL) {
-				$msg = "unknown plan with id : ".$plan_id;
+				$msg = "unknown plan : ".$internal_plan_uuid." for provider : ".$this->provider->getName();
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -436,7 +423,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		if($planOpts == NULL) {
 			$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
 		}
-		//$db_subscription->setProviderId($provider->getId());//STATIC
+		//$db_subscription->setProviderId($this->provider->getId());//STATIC
 		//$db_subscription->setUserId($user->getId());//STATIC
 		$db_subscription->setPlanId($plan->getId());
 		$db_subscription = BillingsSubscriptionDAO::updatePlanId($db_subscription);
@@ -516,16 +503,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		config::getLogger()->addInfo("gocardless dbsubscription update for userid=".$user->getId().", gocardless_subscription_uuid=".$api_subscription->id.", id=".$db_subscription->getId()." done successfully");
 		return($this->doFillSubscription($db_subscription));
 	}
-	
-	private function getDbSubscriptionByUuid(array $db_subscriptions, $subUuid) {
-		foreach ($db_subscriptions as $db_subscription) {
-			if($db_subscription->getSubUid() == $subUuid) {
-				return($db_subscription);
-			}
-		}
-		return(NULL);
-	}
-	
+		
 	private function getApiSubscriptionByUuid(Paginator $api_subscriptions, $subUuid) {
 		foreach ($api_subscriptions as $api_subscription) {
 			if($api_subscription->id == $subUuid) {
@@ -535,7 +513,9 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return(NULL);
 	}
 	
-	public function doRenewSubscription(BillingsSubscription $subscription, DateTime $start_date = NULL, DateTime $end_date = NULL) {
+	public function doRenewSubscription(BillingsSubscription $subscription, RenewSubscriptionRequest $renewSubscriptionRequest) {
+		$start_date = $renewSubscriptionRequest->getStartDate();
+		$end_date = $renewSubscriptionRequest->getEndDate();
 		if($end_date != NULL) {
 			$msg = "renewing a gocardless subscription does not support that end_date is already set";
 			config::getLogger()->addError($msg);
@@ -552,7 +532,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($providerPlan->getId()));
+		$internalPlan = InternalPlanDAO::getInternalPlanById($providerPlan->getInternalPlanId());
 		if($internalPlan == NULL) {
 			$msg = "plan with uuid=".$providerPlan->getPlanUuid()." for provider gocardless is not linked to an internal plan";
 			config::getLogger()->addError($msg);
@@ -623,7 +603,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription(BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId())));
 	}
 	
-	public function doCancelSubscription(BillingsSubscription $subscription, DateTime $cancel_date, $is_a_request = true) {
+	public function doCancelSubscription(BillingsSubscription $subscription, CancelSubscriptionRequest $cancelSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("gocardless subscription cancel...");
 			if(
@@ -635,15 +615,15 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				//nothing todo : already done or in process
 			} else {
 				//
-				if($is_a_request == true) {
+				if($cancelSubscriptionRequest->getOrigin() == 'api') {
 					$client = new Client(array(
-							'access_token' => getEnv('GOCARDLESS_API_KEY'),
+							'access_token' => $this->provider->getApiSecret(),
 							'environment' => getEnv('GOCARDLESS_API_ENV')
 					));
 					//
 					$client->subscriptions()->cancel($subscription->getSubUid());
 				}
-				$subscription->setSubCanceledDate($cancel_date);
+				$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
 				$subscription->setSubStatus('canceled');
 				//
 				try {
@@ -702,7 +682,7 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 						//already canceled, nothing can be done in gocardless side
 					} else {
 						$client = new Client(array(
-								'access_token' => getEnv('GOCARDLESS_API_KEY'),
+								'access_token' => $this->provider->getApiSecret(),
 								'environment' => getEnv('GOCARDLESS_API_ENV')
 						));
 						$api_subscription = $client->subscriptions()->get($subscription->getSubUid());
@@ -741,13 +721,23 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					throw $e;
 				}
 				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase']);
+					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], 'descending', $this->provider->getPlatformId());
 					if(count($transactionsResult['transactions']) == 1) {
 						$transaction = $transactionsResult['transactions'][0];
+						//
+						$amountInCents = NULL; //NULL = Refund ALL
+						if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+							$amountInCents = ceil($transaction->getAmountInCents() * ($subscription->getSubPeriodEndsDate()->getTimestamp() - (new DateTime())->getTimestamp())
+									/
+									($subscription->getSubPeriodEndsDate()->getTimestamp() - $subscription->getSubPeriodStartedDate()->getTimestamp()));
+						}
+						//
 						$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
 						$refundTransactionRequest = new RefundTransactionRequest();
+						$refundTransactionRequest->setPlatform($this->platform);
 						$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
 						$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+						$refundTransactionRequest->setAmountInCents($amountInCents);
 						$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
 					}
 				}

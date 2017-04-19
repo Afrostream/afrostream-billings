@@ -1,26 +1,25 @@
 <?php
 
-class GocardlessPlansHandler {
+require_once __DIR__ . '/../../global/plans/ProviderPlansHandler.php';
+
+class GocardlessPlansHandler extends ProviderPlansHandler {
 	
 	public static $supported_currencies = array();
 	public static $supported_cycles = array();
 	public static $supported_periods = array();
 	
 	public static function init() {
-		self::$supported_currencies = array('EUR');
+		self::$supported_currencies = array('EUR', 'GBP');
 		self::$supported_cycles = array(
 				(new PlanCycle(PlanCycle::auto))->getValue(),
 				(new PlanCycle(PlanCycle::once))->getValue()
 		);
 	
 		self::$supported_periods = array(
-				(new PlanPeriodUnit(PlanPeriodUnit::day))->getValue() => NULL,
+				(new PlanPeriodUnit(PlanPeriodUnit::day))->getValue() => array(7),
 				(new PlanPeriodUnit(PlanPeriodUnit::month))->getValue() => NULL,
 				(new PlanPeriodUnit(PlanPeriodUnit::year))->getValue() => NULL,
 		);
-	}
-	
-	public function __construct() {
 	}
 	
 	public function createProviderPlan(InternalPlan $internalPlan) {
