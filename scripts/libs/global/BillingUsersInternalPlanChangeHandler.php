@@ -71,6 +71,7 @@ class BillingUsersInternalPlanChangeHandler {
 							ScriptsConfig::getLogger()->addInfo("subscription with uuid=".$subscription->getSubscriptionBillingUuid()." ignored, because user has already been notified");
 						}
 						//
+						usleep(getEnv('PLAN_CHANGE_NOTIFY_SLEEPING_TIME_IN_MILLIS') * 1000);
 					} catch(Exception $e) {
 						ScriptsConfig::getLogger()->addError("subscription with uuid=".$subscription->getSubscriptionBillingUuid()." failed to be notified, error_code=".$e->getCode().", error_message=".$e->getMessage());
 					}
@@ -88,7 +89,7 @@ class BillingUsersInternalPlanChangeHandler {
 			InternalPlan $toInternalPlan, Plan $toProviderPlan) {
 		try {
 			ScriptsConfig::getLogger()->addInfo("subscription with uuid=".$subscription->getSubscriptionBillingUuid()." notifying plan change...");
-			$sendgrid_template_id = '66a8e538-641e-4ebb-9b5a-0b7ab4ae72ba';//SUBSCRIPTION_NOTIFY_PLAN_CHANGE';
+			$sendgrid_template_id = getEnv('PLAN_CHANGE_NOTIFY_SENDGRID_TEMPLATE_ID');//SUBSCRIPTION_NOTIFY_PLAN_CHANGE
 			$user = UserDAO::getUserById($subscription->getUserId());
 			if($user == NULL) {
 				$msg = "unknown user with id : ".$subscription->getUserId();
@@ -211,7 +212,7 @@ class BillingUsersInternalPlanChangeHandler {
 			$subscription = BillingsSubscriptionDAO::updatePlanChangeId($subscription);
 			$subscription->setPlanChangeNotified(true);
 			$subscription = BillingsSubscriptionDAO::updatePlanChangeNotified($subscription);
-			ScriptsConfig::getLogger()->addInfo("subscription with uuid=".$subscription->getSubscriptionBillingUuid()." notifying plan change successfully");
+			ScriptsConfig::getLogger()->addInfo("subscription with uuid=".$subscription->getSubscriptionBillingUuid().", email=".(!empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL'))." notifying plan change successfully");
 		} catch(Exception $e) {
 			ScriptsConfig::getLogger()->addError("an error occurred while notifying plan change for subscription with uuid=".$subscription->getSubscriptionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage());
 			throw $e;
@@ -264,6 +265,7 @@ class BillingUsersInternalPlanChangeHandler {
 							ScriptsConfig::getLogger()->addInfo("subscription with uuid=".$subscription->getSubscriptionBillingUuid()." ignored, because it has not been notified yet");
 						}
 						//
+						usleep(getEnv('PLAN_CHANGE_PROCESS_SLEEPING_TIME_IN_MILLIS') * 1000);
 					} catch(Exception $e) {
 						ScriptsConfig::getLogger()->addError("subscription with uuid=".$subscription->getSubscriptionBillingUuid()." Plan Change failed, error_code=".$e->getCode().", error_message=".$e->getMessage());
 					}
