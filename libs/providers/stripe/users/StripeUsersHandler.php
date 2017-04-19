@@ -95,10 +95,8 @@ class StripeUsersHandler extends ProviderUsersHandler
     		
     		$customer->email = $updateUserRequest->getUserOptsArray()['email'];
     		
-    		$customer->metadata = [
-    				'firstName' => $updateUserRequest->getUserOptsArray()['firstName'],
-    				'lastName' => $updateUserRequest->getUserOptsArray()['lastName'],
-    		];
+    		$customer->metadata['firstName'] = $updateUserRequest->getUserOptsArray()['firstName'];
+    		$customer->metadata['lastName'] = $updateUserRequest->getUserOptsArray()['lastName'];
     		//
     		$customer->save();
     		config::getLogger()->addInfo("stripe user data updating done successfully, user_provider_uuid=".$updateUserRequest->getUserProviderUuid());
