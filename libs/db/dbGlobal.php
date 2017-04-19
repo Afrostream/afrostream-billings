@@ -1894,9 +1894,24 @@ class BillingsSubscriptionDAO {
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
 	
-	public static function getBillingsSubscriptionsByPlanId($planId) {
-		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS WHERE BS.deleted = false AND BS.planid = $1 ORDER BY BS._id ASC";
-		$result = pg_query_params(config::getDbConn(), $query, array($planId));
+	public static function getBillingsSubscriptionsByPlanId($planId, $status_array = array('active')) {
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS WHERE BS.deleted = false AND BS.planid = $1";
+		$params = array();
+		$params[] = $planId;
+		$query.= " AND BS.sub_status in (";
+		$firstLoop = true;
+		foreach($status_array as $status) {
+			$params[] = $status;
+			if($firstLoop) {
+				$firstLoop = false;
+				$query .= "$".(count($params));
+			} else {
+				$query .= ", $".(count($params));
+			}
+		}
+		$query.= ")";
+		$query.= " ORDER BY BS._id ASC";
+		$result = pg_query_params(config::getDbConn(), $query, $params);
 	
 		$out = array();
 	
