@@ -266,6 +266,8 @@ class ProviderSubscriptionsHandler {
 		//
 		$userOpts = UserOptsDAO::getUserOptsByUserId($subscription_after_update->getUserId());
 		//
+		$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($subscription_after_update->getPlanId());
+		//
 		$suffix = getEnv('SENDGRID_TEMPLATE_SUFFIX');
 		$locale_country_default = strtoupper(getEnv('LOCALE_COUNTRY_DEFAULT'));
 		$locale_country_user = $locale_country_default;
@@ -291,6 +293,8 @@ class ProviderSubscriptionsHandler {
 		$specific = NULL;
 		if($this->isSponsorshipSubscription($subscription_after_update)) {
 			$specific = 'SPONSORSHIP';
+		} else {
+			$specific = 'P_'.strtoupper($internalPlan->getInternalPlanUuid());
 		}
 		$specificTemplateName = NULL;
 		if(isset($specific)) {
