@@ -84,6 +84,35 @@ class StripeUsersHandler extends ProviderUsersHandler
         $message = vsprintf($message, $values);
         config::getLogger()->addInfo('STRIPE - '.$message);
     }
+    
+    public function doUpdateUserOpts(UpdateUserRequest $updateUserRequest) {
+    	try {
+    		config::getLogger()->addInfo("stripe user data updating...");
+    		//
+    		checkUserOptsArray($updateUserRequest->getUserOptsArray(), $this->provider->getName());
+    		//
+    		$customer = \Stripe\Customer::retrieve($updateUserRequest->getUserProviderUuid());
+    		
+    		$customer->email = $updateUserRequest->getUserOptsArray()['email'];
+    		
+    		$customer->metadata = [
+    				'firstName' => $updateUserRequest->getUserOptsArray()['firstName'],
+    				'lastName' => $updateUserRequest->getUserOptsArray()['lastName'],
+    		];
+    		//
+    		$customer->save();
+    		config::getLogger()->addInfo("stripe user data updating done successfully, user_provider_uuid=".$updateUserRequest->getUserProviderUuid());
+    	} catch(BillingsException $e) {
+    		$msg = "a billings exception occurred while updating stripe user data for user_provider_uuid=".$updateUserRequest->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+    		config::getLogger()->addError("stripe user data updating failed : ".$msg);
+    		throw $e;
+		} catch(Exception $e) {
+    		$msg = "an unknown exception occurred while updating a stripe user data for user_provider_uuid=".$updateUserRequest->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+    		config::getLogger()->addError("stripe user data updating failed : ".$msg);
+    		throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
+    	}
+    }
+    
 }
 
 ?>
