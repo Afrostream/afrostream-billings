@@ -578,6 +578,9 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				break;		
 		}
 		$subscription->setIsActive($is_active);
+		if($subscription->getSubStatus() == 'active') {
+			$subscription->setIsPlanChangeCompatible(true);
+		}
 		return($subscription);
 	}
 	
