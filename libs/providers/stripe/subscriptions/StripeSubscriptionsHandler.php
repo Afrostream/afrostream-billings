@@ -331,6 +331,9 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         if($subscription->getSubStatus() == 'canceled') {
             $subscription->setIsReactivable(true);
         }
+        if($subscription->getSubStatus() == 'active') {
+        	$subscription->setIsPlanChangeCompatible(true);
+        }
         return($subscription);
     }
 
