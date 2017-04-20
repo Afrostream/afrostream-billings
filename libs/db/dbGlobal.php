@@ -2129,6 +2129,7 @@ class BillingsSubscription implements JsonSerializable {
 	private $is_cancelable = false;
 	private $is_reactivable = false;
 	private $is_expirable = false;
+	private $is_plan_change_compatible = false;
 	//
 	private $billinginfoid;
 	private $platformId;
@@ -2367,6 +2368,14 @@ class BillingsSubscription implements JsonSerializable {
 		return($this->plan_change_id);
 	}
 	
+	public function setIsPlanChangeCompatible($is_plan_change_compatible) {
+		$this->is_plan_change_compatible = $is_plan_change_compatible;
+	}
+	
+	public function getIsPlanChangeCompatible() {
+		return($this->is_plan_change_compatible);
+	}
+	
 	public function jsonSerialize() {
 		$return = [
 			'subscriptionBillingUuid' => $this->subscription_billing_uuid,
@@ -2376,6 +2385,7 @@ class BillingsSubscription implements JsonSerializable {
 			'isCancelable' => ($this->is_cancelable) ? 'yes' : 'no',
 			'isReactivable' => ($this->is_reactivable) ? 'yes' : 'no',
 			'isExpirable' => ($this->is_expirable) ? 'yes' : 'no',
+			'isPlanChangeCompatible' => ($this->is_plan_change_compatible) ? 'yes' : 'no',
 			'user' =>	((UserDAO::getUserById($this->userid)->jsonSerialize())),
 			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
 			'creationDate' => dbGlobal::toISODate($this->creation_date),
