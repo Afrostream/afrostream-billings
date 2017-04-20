@@ -616,7 +616,10 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					$options['prorateCharges'] = true;
 					break;
 				case 'atRenewal' :
-					$options['prorateCharges'] = false;
+					//Exception
+					$msg = "unsupported timeframe : ".$updateInternalPlanSubscriptionRequest->getTimeframe()." for provider named : ".$this->provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 				default :
 					//Exception
