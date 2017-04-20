@@ -10,8 +10,8 @@ use Monolog\Handler\StreamHandler;
 #General
 
 //sample : {"planChangeProposalsOnCancel":{"enabled":true,"internalPlans":[{"fromInternalPlanUuid":"toto1","toInternalPlanUuid":"tutu1"},{"fromInternalPlanUuid":"toto2","toInternalPlanUuid":"tutu2"}]}}
-if(getEnv('config') === false) {
-	putEnv('config={"planChangeProposalsOnCancel":{"enabled":true,"internalPlans":[]}}');
+if(getEnv('CONFIG') === false) {
+	putEnv('CONFIG={"planChangeProposalsOnCancel":{"enabled":true,"internalPlans":[]}}');
 }
 
 if(getEnv('LOCALE_COUNTRY_DEFAULT') === false) {

@@ -1483,12 +1483,12 @@ $app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/process", funct
 
 //config
 
-$app->get("/billings/api/config/", function ($request, $response, $args) {
+$app->get("/billings/api/config", function ($request, $response, $args) {
 	$json_as_array = array();
 	$json_as_array['status'] = 'done';
 	$json_as_array['statusMessage'] = 'success';
 	$json_as_array['statusCode'] = 0;
-	$json_as_array['response']['config'] = json_decode(getEnv('config'), true);
+	$json_as_array['response']['config'] = json_decode(getEnv('CONFIG'), true);
 	//
 	$json = json_encode($json_as_array);
 	$response = $response->withStatus(200);
