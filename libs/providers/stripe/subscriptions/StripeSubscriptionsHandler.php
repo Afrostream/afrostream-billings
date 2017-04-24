@@ -331,6 +331,9 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         if($subscription->getSubStatus() == 'canceled') {
             $subscription->setIsReactivable(true);
         }
+        if($subscription->getSubStatus() == 'active') {
+        	$subscription->setIsPlanChangeCompatible(true);
+        }
         return($subscription);
     }
 
@@ -389,8 +392,24 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 	    		config::getLogger()->addError($msg);
 	    		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 	    	}
-	    	//
-	        $user = UserDAO::getUserById($subscription->getUserId());
+	    	switch ($updateInternalPlanSubscriptionRequest->getTimeframe()) {
+	    		case 'now' :
+	    			break;
+	    		case 'atRenewal' :
+	    			//Exception
+	    			$msg = "unsupported timeframe : ".$updateInternalPlanSubscriptionRequest->getTimeframe()." for provider named : ".$this->provider->getName();
+	    			config::getLogger()->addError($msg);
+	    			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+	    			break;	    			
+	    		default :
+	    			//Exception
+	    			$msg = "unknown timeframe : ".$updateInternalPlanSubscriptionRequest->getTimeframe();
+	    			config::getLogger()->addError($msg);
+	    			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+	    			break;
+	    	}
+	        
+	    	$user = UserDAO::getUserById($subscription->getUserId());
 	
 	        $api_subscription = $this->getSubscription($subscription->getSubUid(), $user);
 	        $api_subscription->plan = $providerPlan->getPlanUuid();

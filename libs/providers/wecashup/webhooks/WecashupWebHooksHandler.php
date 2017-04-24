@@ -135,7 +135,9 @@ class WecashupWebHooksHandler extends ProviderWebHooksHandler {
 			$now = new DateTime();
 			switch ($paymentTransaction->getTransactionStatus()) {
 				case 'TOVALIDATE' :
-					$api_subscription->setSubStatus('future');
+					//<-- HACK : IMMEDIATELY ACTIVE : DON'T TOUCH THE CURRENT STATUS
+					//$api_subscription->setSubStatus('future');
+					//--> HACK : IMMEDIATELY ACTIVE
 					$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
 					$billingsTransaction->setUpdateType($update_type);
 					if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
@@ -143,7 +145,9 @@ class WecashupWebHooksHandler extends ProviderWebHooksHandler {
 					}
 					break;
 				case 'PENDING' :
-					$api_subscription->setSubStatus('future');
+					//<-- HACK : IMMEDIATELY ACTIVE : DON'T TOUCH THE CURRENT STATUS
+					//$api_subscription->setSubStatus('future');
+					//--> HACK : IMMEDIATELY ACTIVE
 					$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::waiting));
 					$billingsTransaction->setUpdateType($update_type);
 					if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {
@@ -151,9 +155,11 @@ class WecashupWebHooksHandler extends ProviderWebHooksHandler {
 					}
 					break;
 				case 'PAID' :
-					$api_subscription->setSubStatus('active');
-					$api_subscription->setSubActivatedDate($now);
-					$api_subscription->setSubPeriodStartedDate($now);
+					//<-- HACK : IMMEDIATELY ACTIVE : DON'T TOUCH THE CURRENT STATUS
+					//$api_subscription->setSubStatus('active');
+					//$api_subscription->setSubActivatedDate($now);
+					//$api_subscription->setSubPeriodStartedDate($now);
+					//--> HACK : IMMEDIATELY ACTIVE
 					$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
 					$billingsTransaction->setUpdateType($update_type);
 					if($paymentTransaction->getTransactionSenderCountryCodeIso2() != NULL) {

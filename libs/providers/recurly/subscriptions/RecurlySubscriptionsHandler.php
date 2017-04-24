@@ -450,6 +450,9 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		if($subscription->getSubStatus() == 'canceled') {
 			$subscription->setIsReactivable(true);
 		}
+		if($subscription->getSubStatus() == 'active') {
+			$subscription->setIsPlanChangeCompatible(true);
+		}
 		return($subscription);
 	}
 	
@@ -529,10 +532,22 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
 			//
 			$api_subscription->plan_code = $providerPlan->getPlanUuid();
-			$api_subscription->updateImmediately();
-			//
-			$subscription->setPlanId($providerPlan->getId());
-			//
+			
+			switch ($updateInternalPlanSubscriptionRequest->getTimeframe()) {
+				case 'now' :
+					$api_subscription->updateImmediately();
+					$subscription->setPlanId($providerPlan->getId());
+					break;
+				case 'atRenewal' :
+					$api_subscription->updateAtRenewal();
+					break;
+				default :
+					//Exception
+					$msg = "unknown timeframe : ".$updateInternalPlanSubscriptionRequest->getTimeframe();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");

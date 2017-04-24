@@ -9,6 +9,19 @@ use Monolog\Handler\StreamHandler;
 
 #General
 
+//sample : {"planChangeProposalsOnCancel":{"enabled":true,"internalPlans":[{"fromInternalPlanUuid":"toto1","toInternalPlanUuid":"tutu1"},{"fromInternalPlanUuid":"toto2","toInternalPlanUuid":"tutu2"}]}}
+if(getEnv('CONFIG') === false) {
+	putEnv('CONFIG={"planChangeProposalsOnCancel":{"enabled":true,"internalPlans":[]}}');
+}
+
+if(getEnv('LOCALE_COUNTRY_DEFAULT') === false) {
+	putEnv('LOCALE_COUNTRY_DEFAULT=FR');
+}
+
+if(getEnv('LOCALE_LANGUAGE_DEFAULT') === false) {
+	putEnv('LOCALE_LANGUAGE_DEFAULT=fr');
+}
+
 if(getEnv('PLATFORM_DEFAULT_ID') === false) {
 	putEnv('PLATFORM_DEFAULT_ID=1');/* AFROSTREAM */
 }
@@ -538,6 +551,24 @@ if(getEnv('GOOGLE_APPLICATION_CREDENTIALS') === false) {
 
 if(getEnv('GOOGLE_PACKAGENAME') === false) {
 	putenv('GOOGLE_PACKAGENAME=tv.afrostream.app');
+}
+
+#Bonus
+
+if(getEnv('BONUS_ENABLED') === false) {
+	putEnv('BONUS_ENABLED=0');
+}
+
+if(getEnv('BONUS_CLIENT_IDS') === false) {
+	putEnv('BONUS_CLIENT_IDS=85f700d9-4a80-4913-8223-e0d49fef3a05;');
+}
+
+if(getEnv('BONUS_INTERNAL_COUPON_CAMPAIGN_BILLING_UUID') === false) {
+	putEnv('BONUS_INTERNAL_COUPON_CAMPAIGN_BILLING_UUID=e40028fa-ab18-4ec8-a573-b396c3165758');
+}
+
+if(getEnv('BONUS_INTERNAL_PLAN_BILLING_UUID') === false) {
+	putEnv('BONUS_INTERNAL_PLAN_BILLING_UUID=bonus');
 }
 
 #logger, #db_conn, ...

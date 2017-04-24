@@ -263,52 +263,99 @@ class ProviderSubscriptionsHandler {
 	}
 	
 	private function selectSendgridTemplateId(BillingsSubscription $subscription_after_update, $event) {
+		//
+		$userOpts = UserOptsDAO::getUserOptsByUserId($subscription_after_update->getUserId());
+		//
+		$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($subscription_after_update->getPlanId());
+		//
 		$suffix = getEnv('SENDGRID_TEMPLATE_SUFFIX');
+		$locale_country_default = strtoupper(getEnv('LOCALE_COUNTRY_DEFAULT'));
+		$locale_country_user = $locale_country_default;
+		if($userOpts->getOpt('countryCode') != NULL) {
+			$locale_country_user = strtoupper($userOpts->getOpt('countryCode'));
+		}
+		$locale_language_default = strtolower(getEnv('LOCALE_LANGUAGE_DEFAULT'));
+		$locale_language_user = $locale_language_default;
+		if($userOpts->getOpt('languageCode') != NULL) {
+			$locale_language_user = strtolower($userOpts->getOpt('languageCode'));
+		}
 		$templateNames = array();
 		$defaultTemplateName = 'SUBSCRIPTION'.'_'.$event;
 		$templateNames[] = $defaultTemplateName;
+		$this->addLocales($templateNames, $defaultTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$templateNames[] = $defaultTemplateName.$suffix;
+		$this->addLocales($templateNames, $defaultTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName;
+		$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$defaultTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$templateNames[] = strtoupper($this->platform->getName()).'_'.$defaultTemplateName.$suffix;
+		$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$defaultTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		//SPECIFIC
 		$specific = NULL;
 		if($this->isSponsorshipSubscription($subscription_after_update)) {
 			$specific = 'SPONSORSHIP';
+		} else {
+			$specific = 'P_'.strtoupper($internalPlan->getInternalPlanUuid());
 		}
 		$specificTemplateName = NULL;
 		if(isset($specific)) {
 			$specificTemplateName = 'SUBSCRIPTION'.'_'.$specific.'_'.$event;
 			$templateNames[] = $specificTemplateName;
+			$this->addLocales($templateNames, $specificTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 			$templateNames[] = $specificTemplateName.$suffix;
+			$this->addLocales($templateNames, $specificTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName;
+			$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$specificTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificTemplateName.$suffix;
+			$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$specificTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		}
 		$providerTemplateName = $defaultTemplateName.'_'.strtoupper($this->provider->getName());
 		$templateNames[] = $providerTemplateName;
+		$this->addLocales($templateNames, $providerTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$templateNames[] = $providerTemplateName.$suffix;
+		$this->addLocales($templateNames, $providerTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName;
+		$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$providerTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$templateNames[] = strtoupper($this->platform->getName()).'_'.$providerTemplateName.$suffix;
+		$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$providerTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		$specificProviderTemplateName = NULL;
 		if(isset($specificTemplateName)) {
 			$specificProviderTemplateName = $specificTemplateName.'_'.strtoupper($this->provider->getName());
 			$templateNames[] = $specificProviderTemplateName;
+			$this->addLocales($templateNames, $specificProviderTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 			$templateNames[] = $specificProviderTemplateName.$suffix;
+			$this->addLocales($templateNames, $specificProviderTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName;
+			$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 			$templateNames[] = strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName.$suffix;
+			$this->addLocales($templateNames, strtoupper($this->platform->getName()).'_'.$specificProviderTemplateName.$suffix, $locale_country_default, $locale_language_default, $locale_country_user, $locale_language_user);
 		}
 		//NOW SEARCH TEMPLATE IN DATABASE
 		$billingMailTemplate = NULL;
 		while(($templateName = array_pop($templateNames)) != NULL) {
+			//config::getLogger()->addInfo("template named : ".$templateName." searching...");
 			$billingMailTemplate = BillingMailTemplateDAO::getBillingMailTemplateByTemplateName($templateName);
 			if(isset($billingMailTemplate)) {
-				config::getLogger()->addInfo("found template named : ".$templateName);
+				config::getLogger()->addInfo("template named : ".$templateName." found");
 				return($billingMailTemplate->getTemplatePartnerUuid());
 			}
+			//config::getLogger()->addInfo("template named : ".$templateName." NOT found");
 		}
 		$msg = "event by email : no template was found";
 		config::getLogger()->addError($msg);
 		//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		return(NULL);
+	}
+	
+	//passage par référence !!!
+	private function addLocales(array &$templateNames, $prefix, $defaultCountryCode, $defaultLanguageCode, $userCountryCode, $userLanguageCode) {
+		$templateNames[] = $prefix.'_'.$defaultLanguageCode;
+		$templateNames[] = $prefix.'_'.$userLanguageCode;
+		$templateNames[] = $prefix.'_'.$defaultCountryCode;
+		$templateNames[] = $prefix.'_'.$defaultCountryCode.'_'.$defaultLanguageCode;
+		$templateNames[] = $prefix.'_'.$defaultCountryCode.'_'.$userLanguageCode;
+		$templateNames[] = $prefix.'_'.$userCountryCode;
+		$templateNames[] = $prefix.'_'.$userCountryCode.'_'.$defaultLanguageCode;
+		$templateNames[] = $prefix.'_'.$userCountryCode.'_'.$userLanguageCode;
 	}
 	
 	private function doSendEmail(BillingsSubscription $subscription_after_update, $event, $sendgrid_template_id) {
@@ -482,7 +529,12 @@ class ProviderSubscriptionsHandler {
 	
 	protected function hasFutureSubscription(User $user, BillingsSubscription $currentBillingsSubscription) {
 		$subscriptionsHandler = new SubscriptionsHandler();
-		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($user->getUserReferenceUuid(), $user->getPlatformId());
+		$getSubscriptionsRequest = new GetSubscriptionsRequest();
+		$getSubscriptionsRequest->setOrigin('api');
+		$getSubscriptionsRequest->setClientId(NULL);
+		$getSubscriptionsRequest->setPlatform($this->platform);
+		$getSubscriptionsRequest->setUserReferenceUuid($user->getUserReferenceUuid());
+		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($getSubscriptionsRequest);
 		if(count($subscriptions) > 0) {
 			foreach ($subscriptions as $subscription) {
 				if($subscription->getId() != $currentBillingsSubscription->getId()) {

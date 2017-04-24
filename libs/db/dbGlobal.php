@@ -20,11 +20,11 @@ class dbGlobal {
 		return($str->format(DateTime::ISO8601));
 	}
 	
-	public static function loadSqlResult($query, $limit = 0, $offset = 0) {
+	public static function loadSqlResult($connection, $query, $limit = 0, $offset = 0) {
 		$params = array();
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
-		$result = pg_query_params(config::getReadOnlyDbConn(), $query, $params);
+		$result = pg_query_params($connection, $query, $params);
 		$fieldNames = array();
 		$i = pg_num_fields($result);
 		for($j = 0; $j < $i; $j++) {
@@ -1601,7 +1601,7 @@ class BillingsSubscriptionDAO {
 	public static function init() {
 		BillingsSubscriptionDAO::$sfields = "BS._id, BS.subscription_billing_uuid, BS.providerid, BS.userid, BS.planid, BS.creation_date, BS.updated_date, BS.sub_uuid, BS.sub_status,".
 			" BS.sub_activated_date, BS.sub_canceled_date, BS.sub_expires_date, BS.sub_period_started_date, BS.sub_period_ends_date,".
-			" BS.update_type, BS.updateid, BS.deleted, BS.billinginfoid, BS.platformid";
+			" BS.update_type, BS.updateid, BS.deleted, BS.billinginfoid, BS.platformid, BS.plan_change_notified, BS.plan_change_processed, BS.plan_change_id";
 	}
 	
 	private static function getBillingsSubscriptionFromRow($row) {
@@ -1626,6 +1626,9 @@ class BillingsSubscriptionDAO {
 		$out->setBillingsSubscriptionOpts(BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($row["_id"]));
 		$out->setBillingInfoId($row["billinginfoid"]);
 		$out->setPlatformId($row["platformid"]);
+		$out->setPlanChangeNotified($row["plan_change_notified"] == 't' ? true : false);
+		$out->setPlanChangeProcessed($row["plan_change_processed"] == 't' ? true : false);
+		$out->setPlanChangeId($row["plan_change_id"]);
 		return($out);
 	}
 	
@@ -1858,6 +1861,69 @@ class BillingsSubscriptionDAO {
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
 	
+	//updatePlanChangeNotified
+	public static function updatePlanChangeNotified(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, plan_change_notified = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getPlanChangeNotified() === true ? 'true' : 'false',
+						$subscription->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//updatePlanChangeProcessed
+	public static function updatePlanChangeProcessed(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, plan_change_processed = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getPlanChangeProcessed() === true ? 'true' : 'false',
+						$subscription->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	//updatePlanChangeId
+	public static function updatePlanChangeId(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, plan_change_id = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$subscription->getPlanChangeId(),
+						$subscription->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
+	public static function getBillingsSubscriptionsByPlanId($planId, $status_array = array('active')) {
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS WHERE BS.deleted = false AND BS.planid = $1";
+		$params = array();
+		$params[] = $planId;
+		$query.= " AND BS.sub_status in (";
+		$firstLoop = true;
+		foreach($status_array as $status) {
+			$params[] = $status;
+			if($firstLoop) {
+				$firstLoop = false;
+				$query .= "$".(count($params));
+			} else {
+				$query .= ", $".(count($params));
+			}
+		}
+		$query.= ")";
+		$query.= " ORDER BY BS._id ASC";
+		$result = pg_query_params(config::getDbConn(), $query, $params);
+	
+		$out = array();
+	
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getBillingsSubscriptionFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 	public static function getBillingsSubscriptionsByUserId($userId) {
 		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS WHERE BS.deleted = false AND BS.userid = $1 ORDER BY BS.sub_activated_date DESC";
 		$result = pg_query_params(config::getDbConn(), $query, array($userId));
@@ -2063,10 +2129,15 @@ class BillingsSubscription implements JsonSerializable {
 	private $is_cancelable = false;
 	private $is_reactivable = false;
 	private $is_expirable = false;
+	private $is_plan_change_compatible = false;
 	//
 	private $billinginfoid;
 	private $platformId;
-
+	//
+	private $plan_change_notified = false;
+	private $plan_change_processed = false;
+	private $plan_change_id = NULL;
+	
 	public function getId() {
 		return($this->_id);
 	}
@@ -2273,6 +2344,38 @@ class BillingsSubscription implements JsonSerializable {
 		return($this->platformId);
 	}
 	
+	public function setPlanChangeNotified($bool) {
+		$this->plan_change_notified = $bool;
+	}
+	
+	public function getPlanChangeNotified() {
+		return($this->plan_change_notified);
+	}
+	
+	public function setPlanChangeProcessed($bool) {
+		$this->plan_change_processed = $bool;
+	}
+	
+	public function getPlanChangeProcessed() {
+		return($this->plan_change_processed);
+	}
+	
+	public function setPlanChangeId($planid) {
+		$this->plan_change_id = $planid;
+	}
+	
+	public function getPlanChangeId() {
+		return($this->plan_change_id);
+	}
+	
+	public function setIsPlanChangeCompatible($is_plan_change_compatible) {
+		$this->is_plan_change_compatible = $is_plan_change_compatible;
+	}
+	
+	public function getIsPlanChangeCompatible() {
+		return($this->is_plan_change_compatible);
+	}
+	
 	public function jsonSerialize() {
 		$return = [
 			'subscriptionBillingUuid' => $this->subscription_billing_uuid,
@@ -2282,6 +2385,7 @@ class BillingsSubscription implements JsonSerializable {
 			'isCancelable' => ($this->is_cancelable) ? 'yes' : 'no',
 			'isReactivable' => ($this->is_reactivable) ? 'yes' : 'no',
 			'isExpirable' => ($this->is_expirable) ? 'yes' : 'no',
+			'isPlanChangeCompatible' => ($this->is_plan_change_compatible) ? 'yes' : 'no',
 			'user' =>	((UserDAO::getUserById($this->userid)->jsonSerialize())),
 			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
 			'creationDate' => dbGlobal::toISODate($this->creation_date),

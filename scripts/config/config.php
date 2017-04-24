@@ -263,6 +263,28 @@ if(getEnv('CHARTMOGUL_API_SECRET_KEY') === false) {
 	putEnv('CHARTMOGUL_API_SECRET_KEY=7f7d1e2011fc11860adcfb30492a8e3f');
 }
 
+#PLAN_CHANGE
+
+if(getEnv('PLAN_CHANGE_NOTIFY_SENDGRID_TEMPLATE_ID') === false) {
+	putEnv('PLAN_CHANGE_NOTIFY_SENDGRID_TEMPLATE_ID=66a8e538-641e-4ebb-9b5a-0b7ab4ae72ba');//SUBSCRIPTION_NOTIFY_PLAN_CHANGE
+}
+
+if(getEnv('PLAN_CHANGE_NOTIFY_DAYS_AGO_COUNTER') === false) {
+	putEnv('PLAN_CHANGE_NOTIFY_DAYS_AGO_COUNTER=35');
+}
+
+if(getEnv('PLAN_CHANGE_NOTIFY_SLEEPING_TIME_IN_MILLIS') === false) {
+	putEnv('PLAN_CHANGE_NOTIFY_SLEEPING_TIME_IN_MILLIS=3000');
+}
+
+if(getEnv('PLAN_CHANGE_PROCESS_DAYS_AGO_COUNTER') === false) {
+	putEnv('PLAN_CHANGE_PROCESS_DAYS_AGO_COUNTER=3');
+}
+
+if(getEnv('PLAN_CHANGE_PROCESS_SLEEPING_TIME_IN_MILLIS') === false) {
+	putEnv('PLAN_CHANGE_PROCESS_SLEEPING_TIME_IN_MILLIS=3000');
+}
+
 #logger, #db_conn, ...
 
 class ScriptsConfig {
@@ -278,17 +300,41 @@ class ScriptsConfig {
 		}
 		return(self::$logger);
 	}
-
-	private static $db_conn;
-
-	public static function getDbConn() {
-		if(self::$db_conn == null) {
-			$connection_string = 'host='.getEnv('AFR_DB_HOST').' port='.getEnv('AFR_DB_PORT').' dbname='.getEnv('AFR_DB_NAME').' user='.getEnv('AFR_DB_USER').' password='.getEnv('AFR_DB_PASSWORD');
-			self::$db_conn = pg_connect($connection_string)
-			or die('connection to database impossible : '.pg_last_error());
+	
+	private static $db_conns = array();
+	
+	public static function getDbConn($connection_string_options = NULL, $read_only = false) {
+		$connection_string = 'host='.getEnv('AFR_DB_HOST').' port='.getEnv('AFR_DB_PORT').' dbname='.getEnv('AFR_DB_NAME').' user='.getEnv('AFR_DB_USER').' password='.getEnv('AFR_DB_PASSWORD');
+		if(isset($connection_string_options)) {
+			$connection_string.= ' '.$connection_string_options;
 		}
-		return(self::$db_conn);
+		$db_conn = NULL;
+		$key = $connection_string.'-'.$read_only;
+		if(key_exists($key, self::$db_conns)) {
+			$db_conn = self::$db_conns[$key];
+		} else {
+			/* NC - keep in mind -
+			 * an old connection can be kept by pg_connect.
+			 * By forcing PGSQL_CONNECT_FORCE_NEW will create one connection with read-only mode that will not be returned for connections with read-write mode
+			 */
+			if($read_only == true) {
+				$db_conn = pg_connect($connection_string, PGSQL_CONNECT_FORCE_NEW)
+				or die('connection to database impossible : '.pg_last_error());
+				pg_query($db_conn, "SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY");
+			} else {
+				$db_conn = pg_connect($connection_string)
+				or die('connection to database impossible : '.pg_last_error());
+			}
+			self::$db_conns[$key] = $db_conn;
+		}
+		return($db_conn);
 	}
+	
+	public static function getReadOnlyDbConn() {
+		$db_conn = self::getDbConn(NULL, true);
+		return($db_conn);
+	}
+	
 }
 
 ?>

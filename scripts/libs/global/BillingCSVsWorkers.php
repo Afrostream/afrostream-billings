@@ -77,7 +77,10 @@ class BillingCSVsWorkers extends BillingsWorkers {
 				throw new Exception("cannot read file containing tasks named '".$filename."' as csv");
 			}
 			while(($fields = fgetcsv($billing_csvs_tasks_file_res, NULL, $csvDelimiter)) !== false) {
-				$dailyFileName = "csv-".$fields[1]."-daily-".$yesterdayEndOfDay->format($dailyDateFormat).".csv";
+				$connection = $this->getConnection($fields[0]);
+				$prefix = $fields[1];
+				$sql = $fields[2];
+				$dailyFileName = "csv-".$prefix."-daily-".$yesterdayEndOfDay->format($dailyDateFormat).".csv";
 				$dailyKey = getEnv('AWS_ENV').'/'.getEnv('AWS_FOLDER_CSVS').'/daily/'.$yesterdayEndOfDay->format($dailyDateFormat).'/'.$dailyFileName;
 				try {
 					if($s3->doesObjectExist($bucket, $dailyKey) == false) {
@@ -101,7 +104,7 @@ class BillingCSVsWorkers extends BillingsWorkers {
 						$totalCounter = NULL;
 						$firstLoop = true;
 						do {
-							$result = dbGlobal::loadSqlResult($fields[2], $limit, $offset);
+							$result = dbGlobal::loadSqlResult($connection, $sql, $limit, $offset);
 							$offset = $offset + $limit;
 							if(is_null($totalCounter)) {$totalCounter = $result['total_counter'];}
 							$idx+= count($result['rows']);
@@ -163,6 +166,22 @@ class BillingCSVsWorkers extends BillingsWorkers {
 				ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
 			}
 		}		
+	}
+	
+	public function getConnection($connectionName) {
+		$connection = NULL;
+		switch($connectionName) {
+			case 'BILLING' :
+				$connection = config::getReadOnlyDbConn();
+				break;
+			case 'BACKO' :
+				$connection = ScriptsConfig::getReadOnlyDbConn();
+				break;
+			default : 
+				throw new Exception("connectionName : ".$connectionName." is unknown");
+				break;
+		}
+		return($connection);
 	}
 	
 }

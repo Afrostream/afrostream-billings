@@ -578,6 +578,9 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				break;		
 		}
 		$subscription->setIsActive($is_active);
+		if($subscription->getSubStatus() == 'active') {
+			$subscription->setIsPlanChangeCompatible(true);
+		}
 		return($subscription);
 	}
 	
@@ -607,18 +610,37 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			Braintree_Configuration::publicKey($this->provider->getApiKey());
 			Braintree_Configuration::privateKey($this->provider->getApiSecret());
 			//
+			$options = array();
+			switch ($updateInternalPlanSubscriptionRequest->getTimeframe()) {
+				case 'now' :
+					$options['prorateCharges'] = true;
+					break;
+				case 'atRenewal' :
+					//Exception
+					$msg = "unsupported timeframe : ".$updateInternalPlanSubscriptionRequest->getTimeframe()." for provider named : ".$this->provider->getName();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+				default :
+					//Exception
+					$msg = "unknown timeframe : ".$updateInternalPlanSubscriptionRequest->getTimeframe();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
 			Braintree\Subscription::update($subscription->getSubUid(), 
 					[
 							'planId' => $providerPlan->getPlanUuid(),
 							'price' => $internalPlan->getAmount(),	//Braintree does not change the price !!!
-							'options' => [
-									prorateCharges => true
-							]
+							'options' => $options,
 					]);
-			
-			//
-			$subscription->setPlanId($providerPlan->getId());
-			//
+			switch ($updateInternalPlanSubscriptionRequest->getTimeframe()) {
+				case 'now' :
+					$subscription->setPlanId($providerPlan->getId());
+					break;
+				case 'atRenewal' :
+					break;
+			}
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
@@ -723,6 +745,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 						//
 						$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
 						$refundTransactionRequest = new RefundTransactionRequest();
+						$refundTransactionRequest->setPlatform($this->platform);
 						$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
 						$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
 						$refundTransactionRequest->setAmountInCents($amountInCents);

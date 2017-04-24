@@ -13,6 +13,7 @@ require_once __DIR__ . '/../providers/global/requests/RenewSubscriptionRequest.p
 require_once __DIR__ . '/../providers/global/requests/UpdateInternalPlanSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetOrCreateSubscriptionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetUserSubscriptionsRequest.php';
 require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
 
 class SubscriptionsHandler {
@@ -154,10 +155,16 @@ class SubscriptionsHandler {
 		return($db_subscription);
 	}
 	
-	public function doGetUserSubscriptionsByUser(User $user) {
+	public function doGetUserSubscriptionsByUser(GetUserSubscriptionsRequest $getUserSubscriptionsRequest) {
 		$subscriptions = NULL;
 		try {
-			config::getLogger()->addInfo("subscriptions getting for userid=".$user->getId()."...");
+			config::getLogger()->addInfo("subscriptions getting for userBillingUuid=".$getUserSubscriptionsRequest->getUserBillingUuid()."...");
+			$user = UserDAO::getUserByUserBillingUuid($getUserSubscriptionsRequest->getUserBillingUuid(), $getUserSubscriptionsRequest->getPlatform()->getId());
+			if($user == NULL) {
+				$msg = "unknown userBillingUuid : ".$getUserSubscriptionsRequest->getUserBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
 			$provider = ProviderDAO::getProviderById($user->getProviderId());
 			if($provider == NULL) {
 				$msg = "unknown provider id : ".$user->getProviderId();
@@ -169,13 +176,13 @@ class SubscriptionsHandler {
 			$usersRequestsLog = new UsersRequestsLog();
 			$usersRequestsLog->setUserId($user->getId());
 			$usersRequestsLog = UsersRequestsLogDAO::addUsersRequestsLog($usersRequestsLog);
-			config::getLogger()->addInfo("subscriptions getting for userid=".$user->getId()." done successfully");
+			config::getLogger()->addInfo("subscriptions getting for userBillingUuid=".$getUserSubscriptionsRequest->getUserBillingUuid()." done successfully");
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while getting subscriptions for userid=".$user->getId().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while getting subscriptions for userBillingUuid=".$getUserSubscriptionsRequest->getUserBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("subscriptions getting failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while getting subscriptions for userid=".$user->getId().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while getting subscriptions for userBillingUuid=".$getUserSubscriptionsRequest->getUserBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("subscriptions getting failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -183,21 +190,26 @@ class SubscriptionsHandler {
 		return($subscriptions);
 	}
 	
-	public function doGetUserSubscriptionsByUserReferenceUuid($userReferenceUuid, $platformId) {
+	public function doGetUserSubscriptionsByUserReferenceUuid(GetSubscriptionsRequest $getSubscriptionsRequest) {
 		$subscriptions = array();
 		try {
-			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid."...");
-			$users = UserDAO::getUsersByUserReferenceUuid($userReferenceUuid, NULL, $platformId);
+			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$getSubscriptionsRequest->getUserReferenceUuid()."...");
+			$users = UserDAO::getUsersByUserReferenceUuid($getSubscriptionsRequest->getUserReferenceUuid(), NULL, $getSubscriptionsRequest->getPlatform()->getId());
 			foreach ($users as $user) {
-				$subscriptions = array_merge($subscriptions, $this->doGetUserSubscriptionsByUser($user));
+				$getUserSubscriptionsRequest = new GetUserSubscriptionsRequest();
+				$getUserSubscriptionsRequest->setOrigin('api');
+				$getUserSubscriptionsRequest->setUserBillingUuid($user->getUserBillingUuid());
+				$getUserSubscriptionsRequest->setPlatform($getSubscriptionsRequest->getPlatform());
+				$current_subscriptions = $this->doGetUserSubscriptionsByUser($getUserSubscriptionsRequest);
+				$subscriptions = array_merge($subscriptions, $current_subscriptions);
 			}
-			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$userReferenceUuid." done successfully");
+			config::getLogger()->addInfo("subscriptions getting for userReferenceUuid=".$getSubscriptionsRequest->getUserReferenceUuid()." done successfully");
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while getting subscriptions for userReferenceUuid=".$userReferenceUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while getting subscriptions for userReferenceUuid=".$getSubscriptionsRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("subscriptions getting failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while getting subscriptions for userReferenceUuid=".$userReferenceUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while getting subscriptions for userReferenceUuid=".$getSubscriptionsRequest->getUserReferenceUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("subscriptions getting failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}

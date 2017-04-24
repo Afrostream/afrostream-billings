@@ -9,12 +9,14 @@ require_once __DIR__ . '/../../../../libs/providers/global/requests/UpdateTransa
 class BillingsImportStripeTransactions
 {
     private $provider = NULL;
+    private $platform = NULL;
 
     const STRIPE_LIMIT = 50;
 
     public function __construct(Provider $provider)
     {
         $this->provider = $provider;
+        $this->platform = BillingPlatformDAO::getPlatformById($this->provider->getPlatformId());
         \Stripe\Stripe::setApiKey($this->provider->getApiSecret());
     }
 
@@ -85,6 +87,7 @@ class BillingsImportStripeTransactions
     	ScriptsConfig::getLogger()->addInfo("importing stand-alone transaction from stripe...");
     	$transactionHandler = new TransactionsHandler();
     	$updateTransactionRequest = new UpdateTransactionRequest();
+    	$updateTransactionRequest->setPlatform($this->platform);
     	$updateTransactionRequest->setProviderName($this->provider->getName());
     	$updateTransactionRequest->setTransactionProviderUuid($charge->id);
     	$updateTransactionRequest->setOrigin('import');
