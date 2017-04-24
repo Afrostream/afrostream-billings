@@ -20,11 +20,11 @@ class dbGlobal {
 		return($str->format(DateTime::ISO8601));
 	}
 	
-	public static function loadSqlResult($query, $limit = 0, $offset = 0) {
+	public static function loadSqlResult($connection, $query, $limit = 0, $offset = 0) {
 		$params = array();
 		if($limit > 0) { $query.= " LIMIT ".$limit; }
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
-		$result = pg_query_params(config::getReadOnlyDbConn(), $query, $params);
+		$result = pg_query_params($connection, $query, $params);
 		$fieldNames = array();
 		$i = pg_num_fields($result);
 		for($j = 0; $j < $i; $j++) {

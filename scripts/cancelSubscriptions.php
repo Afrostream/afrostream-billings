@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../libs/db/dbGlobal.php';
 require_once __DIR__ . '/../libs/subscriptions/SubscriptionsHandler.php';
 require_once __DIR__ . '/../libs/providers/global/requests/CancelSubscriptionRequest.php';
@@ -83,7 +84,7 @@ $offset = 0;
 $index = 1;
 
 do {
-	$result = dbGlobal::loadSqlResult($query, $limit, $offset);
+	$result = dbGlobal::loadSqlResult(config::getReadOnlyDbConn(), $query, $limit, $offset);
 	$offset = $offset + $limit;
 	if(is_null($totalCounter)) {$totalCounter = $result['total_counter'];}
 	$idx+= count($result['rows']);
