@@ -79,7 +79,7 @@ EOL;
 
 $query = sprintf($query, $internalPlanUuid);
 
-$limit = 1000;
+$limit = 10000;
 $offset = 0;
 $index = 1;
 
