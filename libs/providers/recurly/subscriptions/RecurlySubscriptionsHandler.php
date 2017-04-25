@@ -652,6 +652,31 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($subscription));		
 	}
 	
+	public function doApplyCoupon(BillingsSubscription $subscription, ApplyCouponRequest $applyCouponRequest) {
+		try {
+			config::getLogger()->addInfo("applying a coupon for recurly_subscription_uuid=".$subscription->getSubUid()."...");
+			Recurly_Client::$subdomain = $this->provider->getMerchantId();
+			Recurly_Client::$apiKey = $this->provider->getApiSecret();
+			//
+			$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
+			//TODO
+			config::getLogger()->addInfo("applying a coupon for recurly_subscription_uuid=".$subscription->getSubUid()." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while applying a coupon for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("applying a coupon failed : ".$msg);
+			throw $e;
+		} catch (Recurly_ValidationError $e) {
+			$msg = "a validation error exception occurred while applying a coupon for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("applying a coupon failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while applying a coupon for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("applying a coupon failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($this->doFillSubscription($subscription));
+	}
+	
 }
 
 ?>

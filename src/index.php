@@ -746,6 +746,11 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/expire", functi
 	return($subscriptionsController->expire($request, $response, $args));
 });
 
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/applycoupon/{couponCode}", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->applyCoupon($request, $response, $args));
+});
+
 /**
  * @api {get} /billings/api/internalplans/:internalPlanUuid Request InternalPlan Information
  * @apiDescription It returns an InternalPlan Information.
