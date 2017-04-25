@@ -33,7 +33,7 @@ class BillingUsersInternalPlanChangeHandler {
 				ScriptsConfig::getLogger()->addError("no internalPlan with uuid : ".$toInternalPlanUuid);
 				return;
 			}
-			$supportedProviderNames = ['recurly'];
+			$supportedProviderNames = ['recurly', 'braintree', 'stripe'];
 			foreach($supportedProviderNames as $supportedProviderName) {
 				$provider = ProviderDAO::getProviderByName($supportedProviderName, $this->platform->getId());
 				if($provider == NULL) {
@@ -228,7 +228,7 @@ class BillingUsersInternalPlanChangeHandler {
 				ScriptsConfig::getLogger()->addError("no internalPlan with uuid : ".$fromInternalPlanUuid);
 				return;
 			}
-			$supportedProviderNames = ['recurly'];
+			$supportedProviderNames = ['recurly', 'braintree', 'stripe'];
 			foreach($supportedProviderNames as $supportedProviderName) {
 				$provider = ProviderDAO::getProviderByName($supportedProviderName, $this->platform->getId());
 				if($provider == NULL) {
@@ -281,6 +281,7 @@ class BillingUsersInternalPlanChangeHandler {
 	private function doUserPlanChange(BillingsSubscription $subscription) {
 		try {
 			ScriptsConfig::getLogger()->addInfo("subscription with uuid=".$subscription->getSubscriptionBillingUuid()." processing plan change...");
+			$provider = ProviderDAO::getProviderById($subscription->getProviderId());
 			$toProviderPlan = PlanDAO::getPlanById($subscription->getPlanChangeId());
 			if($toProviderPlan == NULL) {
 				//Exception
@@ -300,7 +301,12 @@ class BillingUsersInternalPlanChangeHandler {
 			$updateInternalPlanSubscriptionRequest->setPlatform($this->platform);
 			$updateInternalPlanSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
 			$updateInternalPlanSubscriptionRequest->setInternalPlanUuid($toInternalPlan->getInternalPlanUuid());
-			$updateInternalPlanSubscriptionRequest->setTimeframe('atRenewal');
+			//Only recurly supports change atRenewal
+			if($provider->getName() == 'recurly') {
+				$updateInternalPlanSubscriptionRequest->setTimeframe('atRenewal');
+			} else {
+				$updateInternalPlanSubscriptionRequest->setTimeframe('now');
+			}
 			$subscription = $subscriptionsHandler->doUpdateInternalPlanSubscription($updateInternalPlanSubscriptionRequest);
 			//done
 			$subscription->setPlanChangeProcessed(true);

@@ -13,7 +13,11 @@ print_r("starting tool to notify plan changes for platform named : ".$platform->
 $internalPlanUuidsToNotify = [
 	'afrostreamambassadeurs' => 'afrostreammonthly-swl-rts',
 	'afrostreamannually-ambassadors-active' => 'afrostreammonthly-swl-rts',
-	'afrostreamambassadeursrts' => 'afrostreammonthly-swl-rts'
+	'afrostreamambassadeursrts' => 'afrostreammonthly-swl-rts',
+	'afrostreamannually-ambassadors-expired' => 'afrostreammonthly-swl-rts',
+	'afrnooneyear' => 'afrostreammonthly-swl-rts',
+	'afrnooneyearrts2' => 'afrostreammonthly-swl-rts',
+	'afrnooneyearrts' => 'afrostreammonthly-swl-rts'
 ];
 
 $billingUsersInternalPlanChangeHandler = new BillingUsersInternalPlanChangeHandler($platform);
