@@ -97,7 +97,7 @@ class BillingCSVsWorkers extends BillingsWorkers {
 							throw new Exception('file for generating csv cannot be opened for writing');
 						}
 						//FILL FILE
-						$limit = 1000;
+						$limit = 10000;
 						$offset = 0;
 						$idx = 0;
 						$lastId = NULL;
