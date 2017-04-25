@@ -11,9 +11,13 @@ $platform = BillingPlatformDAO::getPlatformById(1);
 print_r("starting tool to process plan changes for platform named : ".$platform->getName()."...\n");
 
 $internalPlanUuidsToProcess = [
-		'afrostreamambassadeurs',
-		'afrostreamannually-ambassadors-active',
-		'afrostreamambassadeursrts'
+	'afrostreamambassadeurs',
+	'afrostreamannually-ambassadors-active',
+	'afrostreamambassadeursrts',
+	'afrostreamannually-ambassadors-expired',
+	'afrnooneyear',
+	'afrnooneyearrts2',
+	'afrnooneyearrts'
 ];
 
 $billingUsersInternalPlanChangeHandler = new BillingUsersInternalPlanChangeHandler($platform);
