@@ -40,17 +40,21 @@ class CancelSubscription implements HookInterface
 
         $oldSubscription = clone $billingSubscription;
         
-        // update status to expired
-        $billingSubscription->setSubStatus('expired');
-        $billingSubscription->setSubExpiresDate($this->createDate($subscription['ended_at']));
-        //if not already set, SubCanceledDate = subExpiresDate when ends before the end of current_period, that generally means a payment failed
-        if($billingSubscription->getSubCanceledDate() == NULL) {
-	        if($subscription['ended_at'] != $subscription['current_period_end']) {
-	        	$billingSubscription->setSubCanceledDate($this->createDate($subscription['ended_at']));
+        // update status to expired only if not yet done
+        if($billingSubscription->getSubStatus() != 'expired') {
+	        $billingSubscription->setSubStatus('expired');
+	        if($billingSubscription->getSubExpiresDate() == NULL) {
+	        	//if not already set only
+	        	$billingSubscription->setSubExpiresDate($this->createDate($subscription['ended_at']));
 	        }
+	        //if not already set, SubCanceledDate = subExpiresDate when ends before the end of current_period, that generally means a payment failed
+	        if($billingSubscription->getSubCanceledDate() == NULL) {
+		        if($subscription['ended_at'] != $subscription['current_period_end']) {
+		        	$billingSubscription->setSubCanceledDate($this->createDate($subscription['ended_at']));
+		        }
+	        }
+	        $billingSubscription = BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
         }
-        $billingSubscription = BillingsSubscriptionDAO::updateBillingsSubscription($billingSubscription);
-        
         $providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
         
         $providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($oldSubscription, $billingSubscription);

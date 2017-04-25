@@ -460,7 +460,7 @@ class SubscriptionsController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
 			}
 			$timeframe = $data['timeframe'];
-			$timeframeValues = ['now', 'onRenewal'];
+			$timeframeValues = ['now', 'atRenewal'];
 			if(!in_array($timeframe, $timeframeValues)) {
 				//exception
 				$msg = "field 'timeframe' value must be one of follows : ".implode(', ', $timeframeValues);

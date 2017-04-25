@@ -447,11 +447,13 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				)
 				{
 					//if expired, stay expired
-					$db_subscription->setSubStatus('expired');
-					$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-					if($db_subscription->getSubExpiresDate() == NULL) {
-						$db_subscription->setSubExpiresDate($now);
-						$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+					if($db_subscription->getSubStatus() != 'expired') {
+						$db_subscription->setSubStatus('expired');
+						$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
+						if($db_subscription->getSubExpiresDate() == NULL) {
+							$db_subscription->setSubExpiresDate($now);
+							$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+						}
 					}
 				} else {
 					//canceled
@@ -473,16 +475,18 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				config::getLogger()->addInfo("gocardless dbsubscription update for userid=".$user->getId().", gocardless_subscription_uuid=".$api_subscription->id.", id=".$db_subscription->getId().", gocardless_subscription_status=finished ignored");
 				break;
 			case 'customer_approval_denied' :
-				$db_subscription->setSubStatus('expired');
-				$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
-				if($db_subscription->getSubExpiresDate() == NULL) {
-					$db_subscription->setSubExpiresDate($now);
-					$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
-				}
-				//NC : Because considered as an immediate cancel
-				if($db_subscription->getSubCanceledDate() == NULL) {
-					$db_subscription->setSubCanceledDate($now);
-					$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
+				if($db_subscription->getSubStatus() != 'expired') {
+					$db_subscription->setSubStatus('expired');
+					$db_subscription = BillingsSubscriptionDAO::updateSubStatus($db_subscription);
+					if($db_subscription->getSubExpiresDate() == NULL) {
+						$db_subscription->setSubExpiresDate($now);
+						$db_subscription = BillingsSubscriptionDAO::updateSubExpiresDate($db_subscription);
+					}
+					//NC : Because considered as an immediate cancel
+					if($db_subscription->getSubCanceledDate() == NULL) {
+						$db_subscription->setSubCanceledDate($now);
+						$db_subscription = BillingsSubscriptionDAO::updateSubCanceledDate($db_subscription);
+					}
 				}
 				break;
 			default :
