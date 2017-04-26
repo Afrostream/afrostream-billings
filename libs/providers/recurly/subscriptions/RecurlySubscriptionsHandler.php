@@ -659,6 +659,9 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			//
 			$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
+			//$api_subscription->coupon_code = 'PRIXDOUX';//'6b2f5692-2a26-c45e-13f2-492bc61aba09';
+			$api_subscription->coupon_code = '6b2f5692-2a26-c45e-13f2-492bc61aba09';
+			//$api_subscription->updateAtRenewal();
 			//TODO
 			config::getLogger()->addInfo("applying a coupon for recurly_subscription_uuid=".$subscription->getSubUid()." done successfully");
 		} catch(BillingsException $e) {

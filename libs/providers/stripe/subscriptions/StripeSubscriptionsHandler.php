@@ -947,6 +947,25 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     	return($this->doFillSubscription($db_subscription));
     }
     
+    public function doApplyCoupon(BillingsSubscription $subscription, ApplyCouponRequest $applyCouponRequest) {
+    	try {
+    		config::getLogger()->addInfo("applying a coupon for stripe_subscription_uuid=".$subscription->getSubUid()."...");
+ 			//
+    		\Stripe\Subscription::update($subscription->getSubUid(), ['coupon' => '6c10d315-34ca-ce55-8e4f-87dcdb0da1c7']);
+    		//TODO
+    		config::getLogger()->addInfo("applying a coupon for stripe_subscription_uuid=".$subscription->getSubUid()." done successfully");
+    	} catch(BillingsException $e) {
+    		$msg = "a billings exception occurred while applying a coupon for stripe_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+    		config::getLogger()->addError("applying a coupon failed : ".$msg);
+    		throw $e;
+		} catch(Exception $e) {
+    		$msg = "an unknown exception occurred while applying a coupon for stripe_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+    		config::getLogger()->addError("applying a coupon failed : ".$msg);
+    		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    	}
+    	return($this->doFillSubscription($subscription));
+    }
+	    
 }
 
 ?>
