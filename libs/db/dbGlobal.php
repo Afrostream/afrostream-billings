@@ -5536,7 +5536,7 @@ class BillingInternalCoupon implements JsonSerializable {
 		return($this->platformId);
 	}
 	
-	public function setCouponTimeframe(CouponTimeframe $couponTimeframe) {
+	public function setCouponTimeframe(CouponTimeframe $couponTimeframe = NULL) {
 		$this->coupon_timeframe = $couponTimeframe;
 	}
 	
@@ -5605,7 +5605,7 @@ EOL;
 		$out->setStockDate($row["stock_date"] == NULL ? NULL : new DateTime($row["stock_date"]));
 		$out->setPartnersOrdersInternalCouponsCampaignsLinkId($row["partnersordersinternalcouponscampaignslinkid"]);
 		$out->setPlatformId($row["platformid"]);
-		$out->setCouponTimeframe(new CouponTimeframe($row["coupon_timeframe"]));
+		$out->setCouponTimeframe($row["coupon_timeframe"] == NULL ? NULL : new CouponTimeframe($row["coupon_timeframe"]));
 		return($out);
 	}
 	
@@ -6022,7 +6022,7 @@ class BillingUserInternalCoupon implements JsonSerializable {
 		return($this->platformId);
 	}
 	
-	public function setCouponTimeframe(CouponTimeframe $couponTimeframe) {
+	public function setCouponTimeframe(CouponTimeframe $couponTimeframe = NULL) {
 		$this->coupon_timeframe = $couponTimeframe;
 	}
 	
@@ -6092,7 +6092,7 @@ EOL;
 		$out->setUserId($row["userid"]);
 		$out->setSubId($row["subid"]);
 		$out->setPlatformId($row["platformid"]);
-		$out->setCouponTimeframe(new CouponTimeframe($row["coupon_timeframe"]));
+		$out->setCouponTimeframe($row["coupon_timeframe"] == NULL ? NULL : new CouponTimeframe($row["coupon_timeframe"]));
 		return($out);
 	}
 	
