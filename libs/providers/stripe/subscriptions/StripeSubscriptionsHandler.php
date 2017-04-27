@@ -146,7 +146,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     		}
     	}
     	if(isset($couponCode)) {
-    		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
+    		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
     	}
     	//<-- DATABASE -->
     	//BILLING_INFO (NOT MANDATORY)
@@ -177,12 +177,16 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     		$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
     		$userInternalCoupon->setSubId($billingSubscription->getId());
     		$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+    		$userInternalCoupon->setCouponTimeframe(new CouponTimeframe(CouponTimeframe::onSubCreation));
+    		$userInternalCoupon = BillingUserInternalCouponDAO::updateCouponTimeframe($userInternalCoupon);
     		//internalCoupon
     		if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
     			$internalCoupon->setStatus("redeemed");
     			$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
     			$internalCoupon->setRedeemedDate($now);
     			$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+    			$internalCoupon->setCouponTimeframe(new CouponTimeframe(CouponTimeframe::onSubCreation));
+    			$internalCoupon = BillingInternalCouponDAO::updateCouponTimeframe($internalCoupon);
     		}
     	}
     	//<-- DATABASE -->
@@ -333,6 +337,8 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         }
         if($subscription->getSubStatus() == 'active') {
         	$subscription->setIsPlanChangeCompatible(true);
+        	//ONLY ONE COUPON BY SUB
+        	$subscription->setIsCouponCodeOnLifetimeCompatible(BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription->getId()) == NULL ? true : false);
         }
         return($subscription);
     }
@@ -612,7 +618,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         if(array_key_exists('couponCode', $subOpts->getOpts())) {
         	$couponCode = $subOpts->getOpts()['couponCode'];
         	if(strlen($couponCode) > 0) {
-        		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
+        		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
         		$subscriptionData['coupon'] = $couponsInfos['providerCouponsCampaign']->getExternalUuid();
         		$logMessage = 'Create subscription : customer : %s, plan : %s, source : %s, coupon : %s';
         	}
@@ -661,7 +667,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             if(array_key_exists('couponCode', $subOpts->getOpts())) {
             	$couponCode = $subOpts->getOpts()['couponCode'];
             	if(strlen($couponCode) > 0) {
-            		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
+            		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
             		$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
             		$billingInternalCoupon = $couponsInfos['internalCoupon'];
             		$billingUserInternalCoupon = $couponsInfos['userInternalCoupon'];
@@ -947,6 +953,66 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     	return($this->doFillSubscription($db_subscription));
     }
     
+    public function doApplyCoupon(BillingsSubscription $subscription, ApplyCouponRequest $applyCouponRequest) {
+    	try {
+    		config::getLogger()->addInfo("applying a coupon for stripe_subscription_uuid=".$subscription->getSubUid()."...");
+    		//
+    		$user = UserDAO::getUserById($subscription->getUserId());
+    		$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($subscription->getPlanId());
+    		//
+    		$couponsInfos = $this->getCouponInfos($applyCouponRequest->getCouponCode(), $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubLifetime));
+    		//
+    		$subscriptionData = array();
+    		$subscriptionData['coupon'] = $couponsInfos['providerCouponsCampaign']->getExternalUuid();
+    		\Stripe\Subscription::update($subscription->getSubUid(), $subscriptionData);
+    		//<-- DATABASE -->
+    		try {
+    			//START TRANSACTION
+    			pg_query("BEGIN");
+    			$userInternalCoupon = $couponsInfos['userInternalCoupon'];
+    			$internalCoupon = $couponsInfos['internalCoupon'];
+    			$internalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+    			//
+    			$now = new DateTime();
+    			//userInternalCoupon
+    			$userInternalCoupon->setStatus("redeemed");
+    			$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
+    			$userInternalCoupon->setRedeemedDate($now);
+    			$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
+    			$userInternalCoupon->setSubId($subscription->getId());
+    			$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+    			$userInternalCoupon->setCouponTimeframe(new CouponTimeframe(CouponTimeframe::onSubLifetime));
+    			$userInternalCoupon = BillingUserInternalCouponDAO::updateCouponTimeframe($userInternalCoupon);
+    			//internalCoupon
+    			if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
+    				$internalCoupon->setStatus("redeemed");
+    				$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
+    				$internalCoupon->setRedeemedDate($now);
+    				$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+    				$internalCoupon->setCouponTimeframe(new CouponTimeframe(CouponTimeframe::onSubLifetime));
+    				$internalCoupon = BillingInternalCouponDAO::updateCouponTimeframe($internalCoupon);
+    			}
+    			//COMMIT
+    			pg_query("COMMIT");
+    		} catch(Exception $e) {
+    			pg_query("ROLLBACK");
+    			throw $e;
+    		}
+    		//<-- DATABASE -->
+    		$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+    		config::getLogger()->addInfo("applying a coupon for stripe_subscription_uuid=".$subscription->getSubUid()." done successfully");
+    	} catch(BillingsException $e) {
+    		$msg = "a billings exception occurred while applying a coupon for stripe_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+    		config::getLogger()->addError("applying a coupon failed : ".$msg);
+    		throw $e;
+		} catch(Exception $e) {
+    		$msg = "an unknown exception occurred while applying a coupon for stripe_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+    		config::getLogger()->addError("applying a coupon failed : ".$msg);
+    		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    	}
+    	return($this->doFillSubscription($subscription));
+    }
+	    
 }
 
 ?>

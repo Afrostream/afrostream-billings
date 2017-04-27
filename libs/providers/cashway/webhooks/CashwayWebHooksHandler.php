@@ -97,11 +97,15 @@ class CashwayWebHooksHandler extends ProviderWebHooksHandler {
 						$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
 						$userInternalCoupon->setRedeemedDate($now);
 						$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
+						$userInternalCoupon->setCouponTimeframe(new CouponTimeframe(CouponTimeframe::onSubCreation));
+						$userInternalCoupon = BillingUserInternalCouponDAO::updateCouponTimeframe($userInternalCoupon);
 						//internalCoupon
 						$internalCoupon->setStatus("redeemed");
 						$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
 						$internalCoupon->setRedeemedDate($now);
 						$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+						$internalCoupon->setCouponTimeframe(new CouponTimeframe(CouponTimeframe::onSubCreation));
+						$internalCoupon = BillingInternalCouponDAO::updateCouponTimeframe($internalCoupon);
 						//COMMIT
 						pg_query("COMMIT");
 					} catch(Exception $e) {

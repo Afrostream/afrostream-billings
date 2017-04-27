@@ -11,6 +11,7 @@ require_once __DIR__ . '/../requests/CancelSubscriptionRequest.php';
 require_once __DIR__ . '/../requests/DeleteSubscriptionRequest.php';
 require_once __DIR__ . '/../requests/RenewSubscriptionRequest.php';
 require_once __DIR__ . '/../requests/UpdateInternalPlanSubscriptionRequest.php';
+require_once __DIR__ . '/../requests/ApplyCouponRequest.php';
 
 use Money\Money;
 use Money\Currency;
@@ -73,7 +74,7 @@ class ProviderSubscriptionsHandler {
 		return($subscriptions);
 	}
 
-	protected function getCouponInfos($couponCode, User $user, InternalPlan $internalPlan) {
+	protected function getCouponInfos($couponCode, User $user, InternalPlan $internalPlan, CouponTimeframe $couponTimeframe) {
 		//
 		$out = array();
 		$internalCoupon = NULL;
@@ -112,6 +113,11 @@ class ProviderSubscriptionsHandler {
 		$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
 		if($internalCouponsCampaign == NULL) {
 			$msg = "unknown internalCouponsCampaign with id : ".$internalCoupon->getInternalCouponsCampaignsId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if(!in_array($couponTimeframe, $internalCouponsCampaign->getCouponTimeframes())) {
+			$msg = "coupon cannot be used on this timeframe : ".$couponTimeframe;
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
@@ -672,6 +678,12 @@ class ProviderSubscriptionsHandler {
 			}
 		}
 		return(NULL);
+	}
+	
+	public function doApplyCoupon(BillingsSubscription $db_subscription, ApplyCouponRequest $applyCouponRequest) {
+		$msg = "unsupported feature - apply coupon - for provider named : ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}
 	
 }

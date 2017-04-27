@@ -75,75 +75,8 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
 					if(strlen($couponCode) > 0) {
-						$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
-						$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
-						$billingProviderCouponsCampaign = $couponsInfos['providerCouponsCampaign'];
-						$discountArray = array();
-						$discountArray['inheritedFromId'] = $billingProviderCouponsCampaign->getExternalUuid();
-						switch($billingInternalCouponsCampaign->getDiscountType()) {
-							case 'amount' :
-								$discountArray['amount'] = number_format((float) ($billingInternalCouponsCampaign->getAmountInCents() / 100), 2, '.', '');
-								break;
-							case 'percent':
-								$discountArray['amount'] = number_format((float) (($internalPlan->getAmountInCents() * $billingInternalCouponsCampaign->getPercent()) / 10000), 2, '.', '');
-								break;
-							default :
-								$msg = "unsupported discount_type=".$billingInternalCouponsCampaign->getDiscountType();
-								config::getLogger()->addError($msg);
-								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-								break;
-						}
-						switch($billingInternalCouponsCampaign->getDiscountDuration()) {
-							case 'once' :
-								$discountArray['numberOfBillingCycles'] = 1;
-								break;
-							case 'forever' :
-								$discountArray['neverExpires'] = true;
-								break;
-							case 'repeating' :
-								//all braintree plans are montlhy based
-								$numberOfMonthsInACycle = NULL;
-								switch ($internalPlan->getPeriodUnit()) {
-									case 'month' :
-										$numberOfMonthsInACycle = 1 * $internalPlan->getPeriodLength();
-										break;
-									case 'year' :
-										$numberOfMonthsInACycle = 12 * $internalPlan->getPeriodLength();
-										break;
-									default :
-										$msg = "unsupported period_unit=".$internalPlan->getPeriodUnit();
-										config::getLogger()->addError($msg);
-										throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-										break;
-								}
-								$numberOfMonthsOfDiscount = NULL;
-								switch($billingInternalCouponsCampaign->getDiscountDurationUnit()) {
-									case 'month' :
-										$numberOfMonthsOfDiscount = 1 * $billingInternalCouponsCampaign->getDiscountDurationLength();
-										break;
-									case 'year' :
-										$numberOfMonthsOfDiscount = 12 * $billingInternalCouponsCampaign->getDiscountDurationLength();
-										break;
-									default :
-										$msg = "unsupported discount_duration_unit=".$billingInternalCouponsCampaign->getDiscountDurationUnit();
-										config::getLogger()->addError($msg);
-										throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-										break;
-								}
-								if(($numberOfMonthsOfDiscount%$numberOfMonthsInACycle) > 0) {
-									$msg = "discount is not compatible with this plan";
-									config::getLogger()->addError($msg);
-									throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);									
-								}
-								$discountArray['numberOfBillingCycles'] = $numberOfMonthsOfDiscount / $numberOfMonthsInACycle;
-								break;
-							default :
-								$msg = "unsupported discount_duration=".$billingInternalCouponsCampaign->getDiscountDuration();
-								config::getLogger()->addError($msg);
-								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-								break;
-						}
-						$attribs['discounts'] = ['add' =>	[$discountArray]];
+						$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
+						$attribs = $this->updateCouponAttribs($attribs, $couponsInfos, $user, $internalPlan);
 					}
 				}
 				$result = Braintree\Subscription::create($attribs);
@@ -338,7 +271,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			}
 		}
 		if(isset($couponCode)) {
-			$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
+			$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
 		}
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
@@ -368,12 +301,16 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
 			$userInternalCoupon->setSubId($db_subscription->getId());
 			$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+			$userInternalCoupon->setCouponTimeframe(new CouponTimeframe(CouponTimeframe::onSubCreation));
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateCouponTimeframe($userInternalCoupon);
 			//internalCoupon
 			if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
 				$internalCoupon->setStatus("redeemed");
 				$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
 				$internalCoupon->setRedeemedDate($now);
 				$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+				$internalCoupon->setCouponTimeframe(new CouponTimeframe(CouponTimeframe::onSubCreation));
+				$internalCoupon = BillingInternalCouponDAO::updateCouponTimeframe($internalCoupon);
 			}
 		}
 		//<-- DATABASE -->
@@ -580,6 +517,8 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$subscription->setIsActive($is_active);
 		if($subscription->getSubStatus() == 'active') {
 			$subscription->setIsPlanChangeCompatible(true);
+			//ONLY ONE COUPON BY SUB
+			$subscription->setIsCouponCodeOnLifetimeCompatible(BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription->getId()) == NULL ? true : false);
 		}
 		return($subscription);
 	}
@@ -767,7 +706,144 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		}
 		return($this->doFillSubscription($subscription));
 	}
-
+	
+	private function updateCouponAttribs(array $attribs, $couponsInfos, User $user, InternalPlan $internalPlan) {
+		$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+		$billingProviderCouponsCampaign = $couponsInfos['providerCouponsCampaign'];
+		$discountArray = array();
+		$discountArray['inheritedFromId'] = $billingProviderCouponsCampaign->getExternalUuid();
+		switch($billingInternalCouponsCampaign->getDiscountType()) {
+			case 'amount' :
+				$discountArray['amount'] = number_format((float) ($billingInternalCouponsCampaign->getAmountInCents() / 100), 2, '.', '');
+				break;
+			case 'percent':
+				$discountArray['amount'] = number_format((float) (($internalPlan->getAmountInCents() * $billingInternalCouponsCampaign->getPercent()) / 10000), 2, '.', '');
+				break;
+			default :
+				$msg = "unsupported discount_type=".$billingInternalCouponsCampaign->getDiscountType();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				break;
+		}
+		switch($billingInternalCouponsCampaign->getDiscountDuration()) {
+			case 'once' :
+				$discountArray['numberOfBillingCycles'] = 1;
+				break;
+			case 'forever' :
+				$discountArray['neverExpires'] = true;
+				break;
+			case 'repeating' :
+				//all braintree plans are montlhy based
+				$numberOfMonthsInACycle = NULL;
+				switch ($internalPlan->getPeriodUnit()) {
+					case 'month' :
+						$numberOfMonthsInACycle = 1 * $internalPlan->getPeriodLength();
+						break;
+					case 'year' :
+						$numberOfMonthsInACycle = 12 * $internalPlan->getPeriodLength();
+						break;
+					default :
+						$msg = "unsupported period_unit=".$internalPlan->getPeriodUnit();
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						break;
+				}
+				$numberOfMonthsOfDiscount = NULL;
+				switch($billingInternalCouponsCampaign->getDiscountDurationUnit()) {
+					case 'month' :
+						$numberOfMonthsOfDiscount = 1 * $billingInternalCouponsCampaign->getDiscountDurationLength();
+						break;
+					case 'year' :
+						$numberOfMonthsOfDiscount = 12 * $billingInternalCouponsCampaign->getDiscountDurationLength();
+						break;
+					default :
+						$msg = "unsupported discount_duration_unit=".$billingInternalCouponsCampaign->getDiscountDurationUnit();
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						break;
+				}
+				if(($numberOfMonthsOfDiscount%$numberOfMonthsInACycle) > 0) {
+					$msg = "discount is not compatible with this plan";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$discountArray['numberOfBillingCycles'] = $numberOfMonthsOfDiscount / $numberOfMonthsInACycle;
+				break;
+			default :
+				$msg = "unsupported discount_duration=".$billingInternalCouponsCampaign->getDiscountDuration();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				break;
+		}
+		$attribs['discounts'] = ['add' =>	[$discountArray]];
+		return($attribs);	
+	}
+	
+	public function doApplyCoupon(BillingsSubscription $subscription, ApplyCouponRequest $applyCouponRequest) {
+		try {
+			config::getLogger()->addInfo("applying a coupon for braintree_subscription_uuid=".$subscription->getSubUid()."...");
+			//
+			Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
+			Braintree_Configuration::merchantId($this->provider->getMerchantId());
+			Braintree_Configuration::publicKey($this->provider->getApiKey());
+			Braintree_Configuration::privateKey($this->provider->getApiSecret());
+			//
+			$user = UserDAO::getUserById($subscription->getUserId());
+			$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($subscription->getPlanId());
+			//
+			$couponsInfos = $this->getCouponInfos($applyCouponRequest->getCouponCode(), $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubLifetime));
+			//
+			$attribs = array();
+			$attribs = $this->updateCouponAttribs($attribs, $couponsInfos, $user, $internalPlan);
+			Braintree\Subscription::update($subscription->getSubUid(), $attribs);
+			//<-- DATABASE -->
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				$userInternalCoupon = $couponsInfos['userInternalCoupon'];
+				$internalCoupon = $couponsInfos['internalCoupon'];
+				$internalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+				//
+				$now = new DateTime();
+				//userInternalCoupon
+				$userInternalCoupon->setStatus("redeemed");
+				$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
+				$userInternalCoupon->setRedeemedDate($now);
+				$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
+				$userInternalCoupon->setSubId($subscription->getId());
+				$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+				$userInternalCoupon->setCouponTimeframe(new CouponTimeframe(CouponTimeframe::onSubLifetime));
+				$userInternalCoupon = BillingUserInternalCouponDAO::updateCouponTimeframe($userInternalCoupon);
+				//internalCoupon
+				if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
+					$internalCoupon->setStatus("redeemed");
+					$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
+					$internalCoupon->setRedeemedDate($now);
+					$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+					$internalCoupon->setCouponTimeframe(new CouponTimeframe(CouponTimeframe::onSubLifetime));
+					$internalCoupon = BillingInternalCouponDAO::updateCouponTimeframe($internalCoupon);
+				}
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
+			//<-- DATABASE -->
+			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
+			config::getLogger()->addInfo("applying a coupon for braintree_subscription_uuid=".$subscription->getSubUid()." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while applying a coupon for braintree_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("applying a coupon failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while applying a coupon for braintree_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("applying a coupon failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($this->doFillSubscription($subscription));
+	}
+	
 }
 
 ?>
