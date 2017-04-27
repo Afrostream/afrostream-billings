@@ -758,8 +758,7 @@ class CouponCampaignType extends Enum implements JsonSerializable {
 }
 
 class CouponTimeframe extends Enum implements JsonSerializable {
-
-	const anytime = 'anytime';
+	
 	const onSubCreation = 'onSubCreation';
 	const onSubLifetime = 'onSubLifetime';
 	
