@@ -456,6 +456,8 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		}
 		if($subscription->getSubStatus() == 'active') {
 			$subscription->setIsPlanChangeCompatible(true);
+			//ONLY ONE COUPON BY SUB
+			$subscription->setIsCouponCodeOnLifetimeCompatible(BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription->getId()) == NULL ? true : false);
 		}
 		return($subscription);
 	}

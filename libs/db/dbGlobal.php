@@ -2142,6 +2142,7 @@ class BillingsSubscription implements JsonSerializable {
 	private $is_reactivable = false;
 	private $is_expirable = false;
 	private $is_plan_change_compatible = false;
+	private $is_coupon_code_on_lifetime_compatible = false;
 	//
 	private $billinginfoid;
 	private $platformId;
@@ -2388,6 +2389,14 @@ class BillingsSubscription implements JsonSerializable {
 		return($this->is_plan_change_compatible);
 	}
 	
+	public function setIsCouponCodeOnLifetimeCompatible($is_coupon_code_on_lifetime_compatible) {
+		$this->is_coupon_code_on_lifetime_compatible = $is_coupon_code_on_lifetime_compatible;
+	}
+	
+	public function getIsCouponCodeOnLifetimeCompatible() {
+		return($this->is_coupon_code_on_lifetime_compatible);
+	}
+	
 	public function jsonSerialize() {
 		$return = [
 			'subscriptionBillingUuid' => $this->subscription_billing_uuid,
@@ -2398,6 +2407,7 @@ class BillingsSubscription implements JsonSerializable {
 			'isReactivable' => ($this->is_reactivable) ? 'yes' : 'no',
 			'isExpirable' => ($this->is_expirable) ? 'yes' : 'no',
 			'isPlanChangeCompatible' => ($this->is_plan_change_compatible) ? 'yes' : 'no',
+			'isCouponCodeOnLifetimeCompatible' => ($this->is_coupon_code_on_lifetime_compatible) ? 'yes' : 'no',
 			'user' =>	((UserDAO::getUserById($this->userid)->jsonSerialize())),
 			'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
 			'creationDate' => dbGlobal::toISODate($this->creation_date),

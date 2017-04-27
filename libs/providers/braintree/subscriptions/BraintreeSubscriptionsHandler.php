@@ -517,6 +517,8 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$subscription->setIsActive($is_active);
 		if($subscription->getSubStatus() == 'active') {
 			$subscription->setIsPlanChangeCompatible(true);
+			//ONLY ONE COUPON BY SUB
+			$subscription->setIsCouponCodeOnLifetimeCompatible(BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription->getId()) == NULL ? true : false);
 		}
 		return($subscription);
 	}
