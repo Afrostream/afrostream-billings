@@ -977,7 +977,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     			$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
     			$userInternalCoupon->setRedeemedDate($now);
     			$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
-    			$userInternalCoupon->setSubId($db_subscription->getId());
+    			$userInternalCoupon->setSubId($subscription->getId());
     			$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
     			$userInternalCoupon->setCouponTimeframe(new CouponTimeframe(CouponTimeframe::onSubLifetime));
     			$userInternalCoupon = BillingUserInternalCouponDAO::updateCouponTimeframe($userInternalCoupon);
