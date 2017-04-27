@@ -571,10 +571,15 @@ class SubscriptionsController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$couponCode = $args['couponCode'];
+			$force = NULL;
+			if(isset($data['force'])) {
+				$force = $data['force'] == 'true' ? true : false;
+			}
 			$subscriptionsHandler = new SubscriptionsFilteredHandler();
 			$applyCouponRequest = new ApplyCouponRequest();
 			$applyCouponRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
 			$applyCouponRequest->setCouponCode($couponCode);
+			$applyCouponRequest->setForce($force);
 			$applyCouponRequest->setOrigin('api');
 			$subscription = $subscriptionsHandler->doApplyCoupon($applyCouponRequest);
 			if($subscription == NULL) {

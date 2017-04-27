@@ -528,12 +528,14 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$billingUserInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($db_subscription->getId());
-			if($billingUserInternalCoupon != NULL) {
-				//Exception
-				$msg = "a coupon has already been applied to the subscription";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			if($applyCouponRequest->getForce() != NULL && $applyCouponRequest->getForce() == true) {
+				$billingUserInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($db_subscription->getId());
+				if($billingUserInternalCoupon != NULL) {
+					//Exception
+					$msg = "a coupon has already been applied to the subscription";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				}
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
