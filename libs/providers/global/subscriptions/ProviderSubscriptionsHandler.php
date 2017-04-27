@@ -74,7 +74,7 @@ class ProviderSubscriptionsHandler {
 		return($subscriptions);
 	}
 
-	protected function getCouponInfos($couponCode, User $user, InternalPlan $internalPlan) {
+	protected function getCouponInfos($couponCode, User $user, InternalPlan $internalPlan, CouponTimeframe $couponTimeframe) {
 		//
 		$out = array();
 		$internalCoupon = NULL;
@@ -113,6 +113,11 @@ class ProviderSubscriptionsHandler {
 		$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
 		if($internalCouponsCampaign == NULL) {
 			$msg = "unknown internalCouponsCampaign with id : ".$internalCoupon->getInternalCouponsCampaignsId();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if(!in_array($couponTimeframe, $internalCouponsCampaign->getCouponTimeframes())) {
+			$msg = "coupon cannot be used on this timeframe : ".$couponTimeframe;
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}

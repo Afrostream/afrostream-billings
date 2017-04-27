@@ -522,6 +522,19 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			if($db_subscription->getSubStatus() != 'active') {
+				//Exception
+				$msg = "a coupon can only be applied to an 'active' subscription";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$billingUserInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($db_subscription->getId());
+			if($billingUserInternalCoupon != NULL) {
+				//Exception
+				$msg = "a coupon has already been applied to the subscription";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
 			if($provider == NULL) {
 				$msg = "unknown provider with id : ".$db_subscription->getProviderId();

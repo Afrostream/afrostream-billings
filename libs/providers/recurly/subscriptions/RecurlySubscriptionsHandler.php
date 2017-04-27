@@ -58,7 +58,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
 					if(strlen($couponCode) > 0) {
-						$couponsInfos = $this->getCouponInfos($couponCode,  $user, $internalPlan);
+						$couponsInfos = $this->getCouponInfos($couponCode,  $user, $internalPlan, CouponTimeframe::onSubCreation);
 						$subscription->coupon_code = $couponsInfos['providerCouponsCampaign']->getExternalUuid();
 					}
 				}
@@ -259,7 +259,7 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			}
 		}
 		if(isset($couponCode)) {
-			$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan);
+			$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, CouponTimeframe::onSubCreation);
 		}
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
@@ -289,12 +289,16 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
 			$userInternalCoupon->setSubId($db_subscription->getId());
 			$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+			$userInternalCoupon->setCouponTimeframe(CouponTimeframe::onSubCreation);
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateCouponTimeframe($userInternalCoupon);
 			//internalCoupon
 			if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
 				$internalCoupon->setStatus("redeemed");
 				$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
 				$internalCoupon->setRedeemedDate($now);
 				$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+				$internalCoupon->setCouponTimeframe(CouponTimeframe::onSubCreation);
+				$internalCoupon = BillingInternalCouponDAO::updateCouponTimeframe($internalCoupon);
 			}
 		}
 		//<-- DATABASE -->
@@ -658,11 +662,38 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			Recurly_Client::$subdomain = $this->provider->getMerchantId();
 			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			//
-			$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
-			//$api_subscription->coupon_code = 'PRIXDOUX';//'6b2f5692-2a26-c45e-13f2-492bc61aba09';
-			$api_subscription->coupon_code = '6b2f5692-2a26-c45e-13f2-492bc61aba09';
-			//$api_subscription->updateAtRenewal();
-			//TODO
+			$user = UserDAO::getUserById($subscription->getUserId());
+			$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($subscription->getPlanId());
+			//
+			$couponsInfos = $this->getCouponInfos($applyCouponRequest->getCouponCode(), $user, $internalPlan, CouponTimeframe::onSubLifetime);
+			//
+			$api_coupon = Recurly_Coupon::get($couponsInfos['providerCouponsCampaign']->getExternalUuid());
+			$redemption = $api_coupon->redeemCoupon($user->getUserProviderUuid(), $internalPlan->getCurrency(), $subscription->getSubUid());
+			//<-- DATABASE -->
+			$userInternalCoupon = $couponsInfos['userInternalCoupon'];
+			$internalCoupon = $couponsInfos['internalCoupon'];
+			$internalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+			//
+			$now = new DateTime();
+			//userInternalCoupon
+			$userInternalCoupon->setStatus("redeemed");
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateStatus($userInternalCoupon);
+			$userInternalCoupon->setRedeemedDate($now);
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
+			$userInternalCoupon->setSubId($db_subscription->getId());
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+			$userInternalCoupon->setCouponTimeframe(CouponTimeframe::onSubLifetime);
+			$userInternalCoupon = BillingUserInternalCouponDAO::updateCouponTimeframe($userInternalCoupon);
+			//internalCoupon
+			if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
+				$internalCoupon->setStatus("redeemed");
+				$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
+				$internalCoupon->setRedeemedDate($now);
+				$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+				$internalCoupon->setCouponTimeframe(CouponTimeframe::onSubLifetime);
+				$internalCoupon = BillingInternalCouponDAO::updateCouponTimeframe($internalCoupon);
+			}
+			//<-- DATABASE -->
 			config::getLogger()->addInfo("applying a coupon for recurly_subscription_uuid=".$subscription->getSubUid()." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while applying a coupon for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();

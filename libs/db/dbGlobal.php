@@ -757,6 +757,18 @@ class CouponCampaignType extends Enum implements JsonSerializable {
 
 }
 
+class CouponTimeframe extends Enum implements JsonSerializable {
+
+	const anytime = 'anytime';
+	const onSubCreation = 'onSubCreation';
+	const onSubLifetime = 'onSubLifetime';
+	
+	public function jsonSerialize() {
+		return $this->getValue();
+	}
+	
+}
+
 class InternalPlan implements JsonSerializable {
 		
 	private $_id;
@@ -4873,6 +4885,7 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 	private $expires_date;
 	private $partnerid;
 	private $platformid;
+	private $coupon_timeframes;
 	
 	public function setId($id) {
 		$this->_id = $id;
@@ -5040,6 +5053,14 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 		return($this->platformId);
 	}
 	
+	public function setCouponTimeframes(array $couponTimeframes) {
+		$this->coupon_timeframes = $couponTimeframes;
+	}
+	
+	public function getCouponTimeframes() {
+		return($this->coupon_timeframes);
+	}
+	
 	public function jsonSerialize() {
 		$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($this->_id);
 		$providers = array();
@@ -5067,6 +5088,7 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 				'couponsCampaignType' => $this->coupon_type,
 				'emailsEnabled' => $this->emails_enabled,
 				'expiresDate' => dbGlobal::toISODate($this->expires_date),
+				'couponsCampaignTimeframes' => $this->coupon_timeframes,
 				'providerCouponsCampaigns' => $providerCouponsCampaigns
 		];
 		//provider / providers
@@ -5101,7 +5123,7 @@ class BillingInternalCouponsCampaignDAO {
 		_id, internal_coupons_campaigns_uuid, creation_date, name, description, prefix,
 		discount_type, amount_in_cents, currency, percent, discount_duration,
 		discount_duration_unit, discount_duration_length, generated_mode, generated_code_length,
- 		total_number, coupon_type, emails_enabled, expires_date, partnerid, platformid
+ 		total_number, coupon_type, emails_enabled, expires_date, partnerid, platformid, array_to_json(coupon_timeframes) as coupon_timeframes
 EOL;
 	
 	private static function getBillingInternalCouponsCampaignFromRow($row) {
@@ -5127,6 +5149,7 @@ EOL;
 		$out->setExpiresDate($row["expires_date"] == NULL ? NULL : new DateTime($row["expires_date"]));
 		$out->setPartnerId($row["partnerid"]);
 		$out->setPlatformId($row["platformid"]);
+		$out->setCouponTimeframes(json_decode($row["coupon_timeframes"]));
 		return($out);
 	}
 	
@@ -5399,6 +5422,7 @@ class BillingInternalCoupon implements JsonSerializable {
 	//
 	private $partnersOrdersInternalCouponsCampaignsLinkId;
 	private $platformId;
+	private $coupon_timeframe;
 	
 	public function setId($id) {
 		$this->_id = $id;
@@ -5512,6 +5536,14 @@ class BillingInternalCoupon implements JsonSerializable {
 		return($this->platformId);
 	}
 	
+	public function setCouponTimeframe(CouponTimeframe $couponTimeframe) {
+		$this->coupon_timeframe = $couponTimeframe;
+	}
+	
+	public function getCouponTimeframe() {
+		return($this->coupon_timeframe);
+	}
+	
 	public function jsonSerialize() {
 		$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($this->internalCouponsCampaignsId);
 		$return = [
@@ -5527,7 +5559,8 @@ class BillingInternalCoupon implements JsonSerializable {
 			//for backward compatibility - to be removed later -
 			'campaign' => $internalCouponsCampaign,
 			'internalCouponsCampaign' => $internalCouponsCampaign,
-			'couponOpts' => BillingInternalCouponOptsDAO::getBillingInternalCouponOptsByInternalCouponId($this->_id)
+			'couponOpts' => BillingInternalCouponOptsDAO::getBillingInternalCouponOptsByInternalCouponId($this->_id),
+			'couponTimeframe' => $this->coupon_timeframe
 		];
 		//internalPlan / internalPlans
 		$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($this->internalCouponsCampaignsId);
@@ -5553,7 +5586,7 @@ class BillingInternalCouponDAO {
 	private static $sfields =<<<EOL
 		_id, internalcouponscampaignsid, coupon_billing_uuid, code, coupon_status, 
 		creation_date, updated_date, redeemed_date, expires_date, sold_status, sold_date, stock_date,  
-		partnersordersinternalcouponscampaignslinkid, platformid
+		partnersordersinternalcouponscampaignslinkid, platformid, coupon_timeframe
 EOL;
 
 	private static function getBillingInternalCouponFromRow($row) {
@@ -5572,6 +5605,7 @@ EOL;
 		$out->setStockDate($row["stock_date"] == NULL ? NULL : new DateTime($row["stock_date"]));
 		$out->setPartnersOrdersInternalCouponsCampaignsLinkId($row["partnersordersinternalcouponscampaignslinkid"]);
 		$out->setPlatformId($row["platformid"]);
+		$out->setCouponTimeframe(new CouponTimeframe($row["coupon_timeframe"]));
 		return($out);
 	}
 	
@@ -5746,6 +5780,16 @@ EOL;
 		return(self::getBillingInternalCouponById($billingInternalCoupon->getId()));
 	}
 	
+	public static function updateCouponTimeframe(BillingInternalCoupon $billingInternalCoupon) {
+		$query = "UPDATE billing_internal_coupons SET updated_date = CURRENT_TIMESTAMP, coupon_timeframe = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCoupon->getCouponTimeframe(),
+						$billingInternalCoupon->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponById($billingInternalCoupon->getId()));
+	}
+	
 }
 
 class BillingInternalCouponOpts implements JsonSerializable {
@@ -5879,7 +5923,8 @@ class BillingUserInternalCoupon implements JsonSerializable {
 	private $expiresDate;
 	private $userId;
 	private $subId;
-	private $platformId;	
+	private $platformId;
+	private $coupon_timeframe;
 	
 	public function setId($id) {
 		$this->_id = $id;
@@ -5977,6 +6022,14 @@ class BillingUserInternalCoupon implements JsonSerializable {
 		return($this->platformId);
 	}
 	
+	public function setCouponTimeframe(CouponTimeframe $couponTimeframe) {
+		$this->coupon_timeframe = $couponTimeframe;
+	}
+	
+	public function getCouponTimeframe() {
+		return($this->coupon_timeframe);
+	}
+	
 	/*
 	 * Same json as an internalCoupon
 	 */
@@ -5996,7 +6049,8 @@ class BillingUserInternalCoupon implements JsonSerializable {
 			//for backward compatibility - to be removed later -
 			'campaign' => $internalCouponsCampaign,
 			'internalCouponsCampaign' => $internalCouponsCampaign,
-			'couponOpts' => BillingUserInternalCouponOptsDAO::getBillingUserInternalCouponOptsByUserInternalCouponId($this->_id)
+			'couponOpts' => BillingUserInternalCouponOptsDAO::getBillingUserInternalCouponOptsByUserInternalCouponId($this->_id),
+			'couponTimeframe' => $this->coupon_timeframe
 		];
 		//internalPlan / internalPlans
 		$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($internalCouponsCampaign->getId());
@@ -6014,13 +6068,14 @@ class BillingUserInternalCoupon implements JsonSerializable {
 		$return['internalPlans'] = $internalPlans;
 		return($return);
 	}
+	
 }
 
 class BillingUserInternalCouponDAO {
 
 	private static $sfields =<<<EOL
 		BUIC._id, BUIC.internalcouponsid, BUIC.coupon_billing_uuid, BUIC.code, BUIC.coupon_status, 
-			BUIC.creation_date, BUIC.updated_date, BUIC.redeemed_date, BUIC.expires_date, BUIC.userid, BUIC.subid, BUIC.platformid
+			BUIC.creation_date, BUIC.updated_date, BUIC.redeemed_date, BUIC.expires_date, BUIC.userid, BUIC.subid, BUIC.platformid, BUIC.coupon_timeframe
 EOL;
 	
 	private static function getBillingUserInternalCouponFromRow($row) {
@@ -6037,6 +6092,7 @@ EOL;
 		$out->setUserId($row["userid"]);
 		$out->setSubId($row["subid"]);
 		$out->setPlatformId($row["platformid"]);
+		$out->setCouponTimeframe(new CouponTimeframe($row["coupon_timeframe"]));
 		return($out);
 	}
 	
@@ -6281,6 +6337,17 @@ EOL;
 		
 		return($out);
 	}
+	
+	public static function updateCouponTimeframe(BillingUserInternalCoupon $billingUserInternalCoupon) {
+		$query = "UPDATE billing_users_internal_coupons SET updated_date = CURRENT_TIMESTAMP, coupon_timeframe = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingUserInternalCoupon->getCouponTimeframe(),
+						$billingUserInternalCoupon->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingUserInternalCouponById($billingUserInternalCoupon->getId()));
+	}
+	
 }
 
 class BillingUserInternalCouponOpts implements JsonSerializable {

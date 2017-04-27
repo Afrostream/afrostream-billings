@@ -299,6 +299,11 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			config::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		if(!in_array(CouponTimeframe::onSubCreation, $internalCouponsCampaign->getCouponTimeframes())) {
+			$msg = "coupon cannot be used on subscription creation";
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
 		//simple check
 		if($internalCoupon->getStatus() != 'waiting') {
 			$msg = "coupon : code=".$couponCode." cannot be used";
@@ -381,12 +386,16 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
 		$userInternalCoupon->setSubId($db_subscription->getId());
 		$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
+		$userInternalCoupon->setCouponTimeframe(CouponTimeframe::onSubCreation);
+		$userInternalCoupon = BillingUserInternalCouponDAO::updateCouponTimeframe($userInternalCoupon);
 		//internalCoupon
 		if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
 			$internalCoupon->setStatus("redeemed");
 			$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
 			$internalCoupon->setRedeemedDate($now);
 			$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
+			$internalCoupon->setCouponTimeframe(CouponTimeframe::onSubCreation);
+			$internalCoupon = BillingInternalCouponDAO::updateCouponTimeframe($internalCoupon);
 		}
 		//
 		$recipientEmail = NULL;
