@@ -386,7 +386,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$userInternalCoupon = BillingUserInternalCouponDAO::updateRedeemedDate($userInternalCoupon);
 		$userInternalCoupon->setSubId($db_subscription->getId());
 		$userInternalCoupon = BillingUserInternalCouponDAO::updateSubId($userInternalCoupon);
-		$userInternalCoupon->setCouponTimeframe(CouponTimeframe::onSubCreation);
+		$userInternalCoupon->setCouponTimeframe(new CouponTimeframe(CouponTimeframe::onSubCreation));
 		$userInternalCoupon = BillingUserInternalCouponDAO::updateCouponTimeframe($userInternalCoupon);
 		//internalCoupon
 		if($internalCouponsCampaign->getGeneratedMode() == 'bulk') {
@@ -394,7 +394,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 			$internalCoupon = BillingInternalCouponDAO::updateStatus($internalCoupon);
 			$internalCoupon->setRedeemedDate($now);
 			$internalCoupon = BillingInternalCouponDAO::updateRedeemedDate($internalCoupon);
-			$internalCoupon->setCouponTimeframe(CouponTimeframe::onSubCreation);
+			$internalCoupon->setCouponTimeframe(new CouponTimeframe(CouponTimeframe::onSubCreation));
 			$internalCoupon = BillingInternalCouponDAO::updateCouponTimeframe($internalCoupon);
 		}
 		//
