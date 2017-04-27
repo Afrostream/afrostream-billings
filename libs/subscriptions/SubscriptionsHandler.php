@@ -528,7 +528,7 @@ class SubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if($applyCouponRequest->getForce() != NULL && $applyCouponRequest->getForce() == true) {
+			if($applyCouponRequest->getForce() == NULL || $applyCouponRequest->getForce() == false) {
 				$billingUserInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($db_subscription->getId());
 				if($billingUserInternalCoupon != NULL) {
 					//Exception
