@@ -11,7 +11,7 @@ require_once __DIR__ . '/../requests/CancelSubscriptionRequest.php';
 require_once __DIR__ . '/../requests/DeleteSubscriptionRequest.php';
 require_once __DIR__ . '/../requests/RenewSubscriptionRequest.php';
 require_once __DIR__ . '/../requests/UpdateInternalPlanSubscriptionRequest.php';
-require_once __DIR__ . '/../requests/ApplyCouponRequest.php';
+require_once __DIR__ . '/../requests/RedeemCouponRequest.php';
 
 use Money\Money;
 use Money\Currency;
@@ -680,8 +680,8 @@ class ProviderSubscriptionsHandler {
 		return(NULL);
 	}
 	
-	public function doApplyCoupon(BillingsSubscription $db_subscription, ApplyCouponRequest $applyCouponRequest) {
-		$msg = "unsupported feature - apply coupon - for provider named : ".$this->provider->getName();
+	public function doRedeemCoupon(BillingsSubscription $db_subscription, RedeemCouponRequest $redeemCouponRequest) {
+		$msg = "unsupported feature - redeem coupon - for provider named : ".$this->provider->getName();
 		config::getLogger()->addError($msg);
 		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}

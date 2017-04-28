@@ -658,16 +658,16 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($subscription));		
 	}
 	
-	public function doApplyCoupon(BillingsSubscription $subscription, ApplyCouponRequest $applyCouponRequest) {
+	public function doRedeemCoupon(BillingsSubscription $subscription, RedeemCouponRequest $redeemCouponRequest) {
 		try {
-			config::getLogger()->addInfo("applying a coupon for recurly_subscription_uuid=".$subscription->getSubUid()."...");
+			config::getLogger()->addInfo("redeeming a coupon for recurly_subscription_uuid=".$subscription->getSubUid()."...");
 			Recurly_Client::$subdomain = $this->provider->getMerchantId();
 			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			//
 			$user = UserDAO::getUserById($subscription->getUserId());
 			$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($subscription->getPlanId());
 			//
-			$couponsInfos = $this->getCouponInfos($applyCouponRequest->getCouponCode(), $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubLifetime));
+			$couponsInfos = $this->getCouponInfos($redeemCouponRequest->getCouponCode(), $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubLifetime));
 			//
 			$api_coupon = Recurly_Coupon::get($couponsInfos['providerCouponsCampaign']->getExternalUuid());
 			$redemption = $api_coupon->redeemCoupon($user->getUserProviderUuid(), $internalPlan->getCurrency(), $subscription->getSubUid());
@@ -706,18 +706,18 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			}
 			//<-- DATABASE -->
 			$subscription = BillingsSubscriptionDAO::getBillingsSubscriptionById($subscription->getId());
-			config::getLogger()->addInfo("applying a coupon for recurly_subscription_uuid=".$subscription->getSubUid()." done successfully");
+			config::getLogger()->addInfo("redeeming a coupon for recurly_subscription_uuid=".$subscription->getSubUid()." done successfully");
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while applying a coupon for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("applying a coupon failed : ".$msg);
+			$msg = "a billings exception occurred while redeeming a coupon for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("redeeming a coupon failed : ".$msg);
 			throw $e;
 		} catch (Recurly_ValidationError $e) {
-			$msg = "a validation error exception occurred while applying a coupon for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("applying a coupon failed : ".$msg);
+			$msg = "a validation error exception occurred while redeeming a coupon for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("redeeming a coupon failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::provider), $e->getMessage(), $e->getCode(), $e);
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while applying a coupon for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("applying a coupon failed : ".$msg);
+			$msg = "an unknown exception occurred while redeeming a coupon for recurly_subscription_uuid=".$subscription->getSubUid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("redeeming a coupon failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($this->doFillSubscription($subscription));

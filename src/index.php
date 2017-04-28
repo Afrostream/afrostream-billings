@@ -746,9 +746,9 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/expire", functi
 	return($subscriptionsController->expire($request, $response, $args));
 });
 
-$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/applycoupon/{couponCode}", function ($request, $response, $args) {
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/coupons/{couponCode}/redeem", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
-	return($subscriptionsController->applyCoupon($request, $response, $args));
+	return($subscriptionsController->redeemCoupon($request, $response, $args));
 });
 
 /**
