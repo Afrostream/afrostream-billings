@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
-class ApplyCouponRequest extends ActionRequest {
+class RedeemCouponRequest extends ActionRequest {
 	
 	protected $subscriptionBillingUuid = NULL;
 	protected $couponCode = NULL;
