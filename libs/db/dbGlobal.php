@@ -7591,3 +7591,80 @@ class BillingPlatformDAO {
 	}
 	
 }
+
+class BillingConfig implements JsonSerializable {
+	
+	private $_id;
+	private $platformId;
+	private $config;
+	
+	public function setId($id) {
+		$this->_id = $id;
+	}
+	
+	public function getId() {
+		return($this->_id);
+	}
+	
+	public function setPlatformId($platformId) {
+		$this->platformId = $platformId;
+	}
+	
+	public function getPlatformId() {
+		return($this->platformId);
+	}
+	
+	public function setConfig(array $json_as_array) {
+		$this->config = $json_as_array;
+	}
+	
+	public function getConfig() {
+		return($this->config);
+	}
+	
+	public function jsonSerialize() {
+		return($this->config);
+	}
+	
+}
+class BillingConfigDAO {
+	
+	private static $sfields = '_id, platformid, config';
+	
+	private static function getBillingConfigFromRow($row) {
+		$out = new BillingConfig();
+		$out->setId($row["_id"]);
+		$out->setPlatformId($row["platformid"]);
+		$out->setConfig(json_decode($row["config"], true));
+		return($out);
+	}
+	
+	public static function getBillingConfigById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_config WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingConfigFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		return($out);
+	}
+	
+	public static function getBillingConfigByPlatformId($platformId) {
+		$query = "SELECT ".self::$sfields." FROM billing_config WHERE platformid = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($platformId));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingConfigFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		return($out);
+	}
+		
+}
