@@ -255,10 +255,8 @@ print_r("processing done\n");
 
 function sendMessage($msg) {
 	print_r($msg.PHP_EOL);
-	if(getEnv('SLACK_ACTIVATED') == 1) {
-		$slackHandler = new SlackHandler();
-		$slackHandler->sendMessage(getEnv('SLACK_GROWTH_CHANNEL'), $msg);
-	}
+	$slackHandler = new SlackHandler();
+	$slackHandler->sendMessage(getEnv('SLACK_GROWTH_CHANNEL'), $msg);
 }
 
 
