@@ -420,13 +420,17 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
 	        $api_subscription = $this->getSubscription($subscription->getSubUid(), $user);
 	        $api_subscription->plan = $providerPlan->getPlanUuid();
 	        $api_subscription->save();
-			//
-			$subscription->setPlanId($providerPlan->getId());
-			//
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
-				BillingsSubscriptionDAO::updatePlanId($subscription);
+				$subscription->setPlanId($providerPlan->getId());
+				$subscription = BillingsSubscriptionDAO::updatePlanId($subscription);
+				$subscription->setPlanChangeId($providerPlan->getId());
+				$subscription = BillingsSubscriptionDAO::updatePlanChangeId($subscription);
+				$subscription->setPlanChangeProcessed(true);
+				$subscription = BillingsSubscriptionDAO::updatePlanChangeProcessed($subscription);
+				$subscription->setPlanChangeProcessedDate(new DateTime());
+				$subscription = BillingsSubscriptionDAO::updatePlanChangeProcessedDate($subscription);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch(Exception $e) {
