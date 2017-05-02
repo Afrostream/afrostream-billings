@@ -19,6 +19,7 @@ require_once __DIR__ . '/../providers/global/requests/UpdateSubscriptionRequest.
 require_once __DIR__ . '/../providers/global/requests/GetOrCreateSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetUserSubscriptionsRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetSubscriptionsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/RedeemCouponRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -549,6 +550,56 @@ class SubscriptionsController extends BillingsController {
 			return($this->returnExceptionAsJson($response, $e));
 			//
 		}
+	}
+	
+	public function redeemCoupon(Request $request, Response $response, array $args) {
+		try {
+			$data = json_decode($request->getBody(), true);
+			$subscriptionBillingUuid = NULL;
+			if(!isset($args['subscriptionBillingUuid'])) {
+				//exception
+				$msg = "field 'subscriptionBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$subscriptionBillingUuid = $args['subscriptionBillingUuid'];
+			$couponCode = NULL;
+			if(!isset($args['couponCode'])) {
+				//exception
+				$msg = "field 'couponCode' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$couponCode = $args['couponCode'];
+			$force = NULL;
+			if(isset($data['force'])) {
+				$force = $data['force'] == 'true' ? true : false;
+			}
+			$subscriptionsHandler = new SubscriptionsFilteredHandler();
+			$redeemCouponRequest = new RedeemCouponRequest();
+			$redeemCouponRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
+			$redeemCouponRequest->setCouponCode($couponCode);
+			$redeemCouponRequest->setForce($force);
+			$redeemCouponRequest->setOrigin('api');
+			$subscription = $subscriptionsHandler->doRedeemCoupon($redeemCouponRequest);
+			if($subscription == NULL) {
+				return($this->returnNotFoundAsJson($response));
+			} else {
+				return($this->returnObjectAsJson($response, 'subscription', $subscription));
+			}
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while redeeming a coupon to a subscription, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while redeeming a coupon to a subscription, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}			
 	}
 	
 }

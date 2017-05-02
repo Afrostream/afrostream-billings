@@ -14,6 +14,7 @@ require_once __DIR__ . '/../providers/global/requests/UpdateInternalPlanSubscrip
 require_once __DIR__ . '/../providers/global/requests/UpdateSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetOrCreateSubscriptionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetUserSubscriptionsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/RedeemCouponRequest.php';
 require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
 
 class SubscriptionsHandler {
@@ -506,6 +507,57 @@ class SubscriptionsHandler {
 			BillingStatsd::inc('route.providers.all.subscriptions.expire.hit');
 			$responseTimeInMillis = round((microtime(true) - $starttime) * 1000);
 			BillingStatsd::timing('route.providers.all.subscriptions.expire.responsetime', $responseTimeInMillis);
+		}
+		return($db_subscription);
+	}
+	
+	public function doRedeemCoupon(RedeemCouponRequest $redeemCouponRequest) {
+		$subscriptionBillingUuid = $redeemCouponRequest->getSubscriptionBillingUuid();
+		$db_subscription = NULL;
+		try {
+			config::getLogger()->addInfo("redeeming coupon for subscriptionBillingUuid=".$subscriptionBillingUuid."...");
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($subscriptionBillingUuid, $redeemCouponRequest->getPlatform()->getId());
+			if($db_subscription == NULL) {
+				$msg = "unknown subscriptionBillingUuid : ".$subscriptionBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($db_subscription->getSubStatus() != 'active') {
+				//Exception
+				$msg = "a coupon can only be applied to an 'active' subscription";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($redeemCouponRequest->getForce() == NULL || $redeemCouponRequest->getForce() == false) {
+				$billingUserInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($db_subscription->getId());
+				if($billingUserInternalCoupon != NULL) {
+					//Exception
+					$msg = "a coupon has already been applied to the subscription";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+				}
+			}
+			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());
+			if($provider == NULL) {
+				$msg = "unknown provider with id : ".$db_subscription->getProviderId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$db_subscription_before_update = clone $db_subscription;
+			//
+			$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
+			$db_subscription = $providerSubscriptionsHandlerInstance->doRedeemCoupon($db_subscription, $redeemCouponRequest);
+			//
+			$providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			config::getLogger()->addInfo("redeeming coupon for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while redeeming coupon for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("redeeming coupon failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while redeeming coupon for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("redeeming coupon failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_subscription);
 	}

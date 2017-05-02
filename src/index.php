@@ -13,6 +13,7 @@ require_once __DIR__ . '/../libs/site/ContextsController.php';
 require_once __DIR__ . '/../libs/site/TransactionsController.php';
 require_once __DIR__ . '/../libs/site/UtilsController.php';
 require_once __DIR__ . '/../libs/site/PartnerOrdersController.php';
+require_once __DIR__ . '/../libs/site/ConfigController.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -744,6 +745,11 @@ $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/updateinternalp
 $app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/expire", function ($request, $response, $args) {
 	$subscriptionsController = new SubscriptionsController();
 	return($subscriptionsController->expire($request, $response, $args));
+});
+
+$app->put("/billings/api/subscriptions/{subscriptionBillingUuid}/coupons/{couponCode}/redeem", function ($request, $response, $args) {
+	$subscriptionsController = new SubscriptionsController();
+	return($subscriptionsController->redeemCoupon($request, $response, $args));
 });
 
 /**
@@ -1484,17 +1490,8 @@ $app->put("/billings/api/partnerorders/{partnerOrderBillingUuid}/process", funct
 //config
 
 $app->get("/billings/api/config", function ($request, $response, $args) {
-	$json_as_array = array();
-	$json_as_array['status'] = 'done';
-	$json_as_array['statusMessage'] = 'success';
-	$json_as_array['statusCode'] = 0;
-	$json_as_array['response']['config'] = json_decode(getEnv('CONFIG'), true);
-	//
-	$json = json_encode($json_as_array);
-	$response = $response->withStatus(200);
-	$response = $response->withHeader('Content-Type', 'application/json');
-	$response->getBody()->write($json);
-	return($response);
+	$configController = new ConfigController();
+	return($configController->getConfig($request, $response, $args));
 });
 
 $app->run();
