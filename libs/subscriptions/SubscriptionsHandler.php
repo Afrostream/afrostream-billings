@@ -16,6 +16,7 @@ require_once __DIR__ . '/../providers/global/requests/GetOrCreateSubscriptionReq
 require_once __DIR__ . '/../providers/global/requests/GetUserSubscriptionsRequest.php';
 require_once __DIR__ . '/../providers/global/requests/RedeemCouponRequest.php';
 require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
+require_once __DIR__ . '/../slack/SlackHandler.php';
 
 class SubscriptionsHandler {
 	
@@ -456,6 +457,22 @@ class SubscriptionsHandler {
 			//
 			$providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
 			config::getLogger()->addInfo("dbsubscription updating internalPlan for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
+			//<-- SLACK
+			$fromInternalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($db_subscription_before_update->getPlanId());
+			$userOpts = UserOptsDAO::getUserOptsByUserId($db_subscription->getUserId());
+			$email = 'unknown@domain.com';
+			if(array_key_exists('email', $userOpts->getOpts())) {
+				$email = $userOpts->getOpts()['email'];
+			}
+			$separatorMsg = "**************************************************";
+			$msg = $email." : plan change from : ".$fromInternalPlan->getInternalPlanUid()." to : ".$updateInternalPlanSubscriptionRequest->getInternalPlanUuid().
+			" done successfully, details : subscriptionBillingUuid=".$updateInternalPlanSubscriptionRequest->getSubscriptionBillingUuid().", timeframe=".$updateInternalPlanSubscriptionRequest->getTimeframe().
+			" (".$provider->getName().")";
+			$slackHandler = new SlackHandler();		
+			$slackHandler->sendMessage(getEnv('SLACK_STATS_CHANNEL'), $separatorMsg);
+			$slackHandler->sendMessage(getEnv('SLACK_STATS_CHANNEL'), $msg);
+			$slackHandler->sendMessage(getEnv('SLACK_STATS_CHANNEL'), $separatorMsg);
+			//--> SLACK
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while dbsubscription updating internalPlan for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("dbsubscription updating internalPlan failed : ".$msg);

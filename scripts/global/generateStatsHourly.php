@@ -176,10 +176,8 @@ print_r("processing done\n");
 
 function sendMessage($msg, $channel) {
 	print_r($msg.PHP_EOL);
-	if(getEnv('SLACK_ACTIVATED') == 1) {
-		$slackHandler = new SlackHandler();
-		$slackHandler->sendMessage($channel, $msg);
-	}
+	$slackHandler = new SlackHandler();
+	$slackHandler->sendMessage($channel, $msg);
 }
 
 ?>
