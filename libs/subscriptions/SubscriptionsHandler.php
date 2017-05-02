@@ -465,7 +465,7 @@ class SubscriptionsHandler {
 				$email = $userOpts->getOpts()['email'];
 			}
 			$separatorMsg = "**************************************************";
-			$msg = $email." : plan change from : ".$fromInternalPlan->getInternalPlanUid()." to : ".$updateInternalPlanSubscriptionRequest->getInternalPlanUuid().
+			$msg = $email." : plan change from : ".$fromInternalPlan->getInternalPlanUuid()." to : ".$updateInternalPlanSubscriptionRequest->getInternalPlanUuid().
 			" done successfully, details : subscriptionBillingUuid=".$updateInternalPlanSubscriptionRequest->getSubscriptionBillingUuid().", timeframe=".$updateInternalPlanSubscriptionRequest->getTimeframe().
 			" (".$provider->getName().")";
 			$slackHandler = new SlackHandler();		
