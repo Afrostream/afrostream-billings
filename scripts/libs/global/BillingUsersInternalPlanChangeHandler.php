@@ -212,6 +212,8 @@ class BillingUsersInternalPlanChangeHandler {
 			$subscription = BillingsSubscriptionDAO::updatePlanChangeId($subscription);
 			$subscription->setPlanChangeNotified(true);
 			$subscription = BillingsSubscriptionDAO::updatePlanChangeNotified($subscription);
+			$subscription->setPlanChangeNotifiedDate(new DateTime());
+			$subscription = BillingsSubscriptionDAO::updatePlanChangeNotifiedDate($subscription);
 			ScriptsConfig::getLogger()->addInfo("subscription with uuid=".$subscription->getSubscriptionBillingUuid().", email=".(!empty($emailTo) ? $emailTo : getEnv('SENDGRID_TO_IFNULL'))." notifying plan change successfully");
 		} catch(Exception $e) {
 			ScriptsConfig::getLogger()->addError("an error occurred while notifying plan change for subscription with uuid=".$subscription->getSubscriptionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage());
@@ -309,8 +311,6 @@ class BillingUsersInternalPlanChangeHandler {
 			}
 			$subscription = $subscriptionsHandler->doUpdateInternalPlanSubscription($updateInternalPlanSubscriptionRequest);
 			//done
-			$subscription->setPlanChangeProcessed(true);
-			$subscription = BillingsSubscriptionDAO::updatePlanChangeProcessed($subscription);
 			ScriptsConfig::getLogger()->addInfo("subscription with uuid=".$subscription->getSubscriptionBillingUuid()." processing plan change done successfully");
 		} catch(Exception $e) {
 			ScriptsConfig::getLogger()->addError("an error occurred while processing plan change for subscription with uuid=".$subscription->getSubscriptionBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage());

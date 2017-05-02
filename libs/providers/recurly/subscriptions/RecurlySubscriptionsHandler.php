@@ -557,7 +557,13 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
-				BillingsSubscriptionDAO::updatePlanId($subscription);
+				$subscription = BillingsSubscriptionDAO::updatePlanId($subscription);
+				$subscription->setPlanChangeId($providerPlan->getId());
+				$subscription = BillingsSubscriptionDAO::updatePlanChangeId($subscription);
+				$subscription->setPlanChangeProcessed(true);
+				$subscription = BillingsSubscriptionDAO::updatePlanChangeProcessed($subscription);
+				$subscription->setPlanChangeProcessedDate(new DateTime());
+				$subscription = BillingsSubscriptionDAO::updatePlanChangeProcessedDate($subscription);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch(Exception $e) {

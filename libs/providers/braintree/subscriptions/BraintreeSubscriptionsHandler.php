@@ -573,17 +573,17 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 							'price' => $internalPlan->getAmount(),	//Braintree does not change the price !!!
 							'options' => $options,
 					]);
-			switch ($updateInternalPlanSubscriptionRequest->getTimeframe()) {
-				case 'now' :
-					$subscription->setPlanId($providerPlan->getId());
-					break;
-				case 'atRenewal' :
-					break;
-			}
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
-				BillingsSubscriptionDAO::updatePlanId($subscription);
+				$subscription->setPlanId($providerPlan->getId());
+				$subscription = BillingsSubscriptionDAO::updatePlanId($subscription);
+				$subscription->setPlanChangeId($providerPlan->getId());
+				$subscription = BillingsSubscriptionDAO::updatePlanChangeId($subscription);
+				$subscription->setPlanChangeProcessed(true);
+				$subscription = BillingsSubscriptionDAO::updatePlanChangeProcessed($subscription);
+				$subscription->setPlanChangeProcessedDate(new DateTime());
+				$subscription = BillingsSubscriptionDAO::updatePlanChangeProcessedDate($subscription);
 				//COMMIT
 				pg_query("COMMIT");
 			} catch(Exception $e) {

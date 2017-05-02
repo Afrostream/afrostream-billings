@@ -1612,7 +1612,8 @@ class BillingsSubscriptionDAO {
 	public static function init() {
 		BillingsSubscriptionDAO::$sfields = "BS._id, BS.subscription_billing_uuid, BS.providerid, BS.userid, BS.planid, BS.creation_date, BS.updated_date, BS.sub_uuid, BS.sub_status,".
 			" BS.sub_activated_date, BS.sub_canceled_date, BS.sub_expires_date, BS.sub_period_started_date, BS.sub_period_ends_date,".
-			" BS.update_type, BS.updateid, BS.deleted, BS.billinginfoid, BS.platformid, BS.plan_change_notified, BS.plan_change_processed, BS.plan_change_id";
+			" BS.update_type, BS.updateid, BS.deleted, BS.billinginfoid, BS.platformid, BS.plan_change_notified, BS.plan_change_processed, BS.plan_change_id,".
+			" BS.plan_change_notified_date, BS.plan_change_processed_date";
 	}
 	
 	private static function getBillingsSubscriptionFromRow($row) {
@@ -1640,6 +1641,8 @@ class BillingsSubscriptionDAO {
 		$out->setPlanChangeNotified($row["plan_change_notified"] == 't' ? true : false);
 		$out->setPlanChangeProcessed($row["plan_change_processed"] == 't' ? true : false);
 		$out->setPlanChangeId($row["plan_change_id"]);
+		$out->setPlanChangeNotifiedDate($row["plan_change_notified_date"] == NULL ? NULL : new DateTime($row["plan_change_notified_date"]));
+		$out->setPlanChangeProcessedDate($row["plan_change_processed_date"] == NULL ? NULL : new DateTime($row["plan_change_processed_date"]));
 		return($out);
 	}
 	
@@ -1883,6 +1886,17 @@ class BillingsSubscriptionDAO {
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
 	
+	//updatePlanChangeNotifiedDate
+	public static function updatePlanChangeNotifiedDate(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, plan_change_notified_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($subscription->getPlanChangeNotifiedDate()),
+						$subscription->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+	
 	//updatePlanChangeProcessed
 	public static function updatePlanChangeProcessed(BillingsSubscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, plan_change_processed = $1 WHERE _id = $2";
@@ -1894,6 +1908,17 @@ class BillingsSubscriptionDAO {
 		return(self::getBillingsSubscriptionById($subscription->getId()));
 	}
 	
+	//updatePlanChangeProcessedDate
+	public static function updatePlanChangeProcessedDate(BillingsSubscription $subscription) {
+		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, plan_change_processed_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($subscription->getPlanChangeProcessedDate()),
+						$subscription->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingsSubscriptionById($subscription->getId()));
+	}
+		
 	//updatePlanChangeId
 	public static function updatePlanChangeId(BillingsSubscription $subscription) {
 		$query = "UPDATE billing_subscriptions SET updated_date = CURRENT_TIMESTAMP, plan_change_id = $1 WHERE _id = $2";
@@ -2147,7 +2172,9 @@ class BillingsSubscription implements JsonSerializable {
 	private $platformId;
 	//
 	private $plan_change_notified = false;
+	private $plan_change_notified_date;
 	private $plan_change_processed = false;
+	private $plan_change_processed_date;
 	private $plan_change_id = NULL;
 	
 	public function getId() {
@@ -2394,6 +2421,22 @@ class BillingsSubscription implements JsonSerializable {
 	
 	public function getIsCouponCodeOnLifetimeCompatible() {
 		return($this->is_coupon_code_on_lifetime_compatible);
+	}
+	
+	public function setPlanChangeNotifiedDate($date) {
+		$this->plan_change_notified_date = $date;
+	}
+	
+	public function getPlanChangeNotifiedDate() {
+		return($this->plan_change_notified_date);
+	}
+	
+	public function setPlanChangeProcessedDate($date) {
+		$this->plan_change_processed_date = $date;
+	}
+	
+	public function getPlanChangeProcessedDate() {
+		return($this->plan_change_processed_date);
 	}
 	
 	public function jsonSerialize() {
