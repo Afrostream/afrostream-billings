@@ -7,6 +7,7 @@ require_once __DIR__ . '/observers/HookInterface.php';
 require_once __DIR__ . '/observers/CancelSubscription.php';
 require_once __DIR__ . '/observers/UpdateSubscription.php';
 require_once __DIR__ . '/observers/ChargeHookObserver.php';
+require_once __DIR__ . '/observers/InvoiceHookObserver.php';
 require_once __DIR__ . '/../../global/webhooks/ProviderWebHooksHandler.php';
 
 /**
@@ -88,7 +89,8 @@ class StripeWebHooksHandler extends ProviderWebHooksHandler
     {
         $this->addHookObserver(new CancelSubscription())
             ->addHookObserver(new UpdateSubscription())
-        	->addHookObserver(new ChargeHookObserver());
+        	->addHookObserver(new ChargeHookObserver())
+        	->addHookObserver(new InvoiceHookObserver());
     }
 
     protected function log($message, array $values =  [])
