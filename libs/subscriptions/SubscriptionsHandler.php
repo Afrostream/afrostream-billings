@@ -546,8 +546,8 @@ class SubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			if($redeemCouponRequest->getForce() == NULL || $redeemCouponRequest->getForce() == false) {
-				$billingUserInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($db_subscription->getId());
-				if($billingUserInternalCoupon != NULL) {
+				$billingUserInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsBySubId($db_subscription->getId());
+				if(count($billingUserInternalCoupons) > 0) {
 					//Exception
 					$msg = "a coupon has already been applied to the subscription";
 					config::getLogger()->addError($msg);
@@ -565,7 +565,7 @@ class SubscriptionsHandler {
 			$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
 			$db_subscription = $providerSubscriptionsHandlerInstance->doRedeemCoupon($db_subscription, $redeemCouponRequest);
 			//
-			$providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription);
+			$providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($db_subscription_before_update, $db_subscription, 'REDEEM_COUPON');
 			config::getLogger()->addInfo("redeeming coupon for subscriptionBillingUuid=".$subscriptionBillingUuid." done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while redeeming coupon for subscriptionBillingUuid=".$subscriptionBillingUuid.", error_code=".$e->getCode().", error_message=".$e->getMessage();

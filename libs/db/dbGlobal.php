@@ -6178,20 +6178,26 @@ EOL;
 		return($out);
 	}
 	
-	public static function getBillingUserInternalCouponBySubId($subId) {
+	public static function getBillingUserInternalCouponsBySubId($subId, CouponTimeframe $couponTimeframe = NULL) {
 		$query = "SELECT ".self::$sfields." FROM billing_users_internal_coupons BUIC WHERE BUIC.subid = $1";
-		$query_params = array($subId);
+		$query_params = array();
+		$query_params[] = $subId;
+		if(isset($couponTimeframe)) {
+			$query.= " AND BUIC.coupon_timeframe = $2";
+			$query_params[] = $couponTimeframe->getValue();
+		}
+		$query.= " ORDER BY BUIC.redeemed_date DESC";//Important : Most recently redeemed first
 		$result = pg_query_params(config::getDbConn(), $query, $query_params);
-		
-		$out = null;
-		
-		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getBillingUserInternalCouponFromRow($row);
+	
+		$out = array();
+	
+		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out[] = self::getBillingUserInternalCouponFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
-		
-		return($out);		
+	
+		return($out);
 	}
 	
 	public static function addBillingUserInternalCoupon(BillingUserInternalCoupon $billingUserInternalCoupon) {

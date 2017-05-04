@@ -802,10 +802,6 @@ class GocardlessSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($subscription);
 	}
 	
-	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
-		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
-	}
-
 	protected function checkBillingInfos(BillingInfo $billingInfo, User $user)
 	{
 		//if no iban suplied, return true

@@ -517,11 +517,7 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		}
 		return($this->doFillSubscription($subscription));
 	}
-	
-	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
-		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
-	}
-	
+		
 	protected function doCheckSponsoring(User $user) {
 		$subscriptionsHandler = new SubscriptionsHandler();
 		$getSubscriptionsRequest = new GetSubscriptionsRequest();
@@ -531,8 +527,8 @@ class AfrSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$getSubscriptionsRequest->setUserReferenceUuid($user->getUserReferenceUuid());
 		$subscriptions = $subscriptionsHandler->doGetUserSubscriptionsByUserReferenceUuid($getSubscriptionsRequest);
 		foreach ($subscriptions as $subscription) {
-			$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription->getId());
-			if(isset($userInternalCoupon)) {
+			$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsBySubId($subscription->getId(), new CouponTimeframe(CouponTimeframe::onSubCreation));
+			foreach ($userInternalCoupons as $userInternalCoupon) {
 				$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($userInternalCoupon->getInternalCouponsId());
 				if($internalCoupon == NULL) {
 					$msg = "no internal coupon found linked to user coupon with uuid=".$userInternalCoupon->getUuid();

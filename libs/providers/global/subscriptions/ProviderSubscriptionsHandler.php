@@ -204,40 +204,41 @@ class ProviderSubscriptionsHandler {
 		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}
 	
-	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
+	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update, $event = NULL) {
 		try {
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid()."...");
-			$event = NULL;
-			//check subscription_is_new_event
-			$switchEvent = NULL;
-			$afterUpdateMergedStatus = self::mergeStatus($subscription_after_update->getSubStatus());
-			switch($afterUpdateMergedStatus) {
-				case 'active' :
-					$switchEvent = 'NEW';
-					break;
-				case 'canceled' :
-					$switchEvent = 'CANCEL';
-					break;
-				case 'expired' :
-					if($subscription_after_update->getSubExpiresDate() == $subscription_after_update->getSubCanceledDate()) {
-						$switchEvent = 'ENDED_FP';
-					} else {
-						$switchEvent = 'ENDED';
-					}
-					break;
-				case 'future' :
-					$switchEvent = 'FUTURE';
-					break;
-			}
-			if(isset($switchEvent)) {
-				//There is only a real event, if object was NULL or SubStatus are different
-				if($subscription_before_update == NULL) {
-					$event = $switchEvent;
-				} else {
-					//subStatus are 'merged' before comparing
-					$beforeUpdateMergedStatus = self::mergeStatus($subscription_before_update->getSubStatus());
-					if($beforeUpdateMergedStatus != $afterUpdateMergedStatus) {
+			if($event == NULL) {
+				//check subscription_is_new_event
+				$switchEvent = NULL;
+				$afterUpdateMergedStatus = self::mergeStatus($subscription_after_update->getSubStatus());
+				switch($afterUpdateMergedStatus) {
+					case 'active' :
+						$switchEvent = 'NEW';
+						break;
+					case 'canceled' :
+						$switchEvent = 'CANCEL';
+						break;
+					case 'expired' :
+						if($subscription_after_update->getSubExpiresDate() == $subscription_after_update->getSubCanceledDate()) {
+							$switchEvent = 'ENDED_FP';
+						} else {
+							$switchEvent = 'ENDED';
+						}
+						break;
+					case 'future' :
+						$switchEvent = 'FUTURE';
+						break;
+				}
+				if(isset($switchEvent)) {
+					//There is only a real event, if object was NULL or SubStatus are different
+					if($subscription_before_update == NULL) {
 						$event = $switchEvent;
+					} else {
+						//subStatus are 'merged' before comparing
+						$beforeUpdateMergedStatus = self::mergeStatus($subscription_before_update->getSubStatus());
+						if($beforeUpdateMergedStatus != $afterUpdateMergedStatus) {
+							$event = $switchEvent;
+						}
 					}
 				}
 			}
@@ -257,6 +258,8 @@ class ProviderSubscriptionsHandler {
 						break;
 					case 'FUTURE' :
 						BillingStatsd::inc('route.providers.all.subscriptions.future.success');
+					case 'REDEEM_COUPON' :
+						BillingStatsd::inc('route.providers.all.subscriptions.redeemcoupon.success');
 					default :
 						//nothing to do
 						break;
@@ -411,12 +414,27 @@ class ProviderSubscriptionsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());
-			$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription_after_update->getId());
+			$userInternalCoupon = NULL;
 			$internalCoupon = NULL;
 			$internalCouponsCampaign = NULL;
-			if(isset($userInternalCoupon)) {
-				$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($userInternalCoupon->getInternalCouponsId());
-				$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+			if(in_array($event, ['NEW', 'REDEEM_COUPON'])) {
+				$couponTimeframe = NULL;
+				switch($event) {
+					case 'NEW' :
+						$couponTimeframe = new CouponTimeframe(CouponTimeframe::onSubCreation);
+						break;
+					case 'REDEEM_COUPON';
+						$couponTimeframe = new CouponTimeframe(CouponTimeframe::onSubLifetime);
+						break;
+				}
+				if(isset($couponTimeframe)) {
+					$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsBySubId($subscription_after_update->getId(), $couponTimeframe);
+					if(count($userInternalCoupons) > 0) {
+						$userInternalCoupon = $userInternalCoupons[0];//take first only (last redeemed because request is ordered)
+						$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($userInternalCoupon->getInternalCouponsId());
+						$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+					}
+				}
 			}
 			//DATA <--
 			//DATA SUBSTITUTION -->
@@ -561,8 +579,8 @@ class ProviderSubscriptionsHandler {
 	}
 	
 	protected function isSponsorshipSubscription(BillingsSubscription $currentBillingsSubscription) {
-		$userInternalCoupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($currentBillingsSubscription->getId());
-		if(isset($userInternalCoupon)) {
+		$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsBySubId($currentBillingsSubscription->getId(), new CouponTimeframe(CouponTimeframe::onSubCreation));
+		foreach ($userInternalCoupons as $userInternalCoupon) {
 			$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($userInternalCoupon->getInternalCouponsId());
 			if($internalCoupon == NULL) {
 				$msg = "no internal coupon found linked to user coupon with uuid=".$userInternalCoupon->getUuid();

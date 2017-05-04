@@ -338,7 +338,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         if($subscription->getSubStatus() == 'active') {
         	$subscription->setIsPlanChangeCompatible(true);
         	//ONLY ONE COUPON BY SUB
-        	$subscription->setIsCouponCodeOnLifetimeCompatible(BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription->getId()) == NULL ? true : false);
+        	$subscription->setIsCouponCodeOnLifetimeCompatible((count(BillingUserInternalCouponDAO::getBillingUserInternalCouponsBySubId($subscription->getId())) == 0) ? true : false);
         }
         return($subscription);
     }

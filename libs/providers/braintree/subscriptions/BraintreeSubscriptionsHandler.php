@@ -518,15 +518,11 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		if($subscription->getSubStatus() == 'active') {
 			$subscription->setIsPlanChangeCompatible(true);
 			//ONLY ONE COUPON BY SUB
-			$subscription->setIsCouponCodeOnLifetimeCompatible(BillingUserInternalCouponDAO::getBillingUserInternalCouponBySubId($subscription->getId()) == NULL ? true : false);
+			$subscription->setIsCouponCodeOnLifetimeCompatible((count(BillingUserInternalCouponDAO::getBillingUserInternalCouponsBySubId($subscription->getId())) == 0) ? true : false);
 		}
 		return($subscription);
 	}
-	
-	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
-		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
-	}
-	
+		
 	public function doUpdateInternalPlanSubscription(BillingsSubscription $subscription, UpdateInternalPlanSubscriptionRequest $updateInternalPlanSubscriptionRequest) {
 		try {
 			config::getLogger()->addInfo("braintree subscription updating Plan...");
