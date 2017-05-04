@@ -478,11 +478,7 @@ class CashwaySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		}
 		return($this->doFillSubscription($subscription));
 	}
-	
-	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
-		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
-	}
-	
+		
 	public function doUpdateUserSubscriptions(User $user, UserOpts $userOpts) {
 		$msg = "unsupported feature - update user subscriptions - for provider named : ".$this->provider->getName();
 		config::getLogger()->addWarning($msg);//Just warn for the moment

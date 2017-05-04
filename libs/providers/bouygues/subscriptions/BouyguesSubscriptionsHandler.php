@@ -344,10 +344,6 @@ class BouyguesSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		return($this->doFillSubscription($subscription));
 	}
 	
-	public function doSendSubscriptionEvent(BillingsSubscription $subscription_before_update = NULL, BillingsSubscription $subscription_after_update) {
-		parent::doSendSubscriptionEvent($subscription_before_update, $subscription_after_update);
-	}
-	
 	private static function getDbSubscriptionByProviderPlanId(array $db_subscriptions, $providerPlanId) {
 		foreach ($db_subscriptions as $db_subscription) {
 			if($db_subscription->getPlanId() == $providerPlanId) {
