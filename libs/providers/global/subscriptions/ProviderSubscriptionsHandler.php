@@ -153,7 +153,7 @@ class ProviderSubscriptionsHandler {
 		//
 		if($internalCouponsCampaign->getMaxRedemptionsByUser() != NULL) {
 			$globalUserInternalCoupons = self::getBillingUserInternalCouponsByUserReferenceUuidAndInternalCouponId($user->getUserReferenceUuid(), $internalCoupon->getId(), $this->platform->getId());
-			$countRedeemedStatus = self::countRedeemedStatus($globalUserInternalCoupons);
+			$countRedeemedStatus = self::countUserInternalCouponsRedeemedStatus($globalUserInternalCoupons);
 			if($countRedeemedStatus >= $internalCouponsCampaign->getMaxRedemptionsByUser()) {
 				//Exception
 				if($internalCouponsCampaign->getMaxRedemptionsByUser() == 1) {
