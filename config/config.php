@@ -379,6 +379,10 @@ if(getEnv('STRIPE_WH_HTTP_AUTH_PWD') === false) {
 	putEnv('STRIPE_WH_HTTP_AUTH_PWD=pwd');
 }
 
+if(getEnv('STRIPE_WH_EVENT_INVOICE.PAYMENT_FAILED_ENABLED') === false) {
+	putEnv('STRIPE_WH_EVENT_INVOICE.PAYMENT_FAILED_ENABLED=0');
+}
+
 #statsd
 
 if(getEnv('STATSD_ACTIVATED') === false) {

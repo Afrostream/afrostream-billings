@@ -33,32 +33,36 @@ class InvoiceHookObserver implements HookInterface
     }
     
     protected function processPaymentFailed(Event $event, Provider $provider) {
-    	config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' is being processed...');
-    	//
-    	$api_invoice_id = $event['data']['object']['id'];
-    	config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' api_invoice_id='.$api_invoice_id);
-    	$api_invoice = \Stripe\Invoice::retrieve($api_invoice_id);
-    	$api_subscription = NULL;
-    	if(isset($api_invoice['subscription'])) {
-    		config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' api_subscription_id='.$api_invoice['subscription']);
-    		$api_subscription = \Stripe\Subscription::retrieve($api_invoice['subscription']);
+    	if(getEnv('STRIPE_WH_EVENT_'.strtoupper($event['type']).'_ENABLED') == 1) {
+	    	config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' is being processed...');
+	    	//
+	    	$api_invoice_id = $event['data']['object']['id'];
+	    	config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' api_invoice_id='.$api_invoice_id);
+	    	$api_invoice = \Stripe\Invoice::retrieve($api_invoice_id);
+	    	$api_subscription = NULL;
+	    	if(isset($api_invoice['subscription'])) {
+	    		config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' api_subscription_id='.$api_invoice['subscription']);
+	    		$api_subscription = \Stripe\Subscription::retrieve($api_invoice['subscription']);
+	    	} else {
+	    		config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' no api_subscription_id found');
+	    	}
+	    	$billingSubscription = NULL;
+	    	if(isset($api_subscription)) {
+	    		$billingSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $api_subscription['id']);
+	    	} else {
+	    		config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' no api_subscription found');
+	    	}
+	    	if(isset($billingSubscription)) {
+	    		$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
+	    		$providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($billingSubscription, $billingSubscription, 'FAILED_PAYMENT');
+	    	} else {
+	    		config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' no billingSubscription found');
+	    	}
+	    	//
+	    	config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' has been processed successfully');
     	} else {
-    		config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' no api_subscription_id found');
+    		config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' has been ignored');
     	}
-    	$billingSubscription = NULL;
-    	if(isset($api_subscription)) {
-    		$billingSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubUuid($provider->getId(), $api_subscription['id']);
-    	} else {
-    		config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' no api_subscription found');
-    	}
-    	if(isset($billingSubscription)) {
-    		$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
-    		$providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($billingSubscription, $billingSubscription, 'FAILED_PAYMENT');
-    	} else {
-    		config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' no billingSubscription found');
-    	}
-    	//
-    	config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' has been processed successfully');
     }
 
 }
