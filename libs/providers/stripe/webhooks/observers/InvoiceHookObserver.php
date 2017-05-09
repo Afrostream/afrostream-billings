@@ -53,6 +53,7 @@ class InvoiceHookObserver implements HookInterface
 	    		config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' no api_subscription found');
 	    	}
 	    	if(isset($billingSubscription)) {
+	    		config::getLogger()->addInfo('STRIPE - Process new event id='.$event['id'].', type='.$event['type'].' billing_subscription_uuid='.$billingSubscription->getSubscriptionBillingUuid());
 	    		$providerSubscriptionsHandlerInstance = ProviderHandlersBuilder::getProviderSubscriptionsHandlerInstance($provider);
 	    		$providerSubscriptionsHandlerInstance->doSendSubscriptionEvent($billingSubscription, $billingSubscription, 'FAILED_PAYMENT');
 	    	} else {
