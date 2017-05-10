@@ -151,12 +151,11 @@ class ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_INTERNALPLAN_INCOMPATIBLE);
 		}
 		//
-		config::getLogger()->addInfo("DEBUG : ...");
 		if($internalCouponsCampaign->getMaxRedemptionsByUser() != NULL) {
-			config::getLogger()->addInfo("DEBUG : internalCouponsCampaign->getMaxRedemptionsByUser() : ".$internalCouponsCampaign->getMaxRedemptionsByUser());
+			config::getLogger()->addInfo("max_redemptions_by_user is limited to : ".$internalCouponsCampaign->getMaxRedemptionsByUser());
 			$globalUserInternalCoupons = self::getBillingUserInternalCouponsByUserReferenceUuidAndInternalCouponId($user->getUserReferenceUuid(), $internalCoupon->getId(), $this->platform->getId());
 			$countRedeemedStatus = self::countUserInternalCouponsRedeemedStatus($globalUserInternalCoupons);
-			config::getLogger()->addInfo("DEBUG : countRedeemedStatus : ".$countRedeemedStatus);
+			config::getLogger()->addInfo("current_redemptions_by_user is : ".$countRedeemedStatus);
 			if($countRedeemedStatus >= $internalCouponsCampaign->getMaxRedemptionsByUser()) {
 				//Exception
 				if($internalCouponsCampaign->getMaxRedemptionsByUser() == 1) {
@@ -170,7 +169,7 @@ class ProviderSubscriptionsHandler {
 				}
 			}
 		} else {
-			config::getLogger()->addInfo("DEBUG : internalCouponsCampaign->getMaxRedemptionsByUser() IS NULL");
+			config::getLogger()->addInfo("max_redemptions_by_user is null, redemptions are unlimited");
 		}
 		//
 		$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCoupon->getId());
