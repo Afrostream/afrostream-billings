@@ -151,9 +151,12 @@ class ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_INTERNALPLAN_INCOMPATIBLE);
 		}
 		//
+		config::getLogger()->addInfo("DEBUG : ...");
 		if($internalCouponsCampaign->getMaxRedemptionsByUser() != NULL) {
+			config::getLogger()->addInfo("DEBUG : internalCouponsCampaign->getMaxRedemptionsByUser() : ".$internalCouponsCampaign->getMaxRedemptionsByUser());
 			$globalUserInternalCoupons = self::getBillingUserInternalCouponsByUserReferenceUuidAndInternalCouponId($user->getUserReferenceUuid(), $internalCoupon->getId(), $this->platform->getId());
 			$countRedeemedStatus = self::countUserInternalCouponsRedeemedStatus($globalUserInternalCoupons);
+			config::getLogger()->addInfo("DEBUG : countRedeemedStatus : ".$countRedeemedStatus);
 			if($countRedeemedStatus >= $internalCouponsCampaign->getMaxRedemptionsByUser()) {
 				//Exception
 				if($internalCouponsCampaign->getMaxRedemptionsByUser() == 1) {
@@ -166,6 +169,8 @@ class ProviderSubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_MAX_REDEMPTIONS_PER_USER_REACHED);
 				}
 			}
+		} else {
+			config::getLogger()->addInfo("DEBUG : internalCouponsCampaign->getMaxRedemptionsByUser() IS NULL");
 		}
 		//
 		$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCoupon->getId());
@@ -723,7 +728,7 @@ class ProviderSubscriptionsHandler {
 		$userInternalCoupons = array();
 		$users = UserDAO::getUsersByUserReferenceUuid($userReferenceUuid, NULL, $platformId);
 		foreach($users as $user) {
-			$userInternalCoupons = array_merge($userInternalCoupons, BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($userid, $internalCouponId));
+			$userInternalCoupons = array_merge($userInternalCoupons, BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCouponId));
 		}
 		return($userInternalCoupons);
 	}
