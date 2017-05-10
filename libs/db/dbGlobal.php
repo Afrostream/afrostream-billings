@@ -4938,6 +4938,7 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 	private $partnerid;
 	private $platformid;
 	private $coupon_timeframes;
+	private $max_redemptions_by_user = 1;
 	
 	public function setId($id) {
 		$this->_id = $id;
@@ -5113,6 +5114,14 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 		return($this->coupon_timeframes);
 	}
 	
+	public function setMaxRedemptionsByUser($max_redemptions_by_user) {
+		$this->max_redemptions_by_user = $max_redemptions_by_user;
+	}
+	
+	public function getMaxRedemptionsByUser() {
+		return($this->max_redemptions_by_user);
+	}
+	
 	public function jsonSerialize() {
 		$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($this->_id);
 		$providers = array();
@@ -5175,7 +5184,8 @@ class BillingInternalCouponsCampaignDAO {
 		_id, internal_coupons_campaigns_uuid, creation_date, name, description, prefix,
 		discount_type, amount_in_cents, currency, percent, discount_duration,
 		discount_duration_unit, discount_duration_length, generated_mode, generated_code_length,
- 		total_number, coupon_type, emails_enabled, expires_date, partnerid, platformid, array_to_json(coupon_timeframes) as coupon_timeframes
+ 		total_number, coupon_type, emails_enabled, expires_date, partnerid, platformid, array_to_json(coupon_timeframes) as coupon_timeframes,
+		max_redemptions_by_user
 EOL;
 	
 	private static function getBillingInternalCouponsCampaignFromRow($row) {
@@ -5202,6 +5212,7 @@ EOL;
 		$out->setPartnerId($row["partnerid"]);
 		$out->setPlatformId($row["platformid"]);
 		$out->setCouponTimeframes(json_decode($row["coupon_timeframes"]));
+		$out->setMaxRedemptionsByUser($row["max_redemptions_by_user"]);
 		return($out);
 	}
 	
