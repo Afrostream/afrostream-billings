@@ -354,7 +354,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 		
 	private function getMappedTransactionPaymentMethodType(Braintree\Transaction $braintreeTransaction) {
 		$paymentMethodType = NULL;
-		switch($braintreeTransaction->payment_instrument_type) {
+		switch($braintreeTransaction->paymentInstrumentType) {
 			case 'android_pay_card' :
 				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::googleplay);
 				break;
