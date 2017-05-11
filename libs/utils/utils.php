@@ -396,7 +396,7 @@ function doSortPaymentMethods(&$paymentMethodsArray, $allPaymentMethods) {
 	//
 	$allPaymentMethodsByPaymentMethodType = array();
 	foreach ($allPaymentMethods as $providerName => $paymentMethod) {
-		$allPaymentMethodsByPaymentMethodType[$paymentMethod->getPaymentMethodType()] = $paymentMethod; 
+		$allPaymentMethodsByPaymentMethodType[$paymentMethod->getPaymentMethodType()->getValue()] = $paymentMethod; 
 	}
 	//
 	uksort($paymentMethodsArray,

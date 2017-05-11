@@ -985,7 +985,7 @@ class InternalPlan implements JsonSerializable {
 				$providerPlanPaymentsMethods = BillingProviderPlanPaymentMethodsDAO::getBillingProviderPlanPaymentMethodsByProviderPlanId($providerPlan->getId());
 				foreach ($providerPlanPaymentsMethods as $providerPlanPaymentsMethod) {
 					$paymentMethod = BillingPaymentMethodDAO::getBillingPaymentMethodById($providerPlanPaymentsMethod->getPaymentMethodId());
-					$providerPlansByPaymentMethodTypeArray[$paymentMethod->getPaymentMethodType()][][$providerName] = $providerPlan;
+					$providerPlansByPaymentMethodTypeArray[$paymentMethod->getPaymentMethodType()->getValue()][][$providerName] = $providerPlan;
 				}
 			}
 			//sort it
@@ -4295,6 +4295,8 @@ class BillingsTransaction implements JsonSerializable {
 	private $message;
 	private $updateType;
 	private $platformId;
+	private $paymentMethodType;
+	
 	
 	public function getId() {
 		return($this->_id);
@@ -4463,6 +4465,14 @@ class BillingsTransaction implements JsonSerializable {
 		return($this->platformId);
 	}
 	
+	public function setPaymentMethodType(BillingPaymentMethodType $billingPaymentMethodType = NULL) {
+		$this->paymentMethodType = $billingPaymentMethodType;
+	}
+	
+	public function getPaymentMethodType() {
+		return($this->paymentMethodType);
+	}
+	
 	public function jsonSerialize() {
 		$return = [
 				'transactionBillingUuid' => $this->transactionBillingUuid,
@@ -4477,7 +4487,8 @@ class BillingsTransaction implements JsonSerializable {
 				'amountInCents' => $this->amountInCents,
 				'amount' => (string) number_format((float) $this->amountInCents / 100, 2, ',', ''),//Forced to French Locale
 				'transactionOpts' => (BillingsTransactionOptsDAO::getBillingsTransactionOptByTransactionId($this->_id)->jsonSerialize()),
-				'linkedTransactions' => BillingsTransactionDAO::getBillingsTransactionsByTransactionLinkId($this->_id)
+				'linkedTransactions' => BillingsTransactionDAO::getBillingsTransactionsByTransactionLinkId($this->_id),
+				'paymentMethodType' => $this->paymentMethodType
 		];
 		return($return);
 	}
@@ -4490,7 +4501,7 @@ class BillingsTransactionDAO {
 	transaction_billing_uuid, transaction_provider_uuid,
 	creation_date, updated_date, transaction_creation_date, 
 	amount_in_cents, currency, country, transaction_status, 
-	transaction_type, invoice_provider_uuid, message, update_type, platformid
+	transaction_type, invoice_provider_uuid, message, update_type, platformid, payment_method_type
 EOL;
 
 	private static function getBillingsTransactionFromRow($row) {
@@ -4516,6 +4527,7 @@ EOL;
 		$out->setMessage($row["message"]);
 		$out->setUpdateType($row["update_type"]);
 		$out->setPlatformId($row["platformid"]);
+		$out->setPaymentMethodType($row["payment_method_type"] == NULL ? NULL : new BillingPaymentMethodType($row["payment_method_type"]));
 		return($out);
 	}
 
@@ -4540,8 +4552,8 @@ EOL;
 		$query.= " transaction_billing_uuid, transaction_provider_uuid,";
 		$query.= " transaction_creation_date,"; 
 		$query.= " amount_in_cents, currency, country, transaction_status, transaction_type,";
-		$query.= " invoice_provider_uuid, message, update_type, status_changed_date, platformid)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING _id";
+		$query.= " invoice_provider_uuid, message, update_type, status_changed_date, platformid, payment_method_type)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$billingsTransaction->getTransactionLinkId(),
 						$billingsTransaction->getProviderId(),
@@ -4561,7 +4573,9 @@ EOL;
 						$billingsTransaction->getMessage(),
 						$billingsTransaction->getUpdateType(),
 						dbGlobal::toISODate($billingsTransaction->getTransactionCreationDate()),
-						$billingsTransaction->getPlatformId()));
+						$billingsTransaction->getPlatformId(),
+						$billingsTransaction->getPaymentMethodType() == NULL ? NULL : $billingsTransaction->getPaymentMethodType()->getValue()
+				));
 		$row = pg_fetch_row($result);
 		// free result
 		pg_free_result($result);
@@ -4582,8 +4596,9 @@ EOL;
 		$query.= " transactionlinkid = $1, providerid = $2, userid = $3, subid = $4, couponid = $5, invoiceid = $6,"; 
 		$query.= " transaction_billing_uuid = $7, transaction_provider_uuid = $8,";
 		$query.= " transaction_creation_date = $9,"; 
-		$query.= " amount_in_cents = $10, currency = $11, country = $12, transaction_status = $13, transaction_type = $14, invoice_provider_uuid = $15, message = $16, update_type = $17";
-		$query.= " WHERE _id = $18";
+		$query.= " amount_in_cents = $10, currency = $11, country = $12, transaction_status = $13, transaction_type = $14, invoice_provider_uuid = $15, message = $16, update_type = $17,";
+		$query.= " payment_method_type = $18";
+		$query.= " WHERE _id = $19";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$billingsTransaction->getTransactionLinkId(),
 						$billingsTransaction->getProviderId(),
@@ -4602,6 +4617,7 @@ EOL;
 						$billingsTransaction->getInvoiceProviderUuid(),
 						$billingsTransaction->getMessage(),
 						$billingsTransaction->getUpdateType(),
+						$billingsTransaction->getPaymentMethodType() == NULL ? NULL : $billingsTransaction->getPaymentMethodType()->getValue(),
 						$billingsTransaction->getId()));
 		// free result
 		pg_free_result($result);
@@ -4740,6 +4756,39 @@ EOL;
 	
 }
 
+class BillingPaymentMethodType extends Enum implements JsonSerializable {
+
+	const _default = 'default';
+	const card = 'card';
+	const sepa = 'sepa';
+	const paypal = 'paypal';
+	const applepay = 'applepay';
+	const googleplay = 'googlepay';
+	const coupon_standard = 'coupon_standard';
+	const coupon_prepaid = 'coupon_prepaid';
+	const coupon_sponsorship = 'coupon_sponsorship';
+	const carrier_billing = 'carrier_billing';
+	const bitcoin = 'bitcoin';
+	const mobile_money = 'mobile_money';
+	const standard = 'standard';
+	const prepaid = 'prepaid';
+	const sponsorship = 'sponsorship';
+	const other = 'other';
+	const check = 'check';
+	const wire_transfer = 'wire_transfer';
+	const money_order = 'money_order';
+	const giropay = 'giropay';
+	const ideal = 'ideal';
+	const sofort = 'sofort';
+	const bancontact = 'bancontact';
+	const venmo = 'venmo';
+	
+	public function jsonSerialize() {
+		return $this->getValue();
+	}
+
+}
+
 class BillingPaymentMethod implements JsonSerializable {
 	
 	private $_id;
@@ -4766,8 +4815,8 @@ class BillingPaymentMethod implements JsonSerializable {
 		return($this->_id);
 	}
 	
-	public function setPaymentMethodType($str) {
-		$this->paymentMethodType = $str;
+	public function setPaymentMethodType(BillingPaymentMethodType $billingPaymentMethodType = NULL) {
+		$this->paymentMethodType = $billingPaymentMethodType;
 	}
 	
 	public function getPaymentMethodType() {
@@ -4798,7 +4847,7 @@ class BillingPaymentMethodDAO {
 	private static function getBillingPaymentMethodFromRow($row) {
 		$out = new BillingPaymentMethod();
 		$out->setId($row["_id"]);
-		$out->setPaymentMethodType($row["payment_method_type"]);
+		$out->setPaymentMethodType($row["payment_method_type"] == NULL ? NULL : new BillingPaymentMethodType($row["payment_method_type"]));
 		$out->setIndex($row["index"]);
 		return($out);
 	}

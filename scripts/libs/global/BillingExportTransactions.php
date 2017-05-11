@@ -37,6 +37,7 @@ class BillingExportTransactions {
 		$fields[] = 'subscription_billing_uuid';
 		$fields[] = 'subscription_provider_uuid';
 		$fields[] = 'coupon_billing_uuid';
+		$fields[] = 'payment_method_type';
 		fputcsv($export_transactions_file_res, $fields, $csvDelimiter);
 		$offset = 0;
 		$limit = 1000;

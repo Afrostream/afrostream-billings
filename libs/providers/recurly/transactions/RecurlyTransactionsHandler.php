@@ -125,6 +125,7 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setMessage("provider_status=".$recurlyTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
 			$billingsTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsTransaction->setPaymentMethodType(self::getMappedTransactionPaymentMethodType($recurlyTransaction));
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -149,6 +150,7 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setMessage("provider_status=".$recurlyTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
 			//NO !!! : $billingsTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsTransaction->setPaymentMethodType(self::getMappedTransactionPaymentMethodType($recurlyTransaction));
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		if($recurlyTransaction->action == 'purchase') {
@@ -221,6 +223,7 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setMessage("provider_status=".$recurlyRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
 			$billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsRefundTransaction->setPaymentMethodType(self::getMappedTransactionPaymentMethodType($recurlyRefundTransaction));
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -246,6 +249,7 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setMessage("provider_status=".$recurlyRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
 			//NO !!! : $billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsRefundTransaction->setPaymentMethodType(self::getMappedTransactionPaymentMethodType($recurlyRefundTransaction));
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from recurly refund transaction id=".$recurlyRefundTransaction->uuid." done successfully");
@@ -325,6 +329,31 @@ class RecurlyTransactionsHandler extends ProviderTransactionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
 		return($transaction);
+	}
+	
+	private function getMappedTransactionPaymentMethodType(Recurly_Transaction $recurlyTransaction) {
+		$paymentMethodType = NULL;
+		switch ($recurlyTransaction->payment_method) {
+			case 'credit_card' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::card);
+				break;
+			case 'paypal' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::paypal);
+				break;
+			case 'check' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::check);
+				break;
+			case 'wire_transfer' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::wire_transfer);
+				break;
+			case 'money_order' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::money_order);
+				break;
+			default :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::other);
+				break;
+		}
+		return($paymentMethodType);
 	}
 	
 }

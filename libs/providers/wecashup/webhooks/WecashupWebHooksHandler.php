@@ -185,6 +185,7 @@ class WecashupWebHooksHandler extends ProviderWebHooksHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
+			$billingsTransaction->setPaymentMethodType(new BillingPaymentMethodType(BillingPaymentMethodType::mobile_money));
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
