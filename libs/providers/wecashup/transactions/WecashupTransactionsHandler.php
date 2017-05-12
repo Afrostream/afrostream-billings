@@ -48,6 +48,7 @@ class WecashupTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setMessage("provider_status=".$wecashupTransactionResponse->getTransactionStatus());
 			$billingsRefundTransaction->setUpdateType($updateType);
 			$billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsRefundTransaction->setPaymentMethodType(new BillingPaymentMethodType(BillingPaymentMethodType::mobile_money));
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -69,6 +70,7 @@ class WecashupTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setMessage("provider_status=".$wecashupTransactionResponse->getTransactionStatus());
 			$billingsRefundTransaction->setUpdateType($updateType);
 			//NO !!! : $billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsRefundTransaction->setPaymentMethodType(new BillingPaymentMethodType(BillingPaymentMethodType::mobile_money));
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from wecashup refund transaction id=".$wecashupTransactionResponse->getTransactionUid()." done successfully");

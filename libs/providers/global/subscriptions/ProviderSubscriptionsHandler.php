@@ -151,11 +151,30 @@ class ProviderSubscriptionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_INTERNALPLAN_INCOMPATIBLE);
 		}
 		//
-		$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCoupon->getId());
-		if(count($userInternalCoupons) > 0) {
-			//TAKING FIRST (EQUALS LAST GENERATED)
-			$userInternalCoupon = $userInternalCoupons[0];
+		if($internalCouponsCampaign->getMaxRedemptionsByUser() != NULL) {
+			config::getLogger()->addInfo("max_redemptions_by_user is limited to : ".$internalCouponsCampaign->getMaxRedemptionsByUser());
+			$globalUserInternalCoupons = self::getBillingUserInternalCouponsByUserReferenceUuidAndInternalCouponId($user->getUserReferenceUuid(), $internalCoupon->getId(), $this->platform->getId());
+			$countRedeemedStatus = self::countUserInternalCouponsRedeemedStatus($globalUserInternalCoupons);
+			config::getLogger()->addInfo("current_redemptions_by_user is : ".$countRedeemedStatus);
+			if($countRedeemedStatus >= $internalCouponsCampaign->getMaxRedemptionsByUser()) {
+				//Exception
+				if($internalCouponsCampaign->getMaxRedemptionsByUser() == 1) {
+					$msg = "coupon : code=".$couponCode." already redeemed";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_REDEEMED);
+				} else {
+					$msg = "coupon : code=".$couponCode." is no more redeemable";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_MAX_REDEMPTIONS_PER_USER_REACHED);
+				}
+			}
 		} else {
+			config::getLogger()->addInfo("max_redemptions_by_user is null, redemptions are unlimited");
+		}
+		//
+		$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCoupon->getId());
+		$userInternalCoupon = self::getFirstUserInternalCouponsWaitingStatus($userInternalCoupons);
+		if($userInternalCoupon == NULL) {
 			$userInternalCoupon = new BillingUserInternalCoupon();
 			$userInternalCoupon->setInternalCouponsId($internalCoupon->getId());
 			$userInternalCoupon->setCode($internalCoupon->getCode());
@@ -702,6 +721,34 @@ class ProviderSubscriptionsHandler {
 		$msg = "unsupported feature - redeem coupon - for provider named : ".$this->provider->getName();
 		config::getLogger()->addError($msg);
 		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
+	}
+	
+	private static function getBillingUserInternalCouponsByUserReferenceUuidAndInternalCouponId($userReferenceUuid, $internalCouponId, $platformId) {
+		$userInternalCoupons = array();
+		$users = UserDAO::getUsersByUserReferenceUuid($userReferenceUuid, NULL, $platformId);
+		foreach($users as $user) {
+			$userInternalCoupons = array_merge($userInternalCoupons, BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCouponId));
+		}
+		return($userInternalCoupons);
+	}
+	
+	private static function countUserInternalCouponsRedeemedStatus(array $userInternalCoupons) {
+		$count = 0;
+		foreach ($userInternalCoupons as $userInternalCoupon) {
+			if($userInternalCoupon->getStatus() == 'redeemed') {
+				$count++;
+			}
+		}
+		return($count);
+	}
+	
+	private static function getFirstUserInternalCouponsWaitingStatus(array $userInternalCoupons) {
+		foreach ($userInternalCoupons as $userInternalCoupon) {
+			if($userInternalCoupon->getStatus() == 'waiting') {
+				return($userInternalCoupon);
+			}
+		}
+		return(NULL);
 	}
 	
 }

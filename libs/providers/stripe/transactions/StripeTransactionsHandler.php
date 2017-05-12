@@ -276,6 +276,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setMessage("provider_status=".$stripeChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
 			$billingsTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsTransaction->setPaymentMethodType(self::getChargeMappedTransactionPaymentMethodType($stripeChargeTransaction));
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -301,6 +302,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setMessage("provider_status=".$stripeChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
 			//NO !!! : $billingsTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsTransaction->setPaymentMethodType(self::getChargeMappedTransactionPaymentMethodType($stripeChargeTransaction));
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		$this->updateRefundsFromProvider($user, $userOpts, $stripeChargeTransaction, $billingsTransaction, $updateType);
@@ -353,6 +355,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setMessage("provider_status=".$stripeRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
 			$billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsRefundTransaction->setPaymentMethodType(self::getRefundMappedTransactionPaymentMethodType($stripeRefundTransaction));
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -374,6 +377,7 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setMessage("provider_status=".$stripeRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
 			//NO !!! : $billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsRefundTransaction->setPaymentMethodType(self::getRefundMappedTransactionPaymentMethodType($stripeRefundTransaction));
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from stripe refund transaction id=".$stripeRefundTransaction->id." done successfully");
@@ -449,6 +453,42 @@ class StripeTransactionsHandler extends ProviderTransactionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
 		return($transaction);
+	}
+	
+	private function getChargeMappedTransactionPaymentMethodType(\Stripe\Charge $stripeChargeTransaction) {
+		$paymentMethodType = NULL;
+		switch($stripeChargeTransaction->source->object) {
+			case 'card' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::card);
+				break;
+			case 'three_d_secure' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::card);
+				break;
+			case 'giropay' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::giropay);
+				break;
+			case 'sepa_debit' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::sepa);
+				break;
+			case 'ideal' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::ideal);
+				break;
+			case 'sofort' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::sofort);
+				break;
+			case 'bancontact' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::bancontact);
+				break;
+			default :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::other);
+				break;
+		}
+		return($paymentMethodType);
+	}
+	
+	private function getRefundMappedTransactionPaymentMethodType(\Stripe\Refund $stripeRefundTransaction) {
+		$stripeChargeTransaction = \Stripe\Charge::retrieve($stripeRefundTransaction->charge);
+		return(self::getChargeMappedTransactionPaymentMethodType($stripeChargeTransaction));
 	}
 	
 }

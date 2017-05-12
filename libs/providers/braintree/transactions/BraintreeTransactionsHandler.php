@@ -108,6 +108,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setMessage("provider_status=".$braintreeChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
 			$billingsTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsTransaction->setPaymentMethodType(self::getMappedTransactionPaymentMethodType($braintreeChargeTransaction));
 			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
@@ -128,6 +129,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setMessage("provider_status=".$braintreeChargeTransaction->status);
 			$billingsTransaction->setUpdateType($updateType);
 			//NO !!! : $billingsTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsTransaction->setPaymentMethodType(self::getMappedTransactionPaymentMethodType($braintreeChargeTransaction));
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 		$this->updateRefundsFromProvider($user, $userOpts, $braintreeChargeTransaction, $billingsTransaction, $updateType);
@@ -178,6 +180,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setMessage("provider_status=".$braintreeRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
 			$billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsRefundTransaction->setPaymentMethodType(self::getMappedTransactionPaymentMethodType($braintreeRefundTransaction));
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
@@ -199,6 +202,7 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setMessage("provider_status=".$braintreeRefundTransaction->status);
 			$billingsRefundTransaction->setUpdateType($updateType);
 			//NO !!! : $billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsRefundTransaction->setPaymentMethodType(self::getMappedTransactionPaymentMethodType($braintreeRefundTransaction));
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 		config::getLogger()->addInfo("creating/updating refund transaction from braintree refund transaction id=".$braintreeRefundTransaction->id." done successfully");
@@ -348,6 +352,37 @@ class BraintreeTransactionsHandler extends ProviderTransactionsHandler {
 		return($transaction);
 	}
 		
+	private function getMappedTransactionPaymentMethodType(Braintree\Transaction $braintreeTransaction) {
+		$paymentMethodType = NULL;
+		switch($braintreeTransaction->paymentInstrumentType) {
+			case 'android_pay_card' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::googleplay);
+				break;
+			case 'apple_pay_card' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::applepay);
+				break;
+			case 'credit_card' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::card);
+				break;
+			case 'masterpass_card' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::card);
+				break;
+			case 'paypal_account' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::paypal);
+				break;
+			case 'venmo_account' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::venmo);
+				break;
+			case 'visa_checkout_card' :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::card);
+				break;
+			default :
+				$paymentMethodType = new BillingPaymentMethodType(BillingPaymentMethodType::other);
+				break;
+		}
+		return($paymentMethodType);
+	}
+	
 }
 
 ?>

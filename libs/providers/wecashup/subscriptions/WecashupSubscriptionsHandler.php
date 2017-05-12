@@ -234,6 +234,7 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$billingsTransaction->setMessage('');
 		$billingsTransaction->setUpdateType('api');
 		$billingsTransaction->setPlatformId($this->provider->getPlatformId());
+		$billingsTransaction->setPaymentMethodType(new BillingPaymentMethodType(BillingPaymentMethodType::mobile_money));
 		//
 		$billingsTransactionOpts = new BillingsTransactionOpts();
 		$billingsTransactionOpts->setOpt('transaction_token', $subOpts->getOpt('transaction_token'));
@@ -619,7 +620,8 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
-		}		
+		}
+		$billingsTransaction->setPaymentMethodType(new BillingPaymentMethodType(BillingPaymentMethodType::mobile_money));
 		$db_subscription = $this->updateDbSubscriptionFromApiSubscription($user, $userOpts, $this->provider, $internalPlan, $internalPlanOpts, $plan, $planOpts, $api_subscription, $db_subscription, 'api', 0);
 		$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		return($this->doFillSubscription($db_subscription));
