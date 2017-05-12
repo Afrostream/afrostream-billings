@@ -107,7 +107,7 @@ class TransactionsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$transactions = array();
+			$transactions = NULL;
 			$transactionsHandler = new TransactionsHandler();
 			if(isset($userReferenceUuid)) {
 				$getUserTransactionsRequest = new GetUserTransactionsRequest();
@@ -124,8 +124,8 @@ class TransactionsController extends BillingsController {
 				$msg = "field 'userReferenceUuid' or field 'subscriptionBillingUuid' are missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			return($this->returnObjectAsJson($response, 'transactions', $transactions));
+			}			
+			return($this->returnObjectAsJson($response, NULL, $transactions));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while getting transactions, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
