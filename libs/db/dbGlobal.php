@@ -4297,7 +4297,6 @@ class BillingsTransaction implements JsonSerializable {
 	private $platformId;
 	private $paymentMethodType;
 	
-	
 	public function getId() {
 		return($this->_id);
 	}
@@ -4672,6 +4671,7 @@ EOL;
 	public static function getBillingsTransactions($limit = 0,
 			$offset = 0,
 			DateTime $afterTransactionCreationDate = NULL,
+			array $userIds = NULL,
 			$subId = NULL,
 			$transaction_type_array = NULL,
 			$order = 'descending',
@@ -4679,6 +4679,25 @@ EOL;
 		$params = array();
 		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_transactions";
 		$where = "";
+		if(isset($userIds) && count($userIds) > 0) {
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "userid IN (";
+			$firstLoop = true;
+			foreach($userIds as $userId) {
+				$params[] = $userId;
+				if($firstLoop) {
+					$firstLoop = false;
+					$where.= "$".(count($params));
+				} else {
+					$where.= ", $".(count($params));
+				}
+			}
+			$where.= ")";
+		}
 		if(isset($subId)) {
 			$params[] = $subId;
 			if(empty($where)) {
