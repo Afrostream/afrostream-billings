@@ -4482,7 +4482,7 @@ class BillingsTransaction implements JsonSerializable {
 		$return = [
 				'transactionBillingUuid' => $this->transactionBillingUuid,
 				'transactionProviderUuid' => $this->transactionProviderUuid,
-				'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
+				'provider' => ProviderDAO::getProviderById($this->providerid),
 				'transactionCreationDate' => dbGlobal::toISODate($this->transactionCreationDate),
 				'creationDate' => dbGlobal::toISODate($this->creationDate),
 				'updatedDate' => dbGlobal::toISODate($this->updatedDate),
@@ -4491,9 +4491,12 @@ class BillingsTransaction implements JsonSerializable {
 				'currency' => $this->currency,
 				'amountInCents' => $this->amountInCents,
 				'amount' => (string) number_format((float) $this->amountInCents / 100, 2, ',', ''),//Forced to French Locale
-				'transactionOpts' => (BillingsTransactionOptsDAO::getBillingsTransactionOptByTransactionId($this->_id)->jsonSerialize()),
+				'transactionOpts' => BillingsTransactionOptsDAO::getBillingsTransactionOptByTransactionId($this->_id),
 				'linkedTransactions' => BillingsTransactionDAO::getBillingsTransactionsByTransactionLinkId($this->_id),
-				'paymentMethodType' => $this->paymentMethodType
+				'paymentMethodType' => $this->paymentMethodType,
+				'user' => UserDAO::getUserById($this->userid),
+				'subscription' => BillingsSubscriptionDAO::getBillingsSubscriptionById($this->subid),
+				'coupon' => BillingUserInternalCouponDAO::getBillingUserInternalCouponById($this->couponid)
 		];
 		return($return);
 	}
@@ -4768,12 +4771,10 @@ EOL;
 		$out['total_hits'] = 0;
 		$out['current_hits'] = 0;
 		$out['transactions'] = array();
-		$out['last_transaction_creation_date'] = NULL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out['total_hits'] = $row['total_hits'];
 			$out['current_hits']++;
 			$out['transactions'][] = self::getBillingsTransactionFromRow($row);
-			$out['last_transaction_creation_date'] = $row['transaction_creation_date'];
 		}
 		// free result
 		pg_free_result($result);
