@@ -32,11 +32,11 @@ class dbGlobal {
 		}
 		$out = array();
 		$out['field_names'] = $fieldNames;
-		$out['total_counter'] = 0;
+		$out['total_hits'] = 0;
 		$out['rows'] = array();
 		$out['lastId'] = NULL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out['total_counter'] = $row['total_counter'];
+			$out['total_hits'] = $row['total_counter'];
 			$out['rows'][] = $row;
 			$out['lastId'] = $row['_id'];
 		}
@@ -207,7 +207,7 @@ EOL;
 			$chartmogulStatus_array = NULL,
 			$platformId) {
 		$params = array();
-		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_users BU";
+		$query = "SELECT count(*) OVER() as total_hits, ".self::$sfields." FROM billing_users BU";
 		$query.= " WHERE BU.deleted = false AND BU.platformid = $1";
 		$params[] = $platformId;
 		if(isset($providerIds_array) && count($providerIds_array) > 0) {
@@ -246,11 +246,13 @@ EOL;
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
-		$out['total_counter'] = 0;
+		$out['total_hits'] = 0;
+		$out['current_hits'] = 0;
 		$out['users'] = array();
 		$out['lastId'] = NULL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out['total_counter'] = $row['total_counter'];
+			$out['total_hits'] = $row['total_hits'];
+			$out['current_hits']++;
 			$out['users'][] = self::getUserFromRow($row);
 			$out['lastId'] = $row['_id'];
 		}
@@ -2009,7 +2011,7 @@ class BillingsSubscriptionDAO {
 			$providerIdsToIgnore_array = NULL,
 			$afterId = NULL) {
 		$params = array();
-		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_subscriptions BS";
+		$query = "SELECT count(*) OVER() as total_hits, ".self::$sfields." FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
 		if(isset($cycle_array)) {
 			$query.= " INNER JOIN billing_plans BP ON (BS.planid = BP._id)";
@@ -2072,11 +2074,13 @@ class BillingsSubscriptionDAO {
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
-		$out['total_counter'] = 0;
+		$out['total_hits'] = 0;
+		$out['current_hits'] = 0;
 		$out['subscriptions'] = array();
 		$out['lastId'] = NULL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out['total_counter'] = $row['total_counter'];
+			$out['total_hits'] = $row['total_hits'];
+			$out['current_hits']++;
 			$out['subscriptions'][] = self::getBillingsSubscriptionFromRow($row);
 			$out['lastId'] = $row['_id'];
 		}
@@ -2092,7 +2096,7 @@ class BillingsSubscriptionDAO {
 			$status_array = array('requesting_canceled'),
 			$afterId = NULL) {
 		$params = array();
-		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_subscriptions BS";
+		$query = "SELECT count(*) OVER() as total_hits, ".self::$sfields." FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
 		$query.= " WHERE BU.deleted = false AND BS.deleted = false";
 		$query.= " AND BS.sub_status in (";
@@ -2119,11 +2123,13 @@ class BillingsSubscriptionDAO {
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
-		$out['total_counter'] = 0;
+		$out['total_hits'] = 0;
+		$out['current_hits'] = 0;
 		$out['subscriptions'] = array();
 		$out['lastId'] = NULL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out['total_counter'] = $row['total_counter'];
+			$out['total_hits'] = $row['total_hits'];
+			$out['current_hits']++;
 			$out['subscriptions'][] = self::getBillingsSubscriptionFromRow($row);
 			$out['lastId'] = $row['_id'];
 		}
@@ -4297,7 +4303,6 @@ class BillingsTransaction implements JsonSerializable {
 	private $platformId;
 	private $paymentMethodType;
 	
-	
 	public function getId() {
 		return($this->_id);
 	}
@@ -4477,7 +4482,7 @@ class BillingsTransaction implements JsonSerializable {
 		$return = [
 				'transactionBillingUuid' => $this->transactionBillingUuid,
 				'transactionProviderUuid' => $this->transactionProviderUuid,
-				'provider' => ((ProviderDAO::getProviderById($this->providerid)->jsonSerialize())),
+				'provider' => ProviderDAO::getProviderById($this->providerid),
 				'transactionCreationDate' => dbGlobal::toISODate($this->transactionCreationDate),
 				'creationDate' => dbGlobal::toISODate($this->creationDate),
 				'updatedDate' => dbGlobal::toISODate($this->updatedDate),
@@ -4486,9 +4491,12 @@ class BillingsTransaction implements JsonSerializable {
 				'currency' => $this->currency,
 				'amountInCents' => $this->amountInCents,
 				'amount' => (string) number_format((float) $this->amountInCents / 100, 2, ',', ''),//Forced to French Locale
-				'transactionOpts' => (BillingsTransactionOptsDAO::getBillingsTransactionOptByTransactionId($this->_id)->jsonSerialize()),
+				'transactionOpts' => BillingsTransactionOptsDAO::getBillingsTransactionOptByTransactionId($this->_id),
 				'linkedTransactions' => BillingsTransactionDAO::getBillingsTransactionsByTransactionLinkId($this->_id),
-				'paymentMethodType' => $this->paymentMethodType
+				'paymentMethodType' => $this->paymentMethodType,
+				'user' => UserDAO::getUserById($this->userid),
+				'subscription' => BillingsSubscriptionDAO::getBillingsSubscriptionById($this->subid),
+				'coupon' => BillingUserInternalCouponDAO::getBillingUserInternalCouponById($this->couponid)
 		];
 		return($return);
 	}
@@ -4672,13 +4680,33 @@ EOL;
 	public static function getBillingsTransactions($limit = 0,
 			$offset = 0,
 			DateTime $afterTransactionCreationDate = NULL,
+			array $userIds = NULL,
 			$subId = NULL,
 			$transaction_type_array = NULL,
 			$order = 'descending',
 			$platformId) {
 		$params = array();
-		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_transactions";
+		$query = "SELECT count(*) OVER() as total_hits, ".self::$sfields." FROM billing_transactions";
 		$where = "";
+		if(isset($userIds) && count($userIds) > 0) {
+			if(empty($where)) {
+				$where.= " WHERE ";
+			} else {
+				$where.= " AND ";
+			}
+			$where.= "userid IN (";
+			$firstLoop = true;
+			foreach($userIds as $userId) {
+				$params[] = $userId;
+				if($firstLoop) {
+					$firstLoop = false;
+					$where.= "$".(count($params));
+				} else {
+					$where.= ", $".(count($params));
+				}
+			}
+			$where.= ")";
+		}
 		if(isset($subId)) {
 			$params[] = $subId;
 			if(empty($where)) {
@@ -4740,13 +4768,13 @@ EOL;
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
-		$out['total_counter'] = 0;
+		$out['total_hits'] = 0;
+		$out['current_hits'] = 0;
 		$out['transactions'] = array();
-		$out['last_transaction_creation_date'] = NULL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out['total_counter'] = $row['total_counter'];
+			$out['total_hits'] = $row['total_hits'];
+			$out['current_hits']++;
 			$out['transactions'][] = self::getBillingsTransactionFromRow($row);
-			$out['last_transaction_creation_date'] = $row['transaction_creation_date'];
 		}
 		// free result
 		pg_free_result($result);

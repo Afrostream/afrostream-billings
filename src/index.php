@@ -1379,6 +1379,11 @@ $app->put("/billings/api/transactions/{transactionBillingUuid}/refund", function
 	return($transactionsController->refund($request, $response, $args));
 });
 
+$app->get("/billings/api/transactions/", function ($request, $response, $args) {
+	$transactionsController = new TransactionsController();
+	return($transactionsController->getMulti($request, $response, $args));
+});
+
 //WebHooks
 
 //sort of 'static' URL for each provider - no parameter - in order to be compatible with most of providers
