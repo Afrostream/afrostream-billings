@@ -107,17 +107,29 @@ class TransactionsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$offset = NULL;
+			if(isset($data['offset'])) {
+				$offset = $data['offset'];
+			}
+			$limit = NULL;
+			if(isset($data['limit'])) {
+				$limit = $data['limit'];
+			}			
 			$transactions = NULL;
 			$transactionsHandler = new TransactionsHandler();
 			if(isset($userReferenceUuid)) {
 				$getUserTransactionsRequest = new GetUserTransactionsRequest();
 				$getUserTransactionsRequest->setOrigin('api');
 				$getUserTransactionsRequest->setUserReferenceUuid($userReferenceUuid);
+				$getUserTransactionsRequest->setOffset($offset);
+				$getUserTransactionsRequest->setLimit($limit);
 				$transactions = $transactionsHandler->doGetUserTransactions($getUserTransactionsRequest);
 			} else if(isset($subscriptionBillingUuid)) {
 				$getSubscriptionTransactionsRequest = new GetSubscriptionTransactionsRequest();
 				$getSubscriptionTransactionsRequest->setOrigin('api');
 				$getSubscriptionTransactionsRequest->setSubscriptionBillingUuid($subscriptionBillingUuid);
+				$getSubscriptionTransactionsRequest->setOffset($offset);
+				$getSubscriptionTransactionsRequest->setLimit($limit);
 				$transactions = $transactionsHandler->doGetSubscriptionTransactions($getSubscriptionTransactionsRequest);
 			} else {
 				//exception (should not happen)

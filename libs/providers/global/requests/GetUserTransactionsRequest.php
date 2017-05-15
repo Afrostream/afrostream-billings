@@ -1,8 +1,8 @@
 <?php
 
-require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
+require_once __DIR__ . '/../../../global/requests/ActionHitsRequest.php';
 
-class GetUserTransactionsRequest extends ActionRequest {
+class GetUserTransactionsRequest extends ActionHitsRequest {
 	
 	protected $userReferenceUuid = NULL;
 	
@@ -17,7 +17,7 @@ class GetUserTransactionsRequest extends ActionRequest {
 	public function getUserReferenceUuid() {
 		return($this->userReferenceUuid);
 	}
-		
+	
 }
 
 ?>

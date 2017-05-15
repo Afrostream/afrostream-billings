@@ -1,8 +1,8 @@
 <?php
 
-require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
+require_once __DIR__ . '/../../../global/requests/ActionHitsRequest.php';
 
-class GetSubscriptionTransactionsRequest extends ActionRequest {
+class GetSubscriptionTransactionsRequest extends ActionHitsRequest {
 	
 	protected $subscriptionBillingUuid = NULL;
 	

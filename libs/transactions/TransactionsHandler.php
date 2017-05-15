@@ -150,7 +150,15 @@ class TransactionsHandler {
 			foreach ($users as $user) {
 				$userIds[] = $user->getId();
 			}
-			$db_transactions = BillingsTransactionDAO::getBillingsTransactions(0, 0, NULL, $userIds, NULL, NULL, 'descending', $getUserTransactionsRequest->getPlatform()->getId());
+			$db_transactions = BillingsTransactionDAO::getBillingsTransactions(
+					$getUserTransactionsRequest->getLimit() == NULL ? 0 : $getUserTransactionsRequest->getLimit(),
+					$getUserTransactionsRequest->getOffset() == NULL ? 0 : $getUserTransactionsRequest->getOffset(),
+					NULL, 
+					$userIds, 
+					NULL, 
+					NULL, 
+					'descending', 
+					$getUserTransactionsRequest->getPlatform()->getId());
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("transactions getting failed : ".$msg);
@@ -172,7 +180,15 @@ class TransactionsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_transactions = BillingsTransactionDAO::getBillingsTransactions(0, 0, NULL, NULL, $db_subscription->getId(), NULL, 'descending', $getSubscriptionTransactionsRequest->getPlatform()->getId());
+			$db_transactions = BillingsTransactionDAO::getBillingsTransactions(
+					$getSubscriptionTransactionsRequest->getLimit() == NULL ? 0 : $getSubscriptionTransactionsRequest->getLimit(), 
+					$getSubscriptionTransactionsRequest->getOffset() == NULL ? 0 : $getSubscriptionTransactionsRequest->getOffset(), 
+					NULL, 
+					NULL, 
+					$db_subscription->getId(), 
+					NULL, 
+					'descending', 
+					$getSubscriptionTransactionsRequest->getPlatform()->getId());
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while getting transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("transactions getting failed : ".$msg);

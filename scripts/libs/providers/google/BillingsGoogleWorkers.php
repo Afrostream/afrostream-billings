@@ -43,14 +43,14 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 			//
 			$idx = 0;
 			$lastId = NULL;
-			$totalCounter = NULL;
+			$totalHits = NULL;
 			do {
 				$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $this->provider->getId(), $sub_period_ends_date, $status_array, NULL, NULL, $lastId);
-				if(is_null($totalCounter)) {$totalCounter = $endingBillingsSubscriptions['total_counter'];}
+				if(is_null($totalHits)) {$totalHits = $endingBillingsSubscriptions['total_hits'];}
 				$idx+= count($endingBillingsSubscriptions['subscriptions']);
 				$lastId = $endingBillingsSubscriptions['lastId'];
 				//
-				ScriptsConfig::getLogger()->addInfo("processing...total_counter=".$totalCounter.", idx=".$idx);
+				ScriptsConfig::getLogger()->addInfo("processing...total_hits=".$totalHits.", idx=".$idx);
 				foreach($endingBillingsSubscriptions['subscriptions'] as $endingBillingsSubscription) {
 					try {
 						$this->doRefreshSubscription($endingBillingsSubscription);
@@ -59,7 +59,7 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 						ScriptsConfig::getLogger()->addError($msg);
 					}
 				}
-			} while ($idx < $totalCounter && count($endingBillingsSubscriptions['subscriptions']) > 0);
+			} while ($idx < $totalHits && count($endingBillingsSubscriptions['subscriptions']) > 0);
 			//DONE
 			$processingLog->setProcessingStatus('done');
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);

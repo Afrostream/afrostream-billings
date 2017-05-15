@@ -32,11 +32,11 @@ class dbGlobal {
 		}
 		$out = array();
 		$out['field_names'] = $fieldNames;
-		$out['total_counter'] = 0;
+		$out['total_hits'] = 0;
 		$out['rows'] = array();
 		$out['lastId'] = NULL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out['total_counter'] = $row['total_counter'];
+			$out['total_hits'] = $row['total_counter'];
 			$out['rows'][] = $row;
 			$out['lastId'] = $row['_id'];
 		}
@@ -207,7 +207,7 @@ EOL;
 			$chartmogulStatus_array = NULL,
 			$platformId) {
 		$params = array();
-		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_users BU";
+		$query = "SELECT count(*) OVER() as total_hits, count(*) as current_hits, ".self::$sfields." FROM billing_users BU";
 		$query.= " WHERE BU.deleted = false AND BU.platformid = $1";
 		$params[] = $platformId;
 		if(isset($providerIds_array) && count($providerIds_array) > 0) {
@@ -246,11 +246,13 @@ EOL;
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
-		$out['total_counter'] = 0;
+		$out['total_hits'] = 0;
+		$out['current_hits'] = 0;
 		$out['users'] = array();
 		$out['lastId'] = NULL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out['total_counter'] = $row['total_counter'];
+			$out['total_hits'] = $row['total_hits'];
+			$out['current_hits'] = $row['current_hits'];
 			$out['users'][] = self::getUserFromRow($row);
 			$out['lastId'] = $row['_id'];
 		}
@@ -2009,7 +2011,7 @@ class BillingsSubscriptionDAO {
 			$providerIdsToIgnore_array = NULL,
 			$afterId = NULL) {
 		$params = array();
-		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_subscriptions BS";
+		$query = "SELECT count(*) OVER() as total_hits, count(*) as current_hits, ".self::$sfields." FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
 		if(isset($cycle_array)) {
 			$query.= " INNER JOIN billing_plans BP ON (BS.planid = BP._id)";
@@ -2072,11 +2074,13 @@ class BillingsSubscriptionDAO {
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
-		$out['total_counter'] = 0;
+		$out['total_hits'] = 0;
+		$out['current_hits'] = 0;
 		$out['subscriptions'] = array();
 		$out['lastId'] = NULL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out['total_counter'] = $row['total_counter'];
+			$out['total_hits'] = $row['total_hits'];
+			$out['current_hits'] = $row['current_hits'];
 			$out['subscriptions'][] = self::getBillingsSubscriptionFromRow($row);
 			$out['lastId'] = $row['_id'];
 		}
@@ -2092,7 +2096,7 @@ class BillingsSubscriptionDAO {
 			$status_array = array('requesting_canceled'),
 			$afterId = NULL) {
 		$params = array();
-		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_subscriptions BS";
+		$query = "SELECT count(*) OVER() as total_hits, count(*) as current_hits, ".self::$sfields." FROM billing_subscriptions BS";
 		$query.= " INNER JOIN billing_users BU ON (BS.userid = BU._id)";
 		$query.= " WHERE BU.deleted = false AND BS.deleted = false";
 		$query.= " AND BS.sub_status in (";
@@ -2119,11 +2123,13 @@ class BillingsSubscriptionDAO {
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
-		$out['total_counter'] = 0;
+		$out['total_hits'] = 0;
+		$out['current_hits'] = 0;
 		$out['subscriptions'] = array();
 		$out['lastId'] = NULL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out['total_counter'] = $row['total_counter'];
+			$out['total_hits'] = $row['total_hits'];
+			$out['current_hits'] = $row['current_hits'];
 			$out['subscriptions'][] = self::getBillingsSubscriptionFromRow($row);
 			$out['lastId'] = $row['_id'];
 		}
@@ -4677,7 +4683,7 @@ EOL;
 			$order = 'descending',
 			$platformId) {
 		$params = array();
-		$query = "SELECT count(*) OVER() as total_counter, ".self::$sfields." FROM billing_transactions";
+		$query = "SELECT count(*) OVER() as total_hits, count(*) as current_hits, ".self::$sfields." FROM billing_transactions";
 		$where = "";
 		if(isset($userIds) && count($userIds) > 0) {
 			if(empty($where)) {
@@ -4759,11 +4765,13 @@ EOL;
 		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 		$out = array();
-		$out['total_counter'] = 0;
+		$out['total_hits'] = 0;
+		$out['current_hits'] = 0;
 		$out['transactions'] = array();
 		$out['last_transaction_creation_date'] = NULL;
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out['total_counter'] = $row['total_counter'];
+			$out['total_hits'] = $row['total_hits'];
+			$out['current_hits'] = $row['current_hits'];
 			$out['transactions'][] = self::getBillingsTransactionFromRow($row);
 			$out['last_transaction_creation_date'] = $row['transaction_creation_date'];
 		}

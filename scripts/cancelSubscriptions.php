@@ -55,7 +55,7 @@ print_r("processing in 5 secs...\n");
 sleep(5);
 
 $query =<<<EOL
-SELECT count(*) OVER() as total_counter, 
+SELECT count(*) OVER() as total_hits, 
 BU._id as _id, 
 (CASE WHEN length(BUO.value) = 0 THEN 'unknown@domain.com' ELSE BUO.value END) as email,
 BS.subscription_billing_uuid
@@ -86,12 +86,12 @@ $index = 1;
 do {
 	$result = dbGlobal::loadSqlResult(config::getReadOnlyDbConn(), $query, $limit, $offset);
 	$offset = $offset + $limit;
-	if(is_null($totalCounter)) {$totalCounter = $result['total_counter'];}
+	if(is_null($totalHits)) {$totalHits = $result['total_hits'];}
 	$idx+= count($result['rows']);
 	$lastId = $result['lastId'];
 	//
 	foreach($result['rows'] as $row) {
-		print_r("total=".$totalCounter.",current=".$index.",email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",processing\n");
+		print_r("total=".$totalHits.",current=".$index.",email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",processing\n");
 		//
 		try {
 			$subscriptionsHandler = new SubscriptionsHandler();
@@ -103,9 +103,9 @@ do {
 			//
 			$subscriptionsHandler->doCancelSubscription($cancelSubscriptionRequest);
 			//
-			print_r("total=".$totalCounter.",current=".$index.",email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",done\n");
+			print_r("total=".$totalHits.",current=".$index.",email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",done\n");
 		} catch(Exception $e) {
-			print_r("total=".$totalCounter.",current=".$index.",email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",failed,message=".$e->getMessage()."\n");
+			print_r("total=".$totalHits.",current=".$index.",email=".$row['email'].",subscription_billing_uuid=".$row['subscription_billing_uuid'].",failed,message=".$e->getMessage()."\n");
 		}
 		//
 		usleep($loopingSleepTimeInMillis * 1000);
@@ -113,7 +113,7 @@ do {
 		$index++;
 		//
 	}
-} while ($idx < $totalCounter && count($result['rows']) > 0);
+} while ($idx < $totalHits && count($result['rows']) > 0);
 
 print_r("processing done\n");
 
