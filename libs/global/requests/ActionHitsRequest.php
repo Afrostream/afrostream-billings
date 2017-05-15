@@ -1,8 +1,8 @@
 <?php
 
-require_once __DIR__ . '/../../db/dbGlobal.php';
+require_once __DIR__ . '/ActionRequest.php';
 
-class ActionHitsRequest {
+class ActionHitsRequest extends ActionRequest {
 	
 	protected $offset = NULL;
 	protected $limit = NULL;
