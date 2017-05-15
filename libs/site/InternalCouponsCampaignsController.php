@@ -116,6 +116,26 @@ class InternalCouponsCampaignsController extends BillingsController {
 		}
 	}
 	
+	public function create(Request $request, Response $response, array $args) {
+		try {
+			$data = json_decode($request->getBody(), true);
+			//
+			
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while creating an InternalCouponsCampaign, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while creating an InternalCouponsCampaign, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
 }
 
 ?>
