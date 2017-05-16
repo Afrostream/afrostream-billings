@@ -6,6 +6,7 @@ require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
 require_once __DIR__ . '/../providers/global/requests/GetInternalCouponsCampaignRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetInternalCouponsCampaignsRequest.php';
 require_once __DIR__ . '/../providers/global/requests/AddProviderToInternalCouponsCampaignRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CreateInternalCouponsCampaignRequest.php';
 
 class InternalCouponsCampaignsHandler {
 	
@@ -108,6 +109,96 @@ class InternalCouponsCampaignsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_internal_coupons_campaign);
+	}
+	
+	public function create(CreateInternalCouponsCampaignRequest $createInternalCouponsCampaignRequest) {
+		// Parameters Verifications...
+		switch($createInternalCouponsCampaignRequest->getDiscountType()) {
+			case 'percent' :
+				if($createInternalCouponsCampaignRequest->getPercent() == NULL) {
+					//exception
+					$msg = "percent parameter cannot be null when discountType parameter is set to percent";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				break;
+			case 'amount' :
+				if($createInternalCouponsCampaignRequest->getAmountInCents() == NULL) {
+					//exception
+					$msg = "amount parameter cannot be null when discountType parameter is set to amount";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($createInternalCouponsCampaignRequest->getCurrency() == NULL) {
+					//exception
+					$msg = "currency parameter cannot be null when discountType parameter is set to amount";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				break;
+		}
+		switch($createInternalCouponsCampaignRequest->getDiscountDuration()) {
+			case 'once' :
+				break;
+			case 'repeating' :
+				if($createInternalCouponsCampaignRequest->getDiscountDurationUnit() == NULL) {
+					//exception
+					$msg = "discountDurationUnit parameter cannot be null when discountDuration parameter is set to repeating";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($createInternalCouponsCampaignRequest->getDiscountDurationLength() == NULL) {
+					//exception
+					$msg = "discountDurationLength parameter cannot be null when discountDuration parameter is set to repeating";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				break;
+			case 'forever' :
+				break;
+		}
+		switch($createInternalCouponsCampaignRequest->getGeneratedMode()) {
+			case 'single' :
+				break;
+			case 'bulk' :
+				if($createInternalCouponsCampaignRequest->getGeneratedCodeLength() == NULL) {
+					//exception
+					$msg = "generatedCodeLength parameter cannot be null when generatedMode is set to bulk";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($createInternalCouponsCampaignRequest->getTotalNumber() == NULL) {
+					//exception
+					$msg = "totalNumber parameter cannot be null when generatedMode is set to bulk";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				break;
+		}
+		$timeframesSize = count($createInternalCouponsCampaignRequest->getTimeframes());
+		if($timeframesSize == 0) {
+			//exception
+			$msg = "at least one timeframe must be provided";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		// Parameters Verifications OK
+		// Database Verifications...
+		// TODO
+		// Database Verifications OK
+		$billingInternalCouponsCampaign = new BillingInternalCouponsCampaign();
+		$billingInternalCouponsCampaign->setPlatformId($createInternalCouponsCampaignRequest->getPlatform()->getId());
+		$billingInternalCouponsCampaign->setUuid(guid());
+		$billingInternalCouponsCampaign->setName($createInternalCouponsCampaignRequest->getName());
+		$billingInternalCouponsCampaign->setDescription($createInternalCouponsCampaignRequest->getDescription());
+		$billingInternalCouponsCampaign->setPrefix($createInternalCouponsCampaignRequest->getPrefix());
+		$billingInternalCouponsCampaign->setDiscountType($createInternalCouponsCampaignRequest->getDiscountType());
+		$billingInternalCouponsCampaign->setPercent($createInternalCouponsCampaignRequest->getPercent());
+		$billingInternalCouponsCampaign->setAmountInCents($createInternalCouponsCampaignRequest->getAmountInCents());
+		$billingInternalCouponsCampaign->setCurrency($createInternalCouponsCampaignRequest->getCurrency());
+		$billingInternalCouponsCampaign->setDiscountDuration($createInternalCouponsCampaignRequest->getDiscountDuration());
+		$billingInternalCouponsCampaign->setDiscountDurationUnit($createInternalCouponsCampaignRequest->getDiscountDurationUnit());
+		$billingInternalCouponsCampaign->setDiscountDurationLength($createInternalCouponsCampaignRequest->getDiscountDurationLength());
+		$billingInternalCouponsCampaign->setCouponType($createInternalCouponsCampaignRequest->getCouponsCampaignType());
+		$billingInternalCouponsCampaign->setGeneratedMode($createInternalCouponsCampaignRequest->getGeneratedMode());
+		$billingInternalCouponsCampaign->setGeneratedCodeLength($createInternalCouponsCampaignRequest->getGeneratedCodeLength());
+		$billingInternalCouponsCampaign->setCouponTimeframes($createInternalCouponsCampaignRequest->getTimeframes());
+		$billingInternalCouponsCampaign->setEmailsEnabled($createInternalCouponsCampaignRequest->getEmailsEnabled());
+		$billingInternalCouponsCampaign->setMaxRedemptionsByUser($createInternalCouponsCampaignRequest->getMaxRedemptionsByUser());
+		$billingInternalCouponsCampaign = BillingInternalCouponsCampaignDAO::addBillingInternalCouponsCampaign($billingInternalCouponsCampaign);
+		return($billingInternalCouponsCampaign);
 	}
 	
 }

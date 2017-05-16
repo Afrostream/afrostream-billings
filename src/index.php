@@ -1252,6 +1252,11 @@ $app->get("/billings/api/internalcouponscampaigns/", function ($request, $respon
 	return($internalCouponsCampaignsController->getMulti($request, $response, $args));
 });
 
+$app->post("/billings/api/internalcouponscampaigns/", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->create($request, $response, $args));
+});
+
 //for backward compatibility - to be removed later -
 
 $app->get("/billings/api/couponscampaigns/{couponsCampaignInternalBillingUuid}", function ($request, $response, $args) {
