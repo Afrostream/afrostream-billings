@@ -113,6 +113,14 @@ class InternalCouponsCampaignsHandler {
 		return($db_internal_coupons_campaign);
 	}
 	
+	public function doAddToInternalPlan() {
+		
+	}
+	
+	public function doRemoveFromInternalPlan() {
+		
+	}
+	
 	public function create(CreateInternalCouponsCampaignRequest $createInternalCouponsCampaignRequest) {
 		// Parameters Verifications...
 		if(strlen($createInternalCouponsCampaignRequest->getName()) == 0) {
@@ -254,7 +262,16 @@ class InternalCouponsCampaignsHandler {
 		}
 		// Parameters Verifications OK
 		// Database Verifications...
-		// TODO
+		if(BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByName($createInternalCouponsCampaignRequest->getName(), $createInternalCouponsCampaignRequest->getPlatform()->getId()) != NULL) {
+			//exception
+			$msg = "an internalCouponsCampaign with the same name=".$createInternalCouponsCampaignRequest->getName()." already exists";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if(BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByPrefix($createInternalCouponsCampaignRequest->getPrefix(), $createInternalCouponsCampaignRequest->getPlatform()->getId()) != NULL) {
+			//exception	
+			$msg = "an internalCouponsCampaign with the same prefix=".$createInternalCouponsCampaignRequest->getPrefix()." already exists";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
 		// Database Verifications OK
 		$billingInternalCouponsCampaign = new BillingInternalCouponsCampaign();
 		$billingInternalCouponsCampaign->setPlatformId($createInternalCouponsCampaignRequest->getPlatform()->getId());

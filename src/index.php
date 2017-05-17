@@ -1269,11 +1269,25 @@ $app->get("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillin
 	return($internalCouponsCampaignsController->getOne($request, $response, $args));
 });
 
-//actions to internalPlan : addtoprovider
+//actions to internalcouponscampaigns : addtoprovider
 
 $app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}/addtoprovider/{providerName}", function ($request, $response, $args) {
 	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
 	return($internalCouponsCampaignsController->addToProvider($request, $response, $args));
+});
+
+//actions to internalcouponscampaigns : addinternalplan
+	
+$app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}/addinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->addInternalPlan($request, $response, $args));
+});
+
+//actions to internalcouponscampaigns : removeinternalplan
+	
+$app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}/removeinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->removeInternalPlan($request, $response, $args));
 });
 
 //contexts

@@ -268,6 +268,14 @@ class InternalCouponsCampaignsController extends BillingsController {
 		}
 	}
 	
+	public function addInternalPlan(Request $request, Response $response, array $args) {
+		//TODO
+	}
+	
+	public function removeInternalPlan(Request $request, Response $response, array $args) {
+		//TODO
+	}
+	
 }
 
 ?>
