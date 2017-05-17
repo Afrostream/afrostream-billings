@@ -199,7 +199,7 @@ class ContextsHandler {
 		$index = $setInternalPlanIndexInContextRequest->getIndex();
 		$context = NULL;
 		try {
-			if(!(ctype_digit($index)) || !($index > 0)) {
+			if(!(is_numeric($index)) || !(is_int($index)) || !($index > 0)) {
 				$msg = "index must be a positive or zero integer";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
