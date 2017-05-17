@@ -76,19 +76,27 @@ class BraintreeUsersHandler extends ProviderUsersHandler {
 			Braintree_Configuration::privateKey($this->provider->getApiSecret());
 			//
 			$attribs = array();
-			$attribs['email'] = $updateUserRequest->getUserOptsArray()['email'];
-			$attribs['firstName'] = $updateUserRequest->getUserOptsArray()['firstName'];
-			$attribs['lastName'] = $updateUserRequest->getUserOptsArray()['lastName'];
+			if(array_key_exists('email', $updateUserRequest->getUserOptsArray())) {
+				$attribs['email'] = $updateUserRequest->getUserOptsArray()['email'];
+			}
+			if(array_key_exists('firstName', $updateUserRequest->getUserOptsArray())) {
+				$attribs['firstName'] = $updateUserRequest->getUserOptsArray()['firstName'];
+			}
+			if(array_key_exists('lastName', $updateUserRequest->getUserOptsArray())) {
+				$attribs['lastName'] = $updateUserRequest->getUserOptsArray()['lastName'];
+			}
 			//
-			$result = Braintree\Customer::update($updateUserRequest->getUserProviderUuid(), $attribs);
-			if (!$result->success) {
-				$msg = 'a braintree api error occurred : ';
-				$errorString = $result->message;
-				foreach($result->errors->deepAll() as $error) {
-					$errorString.= '; Code=' . $error->code . ", msg=" . $error->message;
+			if(count($attribs) > 0) {
+				$result = Braintree\Customer::update($updateUserRequest->getUserProviderUuid(), $attribs);
+				if (!$result->success) {
+					$msg = 'a braintree api error occurred : ';
+					$errorString = $result->message;
+					foreach($result->errors->deepAll() as $error) {
+						$errorString.= '; Code=' . $error->code . ", msg=" . $error->message;
+					}
+					throw new Exception($msg.$errorString);
 				}
-				throw new Exception($msg.$errorString);
-			}			
+			}
 			config::getLogger()->addInfo("braintree user data updating done successfully, user_provider_uuid=".$updateUserRequest->getUserProviderUuid());
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while updating braintree user data for user_provider_uuid=".$updateUserRequest->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();

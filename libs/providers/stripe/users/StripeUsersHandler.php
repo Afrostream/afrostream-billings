@@ -92,13 +92,30 @@ class StripeUsersHandler extends ProviderUsersHandler
     		checkUserOptsArray($updateUserRequest->getUserOptsArray(), $this->provider->getName());
     		//
     		$customer = \Stripe\Customer::retrieve($updateUserRequest->getUserProviderUuid());
-    		
-    		$customer->email = $updateUserRequest->getUserOptsArray()['email'];
-    		
-    		$customer->metadata['firstName'] = $updateUserRequest->getUserOptsArray()['firstName'];
-    		$customer->metadata['lastName'] = $updateUserRequest->getUserOptsArray()['lastName'];
     		//
-    		$customer->save();
+    		$hasToBeUpdated = false;
+    		//
+    		if(array_key_exists('email', $updateUserRequest->getUserOptsArray())) {
+    			$customer->email = $updateUserRequest->getUserOptsArray()['email'];
+    			$hasToBeUpdated = true;
+    		}
+    		if(array_key_exists('firstName', $updateUserRequest->getUserOptsArray())) {
+    			$customer->metadata['firstName'] = $updateUserRequest->getUserOptsArray()['firstName'];
+    			$hasToBeUpdated = true;
+    		}
+    		if(array_key_exists('lastName', $updateUserRequest->getUserOptsArray())) {
+    			$customer->metadata['lastName'] = $updateUserRequest->getUserOptsArray()['lastName'];
+    			$hasToBeUpdated = true;
+    		}
+    		//
+    		if(array_key_exists('customerBankAccountToken', $updateUserRequest->getUserOptsArray())) {
+    			$customer->source = $updateUserRequest->getUserOptsArray()['customerBankAccountToken'];
+    			$hasToBeUpdated = true;
+    		}
+    		//
+    		if($hasToBeUpdated) {
+    			$customer->save();
+    		}
     		config::getLogger()->addInfo("stripe user data updating done successfully, user_provider_uuid=".$updateUserRequest->getUserProviderUuid());
     	} catch(BillingsException $e) {
     		$msg = "a billings exception occurred while updating stripe user data for user_provider_uuid=".$updateUserRequest->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();

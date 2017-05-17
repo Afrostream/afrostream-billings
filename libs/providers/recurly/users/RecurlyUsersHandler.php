@@ -64,11 +64,25 @@ class RecurlyUsersHandler extends ProviderUsersHandler {
 			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			//
 			$account = Recurly_Account::get($updateUserRequest->getUserProviderUuid());
-			$account->email = $updateUserRequest->getUserOptsArray()['email'];
-			$account->first_name = $updateUserRequest->getUserOptsArray()['firstName'];
-			$account->last_name = $updateUserRequest->getUserOptsArray()['lastName'];
 			//
-			$account->update();
+			$hasToBeUpdated = false;
+			//
+			if(array_key_exists('email', $updateUserRequest->getUserOptsArray())) {
+				$account->email = $updateUserRequest->getUserOptsArray()['email'];
+				$hasToBeUpdated = true;
+			}
+			if(array_key_exists('firstName', $updateUserRequest->getUserOptsArray())) {
+				$account->first_name = $updateUserRequest->getUserOptsArray()['firstName'];
+				$hasToBeUpdated = true;
+			}
+			if(array_key_exists('lastName', $updateUserRequest->getUserOptsArray())) {
+				$account->last_name = $updateUserRequest->getUserOptsArray()['lastName'];
+				$hasToBeUpdated = true;
+			}
+			//
+			if($hasToBeUpdated) {
+				$account->update();
+			}
 			config::getLogger()->addInfo("recurly user data updating done successfully, user_provider_uuid=".$updateUserRequest->getUserProviderUuid());
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while updating recurly user data for user_provider_uuid=".$updateUserRequest->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
