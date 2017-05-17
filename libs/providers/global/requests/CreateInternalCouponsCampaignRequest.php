@@ -90,7 +90,7 @@ class CreateInternalCouponsCampaignRequest extends ActionRequest {
 	}
 	
 	public function getPercent() {
-		return($this-Percent);
+		return($this->percent);
 	}
 	
 	public function setDiscountDuration($discountDuration) {
@@ -122,7 +122,7 @@ class CreateInternalCouponsCampaignRequest extends ActionRequest {
 	}
 	
 	public function getGeneratedMode() {
-		$this->generatedMode;
+		return($this->generatedMode);
 	}
 	
 	public function setGeneratedCodeLength($generatedCodeLength) {
