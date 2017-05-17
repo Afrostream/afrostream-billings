@@ -7,6 +7,8 @@ require_once __DIR__ . '/../providers/global/requests/GetInternalCouponsCampaign
 require_once __DIR__ . '/../providers/global/requests/GetInternalCouponsCampaignsRequest.php';
 require_once __DIR__ . '/../providers/global/requests/AddProviderToInternalCouponsCampaignRequest.php';
 require_once __DIR__ . '/../providers/global/requests/CreateInternalCouponsCampaignRequest.php';
+require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToInternalCouponsCampaignRequest.php';
+require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromInternalCouponsCampaignRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -269,11 +271,79 @@ class InternalCouponsCampaignsController extends BillingsController {
 	}
 	
 	public function addInternalPlan(Request $request, Response $response, array $args) {
-		//TODO
+		try {
+			if(!isset($args['couponsCampaignInternalBillingUuid'])) {
+				//exception
+				$msg = "field 'couponsCampaignInternalBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$couponsCampaignInternalBillingUuid = $args['couponsCampaignInternalBillingUuid'];
+			if(!isset($args['internalPlanUuid'])) {
+				//exception
+				$msg = "field 'internalPlanUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanUuid = $args['internalPlanUuid'];
+			$addInternalPlanToInternalCouponsCampaignRequest = new AddInternalPlanToInternalCouponsCampaignRequest();
+			$addInternalPlanToInternalCouponsCampaignRequest->setOrigin('api');
+			$addInternalPlanToInternalCouponsCampaignRequest->setCouponsCampaignInternalBillingUuid($couponsCampaignInternalBillingUuid);
+			$addInternalPlanToInternalCouponsCampaignRequest->setInternalPlanUuid($internalPlanUuid);
+			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
+			$couponsCampaign = $internalCouponsCampaignsHandler->doAddToInternalPlan($addInternalPlanToInternalCouponsCampaignRequest);
+			return($this->returnObjectAsJson($response, 'couponsCampaign', $couponsCampaign));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while adding an InternaPlan to an InternalCouponsCampaign, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while adding an InternaPlan to an InternalCouponsCampaign, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
 	}
 	
 	public function removeInternalPlan(Request $request, Response $response, array $args) {
-		//TODO
+		try {
+			if(!isset($args['couponsCampaignInternalBillingUuid'])) {
+				//exception
+				$msg = "field 'couponsCampaignInternalBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$couponsCampaignInternalBillingUuid = $args['couponsCampaignInternalBillingUuid'];
+			if(!isset($args['internalPlanUuid'])) {
+				//exception
+				$msg = "field 'internalPlanUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$internalPlanUuid = $args['internalPlanUuid'];
+			$removeInternalPlanFromInternalCouponsCampaignRequest = new RemoveInternalPlanFromInternalCouponsCampaignRequest();
+			$removeInternalPlanFromInternalCouponsCampaignRequest->setOrigin('api');
+			$removeInternalPlanFromInternalCouponsCampaignRequest->setCouponsCampaignInternalBillingUuid($couponsCampaignInternalBillingUuid);
+			$removeInternalPlanFromInternalCouponsCampaignRequest->setInternalPlanUuid($internalPlanUuid);
+			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
+			$couponsCampaign = $internalCouponsCampaignsHandler->doRemoveFromInternalPlan($removeInternalPlanFromInternalCouponsCampaignRequest);
+			return($this->returnObjectAsJson($response, 'couponsCampaign', $couponsCampaign));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while removing an InternaPlan to an InternalCouponsCampaign, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while removing an InternaPlan to an InternalCouponsCampaign, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
 	}
 	
 }

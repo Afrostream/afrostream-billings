@@ -7,6 +7,8 @@ require_once __DIR__ . '/../providers/global/requests/GetInternalCouponsCampaign
 require_once __DIR__ . '/../providers/global/requests/GetInternalCouponsCampaignsRequest.php';
 require_once __DIR__ . '/../providers/global/requests/AddProviderToInternalCouponsCampaignRequest.php';
 require_once __DIR__ . '/../providers/global/requests/CreateInternalCouponsCampaignRequest.php';
+require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToInternalCouponsCampaignRequest.php';
+require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromInternalCouponsCampaignRequest.php';
 
 use Money\Currency;
 
@@ -113,12 +115,12 @@ class InternalCouponsCampaignsHandler {
 		return($db_internal_coupons_campaign);
 	}
 	
-	public function doAddToInternalPlan() {
-		
+	public function doAddToInternalPlan(AddInternalPlanToInternalCouponsCampaignRequest $addInternalPlanToInternalCouponsCampaignRequest) {
+		//TODO
 	}
 	
-	public function doRemoveFromInternalPlan() {
-		
+	public function doRemoveFromInternalPlan(RemoveInternalPlanFromInternalCouponsCampaignRequest $removeInternalPlanFromInternalCouponsCampaignRequest) {
+		//TODO
 	}
 	
 	public function create(CreateInternalCouponsCampaignRequest $createInternalCouponsCampaignRequest) {
