@@ -56,7 +56,7 @@ class StripeUsersHandler extends ProviderUsersHandler
      */
     protected function createUser(CreateUserRequest $createUserRequest)
     {
-        checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName());
+        checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName(), 'create');
 
         $customer = \Stripe\Customer::create([
             'email' => $createUserRequest->getUserOptsArray()['email'],

@@ -16,64 +16,66 @@ function guid( $opt = false ) {       //  Set to true/false as your default way 
       return $uuid;
 }
 
-function checkUserOptsArray(array $user_opts_as_array, $providerName) {
-	checkUserOptsKeys($user_opts_as_array, $providerName);
-	checkUserOptsValues($user_opts_as_array, $providerName);
+function checkUserOptsArray(array $user_opts_as_array, $providerName, $case = 'all') {
+	checkUserOptsKeys($user_opts_as_array, $providerName, $case);
+	checkUserOptsValues($user_opts_as_array, $providerName, $case);
 }
 
-function checkUserOptsKeys(array $user_opts_as_array, $providerName) {
-	switch ($providerName) {
-		case 'netsize' :
-			//email, firstName, lastName are optional
-			break;
-		case 'bouygues' :
-			//email, firstName, lastName are optional
-			break;
-		case 'bachat' :
-			//email, firstName, lastName are optional
-			break;
-		case 'orange' :
-			//email, firstName, lastName are optional but OrangeApiToken is mandatory
-			if(!array_key_exists('OrangeApiToken', $user_opts_as_array)) {
-				//exception
-				$msg = "userOpts field 'OrangeApiToken' is missing";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}			
-			break;
-		case 'afr' :
-			//firstName, lastName are optional
-			if(!array_key_exists('email', $user_opts_as_array)) {
-				//exception
-				$msg = "userOpts field 'email' is missing";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			break;
-		default :
-			if(!array_key_exists('email', $user_opts_as_array)) {
-				//exception
-				$msg = "userOpts field 'email' is missing";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			if(!array_key_exists('firstName', $user_opts_as_array)) {
-				//exception
-				$msg = "userOpts field 'firstName' is missing";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			if(!array_key_exists('lastName', $user_opts_as_array)) {
-				//exception
-				$msg = "userOpts field 'lastName' is missing";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-			break;
+function checkUserOptsKeys(array $user_opts_as_array, $providerName, $case = 'all') {
+	if($case == 'create') {
+		switch ($providerName) {
+			case 'netsize' :
+				//email, firstName, lastName are optional
+				break;
+			case 'bouygues' :
+				//email, firstName, lastName are optional
+				break;
+			case 'bachat' :
+				//email, firstName, lastName are optional
+				break;
+			case 'orange' :
+				//email, firstName, lastName are optional but OrangeApiToken is mandatory
+				if(!array_key_exists('OrangeApiToken', $user_opts_as_array)) {
+					//exception
+					$msg = "userOpts field 'OrangeApiToken' is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}			
+				break;
+			case 'afr' :
+				//firstName, lastName are optional
+				if(!array_key_exists('email', $user_opts_as_array)) {
+					//exception
+					$msg = "userOpts field 'email' is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				break;
+			default :
+				if(!array_key_exists('email', $user_opts_as_array)) {
+					//exception
+					$msg = "userOpts field 'email' is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if(!array_key_exists('firstName', $user_opts_as_array)) {
+					//exception
+					$msg = "userOpts field 'firstName' is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if(!array_key_exists('lastName', $user_opts_as_array)) {
+					//exception
+					$msg = "userOpts field 'lastName' is missing";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				break;
+		}
 	}
 }
 
-function checkUserOptsValues(array $user_opts_as_array, $providerName) {
+function checkUserOptsValues(array $user_opts_as_array, $providerName, $case = 'all') {
 	switch ($providerName) {
 		case 'netsize' :
 			//email, firstName, lastName are optional

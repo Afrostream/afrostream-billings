@@ -29,7 +29,7 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//
-				checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName());
+				checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName(), 'create');
 				//
 				$customer = $client->customers()->create(
 						['params' => 

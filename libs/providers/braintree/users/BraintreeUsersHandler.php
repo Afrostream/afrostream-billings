@@ -22,7 +22,7 @@ class BraintreeUsersHandler extends ProviderUsersHandler {
 				//
 			} else {
 				//
-				checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName());
+				checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName(), 'create');
 				//
 				Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
 				Braintree_Configuration::merchantId($this->provider->getMerchantId());

@@ -19,7 +19,7 @@ class RecurlyUsersHandler extends ProviderUsersHandler {
 				$account = Recurly_Account::get($createUserRequest->getUserProviderUuid());
 			} else {
 				//
-				checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName());
+				checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName(), 'create');
 				//
 				Recurly_Client::$subdomain = $this->provider->getMerchantId();
 				Recurly_Client::$apiKey = $this->provider->getApiSecret();
