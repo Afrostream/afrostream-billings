@@ -5362,15 +5362,40 @@ EOL;
 		return($out);
 	}
 	
-	public static function addBillingInternalCouponsCampaign(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
-		// FIXME
-	
+	public static function addBillingInternalCouponsCampaign(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {	
 		$query = "INSERT INTO billing_internal_coupons_campaigns";
+		$query.= " (internal_coupons_campaigns_uuid, name, description, prefix, discount_type, amount_in_cents, currency, percent,";
+		$query.= " discount_duration, discount_duration_unit, discount_duration_length, generated_mode, generated_code_length,";
+		$query.= " total_number, coupon_type, emails_enabled, platformid, max_redemptions_by_user)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+			array(	$billingInternalCouponsCampaign->getUuid(),
+					$billingInternalCouponsCampaign->getName(),
+					$billingInternalCouponsCampaign->getDescription(),
+					$billingInternalCouponsCampaign->getPrefix(),
+					$billingInternalCouponsCampaign->getDiscountType(),
+					$billingInternalCouponsCampaign->getAmountInCents(),
+					$billingInternalCouponsCampaign->getCurrency(),
+					$billingInternalCouponsCampaign->getPercent(),
+					$billingInternalCouponsCampaign->getDiscountDuration(),
+					$billingInternalCouponsCampaign->getDiscountDurationUnit(),
+					$billingInternalCouponsCampaign->getDiscountDurationLength(),
+					$billingInternalCouponsCampaign->getGeneratedMode(),
+					$billingInternalCouponsCampaign->getGeneratedCodeLength(),
+					$billingInternalCouponsCampaign->getTotalNumber(),
+					$billingInternalCouponsCampaign->getCouponType()->getValue(),
+					$billingInternalCouponsCampaign->getEmailsEnabled(),
+					$billingInternalCouponsCampaign->getPlatformId(),
+					/*json_encode($billingInternalCouponsCampaign->getCouponTimeframes()),*/
+					$billingInternalCouponsCampaign->getMaxRedemptionsByUser()
+				));
+		
+		/*$query = "INSERT INTO billing_internal_coupons_campaigns";
 		$query.= " (internal_coupons_campaigns_uuid, name, description, prefix, discount_type, amount_in_cents, currency, percent,";
 		$query.= " discount_duration, discount_duration_unit, discount_duration_length, generated_mode, generated_code_length,";
 		$query.= " total_number, coupon_type, platformid, max_redemptions_by_user)";
 		
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING _id";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	'e83852fd-3b12-49bb-b958-3c62d8154786',
 						'myName',
@@ -5390,6 +5415,7 @@ EOL;
 						1,
 						1
 				));
+		*/
 		config::getLogger()->addError("pg_result_status : ".pg_result_status($result));
 		$row = pg_fetch_row($result);
 		// free result
