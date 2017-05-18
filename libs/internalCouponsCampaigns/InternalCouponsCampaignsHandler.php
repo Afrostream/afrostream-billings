@@ -138,6 +138,16 @@ class InternalCouponsCampaignsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			//Verifications ...
+			//currency check
+			if($db_internal_coupons_campaign->getCurrency() != NULL) {
+				if($db_internal_coupons_campaign->getCurrency() != $db_internal_plan->getCurrency()) {
+					$msg = "internalPlan and internalCouponsCampaign must have the same currency";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+			}
+			//Verification OK
 			$billingInternalCouponsCampaignInternalPlan = new BillingInternalCouponsCampaignInternalPlan();
 			$billingInternalCouponsCampaignInternalPlan->setInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
 			$billingInternalCouponsCampaignInternalPlan->setInternalPlanId($db_internal_plan->getId());
