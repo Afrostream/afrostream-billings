@@ -12,8 +12,16 @@ class RecurlyCouponsCampaignsHandler extends ProviderCouponsCampaignsHandler {
 		$couponsCampaignProviderBillingUuid = NULL;
 		try {
 			config::getLogger()->addInfo("recurly couponsCampaign creation...");
-			//Check Compatibility
-			//
+			//Verifications ...
+			$supported_coupon_types = [
+					new CouponCampaignType(CouponCampaignType::promo)
+			];
+			if(!in_array($billingInternalCouponsCampaign->getCouponType(), $supported_coupon_types)) {
+				$msg = "unsupported couponsCampaignType : ".$billingInternalCouponsCampaign->getCouponType()->getValue()." by provider named : ".$this->provider->getName();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//Verifications OK
 			Recurly_Client::$subdomain = $this->provider->getMerchantId();
 			Recurly_Client::$apiKey = $this->provider->getApiSecret();
 			//

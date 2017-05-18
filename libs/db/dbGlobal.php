@@ -5488,7 +5488,45 @@ class BillingInternalCouponsCampaignInternalPlansDAO {
 
 		return($out);
 	}
-
+	
+	public static function getBillingInternalCouponsCampaignInternalPlanByInternalPlan($internalPlanId, $internalCouponsCampaignsId) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns_internal_plans WHERE internalplanid = $1 AND internalcouponscampaignsid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalPlanId, $internalCouponsCampaignsId));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingInternalCouponsCampaignInternalPlanFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function addBillingInternalCouponsCampaignInternalPlan(BillingInternalCouponsCampaignInternalPlan $billingInternalCouponsCampaignInternalPlan) {
+		$query = "INSERT INTO billing_internal_coupons_campaigns_internal_plans";
+		$query.= " (internalcouponscampaignsid, internalplanid)";
+		$query.= " VALUES ($1, $2) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaignInternalPlan->getInternalCouponsCampaignsId(),
+						$billingInternalCouponsCampaignInternalPlan->getInternalPlanId()
+				));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($row[0]));
+	}
+	
+	public static function deleteBillingInternalCouponsCampaignInternalPlanById($id) {
+		$query = "DELETE FROM billing_internal_coupons_campaigns_internal_plans";
+		$query.= " WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		// free result
+		pg_free_result($result);
+		return($result);
+	}
+	
 }
 
 class BillingInternalCouponsCampaignOpts implements JsonSerializable {
