@@ -116,11 +116,84 @@ class InternalCouponsCampaignsHandler {
 	}
 	
 	public function doAddToInternalPlan(AddInternalPlanToInternalCouponsCampaignRequest $addInternalPlanToInternalCouponsCampaignRequest) {
-		//TODO
+		$db_internal_coupons_campaign = NULL;
+		try {
+			config::getLogger()->addInfo("adding an InternalPlan to an internalCouponsCampaign, couponsCampaignInternalBillingUuid=".$addInternalPlanToInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid()."....");
+			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($addInternalPlanToInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid(), $addInternalPlanToInternalCouponsCampaignRequest->getPlatform()->getId());
+			if($db_internal_coupons_campaign == NULL) {
+				$msg = "unknown couponsCampaignInternalBillingUuid : ".$addInternalPlanToInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($addInternalPlanToInternalCouponsCampaignRequest->getInternalPlanUuid(), $addInternalPlanToInternalCouponsCampaignRequest->getPlatform()->getId());
+			if($db_internal_plan == NULL) {
+				$msg = "unknown internalPlanUuid : ".$addInternalPlanToInternalCouponsCampaignRequest->getInternalPlanUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//linked to that internalPlan ?
+			$billingInternalCouponsCampaignInternalPlan = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlanByInternalPlan($db_internal_plan->getId(), $db_internal_coupons_campaign->getId());
+			if(isset($billingInternalCouponsCampaignInternalPlan)) {
+				$msg = "internal plan with internalPlanUuid : ".$addInternalPlanToInternalCouponsCampaignRequest->getInternalPlanUuid()." is already linked to the couponsCampaignInternalBillingUuid : ".$addInternalPlanToInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$billingInternalCouponsCampaignInternalPlan = new BillingInternalCouponsCampaignInternalPlan();
+			$billingInternalCouponsCampaignInternalPlan->setInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
+			$billingInternalCouponsCampaignInternalPlan->setInternalPlanId($db_internal_plan->getId());
+			BillingInternalCouponsCampaignInternalPlansDAO::addBillingInternalCouponsCampaignInternalPlan($billingInternalCouponsCampaignInternalPlan);
+			//done
+			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($db_internal_coupons_campaign->getId());
+			config::getLogger()->addInfo("adding an InternalPlan to an internalCouponsCampaign, couponsCampaignInternalBillingUuid=".$addInternalPlanToInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid()." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while adding an InternalPlan to an internalCouponsCampaign for couponsCampaignInternalBillingUuid=".$addInternalPlanToInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("adding an InternalPlan to an internalCouponsCampaign failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while adding an InternalPlan to an internalCouponsCampaign for couponsCampaignInternalBillingUuid=".$addInternalPlanToInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("adding an InternalPlan to an internalCouponsCampaign failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_internal_coupons_campaign);
 	}
 	
 	public function doRemoveFromInternalPlan(RemoveInternalPlanFromInternalCouponsCampaignRequest $removeInternalPlanFromInternalCouponsCampaignRequest) {
-		//TODO
+		$db_internal_coupons_campaign = NULL;
+		try {
+			config::getLogger()->addInfo("removing an InternalPlan to an internalCouponsCampaign, couponsCampaignInternalBillingUuid=".$removeInternalPlanFromInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid()."....");
+			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($removeInternalPlanFromInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid(), $removeInternalPlanFromInternalCouponsCampaignRequest->getPlatform()->getId());
+			if($db_internal_coupons_campaign == NULL) {
+				$msg = "unknown couponsCampaignInternalBillingUuid : ".$removeInternalPlanFromInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($removeInternalPlanFromInternalCouponsCampaignRequest->getInternalPlanUuid(), $removeInternalPlanFromInternalCouponsCampaignRequest->getPlatform()->getId());
+			if($db_internal_plan == NULL) {
+				$msg = "unknown internalPlanUuid : ".$removeInternalPlanFromInternalCouponsCampaignRequest->getInternalPlanUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//linked to that internalPlan ?
+			$billingInternalCouponsCampaignInternalPlan = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlanByInternalPlan($db_internal_plan->getId(), $db_internal_coupons_campaign->getId());
+			if($billingInternalCouponsCampaignInternalPlan == NULL) {
+				$msg = "internal plan with internalPlanUuid : ".$removeInternalPlanFromInternalCouponsCampaignRequest->getInternalPlanUuid()." is NOT linked to the couponsCampaignInternalBillingUuid=".$removeInternalPlanFromInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			BillingInternalCouponsCampaignInternalPlansDAO::deleteBillingInternalCouponsCampaignInternalPlanById($billingInternalCouponsCampaignInternalPlan->getId());
+			//done
+			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($db_internal_coupons_campaign->getId());
+			config::getLogger()->addInfo("removing an InternalPlan from an internalCouponsCampaign, couponsCampaignInternalBillingUuid=".$removeInternalPlanFromInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid()." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while removing an InternalPlan from an internalCouponsCampaign for couponsCampaignInternalBillingUuid=".$removeInternalPlanFromInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("removing an InternalPlan from an internalCouponsCampaign failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while removing an InternalPlan from an internalCouponsCampaign for couponsCampaignInternalBillingUuid=".$removeInternalPlanFromInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("removing an InternalPlan from an internalCouponsCampaign failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_internal_coupons_campaign);
 	}
 	
 	public function create(CreateInternalCouponsCampaignRequest $createInternalCouponsCampaignRequest) {
