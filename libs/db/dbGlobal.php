@@ -680,7 +680,7 @@ class InternalPlanDAO {
 					$internalPlan->getCycle(),
 					$internalPlan->getPeriodUnit(),
 					$internalPlan->getPeriodLength(),
-					$internalPlan->getTrialEnabled(),
+					$internalPlan->getTrialEnabled() == true ? 't' : 'f',
 					$internalPlan->getTrialPeriodLength(),
 					$internalPlan->getTrialPeriodUnit(),
 					$internalPlan->getVatRate(),
@@ -5227,7 +5227,8 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 				'emailsEnabled' => $this->emails_enabled,
 				'expiresDate' => dbGlobal::toISODate($this->expires_date),
 				'couponsCampaignTimeframes' => $this->coupon_timeframes,
-				'providerCouponsCampaigns' => $providerCouponsCampaigns
+				'providerCouponsCampaigns' => $providerCouponsCampaigns,
+				'maxRedemptionsByUser' => $this->max_redemptions_by_user
 		];
 		//provider / providers
 		if(count($providers) == 1) {
@@ -5354,6 +5355,69 @@ EOL;
 		
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
 			$out[] = self::getBillingInternalCouponsCampaignFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function addBillingInternalCouponsCampaign(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {	
+		$query = "INSERT INTO billing_internal_coupons_campaigns";
+		$query.= " (internal_coupons_campaigns_uuid, name, description, prefix, discount_type, amount_in_cents, currency, percent,";
+		$query.= " discount_duration, discount_duration_unit, discount_duration_length, generated_mode, generated_code_length,";
+		$query.= " total_number, coupon_type, emails_enabled, platformid, coupon_timeframes, max_redemptions_by_user)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+			array(	$billingInternalCouponsCampaign->getUuid(),
+					$billingInternalCouponsCampaign->getName(),
+					$billingInternalCouponsCampaign->getDescription(),
+					$billingInternalCouponsCampaign->getPrefix(),
+					$billingInternalCouponsCampaign->getDiscountType(),
+					$billingInternalCouponsCampaign->getAmountInCents(),
+					$billingInternalCouponsCampaign->getCurrency(),
+					$billingInternalCouponsCampaign->getPercent(),
+					$billingInternalCouponsCampaign->getDiscountDuration(),
+					$billingInternalCouponsCampaign->getDiscountDurationUnit(),
+					$billingInternalCouponsCampaign->getDiscountDurationLength(),
+					$billingInternalCouponsCampaign->getGeneratedMode(),
+					$billingInternalCouponsCampaign->getGeneratedCodeLength(),
+					$billingInternalCouponsCampaign->getTotalNumber(),
+					$billingInternalCouponsCampaign->getCouponType()->getValue(),
+					$billingInternalCouponsCampaign->getEmailsEnabled() == true ? 't' : 'f',
+					$billingInternalCouponsCampaign->getPlatformId(),
+					'{'.implode($billingInternalCouponsCampaign->getCouponTimeframes(), ',').'}',
+					$billingInternalCouponsCampaign->getMaxRedemptionsByUser()
+				));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($row[0]));
+	}
+	
+	public static function getBillingInternalCouponsCampaignByName($name, $platformId) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns WHERE name = $1 AND platformid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($name, $platformId));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingInternalCouponsCampaignFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getBillingInternalCouponsCampaignByPrefix($prefix, $platformId) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns WHERE prefix = $1 AND platformid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($prefix, $platformId));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingInternalCouponsCampaignFromRow($row);
 		}
 		// free result
 		pg_free_result($result);

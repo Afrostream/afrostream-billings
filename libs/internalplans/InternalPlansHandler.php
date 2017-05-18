@@ -138,7 +138,7 @@ class InternalPlansHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if(!(ctype_digit($amount_in_cents)) || !($amount_in_cents >= 0)) {
+			if(!(is_numeric($amount_in_cents)) || !(is_int($amount_in_cents)) || !($amount_in_cents >= 0)) {
 				$msg = "amount_in_cents must be a positive or zero integer";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);

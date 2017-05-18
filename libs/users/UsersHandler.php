@@ -99,7 +99,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user getting/creating...");
-			checkUserOptsArray($createUserRequest->getUserOptsArray(), $createUserRequest->getProviderName());
+			checkUserOptsArray($createUserRequest->getUserOptsArray(), $createUserRequest->getProviderName(), 'create');
 			$provider = ProviderDAO::getProviderByName($createUserRequest->getProviderName(), $createUserRequest->getPlatform()->getId());
 				
 			if($provider == NULL) {
@@ -201,7 +201,7 @@ class UsersHandler {
 		$db_user = NULL;
 		try {
 			config::getLogger()->addInfo("user creating...");
-			checkUserOptsArray($createUserRequest->getUserOptsArray(), $createUserRequest->getProviderName());
+			checkUserOptsArray($createUserRequest->getUserOptsArray(), $createUserRequest->getProviderName(), 'create');
 			$provider = ProviderDAO::getProviderByName($createUserRequest->getProviderName(), $createUserRequest->getPlatform()->getId());
 			
 			if($provider == NULL) {
@@ -291,12 +291,9 @@ class UsersHandler {
 				throw $e;
 			}
 			//done in db
-			$db_user_opts = UserOptsDAO::getUserOptsByUserId($db_user->getId());
-			$db_user = UserDAO::getUserById($db_user->getId());
 			//user creation provider side
 			$providerUsersHandler = ProviderHandlersBuilder::getProviderUsersHandlerInstance($provider);
 			$updateUserRequest->setUserProviderUuid($db_user->getUserProviderUuid());
-			$updateUserRequest->setUserOptsArray($db_user_opts->getOpts());
 			$providerUsersHandler->doUpdateUserOpts($updateUserRequest);		
 			config::getLogger()->addInfo("userOpts updating done successfully");
 		} catch(BillingsException $e) {
