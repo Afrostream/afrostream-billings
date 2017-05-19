@@ -30,7 +30,8 @@
 		"sendgrid/sendgrid": "^5.1",
 		"google/apiclient": "^2.1",
 		"cache/filesystem-adapter": "^0.3.3",
-		"chartmogul/chartmogul-php": "^1.1"
+		"chartmogul/chartmogul-php": "^1.1",
+		"php-amqplib/php-amqplib": "^2.6"
 	},
 	"authors": [
 		{

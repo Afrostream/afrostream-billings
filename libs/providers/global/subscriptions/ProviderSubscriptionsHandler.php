@@ -15,6 +15,8 @@ require_once __DIR__ . '/../requests/RedeemCouponRequest.php';
 
 use Money\Money;
 use Money\Currency;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Message\AMQPMessage;
 
 class ProviderSubscriptionsHandler {
 	
@@ -264,6 +266,7 @@ class ProviderSubscriptionsHandler {
 			$hasEvent = ($event != NULL);
 			if($hasEvent) {
 				$this->doSendEmail($subscription_after_update, $event, $this->selectSendgridTemplateId($subscription_after_update, $event));
+				$this->doSendNotification($subscription_after_update, $event);
 				switch ($event) {
 					case 'NEW' :
 						//nothing to do : creation is made only by API calls already traced
@@ -563,7 +566,7 @@ class ProviderSubscriptionsHandler {
 			}
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending mail done successfully");
 		} catch(Exception $e) {
-			$msg = 'an error occurred while sending email for a new subscription event for subscriptionBillingUuid=';
+			$msg = 'an error occurred while sending email for a subscription event for subscriptionBillingUuid=';
 			$msg.= $subscription_after_update->getSubscriptionBillingUuid().', event='.$event.', error_code='.$e->getCode().', error_message='.$e->getMessage();
 			config::getLogger()->addError($msg);
 			throw $e;
@@ -749,6 +752,40 @@ class ProviderSubscriptionsHandler {
 			}
 		}
 		return(NULL);
+	}
+	
+	private function doSendNotification(BillingsSubscription $subscription_after_update, $event) {
+		try {
+			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending a RabbitMQ notification...");
+			$url = parse_url(getenv('CLOUDAMQP_URL'));
+			$connection = new AMQPStreamConnection(
+          			$url['host'], //host - CloudAMQP_URL
+          			5672,         //port - port number of the service, 5672 is the default
+          			$url['user'], //user - username to connect to server
+          			$url['pass'], //password - password to connecto to the server
+          			substr($url['path'], 1) //vhost
+			);
+			$channel = $connection->channel();
+			$channel->exchange_declare('afrostream-billings', 'fanout', false, true, false);
+			//Message formatting...
+			$msg_as_array = array();
+			$msg_as_array['id'] =  sprintf("%d%d", $time(), random_int(0, 99999));
+			$msg_as_array['type'] = 'subscription.'.strtolower($event);
+			$msg_as_array['date'] = (new DateTime())->format('Y-m-d\TH:i:s\Z');
+			$msg_as_array['data'] = array();
+			$msg_as_array['data']['subscription'] = $subscription_after_update;
+			//Message formatting done
+			$msg = new AMQPMessage(json_encode($msg_as_array));
+			$channel->basic_publish($msg);
+			$channel->close();
+			$connection->close();
+			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending a RabbitMQ notification done successfully");
+		} catch(Exception $e) {
+			$msg = 'an error occurred while sending a RabbitMQ notification for a subscription event with subscriptionBillingUuid=';
+			$msg.= $subscription_after_update->getSubscriptionBillingUuid().', event='.$event.', error_code='.$e->getCode().', error_message='.$e->getMessage();
+			config::getLogger()->addError($msg);
+			throw $e;
+		}
 	}
 	
 }
