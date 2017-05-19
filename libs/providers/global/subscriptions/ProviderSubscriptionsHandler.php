@@ -769,7 +769,7 @@ class ProviderSubscriptionsHandler {
 			$channel->exchange_declare('afrostream-billings', 'fanout', false, true, false);
 			//Message formatting...
 			$msg_as_array = array();
-			$msg_as_array['id'] =  sprintf("%d%d", $time(), random_int(0, 99999));
+			$msg_as_array['id'] =  sprintf("%d%d", time(), random_int(0, 99999));
 			$msg_as_array['type'] = 'subscription.'.strtolower($event);
 			$msg_as_array['date'] = (new DateTime())->format('Y-m-d\TH:i:s\Z');
 			$msg_as_array['data'] = array();
