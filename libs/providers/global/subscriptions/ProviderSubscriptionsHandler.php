@@ -776,7 +776,7 @@ class ProviderSubscriptionsHandler {
 			$msg_as_array['data']['subscription'] = $subscription_after_update;
 			//Message formatting done
 			$msg = new AMQPMessage(json_encode($msg_as_array));
-			$channel->basic_publish($msg);
+			$channel->basic_publish($msg, 'afrostream-billings');
 			$channel->close();
 			$connection->close();
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending a RabbitMQ notification done successfully");
