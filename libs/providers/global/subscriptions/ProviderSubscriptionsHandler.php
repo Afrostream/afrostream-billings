@@ -757,6 +757,10 @@ class ProviderSubscriptionsHandler {
 	private function doSendNotification(BillingsSubscription $subscription_after_update, $event) {
 		try {
 			config::getLogger()->addInfo("subscription event processing for subscriptionBillingUuid=".$subscription_after_update->getSubscriptionBillingUuid().", event=".$event.", sending a RabbitMQ notification...");
+			if(getEnv('EVENT_CLOUDAMQP_ACTIVATED') != 1) {
+				config::getLogger()->addInfo("event by cloudamqp : cloudamqp is inactive");
+				return;
+			}
 			$url = parse_url(getenv('CLOUDAMQP_URL'));
 			$connection = new AMQPStreamConnection(
           			$url['host'], //host - CloudAMQP_URL
