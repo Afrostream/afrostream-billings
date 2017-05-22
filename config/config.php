@@ -206,6 +206,12 @@ if(getEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION') === false) {
 	putEnv('EVENT_EMAIL_PROVIDERS_EXCEPTION=recurly');
 }
 
+#Event (CLOUDAMQP)
+
+if(getEnv('EVENT_CLOUDAMQP_ACTIVATED') === false) {
+	putEnv('EVENT_CLOUDAMQP_ACTIVATED=0');
+}
+
 #Slack
 //test channel : test-channel
 if(getEnv('SLACK_ACTIVATED') === false) {
