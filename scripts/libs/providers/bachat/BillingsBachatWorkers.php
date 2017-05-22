@@ -65,14 +65,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				//
 				$idx = 0;
 				$lastId = NULL;
-				$totalCounter = NULL;
+				$totalHits = NULL;
 				do {
 					$endingBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, $this->provider->getId(), $sub_period_ends_date, $status_array, NULL, NULL, $lastId);
-					if(is_null($totalCounter)) {$totalCounter = $endingBillingsSubscriptions['total_counter'];}
+					if(is_null($totalHits)) {$totalHits = $endingBillingsSubscriptions['total_hits'];}
 					$idx+= count($endingBillingsSubscriptions['subscriptions']);
 					$lastId = $endingBillingsSubscriptions['lastId'];
 					//
-					ScriptsConfig::getLogger()->addInfo("processing...total_counter=".$totalCounter.", idx=".$idx);
+					ScriptsConfig::getLogger()->addInfo("processing...total_hits=".$totalHits.", idx=".$idx);
 					foreach($endingBillingsSubscriptions['subscriptions'] as $endingBillingsSubscription) {
 						//
 						$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($endingBillingsSubscription->getId(), "request_renew");
@@ -86,7 +86,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 							ScriptsConfig::getLogger()->addError($msg);
 						}
 					}
-				} while ($idx < $totalCounter && count($endingBillingsSubscriptions['subscriptions']) > 0);
+				} while ($idx < $$totalHits && count($endingBillingsSubscriptions['subscriptions']) > 0);
 				fclose($current_par_ren_file_res);
 				$current_par_ren_file_res = NULL;
 				if(($current_par_ren_file_res = fopen($current_par_ren_file_path, "r")) === false) {
@@ -302,14 +302,14 @@ class BillingsBachatWorkers extends BillingsWorkers {
 				//
 				$idx = 0;
 				$lastId = NULL;
-				$totalCounter = NULL;
+				$totalHits = NULL;
 				do {
 					$requestingCanceledBillingsSubscriptions = BillingsSubscriptionDAO::getRequestingCanceledBillingsSubscriptions($limit, 0, $this->provider->getId(), $status_array, $lastId);
-					if(is_null($totalCounter)) {$totalCounter = $requestingCanceledBillingsSubscriptions['total_counter'];}
+					if(is_null($totalHits)) {$totalHits = $requestingCanceledBillingsSubscriptions['total_hits'];}
 					$idx+= count($requestingCanceledBillingsSubscriptions['subscriptions']);
 					$lastId = $requestingCanceledBillingsSubscriptions['lastId'];
 					//
-					ScriptsConfig::getLogger()->addInfo("processing...total_counter=".$totalCounter.", idx=".$idx);
+					ScriptsConfig::getLogger()->addInfo("processing...total_hits=".$totalHits.", idx=".$idx);
 					foreach($requestingCanceledBillingsSubscriptions['subscriptions'] as $requestingCanceledBillingsSubscription) {
 						//
 						$billingsSubscriptionActionLog = BillingsSubscriptionActionLogDAO::addBillingsSubscriptionActionLog($requestingCanceledBillingsSubscription->getId(), "request_cancel");
@@ -323,7 +323,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 							ScriptsConfig::getLogger()->addError($msg);
 						}
 					}
-				} while($idx < $totalCounter && count($requestingCanceledBillingsSubscriptions['subscriptions']) > 0);
+				} while($idx < $totalHits && count($requestingCanceledBillingsSubscriptions['subscriptions']) > 0);
 				fclose($current_par_can_file_res);
 				$current_par_can_file_res = NULL;
 				if(($current_par_can_file_res = fopen($current_par_can_file_path, "r")) === false) {

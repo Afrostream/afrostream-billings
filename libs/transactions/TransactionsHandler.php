@@ -6,6 +6,8 @@ require_once __DIR__ . '/../utils/utils.php';
 require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
 require_once __DIR__ . '/../providers/global/requests/RefundTransactionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetTransactionRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetUserTransactionsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetSubscriptionTransactionsRequest.php';
 
 class TransactionsHandler {
 	
@@ -138,6 +140,65 @@ class TransactionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_transaction);
+	}
+	
+	public function doGetUserTransactions(GetUserTransactionsRequest $getUserTransactionsRequest) {
+		$db_transactions = NULL;
+		try {
+			$users = UserDAO::getUsersByUserReferenceUuid($getUserTransactionsRequest->getUserReferenceUuid(), NULL, $getUserTransactionsRequest->getPlatform()->getId());
+			$userIds = array();
+			foreach ($users as $user) {
+				$userIds[] = $user->getId();
+			}
+			$db_transactions = BillingsTransactionDAO::getBillingsTransactions(
+					$getUserTransactionsRequest->getLimit() == NULL ? 0 : $getUserTransactionsRequest->getLimit(),
+					$getUserTransactionsRequest->getOffset() == NULL ? 0 : $getUserTransactionsRequest->getOffset(),
+					NULL, 
+					$userIds, 
+					NULL, 
+					NULL, 
+					'descending', 
+					$getUserTransactionsRequest->getPlatform()->getId());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while getting transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("transactions getting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("transactions getting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_transactions);
+	}
+	
+	public function doGetSubscriptionTransactions(GetSubscriptionTransactionsRequest $getSubscriptionTransactionsRequest) {		
+		$db_transactions = NULL;
+		try {
+			$db_subscription = BillingsSubscriptionDAO::getBillingsSubscriptionBySubscriptionBillingUuid($getSubscriptionTransactionsRequest->getSubscriptionBillingUuid(), $getSubscriptionTransactionsRequest->getPlatform()->getId());
+			if($db_subscription == NULL) {
+				$msg = "unknown subscriptionBillingUuid : ".$getSubscriptionTransactionsRequest->getSubscriptionBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$db_transactions = BillingsTransactionDAO::getBillingsTransactions(
+					$getSubscriptionTransactionsRequest->getLimit() == NULL ? 0 : $getSubscriptionTransactionsRequest->getLimit(), 
+					$getSubscriptionTransactionsRequest->getOffset() == NULL ? 0 : $getSubscriptionTransactionsRequest->getOffset(), 
+					NULL, 
+					NULL, 
+					$db_subscription->getId(), 
+					NULL, 
+					'descending', 
+					$getSubscriptionTransactionsRequest->getPlatform()->getId());
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while getting transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("transactions getting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("transactions getting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_transactions);
 	}
 	
 }

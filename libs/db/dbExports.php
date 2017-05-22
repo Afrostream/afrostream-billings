@@ -58,7 +58,8 @@ class dbExports {
 		(CASE WHEN BS.couponid IS NULL THEN NULL 
 			ELSE
 		(SELECT coupon_billing_uuid FROM billing_users_internal_coupons WHERE _id = BS.couponid)
-		END) as coupon_billing_uuid
+		END) as coupon_billing_uuid,
+		payment_method_type
 		FROM
 		billing_transactions BS
 		INNER JOIN billing_providers BP ON (BS.providerid = BP._id)

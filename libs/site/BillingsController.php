@@ -57,7 +57,11 @@ class BillingsController {
 		$json_as_array['statusMessage'] = 'success';
 		$json_as_array['statusCode'] = 0;
 		$json_object = json_encode($object, JSON_UNESCAPED_UNICODE);
-		$json_as_array['response'][$response_name] = json_decode($json_object, true);
+		if($response_name == NULL) {
+			$json_as_array['response'] = json_decode($json_object, true);
+		} else {
+			$json_as_array['response'][$response_name] = json_decode($json_object, true);
+		}
 		//
 		$json = json_encode($json_as_array);
 		$response = $response->withStatus($statusCode);

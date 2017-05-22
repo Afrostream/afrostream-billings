@@ -29,7 +29,7 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 				));
 				//
-				checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName());
+				checkUserOptsArray($createUserRequest->getUserOptsArray(), $this->provider->getName(), 'create');
 				//
 				$customer = $client->customers()->create(
 						['params' => 
@@ -69,14 +69,20 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 					'environment' => getEnv('GOCARDLESS_API_ENV')
 			));
 			//
-			$client->customers()->update($updateUserRequest->getUserProviderUuid(),
-					['params' =>
-							[
-									'email' => $updateUserRequest->getUserOptsArray()['email'],
-									'given_name' => $updateUserRequest->getUserOptsArray()['firstName'],
-									'family_name' => $updateUserRequest->getUserOptsArray()['lastName']
-							]
-					]);
+			$params = array();
+			if(array_key_exists('email', $updateUserRequest->getUserOptsArray())) {
+				$params['email'] = $updateUserRequest->getUserOptsArray()['email'];
+			}
+			if(array_key_exists('firstName', $updateUserRequest->getUserOptsArray())) {
+				$params['given_name'] = $updateUserRequest->getUserOptsArray()['firstName'];
+			}
+			if(array_key_exists('lastName', $updateUserRequest->getUserOptsArray())) {
+				$params['family_name'] = $updateUserRequest->getUserOptsArray()['lastName'];
+			}
+			//
+			if(count($params) > 0) {
+				$client->customers()->update($updateUserRequest->getUserProviderUuid(), ['params' => $params]);
+			}
 			config::getLogger()->addInfo("gocardless user data updating done successfully, user_provider_uuid=".$updateUserRequest->getUserProviderUuid());
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while updating gocardless user data for user_provider_uuid=".$updateUserRequest->getUserProviderUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();

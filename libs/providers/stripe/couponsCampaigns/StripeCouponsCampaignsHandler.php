@@ -18,8 +18,16 @@ class StripeCouponsCampaignsHandler extends ProviderCouponsCampaignsHandler {
 		$couponsCampaignProviderBillingUuid = NULL;
 		try {
 			config::getLogger()->addInfo("stripe couponsCampaign creation...");
-			//Check Compatibility
-			//
+			//Verifications ...
+			$supported_coupon_types = [
+					new CouponCampaignType(CouponCampaignType::promo)
+			];
+			if(!in_array($billingInternalCouponsCampaign->getCouponType(), $supported_coupon_types)) {
+				$msg = "unsupported couponsCampaignType : ".$billingInternalCouponsCampaign->getCouponType()->getValue()." by provider named : ".$this->provider->getName();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//Verifications OK
 			$couponData = array();
 			//
 			$couponData['id'] = guid();

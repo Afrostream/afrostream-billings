@@ -101,12 +101,12 @@ class BillingCSVsWorkers extends BillingsWorkers {
 						$offset = 0;
 						$idx = 0;
 						$lastId = NULL;
-						$totalCounter = NULL;
+						$totalHits = NULL;
 						$firstLoop = true;
 						do {
 							$result = dbGlobal::loadSqlResult($connection, $sql, $limit, $offset);
 							$offset = $offset + $limit;
-							if(is_null($totalCounter)) {$totalCounter = $result['total_counter'];}
+							if(is_null($totalHits)) {$totalHits = $result['total_hits'];}
 							$idx+= count($result['rows']);
 							$lastId = $result['lastId'];
 							//
@@ -117,7 +117,7 @@ class BillingCSVsWorkers extends BillingsWorkers {
 								}
 								fputcsv($csv_file_res, array_slice($row, 2));
 							}
-						} while ($idx < $totalCounter && count($result['rows']) > 0);
+						} while ($idx < $totalHits && count($result['rows']) > 0);
 						//UPLOAD FILE
 						$s3->putObject(array(
 								'Bucket' => $bucket,

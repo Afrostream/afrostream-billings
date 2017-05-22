@@ -1252,6 +1252,11 @@ $app->get("/billings/api/internalcouponscampaigns/", function ($request, $respon
 	return($internalCouponsCampaignsController->getMulti($request, $response, $args));
 });
 
+$app->post("/billings/api/internalcouponscampaigns/", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->create($request, $response, $args));
+});
+
 //for backward compatibility - to be removed later -
 
 $app->get("/billings/api/couponscampaigns/{couponsCampaignInternalBillingUuid}", function ($request, $response, $args) {
@@ -1264,11 +1269,25 @@ $app->get("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillin
 	return($internalCouponsCampaignsController->getOne($request, $response, $args));
 });
 
-//actions to internalPlan : addtoprovider
+//actions to internalcouponscampaigns : addtoprovider
 
 $app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}/addtoprovider/{providerName}", function ($request, $response, $args) {
 	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
 	return($internalCouponsCampaignsController->addToProvider($request, $response, $args));
+});
+
+//actions to internalcouponscampaigns : addinternalplan
+	
+$app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}/addinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->addInternalPlan($request, $response, $args));
+});
+
+//actions to internalcouponscampaigns : removeinternalplan
+	
+$app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}/removeinternalplan/{internalPlanUuid}", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->removeInternalPlan($request, $response, $args));
 });
 
 //contexts
@@ -1377,6 +1396,11 @@ $app->get("/billings/api/transactions/{transactionBillingUuid}", function ($requ
 $app->put("/billings/api/transactions/{transactionBillingUuid}/refund", function ($request, $response, $args) {
 	$transactionsController = new TransactionsController();
 	return($transactionsController->refund($request, $response, $args));
+});
+
+$app->get("/billings/api/transactions/", function ($request, $response, $args) {
+	$transactionsController = new TransactionsController();
+	return($transactionsController->getMulti($request, $response, $args));
 });
 
 //WebHooks

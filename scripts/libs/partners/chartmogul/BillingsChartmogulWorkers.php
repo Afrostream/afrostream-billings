@@ -52,14 +52,14 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 			$offset = 0;
 			$idx = 0;
 			$lastId = NULL;
-			$totalCounter = NULL;
+			$totalHits = NULL;
 			do {
 				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $this->supportedProvidersIds, $chartmogulStatus_array, $this->platform->getId());
-				if(is_null($totalCounter)) {$totalCounter = $users['total_counter'];}
+				if(is_null($totalHits)) {$totalHits = $users['total_hits'];}
 				$idx+= count($users['users']);
 				$lastId = $users['lastId'];
 				//
-				ScriptsConfig::getLogger()->addInfo("processing...total_counter=".$totalCounter.", idx=".$idx);
+				ScriptsConfig::getLogger()->addInfo("processing...total_hits=".$totalHits.", idx=".$idx);
 				foreach($users['users'] as $user) {
 					try {
 						$this->doMergeCustomer($user);
@@ -68,7 +68,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 						ScriptsConfig::getLogger()->addError($msg);
 					}
 				}
-			} while ($idx < $totalCounter && count($users['users']) > 0);
+			} while ($idx < $totalHits && count($users['users']) > 0);
 			//DONE
 			$processingLog->setProcessingStatus('done');
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
@@ -113,14 +113,14 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 			$offset = 0;
 			$idx = 0;
 			$lastId = NULL;
-			$totalCounter = NULL;
+			$totalHits = NULL;
 			do {
 				$users = UserDAO::getUsersByChartmogulStatus($limit, $offset, $lastId, $this->supportedProvidersIds, $chartmogulStatus_array, $this->platform->getId());
-				if(is_null($totalCounter)) {$totalCounter = $users['total_counter'];}
+				if(is_null($totalHits)) {$totalHits = $users['total_hits'];}
 				$idx+= count($users['users']);
 				$lastId = $users['lastId'];
 				//
-				ScriptsConfig::getLogger()->addInfo("processing...total_counter=".$totalCounter.", idx=".$idx);
+				ScriptsConfig::getLogger()->addInfo("processing...total_hits=".$totalHits.", idx=".$idx);
 				foreach($users['users'] as $user) {
 					try {
 						$user = $this->doSyncCustomer($user);
@@ -129,7 +129,7 @@ class BillingsChartmogulWorkers extends BillingsWorkers {
 						ScriptsConfig::getLogger()->addError($msg);
 					}
 				}
-			} while ($idx < $totalCounter && count($users['users']) > 0);
+			} while ($idx < $totalHits && count($users['users']) > 0);
 			//DONE
 			$processingLog->setProcessingStatus('done');
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);

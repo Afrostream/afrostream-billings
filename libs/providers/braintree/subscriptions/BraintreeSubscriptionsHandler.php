@@ -667,7 +667,7 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					throw $e;
 				}
 				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, $subscription->getId(), ['purchase'], 'descending', $this->provider->getPlatformId());
+					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, NULL, $subscription->getId(), ['purchase'], 'descending', $this->provider->getPlatformId());
 					if(count($transactionsResult['transactions']) == 1) {
 						$transaction = $transactionsResult['transactions'][0];
 						//

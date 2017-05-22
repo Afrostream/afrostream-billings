@@ -49,14 +49,14 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 			//
 			$idx = 0;
 			$lastId = NULL;
-			$totalCounter = NULL;
+			$totalHits = NULL;
 			do {
 				$canceledBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, NULL, $sub_period_ends_date, array('canceled'), array('auto'), $providerIdsToIgnore, $lastId);
-				if(is_null($totalCounter)) {$totalCounter = $canceledBillingsSubscriptions['total_counter'];}
+				if(is_null($totalHits)) {$totalHits = $canceledBillingsSubscriptions['total_hits'];}
 				$idx+= count($canceledBillingsSubscriptions['subscriptions']);
 				$lastId = $canceledBillingsSubscriptions['lastId'];
 				//
-				ScriptsConfig::getLogger()->addInfo("processing...total_counter=".$totalCounter.", idx=".$idx);
+				ScriptsConfig::getLogger()->addInfo("processing...total_hits=".$totalHits.", idx=".$idx);
 				foreach($canceledBillingsSubscriptions['subscriptions'] as $canceledBillingsSubscription) {
 					try {
 						$this->doExpireSubscription($canceledBillingsSubscription);
@@ -65,7 +65,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 						ScriptsConfig::getLogger()->addError($msg);
 					}
 				}
-			} while ($idx < $totalCounter && count($canceledBillingsSubscriptions['subscriptions']) > 0);
+			} while ($idx < $totalHits && count($canceledBillingsSubscriptions['subscriptions']) > 0);
 			//DONE
 			$processingLog->setProcessingStatus('done');
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
@@ -120,14 +120,14 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 			//
 			$idx = 0;
 			$lastId = NULL;
-			$totalCounter = NULL;
+			$totalHits = NULL;
 			do {
 				$endedBillingsSubscriptions = BillingsSubscriptionDAO::getEndingBillingsSubscriptions($limit, 0, NULL, $sub_period_ends_date, array('active'), array('once'), $providerIdsToIgnore, $lastId);
-				if(is_null($totalCounter)) {$totalCounter = $endedBillingsSubscriptions['total_counter'];}
+				if(is_null($totalHits)) {$totalHits = $endedBillingsSubscriptions['total_hits'];}
 				$idx+= count($endedBillingsSubscriptions['subscriptions']);
 				$lastId = $endedBillingsSubscriptions['lastId'];
 				//
-				ScriptsConfig::getLogger()->addInfo("processing...total_counter=".$totalCounter.", idx=".$idx);
+				ScriptsConfig::getLogger()->addInfo("processing...total_hits=".$totalHits.", idx=".$idx);
 				foreach($endedBillingsSubscriptions['subscriptions'] as $endedBillingsSubscription) {
 					try {
 						$this->doExpireSubscription($endedBillingsSubscription);
@@ -136,7 +136,7 @@ class BillingExpireSubscriptionsWorkers extends BillingsWorkers {
 						ScriptsConfig::getLogger()->addError($msg);
 					}
 				}
-			} while($idx < $totalCounter && count($endedBillingsSubscriptions['subscriptions']) > 0);
+			} while($idx < $totalHits && count($endedBillingsSubscriptions['subscriptions']) > 0);
 			//DONE
 			$processingLog->setProcessingStatus('done');
 			ProcessingLogDAO::updateProcessingLogProcessingStatus($processingLog);
