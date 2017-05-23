@@ -71,12 +71,15 @@ class GocardlessUsersHandler extends ProviderUsersHandler {
 			//
 			$params = array();
 			if(array_key_exists('email', $updateUserRequest->getUserOptsArray())) {
+				config::getLogger()->addInfo("gocardless user data updating 'email'");
 				$params['email'] = $updateUserRequest->getUserOptsArray()['email'];
 			}
 			if(array_key_exists('firstName', $updateUserRequest->getUserOptsArray())) {
+				config::getLogger()->addInfo("gocardless user data updating 'firstName'");
 				$params['given_name'] = $updateUserRequest->getUserOptsArray()['firstName'];
 			}
 			if(array_key_exists('lastName', $updateUserRequest->getUserOptsArray())) {
+				config::getLogger()->addInfo("gocardless user data updating 'lastName'");
 				$params['family_name'] = $updateUserRequest->getUserOptsArray()['lastName'];
 			}
 			//

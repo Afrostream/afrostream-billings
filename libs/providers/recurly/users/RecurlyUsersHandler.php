@@ -68,14 +68,17 @@ class RecurlyUsersHandler extends ProviderUsersHandler {
 			$hasToBeUpdated = false;
 			//
 			if(array_key_exists('email', $updateUserRequest->getUserOptsArray())) {
+				config::getLogger()->addInfo("recurly user data updating 'email'");
 				$account->email = $updateUserRequest->getUserOptsArray()['email'];
 				$hasToBeUpdated = true;
 			}
 			if(array_key_exists('firstName', $updateUserRequest->getUserOptsArray())) {
+				config::getLogger()->addInfo("recurly user data updating 'firstName'");
 				$account->first_name = $updateUserRequest->getUserOptsArray()['firstName'];
 				$hasToBeUpdated = true;
 			}
 			if(array_key_exists('lastName', $updateUserRequest->getUserOptsArray())) {
+				config::getLogger()->addInfo("recurly user data updating 'lastName'");
 				$account->last_name = $updateUserRequest->getUserOptsArray()['lastName'];
 				$hasToBeUpdated = true;
 			}

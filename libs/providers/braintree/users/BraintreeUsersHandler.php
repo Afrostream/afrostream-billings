@@ -77,12 +77,15 @@ class BraintreeUsersHandler extends ProviderUsersHandler {
 			//
 			$attribs = array();
 			if(array_key_exists('email', $updateUserRequest->getUserOptsArray())) {
+				config::getLogger()->addInfo("braintree user data updating 'email'");
 				$attribs['email'] = $updateUserRequest->getUserOptsArray()['email'];
 			}
 			if(array_key_exists('firstName', $updateUserRequest->getUserOptsArray())) {
+				config::getLogger()->addInfo("braintree user data updating 'firstName'");
 				$attribs['firstName'] = $updateUserRequest->getUserOptsArray()['firstName'];
 			}
 			if(array_key_exists('lastName', $updateUserRequest->getUserOptsArray())) {
+				config::getLogger()->addInfo("braintree user data updating 'lastName'");
 				$attribs['lastName'] = $updateUserRequest->getUserOptsArray()['lastName'];
 			}
 			//

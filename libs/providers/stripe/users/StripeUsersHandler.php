@@ -96,19 +96,22 @@ class StripeUsersHandler extends ProviderUsersHandler
     		$hasToBeUpdated = false;
     		//
     		if(array_key_exists('email', $updateUserRequest->getUserOptsArray())) {
+    			config::getLogger()->addInfo("stripe user data updating 'email'");
     			$customer->email = $updateUserRequest->getUserOptsArray()['email'];
     			$hasToBeUpdated = true;
     		}
     		if(array_key_exists('firstName', $updateUserRequest->getUserOptsArray())) {
+    			config::getLogger()->addInfo("stripe user data updating 'firstName'");
     			$customer->metadata['firstName'] = $updateUserRequest->getUserOptsArray()['firstName'];
     			$hasToBeUpdated = true;
     		}
     		if(array_key_exists('lastName', $updateUserRequest->getUserOptsArray())) {
+    			config::getLogger()->addInfo("stripe user data updating 'lastName'");
     			$customer->metadata['lastName'] = $updateUserRequest->getUserOptsArray()['lastName'];
     			$hasToBeUpdated = true;
     		}
-    		//
     		if(array_key_exists('customerBankAccountToken', $updateUserRequest->getUserOptsArray())) {
+    			config::getLogger()->addInfo("stripe user data updating 'customerBankAccountToken'");
     			$customer->source = $updateUserRequest->getUserOptsArray()['customerBankAccountToken'];
     			$hasToBeUpdated = true;
     		}
