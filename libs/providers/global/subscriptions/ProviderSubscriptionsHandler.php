@@ -83,6 +83,22 @@ class ProviderSubscriptionsHandler {
 		$internalCouponsCampaign = NULL;
 		$providerCouponsCampaign = NULL;
 		$userInternalCoupon = NULL;
+		//TODO
+		/*
+		$defaultInternalCouponCampaignsId = $internalPlan->getInternalCouponsCampaignsId();
+		if(isset($defaultInternalCouponCampaignsId)) {
+			if(isset($couponCode)) {
+				//Exception
+			} else {
+				//
+				$defaultInternalCoupon = BillingInternalCouponDAO::getFirstWaitingBillingInternalCoupon($internalcouponscampaignsid);
+				if($defaultInternalCoupon == NULL) {
+					//Exception
+				}
+				$couponCode = $defaultInternalCoupon->getCode();
+			}
+		}
+		*/
 		//
 		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode, $this->provider->getPlatformId());
 		if($internalCoupon == NULL) {

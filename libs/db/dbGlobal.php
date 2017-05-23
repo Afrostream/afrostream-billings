@@ -516,7 +516,8 @@ class InternalPlanDAO {
 	public static function init() {
 		InternalPlanDAO::$sfields = "BIP._id, BIP.internal_plan_uuid, BIP.name, BIP.description,".
 			" BIP.amount_in_cents, BIP.currency, BIP.cycle, BIP.period_unit, BIP.period_length, BIP.thumbid, BIP.vat_rate,".
-			" BIP.trial_enabled, BIP.trial_period_length, BIP.trial_period_unit, BIP.is_visible, BIP.details, BIP.platformid";
+			" BIP.trial_enabled, BIP.trial_period_length, BIP.trial_period_unit, BIP.is_visible, BIP.details, BIP.platformid,".
+			" BIP.internalcouponscampaignsid";
 	}
 	
 	private static function getInternalPlanFromRow($row) {
@@ -538,6 +539,7 @@ class InternalPlanDAO {
 		$out->setIsVisible($row["is_visible"] == 't' ? true : false);
 		$out->setDetails(json_decode($row["details"], true));
 		$out->setPlatformId($row["platformid"]);
+		$out->setInternalCouponsCampaignsId($row["internalcouponscampaignsid"]);
 		return($out);
 	}
 	
@@ -790,6 +792,7 @@ class InternalPlan implements JsonSerializable {
 	private $isVisible;
 	private $details;
 	private $platformId;
+	private $internalCouponsCampaignsId;
 
 	public function getId() {
 		return($this->_id);
@@ -949,6 +952,14 @@ class InternalPlan implements JsonSerializable {
 	
 	public function getPlatformId() {
 		return($this->platformId);
+	}
+	
+	public function setInternalCouponsCampaignsId($id) {
+		$this->internalCouponsCampaignsId = $id;
+	}
+	
+	public function getInternalCouponsCampaignsId() {
+		return($this->internalCouponsCampaignsId);
 	}
 	
 	public function jsonSerialize() {
@@ -6030,6 +6041,21 @@ EOL;
 		// free result
 		pg_free_result($result);
 		return(self::getBillingInternalCouponById($billingInternalCoupon->getId()));
+	}
+	
+	public static function getFirstWaitingBillingInternalCoupon($internalcouponscampaignsid) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons WHERE internalcouponscampaignsid = $1 AND coupon_status = 'waiting' ORDER BY _id ASC LIMIT 1";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalcouponscampaignsid));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingInternalCouponFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);	
 	}
 	
 }
