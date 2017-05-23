@@ -1290,6 +1290,13 @@ $app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillin
 	return($internalCouponsCampaignsController->removeInternalPlan($request, $response, $args));
 });
 
+//actions to internalcouponscampaigns : generate
+
+$app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}/generate", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->generateInternalCoupons($request, $response, $args));
+});
+
 //contexts
 
 //get one context

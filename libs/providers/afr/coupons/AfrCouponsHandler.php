@@ -195,7 +195,7 @@ class AfrCouponsHandler extends ProviderCouponsHandler {
 		$strReturnString       = '';
 
 		for ($intCounter = 0; $intCounter < $length; $intCounter++) {
-			$strReturnString .= $strAlphaNumericString[rand(0, $strlength)];
+			$strReturnString .= $strAlphaNumericString[random_int(0, $strlength)];
 		}
 
 		return $strReturnString;

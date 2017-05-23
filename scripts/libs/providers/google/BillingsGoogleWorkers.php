@@ -92,7 +92,7 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 			//check plan
 			if($plan == NULL) {
 				$msg = "unknown plan with id : ".$subscription->getPlanId();
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
@@ -108,7 +108,7 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 			//check user
 			if($user == NULL) {
 				$msg = "unknown user with id : ".$subscription->getUserId();
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
@@ -117,7 +117,7 @@ class BillingsGoogleWorkers extends BillingsWorkers {
 			//check internalPlan
 			if($internalPlan == NULL) {
 				$msg = "plan with uuid=".$plan->getPlanUuid()." is not linked to an internal plan";
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$internalPlanOpts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($internalPlan->getId());

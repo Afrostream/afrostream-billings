@@ -93,7 +93,7 @@ class BillingUsersInternalPlanChangeHandler {
 			$user = UserDAO::getUserById($subscription->getUserId());
 			if($user == NULL) {
 				$msg = "unknown user with id : ".$subscription->getUserId();
-				config::getLogger()->addError($msg);
+				ScriptsConfig::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$userOpts = UserOptsDAO::getUserOptsByUserId($user->getId());
@@ -204,9 +204,9 @@ class BillingUsersInternalPlanChangeHandler {
 			$mail->setTemplateId($sendgrid_template_id);
 			$response = $sendgrid->client->mail()->send()->post($mail);
 			if($response->statusCode() != 202) {
-				config::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
-				config::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
-				config::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
+				ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, statusCode='.$response->statusCode());
+				ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, body='.$response->body());
+				ScriptsConfig::getLogger()->addError('sending mail using sendgrid failed, headers='.var_export($response->headers(), true));
 			}
 			$subscription->setPlanChangeId($toProviderPlan->getId());
 			$subscription = BillingsSubscriptionDAO::updatePlanChangeId($subscription);

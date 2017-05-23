@@ -103,12 +103,12 @@ class BillingLogistaProcessIncidentsReport {
 		if(count($billingInternalCouponsCampaignInternalPlans) == 0) {
 			//Exception
 			$msg = "no internalPlan associated to internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid();
-			config::getLogger()->addError($msg);
+			ScriptsConfig::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		} else if(count($billingInternalCouponsCampaignInternalPlans) > 1) {
 			//Exception
 			$msg = "only one internalPlan can be associated to internalCouponsCampaign with uuid=".$internalCouponsCampaign->getUuid();
-			config::getLogger()->addError($msg);
+			ScriptsConfig::getLogger()->addError($msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$internalPlan = InternalPlanDAO::getInternalPlanById($billingInternalCouponsCampaignInternalPlans[0]->getInternalPlanId());

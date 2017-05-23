@@ -9,6 +9,7 @@ require_once __DIR__ . '/../providers/global/requests/AddProviderToInternalCoupo
 require_once __DIR__ . '/../providers/global/requests/CreateInternalCouponsCampaignRequest.php';
 require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToInternalCouponsCampaignRequest.php';
 require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromInternalCouponsCampaignRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GenerateInternalCouponsRequest.php';
 
 use Money\Currency;
 
@@ -379,6 +380,89 @@ class InternalCouponsCampaignsHandler {
 		$billingInternalCouponsCampaign->setMaxRedemptionsByUser($createInternalCouponsCampaignRequest->getMaxRedemptionsByUser());
 		$billingInternalCouponsCampaign = BillingInternalCouponsCampaignDAO::addBillingInternalCouponsCampaign($billingInternalCouponsCampaign);
 		return($billingInternalCouponsCampaign);
+	}
+	
+	public function doGenerateInternalCoupons(GenerateInternalCouponsRequest $generateInternalCouponsRequest) {
+		$db_internal_coupons_campaign = NULL;
+		try {
+			config::getLogger()->addInfo("generating internalCoupons for an internalCouponsCampaign, couponsCampaignInternalBillingUuid=".$generateInternalCouponsRequest->getCouponsCampaignInternalBillingUuid()."....");
+			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($generateInternalCouponsRequest->getCouponsCampaignInternalBillingUuid(), $generateInternalCouponsRequest->getPlatform()->getId());
+			if($db_internal_coupons_campaign == NULL) {
+				$msg = "unknown couponsCampaignInternalBillingUuid : ".$generateInternalCouponsRequest->getCouponsCampaignInternalBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//
+			$separator = $this->getSeparator($db_internal_coupons_campaign);
+			//
+			$coupon_counter = BillingInternalCouponDAO::getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
+			$coupon_counter_duplicate = 0;
+			$coupon_total_number = $db_internal_coupons_campaign->getGeneratedMode() == 'single' ? 1 : $db_internal_coupons_campaign->getTotalNumber();
+			$coupon_counter_missing = $coupon_total_number - $coupon_counter;
+			config::getLogger()->addInfo("generating ".$coupon_counter_missing." missing coupons out of ".$coupon_total_number." for couponsCampaignInternalBillingUuid=".$generateInternalCouponsRequest->getCouponsCampaignInternalBillingUuid()."...");
+			while($coupon_counter < $coupon_total_number) {
+				$code = NULL;
+				if($db_internal_coupons_campaign->getGeneratedMode() == 'single') {
+					$code = strtoupper($db_internal_coupons_campaign->getPrefix());
+				} else {
+					$code = strtoupper($db_internal_coupons_campaign->getPrefix().$separator.$this->getRandomString($db_internal_coupons_campaign->getGeneratedCodeLength()));
+				}
+				$internalCouponAlreadyExisting = BillingInternalCouponDAO::getBillingInternalCouponByCode($code, $generateInternalCouponsRequest->getPlatform()->getId());
+				if(isset($internalCouponAlreadyExisting)) {
+					$coupon_counter_duplicate++;
+					config::getLogger()->addInfo("generating internalCoupons, duplicates : ".$coupon_counter_duplicate." => let's continue anyway");
+					if($coupon_counter_duplicate == 10) {
+						$msg = "generating internalCoupons : too many duplicates => STOP";
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					continue;
+				} else {
+					$internalCoupon = new BillingInternalCoupon();
+					$internalCoupon->setInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
+					$internalCoupon->setCode($code);
+					$internalCoupon->setUuid(guid());
+					$internalCoupon->setExpiresDate($db_internal_coupons_campaign->getExpiresDate());
+					$internalCoupon->setPlatformId($generateInternalCouponsRequest->getPlatform()->getId());
+					$internalCoupon = BillingInternalCouponDAO::addBillingInternalCoupon($internalCoupon);
+					$coupon_counter++;
+					config::getLogger()->addInfo("(".$coupon_counter."/".$coupon_total_number.") coupon with code ".$internalCoupon->getCode()." for couponsCampaignInternalBillingUuid=".$generateInternalCouponsRequest->getCouponsCampaignInternalBillingUuid()." generated successfully");
+				}
+			}
+			//done
+			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($db_internal_coupons_campaign->getId());
+			config::getLogger()->addInfo("generating internalCoupons for an internalCouponsCampaign, couponsCampaignInternalBillingUuid=".$generateInternalCouponsRequest->getCouponsCampaignInternalBillingUuid()." done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while generating internalCoupons for an internalCouponsCampaign, couponsCampaignInternalBillingUuid=".$generateInternalCouponsRequest->getCouponsCampaignInternalBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("generating internalCoupons for an internalCouponsCampaign failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while generating internalCoupons for an internalCouponsCampaign, couponsCampaignInternalBillingUuid=".$generateInternalCouponsRequest->getCouponsCampaignInternalBillingUuid().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("generating internalCoupons for an internalCouponsCampaign failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_internal_coupons_campaign);
+	}
+	
+	private function getRandomString($length) {
+		$strAlphaNumericString = '23456789bcdfghjkmnpqrstvwxz';
+		$strReturnString = '';
+		for ($intCounter = 0; $intCounter < $length; $intCounter++) {
+			$strReturnString .= $strAlphaNumericString[random_int(0, strlen($strAlphaNumericString) - 1)];
+		}
+		return $strReturnString;
+	}
+	
+	private function getSeparator(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$partner = NULL;
+		if($billingInternalCouponsCampaign->getPartnerId() != NULL) {
+			$partner = BillingPartnerDAO::getPartnerById($billingInternalCouponsCampaign->getPartnerId());
+		}
+		if($partner != NULL) {
+			if($partner->getName() == 'logista') {
+				return("");//logista = alphanumeric only
+			}
+		}
+		return("-");
 	}
 	
 }
