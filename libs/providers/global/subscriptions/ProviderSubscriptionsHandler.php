@@ -83,22 +83,34 @@ class ProviderSubscriptionsHandler {
 		$internalCouponsCampaign = NULL;
 		$providerCouponsCampaign = NULL;
 		$userInternalCoupon = NULL;
-		//TODO
-		/*
-		$defaultInternalCouponCampaignsId = $internalPlan->getInternalCouponsCampaignsId();
-		if(isset($defaultInternalCouponCampaignsId)) {
-			if(isset($couponCode)) {
-				//Exception
+		if(isset($couponCode)) {
+			if(strlen(trim($couponCode)) == 0) {
+				$couponCode = NULL;
 			} else {
-				//
-				$defaultInternalCoupon = BillingInternalCouponDAO::getFirstWaitingBillingInternalCoupon($internalcouponscampaignsid);
-				if($defaultInternalCoupon == NULL) {
-					//Exception
-				}
-				$couponCode = $defaultInternalCoupon->getCode();
+				$couponCode = trim($couponCode);
 			}
 		}
-		*/
+		if($couponTimeframe->getValue() == CouponTimeframe::onSubCreation) {
+			$defaultInternalCouponCampaignsId = $internalPlan->getInternalCouponsCampaignsId();
+			if(isset($defaultInternalCouponCampaignsId)) {
+				if(isset($couponCode)) {
+					//Exception
+					$msg = "a coupon has already been applied to the subscription";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_ANOTHER_ALREADY_APPLIED);
+				} else {
+					//
+					$defaultInternalCoupon = BillingInternalCouponDAO::getFirstWaitingBillingInternalCoupon($internalcouponscampaignsid);
+					if($defaultInternalCoupon == NULL) {
+						//Exception
+						$msg = "no coupon available to be redeemed";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_WAITING_STATUS_NOT_FOUND);
+					}
+					$couponCode = $defaultInternalCoupon->getCode();
+				}
+			}
+		}
 		//
 		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode, $this->provider->getPlatformId());
 		if($internalCoupon == NULL) {
@@ -539,6 +551,7 @@ class ProviderSubscriptionsHandler {
 			$substitutions['%couponAmountForDisplay%'] = '';
 			$substitutions['%couponDetails%'] = '';
 			$substitutions['%couponAppliedSentence%'] = '';
+			//TODO
 			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() == 'promo') {
 				$couponAmountForDisplay = '';
 				switch($internalCouponsCampaign->getDiscountType()) {
