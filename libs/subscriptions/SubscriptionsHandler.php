@@ -551,7 +551,7 @@ class SubscriptionsHandler {
 					//Exception
 					$msg = "a coupon has already been applied to the subscription";
 					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);				
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_ANOTHER_ALREADY_APPLIED);				
 				}
 			}
 			$provider = ProviderDAO::getProviderById($db_subscription->getProviderId());

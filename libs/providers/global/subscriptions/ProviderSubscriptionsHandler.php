@@ -83,6 +83,45 @@ class ProviderSubscriptionsHandler {
 		$internalCouponsCampaign = NULL;
 		$providerCouponsCampaign = NULL;
 		$userInternalCoupon = NULL;
+		if(isset($couponCode)) {
+			if(strlen(trim($couponCode)) == 0) {
+				$couponCode = NULL;
+			} else {
+				$couponCode = trim($couponCode);
+			}
+		}
+		if($couponCode == NULL) {
+			config::getLogger()->addInfo("user CouponCode  : <none>");
+		} else {
+			config::getLogger()->addInfo("user CouponCode  : ".$couponCode);
+		}
+		if($couponTimeframe->getValue() == CouponTimeframe::onSubCreation) {
+			$defaultInternalCouponCampaignsId = $internalPlan->getInternalCouponsCampaignsId();
+			if(isset($defaultInternalCouponCampaignsId)) {
+				if(isset($couponCode)) {
+					//Exception
+					$msg = "a coupon has already been applied to the subscription";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_ANOTHER_ALREADY_APPLIED);
+				} else {
+					//
+					$defaultInternalCoupon = BillingInternalCouponDAO::getFirstWaitingBillingInternalCoupon($defaultInternalCouponCampaignsId);
+					if($defaultInternalCoupon == NULL) {
+						//Exception
+						$msg = "no coupon available to be redeemed";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_WAITING_STATUS_NOT_FOUND);
+					}
+					$couponCode = $defaultInternalCoupon->getCode();
+					config::getLogger()->addInfo("default CouponCode  : ".$couponCode);
+				}
+			} else {
+				config::getLogger()->addInfo("no default InternalCouponsCampaign");
+			}
+		}
+		if($couponCode == NULL) {
+			return(NULL);//No couponCode given, no defaultInternalCouponCampaignsId given
+		}
 		//
 		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode, $this->provider->getPlatformId());
 		if($internalCoupon == NULL) {
@@ -455,6 +494,13 @@ class ProviderSubscriptionsHandler {
 						$userInternalCoupon = $userInternalCoupons[0];//take first only (last redeemed because request is ordered)
 						$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($userInternalCoupon->getInternalCouponsId());
 						$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+						if($couponTimeframe == CouponTimeframe::onSubCreation) {
+							$defaultInternalCouponsCampaignId = $internalPlan->getInternalCouponsCampaignsId();
+							if(isset($defaultInternalCouponsCampaignId) && $internalCouponsCampaign->getId() == $defaultInternalCouponsCampaignId) {
+								//FORCE USER NOTIFICATIONS TO FALSE
+								$internalCouponsCampaign->setUserNotificationsEnabled(false);
+							}
+						}
 					}
 				}
 			}
@@ -523,7 +569,7 @@ class ProviderSubscriptionsHandler {
 			$substitutions['%couponAmountForDisplay%'] = '';
 			$substitutions['%couponDetails%'] = '';
 			$substitutions['%couponAppliedSentence%'] = '';
-			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() == 'promo') {
+			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() == 'promo' && $internalCouponsCampaign->getUserNotificationsEnabled() == true) {
 				$couponAmountForDisplay = '';
 				switch($internalCouponsCampaign->getDiscountType()) {
 					case 'percent' :

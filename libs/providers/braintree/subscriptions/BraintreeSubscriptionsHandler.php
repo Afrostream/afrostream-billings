@@ -72,13 +72,12 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$attribs = array();
 				$attribs['planId'] = $plan->getPlanUuid();
 				$attribs['paymentMethodToken'] = $paymentMethod->token;
+				$couponCode = NULL;
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
-					if(strlen($couponCode) > 0) {
-						$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
-						$attribs = $this->updateCouponAttribs($attribs, $couponsInfos, $user, $internalPlan);
-					}
 				}
+				$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
+				$attribs = $this->updateCouponAttribs($attribs, $couponsInfos, $user, $internalPlan);
 				$result = Braintree\Subscription::create($attribs);
 				if ($result->success) {
 					$subscription = $result->subscription;
@@ -260,19 +259,13 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted(false);
 		//?COUPON?
-		$couponsInfos = NULL;
 		$couponCode = NULL;
 		if(isset($subOpts)) {
 			if(array_key_exists('couponCode', $subOpts->getOpts())) {
-				$str = $subOpts->getOpts()['couponCode'];
-				if(strlen($str) > 0) {
-					$couponCode = $str;
-				}
+				$couponCode = $subOpts->getOpts()['couponCode'];
 			}
 		}
-		if(isset($couponCode)) {
-			$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
-		}
+		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
 		//BILLING_INFO
@@ -704,74 +697,76 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 	}
 	
 	private function updateCouponAttribs(array $attribs, $couponsInfos, User $user, InternalPlan $internalPlan) {
-		$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
-		$billingProviderCouponsCampaign = $couponsInfos['providerCouponsCampaign'];
-		$discountArray = array();
-		$discountArray['inheritedFromId'] = $billingProviderCouponsCampaign->getExternalUuid();
-		switch($billingInternalCouponsCampaign->getDiscountType()) {
-			case 'amount' :
-				$discountArray['amount'] = number_format((float) ($billingInternalCouponsCampaign->getAmountInCents() / 100), 2, '.', '');
-				break;
-			case 'percent':
-				$discountArray['amount'] = number_format((float) (($internalPlan->getAmountInCents() * $billingInternalCouponsCampaign->getPercent()) / 10000), 2, '.', '');
-				break;
-			default :
-				$msg = "unsupported discount_type=".$billingInternalCouponsCampaign->getDiscountType();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
-		}
-		switch($billingInternalCouponsCampaign->getDiscountDuration()) {
-			case 'once' :
-				$discountArray['numberOfBillingCycles'] = 1;
-				break;
-			case 'forever' :
-				$discountArray['neverExpires'] = true;
-				break;
-			case 'repeating' :
-				//all braintree plans are montlhy based
-				$numberOfMonthsInACycle = NULL;
-				switch ($internalPlan->getPeriodUnit()) {
-					case 'month' :
-						$numberOfMonthsInACycle = 1 * $internalPlan->getPeriodLength();
-						break;
-					case 'year' :
-						$numberOfMonthsInACycle = 12 * $internalPlan->getPeriodLength();
-						break;
-					default :
-						$msg = "unsupported period_unit=".$internalPlan->getPeriodUnit();
-						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-						break;
-				}
-				$numberOfMonthsOfDiscount = NULL;
-				switch($billingInternalCouponsCampaign->getDiscountDurationUnit()) {
-					case 'month' :
-						$numberOfMonthsOfDiscount = 1 * $billingInternalCouponsCampaign->getDiscountDurationLength();
-						break;
-					case 'year' :
-						$numberOfMonthsOfDiscount = 12 * $billingInternalCouponsCampaign->getDiscountDurationLength();
-						break;
-					default :
-						$msg = "unsupported discount_duration_unit=".$billingInternalCouponsCampaign->getDiscountDurationUnit();
-						config::getLogger()->addError($msg);
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-						break;
-				}
-				if(($numberOfMonthsOfDiscount%$numberOfMonthsInACycle) > 0) {
-					$msg = "discount is not compatible with this plan";
+		if(isset($couponsInfos)) {
+			$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+			$billingProviderCouponsCampaign = $couponsInfos['providerCouponsCampaign'];
+			$discountArray = array();
+			$discountArray['inheritedFromId'] = $billingProviderCouponsCampaign->getExternalUuid();
+			switch($billingInternalCouponsCampaign->getDiscountType()) {
+				case 'amount' :
+					$discountArray['amount'] = number_format((float) ($billingInternalCouponsCampaign->getAmountInCents() / 100), 2, '.', '');
+					break;
+				case 'percent':
+					$discountArray['amount'] = number_format((float) (($internalPlan->getAmountInCents() * $billingInternalCouponsCampaign->getPercent()) / 10000), 2, '.', '');
+					break;
+				default :
+					$msg = "unsupported discount_type=".$billingInternalCouponsCampaign->getDiscountType();
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				$discountArray['numberOfBillingCycles'] = $numberOfMonthsOfDiscount / $numberOfMonthsInACycle;
-				break;
-			default :
-				$msg = "unsupported discount_duration=".$billingInternalCouponsCampaign->getDiscountDuration();
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
+					break;
+			}
+			switch($billingInternalCouponsCampaign->getDiscountDuration()) {
+				case 'once' :
+					$discountArray['numberOfBillingCycles'] = 1;
+					break;
+				case 'forever' :
+					$discountArray['neverExpires'] = true;
+					break;
+				case 'repeating' :
+					//all braintree plans are montlhy based
+					$numberOfMonthsInACycle = NULL;
+					switch ($internalPlan->getPeriodUnit()) {
+						case 'month' :
+							$numberOfMonthsInACycle = 1 * $internalPlan->getPeriodLength();
+							break;
+						case 'year' :
+							$numberOfMonthsInACycle = 12 * $internalPlan->getPeriodLength();
+							break;
+						default :
+							$msg = "unsupported period_unit=".$internalPlan->getPeriodUnit();
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+					}
+					$numberOfMonthsOfDiscount = NULL;
+					switch($billingInternalCouponsCampaign->getDiscountDurationUnit()) {
+						case 'month' :
+							$numberOfMonthsOfDiscount = 1 * $billingInternalCouponsCampaign->getDiscountDurationLength();
+							break;
+						case 'year' :
+							$numberOfMonthsOfDiscount = 12 * $billingInternalCouponsCampaign->getDiscountDurationLength();
+							break;
+						default :
+							$msg = "unsupported discount_duration_unit=".$billingInternalCouponsCampaign->getDiscountDurationUnit();
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+					}
+					if(($numberOfMonthsOfDiscount%$numberOfMonthsInACycle) > 0) {
+						$msg = "discount is not compatible with this plan";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					$discountArray['numberOfBillingCycles'] = $numberOfMonthsOfDiscount / $numberOfMonthsInACycle;
+					break;
+				default :
+					$msg = "unsupported discount_duration=".$billingInternalCouponsCampaign->getDiscountDuration();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
+			$attribs['discounts'] = ['add' =>	[$discountArray]];
 		}
-		$attribs['discounts'] = ['add' =>	[$discountArray]];
 		return($attribs);	
 	}
 	

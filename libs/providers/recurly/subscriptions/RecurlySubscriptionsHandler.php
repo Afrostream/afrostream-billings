@@ -55,12 +55,13 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$account->billing_info = $billing_info;
 				$subscription->account = $account;
 				//couponCode
+				$couponCode = NULL;
 				if(array_key_exists('couponCode', $subOpts->getOpts())) {
 					$couponCode = $subOpts->getOpts()['couponCode'];
-					if(strlen($couponCode) > 0) {
-						$couponsInfos = $this->getCouponInfos($couponCode,  $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
-						$subscription->coupon_code = $couponsInfos['providerCouponsCampaign']->getExternalUuid();
-					}
+				}
+				$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
+				if(isset($couponsInfos)) {
+					$subscription->coupon_code = $couponsInfos['providerCouponsCampaign']->getExternalUuid();
 				}
 				//startsAt
 				if(array_key_exists('startsAt', $subOpts->getOpts())) {
@@ -248,19 +249,13 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 		$db_subscription->setUpdateId($updateId);
 		$db_subscription->setDeleted(false);
 		//?COUPON?
-		$couponsInfos = NULL;
 		$couponCode = NULL;
 		if(isset($subOpts)) {
 			if(array_key_exists('couponCode', $subOpts->getOpts())) {
-				$str = $subOpts->getOpts()['couponCode'];
-				if(strlen($str) > 0) {
-					$couponCode = $str;
-				}
+				$couponCode = $subOpts->getOpts()['couponCode'];
 			}
 		}
-		if(isset($couponCode)) {
-			$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
-		}
+		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
 		//NO MORE TRANSACTION (DONE BY CALLER)
 		//<-- DATABASE -->
 		//BILLING_INFO (NOT MANDATORY)
