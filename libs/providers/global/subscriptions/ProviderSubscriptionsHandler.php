@@ -90,6 +90,11 @@ class ProviderSubscriptionsHandler {
 				$couponCode = trim($couponCode);
 			}
 		}
+		if($couponCode == NULL) {
+			config::getLogger()->addInfo("user CouponCode  : <none>");
+		} else {
+			config::getLogger()->addInfo("user CouponCode  : ".$couponCode);
+		}
 		if($couponTimeframe->getValue() == CouponTimeframe::onSubCreation) {
 			$defaultInternalCouponCampaignsId = $internalPlan->getInternalCouponsCampaignsId();
 			if(isset($defaultInternalCouponCampaignsId)) {
@@ -108,7 +113,10 @@ class ProviderSubscriptionsHandler {
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_WAITING_STATUS_NOT_FOUND);
 					}
 					$couponCode = $defaultInternalCoupon->getCode();
+					config::getLogger()->addInfo("default CouponCode  : ".$couponCode);
 				}
+			} else {
+				config::getLogger()->addInfo("no default InternalCouponsCampaign");
 			}
 		}
 		if($couponCode == NULL) {
