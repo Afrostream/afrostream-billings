@@ -5027,6 +5027,7 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 	private $platformid;
 	private $coupon_timeframes;
 	private $max_redemptions_by_user = 1;
+	private $user_notifications_enabled = true;
 	
 	public function setId($id) {
 		$this->_id = $id;
@@ -5210,6 +5211,14 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 		return($this->max_redemptions_by_user);
 	}
 	
+	public function setUserNotificationsEnabled($bool) {
+		$this->user_notifications_enabled = $bool;
+	}
+	
+	public function getUserNotificationsEnabled() {
+		return($this->user_notifications_enabled);
+	}
+	
 	public function jsonSerialize() {
 		$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($this->_id);
 		$providers = array();
@@ -5239,7 +5248,8 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 				'expiresDate' => dbGlobal::toISODate($this->expires_date),
 				'couponsCampaignTimeframes' => $this->coupon_timeframes,
 				'providerCouponsCampaigns' => $providerCouponsCampaigns,
-				'maxRedemptionsByUser' => $this->max_redemptions_by_user
+				'maxRedemptionsByUser' => $this->max_redemptions_by_user,
+				'userNotificationsEnabled' => $this->user_notifications_enabled
 		];
 		//provider / providers
 		if(count($providers) == 1) {
@@ -5274,7 +5284,7 @@ class BillingInternalCouponsCampaignDAO {
 		discount_type, amount_in_cents, currency, percent, discount_duration,
 		discount_duration_unit, discount_duration_length, generated_mode, generated_code_length,
  		total_number, coupon_type, emails_enabled, expires_date, partnerid, platformid, array_to_json(coupon_timeframes) as coupon_timeframes,
-		max_redemptions_by_user
+		max_redemptions_by_user, user_notifications_enabled
 EOL;
 	
 	private static function getBillingInternalCouponsCampaignFromRow($row) {
@@ -5302,6 +5312,7 @@ EOL;
 		$out->setPlatformId($row["platformid"]);
 		$out->setCouponTimeframes(json_decode($row["coupon_timeframes"]));
 		$out->setMaxRedemptionsByUser($row["max_redemptions_by_user"]);
+		$out->setUserNotificationsEnabled($row["user_notifications_enabled"] == 't' ? true : false);
 		return($out);
 	}
 	

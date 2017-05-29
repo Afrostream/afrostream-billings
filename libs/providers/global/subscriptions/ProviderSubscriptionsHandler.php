@@ -486,6 +486,13 @@ class ProviderSubscriptionsHandler {
 						$userInternalCoupon = $userInternalCoupons[0];//take first only (last redeemed because request is ordered)
 						$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponById($userInternalCoupon->getInternalCouponsId());
 						$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($internalCoupon->getInternalCouponsCampaignsId());
+						if($couponTimeframe == CouponTimeframe::onSubCreation) {
+							$defaultInternalCouponsCampaignId = $internalPlan->getInternalCouponsCampaignsId();
+							if(isset($defaultInternalCouponsCampaignId) && $internalCouponsCampaign->getId() == $defaultInternalCouponsCampaignId) {
+								//FORCE USER NOTIFICATIONS TO FALSE
+								$internalCouponsCampaign->setUserNotificationsEnabled(false);
+							}
+						}
 					}
 				}
 			}
@@ -554,8 +561,7 @@ class ProviderSubscriptionsHandler {
 			$substitutions['%couponAmountForDisplay%'] = '';
 			$substitutions['%couponDetails%'] = '';
 			$substitutions['%couponAppliedSentence%'] = '';
-			//TODO
-			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() == 'promo') {
+			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() == 'promo' && $internalCouponsCampaign->getUserNotificationsEnabled() == true) {
 				$couponAmountForDisplay = '';
 				switch($internalCouponsCampaign->getDiscountType()) {
 					case 'percent' :
