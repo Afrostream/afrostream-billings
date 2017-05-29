@@ -100,7 +100,7 @@ class ProviderSubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_ANOTHER_ALREADY_APPLIED);
 				} else {
 					//
-					$defaultInternalCoupon = BillingInternalCouponDAO::getFirstWaitingBillingInternalCoupon($internalcouponscampaignsid);
+					$defaultInternalCoupon = BillingInternalCouponDAO::getFirstWaitingBillingInternalCoupon($defaultInternalCouponCampaignsId);
 					if($defaultInternalCoupon == NULL) {
 						//Exception
 						$msg = "no coupon available to be redeemed";
