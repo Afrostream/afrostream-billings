@@ -111,6 +111,9 @@ class ProviderSubscriptionsHandler {
 				}
 			}
 		}
+		if($couponCode == NULL) {
+			return(NULL);//No couponCode given, no defaultInternalCouponCampaignsId given
+		}
 		//
 		$internalCoupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($couponCode, $this->provider->getPlatformId());
 		if($internalCoupon == NULL) {
