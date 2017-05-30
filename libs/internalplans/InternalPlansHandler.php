@@ -508,7 +508,7 @@ class InternalPlansHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//Verifications...
-			if($$db_internal_plan->getInternalCouponsCampaignsId() != NULL) {
+			if($db_internal_plan->getInternalCouponsCampaignsId() != NULL) {
 				if($db_internal_plan->getInternalCouponsCampaignsId() == $db_internal_coupons_campaign->getId()) {
 					//Exception
 					$msg = "couponsCampaign with couponsCampaignInternalBillingUuid=".$setDefaultInternalCouponsCampaignToInternalPlanRequest->getCouponsCampaignInternalBillingUuid()." is already set as default to the internalPlan with internalPlanUuid=".$$db_internal_plan->getInternalPlanUuid();
