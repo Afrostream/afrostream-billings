@@ -12,6 +12,8 @@ require_once __DIR__ . '/../providers/global/requests/CreateInternalPlanRequest.
 require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromContextRequest.php';
 require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromCountryRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateInternalPlanRequest.php';
+require_once __DIR__ . '/../providers/global/requests/SetDefaultInternalCouponsCampaignToInternalPlanRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UnsetDefaultInternalCouponsCampaignToInternalPlanRequest.php';
 
 use Money\Currency;
 use Iso3166\Codes;
@@ -485,6 +487,76 @@ class InternalPlansHandler {
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while updating Internal Plan Opts, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("internal plan opts updating failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_internal_plan);
+	}
+	
+	public function doSetDefaultInternalCouponsCampaign(SetDefaultInternalCouponsCampaignToInternalPlanRequest $setDefaultInternalCouponsCampaignToInternalPlanRequest) {
+		$db_internal_plan = NULL;
+		try {
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($setDefaultInternalCouponsCampaignToInternalPlanRequest->getInternalPlanUuid(), $setDefaultInternalCouponsCampaignToInternalPlanRequest->getPlatform()->getId());
+			if($db_internal_plan == NULL) {
+				$msg = "unknown internalPlanUuid : ".$setDefaultInternalCouponsCampaignToInternalPlanRequest->getInternalPlanUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($setDefaultInternalCouponsCampaignToInternalPlanRequest->getCouponsCampaignInternalBillingUuid(), $setDefaultInternalCouponsCampaignToInternalPlanRequest->getPlatform()->getId());
+			if($db_internal_coupons_campaign == NULL) {
+				$msg = "unknown couponsCampaignInternalBillingUuid : ".$setDefaultInternalCouponsCampaignToInternalPlanRequest->getCouponsCampaignInternalBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//Verifications...
+			if($db_internal_coupons_campaign->getCouponType()->getValue() != CouponCampaignType::promo) {
+				//Exception
+				$msg = "couponsCampaignType must be 'promo' for couponsCampaign with couponsCampaignInternalBillingUuid=".$setDefaultInternalCouponsCampaignToInternalPlanRequest->getCouponsCampaignInternalBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				
+			}
+			$billingInternalCouponsCampaignInternalPlan = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlanByInternalPlan($db_internal_plan->getId(), $db_internal_coupons_campaign->getId());
+			if($billingInternalCouponsCampaignInternalPlan == NULL) {
+				//Exception
+				$msg = "internal plan with internalPlanUuid : ".$removeInternalPlanFromInternalCouponsCampaignRequest->getInternalPlanUuid()." is NOT linked to the couponsCampaignInternalBillingUuid=".$setDefaultInternalCouponsCampaignToInternalPlanRequest->getCouponsCampaignInternalBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//Verifications Done
+			$db_internal_plan->setInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
+			$db_internal_plan = InternalPlanDAO::setDefaultInternalCouponsCampaignId($db_internal_plan);
+			//done
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while setting a default internalCouponsCampaign to an internalPlan, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("setting a default internalCouponsCampaign to an internalPlan failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while setting a default internalCouponsCampaign to an internalPlan, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("setting a default internalCouponsCampaign to an internalPlan failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_internal_plan);
+	}
+	
+	public function doUnsetDefaultInternalCouponsCampaign(UnsetDefaultInternalCouponsCampaignToInternalPlanRequest $unsetDefaultInternalCouponsCampaignToInternalPlanRequest) {
+		$db_internal_plan = NULL;
+		try {
+			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($unsetDefaultInternalCouponsCampaignToInternalPlanRequest->getInternalPlanUuid(), $unsetDefaultInternalCouponsCampaignToInternalPlanRequest->getPlatform()->getId());
+			if($db_internal_plan == NULL) {
+				$msg = "unknown internalPlanUuid : ".$unsetDefaultInternalCouponsCampaignToInternalPlanRequest->getInternalPlanUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$db_internal_plan->setInternalCouponsCampaignsId(NULL);
+			$db_internal_plan = InternalPlanDAO::setDefaultInternalCouponsCampaignId($db_internal_plan);
+			//done
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while unsetting the default internalCouponsCampaign from an internalPlan, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("unsetting the default internalCouponsCampaign from an internalPlan failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while unsetting the default internalCouponsCampaign from an internalPlan, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("unsetting the default internalCouponsCampaign from an internalPlan failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_internal_plan);

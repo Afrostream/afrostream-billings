@@ -1116,6 +1116,20 @@ $app->put("/billings/api/internalplans/{internalPlanUuid}/removefromcontext/{con
 	return($internalPlansController->removeFromContext($request, $response, $args));
 });
 
+//actions to internalPlan : setdefaultinternalcouponscampaign
+
+$app->put("/billings/api/internalplans/{internalPlanUuid}/setdefaultinternalcouponscampaign/{couponsCampaignInternalBillingUuid}", function ($request, $response, $args) {
+	$internalPlansController = new InternalPlansFilteredController();
+	return($internalPlansController->setDefaultInternalCouponsCampaign($request, $response, $args));
+});
+
+//actions to internalPlan : unsetdefaultinternalcouponscampaign
+
+$app->put("/billings/api/internalplans/{internalPlanUuid}/unsetdefaultinternalcouponscampaign/", function ($request, $response, $args) {
+	$internalPlansController = new InternalPlansFilteredController();
+	return($internalPlansController->unsetDefaultInternalCouponsCampaign($request, $response, $args));
+});
+
 //get coupon
 	
 /*

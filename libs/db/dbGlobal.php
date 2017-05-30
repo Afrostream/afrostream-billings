@@ -711,6 +711,16 @@ class InternalPlanDAO {
 		return($out);
 	}
 	
+	public static function setDefaultInternalCouponsCampaignId(InternalPlan $internalPlan) {
+		$query = "UPDATE billing_internal_plans SET internalcouponscampaignsid = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$internalPlan->getInternalCouponsCampaignsId(),
+						$internalPlan->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getInternalPlanById($internalPlan->getId()));
+	}
+	
 }
 
 InternalPlanDAO::init();
