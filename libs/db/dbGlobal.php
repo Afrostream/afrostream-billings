@@ -516,7 +516,8 @@ class InternalPlanDAO {
 	public static function init() {
 		InternalPlanDAO::$sfields = "BIP._id, BIP.internal_plan_uuid, BIP.name, BIP.description,".
 			" BIP.amount_in_cents, BIP.currency, BIP.cycle, BIP.period_unit, BIP.period_length, BIP.thumbid, BIP.vat_rate,".
-			" BIP.trial_enabled, BIP.trial_period_length, BIP.trial_period_unit, BIP.is_visible, BIP.details, BIP.platformid";
+			" BIP.trial_enabled, BIP.trial_period_length, BIP.trial_period_unit, BIP.is_visible, BIP.details, BIP.platformid,".
+			" BIP.internalcouponscampaignsid";
 	}
 	
 	private static function getInternalPlanFromRow($row) {
@@ -538,6 +539,7 @@ class InternalPlanDAO {
 		$out->setIsVisible($row["is_visible"] == 't' ? true : false);
 		$out->setDetails(json_decode($row["details"], true));
 		$out->setPlatformId($row["platformid"]);
+		$out->setInternalCouponsCampaignsId($row["internalcouponscampaignsid"]);
 		return($out);
 	}
 	
@@ -790,6 +792,7 @@ class InternalPlan implements JsonSerializable {
 	private $isVisible;
 	private $details;
 	private $platformId;
+	private $internalCouponsCampaignsId;
 
 	public function getId() {
 		return($this->_id);
@@ -949,6 +952,14 @@ class InternalPlan implements JsonSerializable {
 	
 	public function getPlatformId() {
 		return($this->platformId);
+	}
+	
+	public function setInternalCouponsCampaignsId($id) {
+		$this->internalCouponsCampaignsId = $id;
+	}
+	
+	public function getInternalCouponsCampaignsId() {
+		return($this->internalCouponsCampaignsId);
 	}
 	
 	public function jsonSerialize() {
@@ -5016,6 +5027,7 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 	private $platformid;
 	private $coupon_timeframes;
 	private $max_redemptions_by_user = 1;
+	private $user_notifications_enabled = true;
 	
 	public function setId($id) {
 		$this->_id = $id;
@@ -5199,6 +5211,14 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 		return($this->max_redemptions_by_user);
 	}
 	
+	public function setUserNotificationsEnabled($bool) {
+		$this->user_notifications_enabled = $bool;
+	}
+	
+	public function getUserNotificationsEnabled() {
+		return($this->user_notifications_enabled);
+	}
+	
 	public function jsonSerialize() {
 		$providerCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($this->_id);
 		$providers = array();
@@ -5228,7 +5248,8 @@ class BillingInternalCouponsCampaign implements JsonSerializable {
 				'expiresDate' => dbGlobal::toISODate($this->expires_date),
 				'couponsCampaignTimeframes' => $this->coupon_timeframes,
 				'providerCouponsCampaigns' => $providerCouponsCampaigns,
-				'maxRedemptionsByUser' => $this->max_redemptions_by_user
+				'maxRedemptionsByUser' => $this->max_redemptions_by_user,
+				'userNotificationsEnabled' => $this->user_notifications_enabled
 		];
 		//provider / providers
 		if(count($providers) == 1) {
@@ -5263,7 +5284,7 @@ class BillingInternalCouponsCampaignDAO {
 		discount_type, amount_in_cents, currency, percent, discount_duration,
 		discount_duration_unit, discount_duration_length, generated_mode, generated_code_length,
  		total_number, coupon_type, emails_enabled, expires_date, partnerid, platformid, array_to_json(coupon_timeframes) as coupon_timeframes,
-		max_redemptions_by_user
+		max_redemptions_by_user, user_notifications_enabled
 EOL;
 	
 	private static function getBillingInternalCouponsCampaignFromRow($row) {
@@ -5291,6 +5312,7 @@ EOL;
 		$out->setPlatformId($row["platformid"]);
 		$out->setCouponTimeframes(json_decode($row["coupon_timeframes"]));
 		$out->setMaxRedemptionsByUser($row["max_redemptions_by_user"]);
+		$out->setUserNotificationsEnabled($row["user_notifications_enabled"] == 't' ? true : false);
 		return($out);
 	}
 	
@@ -6030,6 +6052,21 @@ EOL;
 		// free result
 		pg_free_result($result);
 		return(self::getBillingInternalCouponById($billingInternalCoupon->getId()));
+	}
+	
+	public static function getFirstWaitingBillingInternalCoupon($internalcouponscampaignsid) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons WHERE internalcouponscampaignsid = $1 AND coupon_status = 'waiting' ORDER BY _id ASC LIMIT 1";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalcouponscampaignsid));
+		
+		$out = null;
+		
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingInternalCouponFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		
+		return($out);	
 	}
 	
 }

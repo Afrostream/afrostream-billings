@@ -135,19 +135,13 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     					]
     	);
     	//?COUPON?
-    	$couponsInfos = NULL;
     	$couponCode = NULL;
     	if(isset($subOpts)) {
     		if(array_key_exists('couponCode', $subOpts->getOpts())) {
-    			$str = $subOpts->getOpts()['couponCode'];
-    			if(strlen($str) > 0) {
-    				$couponCode = $str;
-    			}
+    			$couponCode = $subOpts->getOpts()['couponCode'];
     		}
     	}
-    	if(isset($couponCode)) {
-    		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
-    	}
+    	$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
     	//<-- DATABASE -->
     	//BILLING_INFO (NOT MANDATORY)
     	if(isset($billingInfo)) {
@@ -619,17 +613,17 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
         $logMessage = 'Create subscription : customer : %s, plan : %s, source : %s';
         
         //couponCode
+        $couponCode = NULL;
         if(array_key_exists('couponCode', $subOpts->getOpts())) {
         	$couponCode = $subOpts->getOpts()['couponCode'];
-        	if(strlen($couponCode) > 0) {
-        		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
-        		$subscriptionData['coupon'] = $couponsInfos['providerCouponsCampaign']->getExternalUuid();
-        		$logMessage = 'Create subscription : customer : %s, plan : %s, source : %s, coupon : %s';
-        	}
         }
-
+        $couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
+        if(isset($couponsInfos)) {
+	        $subscriptionData['coupon'] = $couponsInfos['providerCouponsCampaign']->getExternalUuid();
+	        $logMessage = 'Create subscription : customer : %s, plan : %s, source : %s, coupon : %s';
+        }
         $this->log($logMessage, $subscriptionData);
-
+		
         $subscription = \Stripe\Subscription::create($subscriptionData);
 
         if (empty($subscription['id'])) {
@@ -668,36 +662,37 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
             
             $amount = $internalPlan->getAmountInCents();
             $discount = 0;
+            $couponCode = NULL;
             if(array_key_exists('couponCode', $subOpts->getOpts())) {
             	$couponCode = $subOpts->getOpts()['couponCode'];
-            	if(strlen($couponCode) > 0) {
-            		$couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
-            		$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
-            		$billingInternalCoupon = $couponsInfos['internalCoupon'];
-            		$billingUserInternalCoupon = $couponsInfos['userInternalCoupon'];
-            		if($billingInternalCouponsCampaign->getDiscountDuration() != 'once') {
-            			$msg = "discount is not compatible with this plan";
+            }
+            $couponsInfos = $this->getCouponInfos($couponCode, $user, $internalPlan, new CouponTimeframe(CouponTimeframe::onSubCreation));
+            if(isset($couponsInfos)) {
+            	$billingInternalCouponsCampaign = $couponsInfos['internalCouponsCampaign'];
+            	$billingInternalCoupon = $couponsInfos['internalCoupon'];
+            	$billingUserInternalCoupon = $couponsInfos['userInternalCoupon'];
+            	if($billingInternalCouponsCampaign->getDiscountDuration() != 'once') {
+            		$msg = "discount is not compatible with this plan";
+            		config::getLogger()->addError($msg);
+            		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+            	}
+            	switch($billingInternalCouponsCampaign->getDiscountType()) {
+            		case 'amount' :
+            			$discount = $billingInternalCouponsCampaign->getAmountInCents();
+            			break;
+            		case 'percent':
+            			$discount = $internalPlan->getAmountInCents() * $billingInternalCouponsCampaign->getPercent() / 100;
+            			break;
+            		default :
+            			$msg = "unsupported discount_type=".$billingInternalCouponsCampaign->getDiscountType();
             			config::getLogger()->addError($msg);
             			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-            		}
-            		switch($billingInternalCouponsCampaign->getDiscountType()) {
-            			case 'amount' :
-            				$discount = $billingInternalCouponsCampaign->getAmountInCents();
-            				break;
-            			case 'percent':
-            				$discount = $internalPlan->getAmountInCents() * $billingInternalCouponsCampaign->getPercent() / 100;
-            				break;
-            			default :
-            				$msg = "unsupported discount_type=".$billingInternalCouponsCampaign->getDiscountType();
-            				config::getLogger()->addError($msg);
-            				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-            				break;
-            		}
-            		//
-            		$metadata['AfrCouponsCampaignInternalBillingUuid'] = $billingInternalCouponsCampaign->getUuid();
-            		$metadata['AfrInternalCouponBillingUuid'] = $billingInternalCoupon->getUuid();
-            		$metadata['AfrInternalUserCouponBillingUuid'] =	$billingUserInternalCoupon->getUuid();
+            			break;
             	}
+            	//
+            	$metadata['AfrCouponsCampaignInternalBillingUuid'] = $billingInternalCouponsCampaign->getUuid();
+            	$metadata['AfrInternalCouponBillingUuid'] = $billingInternalCoupon->getUuid();
+            	$metadata['AfrInternalUserCouponBillingUuid'] =	$billingUserInternalCoupon->getUuid();
             }
             $amount = floor($amount - $discount);
             if($amount <= 0) {

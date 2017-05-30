@@ -570,7 +570,13 @@ class SubscriptionsController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$couponCode = $args['couponCode'];
+			if(strlen(trim($args['couponCode'])) == 0) {
+				//exception
+				$msg = "field 'couponCode' is empty";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$couponCode = trim($args['couponCode']);
 			$force = NULL;
 			if(isset($data['force'])) {
 				$force = $data['force'] == 'true' ? true : false;
