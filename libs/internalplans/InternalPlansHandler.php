@@ -246,6 +246,7 @@ class InternalPlansHandler {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				$provider_plan = new Plan();
+				$provider_plan->setProviderPlanBillingUuid(guid());
 				$provider_plan->setProviderId($provider->getId());
 				$provider_plan->setPlanUid($provider_plan_uuid);
 				$provider_plan->setName($db_internal_plan->getName());
