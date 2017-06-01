@@ -5028,6 +5028,21 @@ class BillingProviderPlanPaymentMethodsDAO {
 		return($out);
 	}
 	
+	public static function getBillingProviderPlanPaymentMethodsById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_provider_plans_payment_methods WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingProviderPlanPaymentMethodFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 	public static function getBillingProviderPlanPaymentMethodsByProviderPlanId($id) {
 		$query = "SELECT ".self::$sfields." FROM billing_provider_plans_payment_methods WHERE provider_plan_id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
@@ -5041,6 +5056,27 @@ class BillingProviderPlanPaymentMethodsDAO {
 		pg_free_result($result);
 		
 		return($out);
+	}
+	
+	public static function addBillingProviderPlanPaymentMethod(BillingProviderPlanPaymentMethod $billingProviderPlanPaymentMethod) {
+		$query = "INSERT INTO billing_provider_plans_payment_methods (provider_plan_id, payment_method_id)";
+		$query.= " VALUES ($1, $2) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingProviderPlanPaymentMethod->getProviderPlanId(),
+						$billingProviderPlanPaymentMethod->getPaymentMethodId()
+				));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		return(self::getBillingProviderPlanPaymentMethodsById($row[0]));
+	}
+	
+	public static function deleteBillingProviderPlanPaymentMethodById($id) {
+		$query = "DELETE FROM billing_provider_plans_payment_methods";
+		$query.= " WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		// free result
+		pg_free_result($result);
 	}
 	
 }
