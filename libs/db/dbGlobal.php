@@ -1203,22 +1203,7 @@ class PlanDAO {
 	
 		return($out);
 	}
-	
-	public static function getPlanByName($providerId, $name) {
-		$query = "SELECT ".self::$sfields." FROM billing_plans BP WHERE BP.providerid = $1 AND BP.name = $2";
-		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $name));
 		
-		$out = null;
-		
-		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getPlanFromRow($row);
-		}
-		// free result
-		pg_free_result($result);
-		
-		return($out);
-	}
-	
 	public static function getPlans($providerId = NULL) {
 		$query = "SELECT ".self::$sfields." FROM billing_plans BP";
 		$params = array();
