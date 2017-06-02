@@ -231,7 +231,7 @@ class InternalPlansHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			//already exist ?
+			//already exists ?
 			$db_tmp_internal_plan = PlanDAO::getPlanByName($provider->getId(), $db_internal_plan->getName());
 			if(isset($db_tmp_internal_plan)) {
 				$msg = "a provider plan named ".$db_tmp_internal_plan->getName()." does already exist for provider : ".$provider->getName();
@@ -246,6 +246,7 @@ class InternalPlansHandler {
 				//START TRANSACTION
 				pg_query("BEGIN");
 				$provider_plan = new Plan();
+				$provider_plan->setProviderPlanBillingUuid(guid());
 				$provider_plan->setProviderId($provider->getId());
 				$provider_plan->setPlanUid($provider_plan_uuid);
 				$provider_plan->setName($db_internal_plan->getName());

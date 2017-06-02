@@ -14,6 +14,7 @@ require_once __DIR__ . '/../libs/site/TransactionsController.php';
 require_once __DIR__ . '/../libs/site/UtilsController.php';
 require_once __DIR__ . '/../libs/site/PartnerOrdersController.php';
 require_once __DIR__ . '/../libs/site/ConfigController.php';
+require_once __DIR__ . '/../libs/site/ProviderPlansController.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -1422,6 +1423,23 @@ $app->put("/billings/api/transactions/{transactionBillingUuid}/refund", function
 $app->get("/billings/api/transactions/", function ($request, $response, $args) {
 	$transactionsController = new TransactionsController();
 	return($transactionsController->getMulti($request, $response, $args));
+});
+
+//providerPlans
+
+$app->get("/billings/api/providerplans/{providerPlanBillingUuid}", function ($request, $response, $args) {
+	$providerPlansController = new ProviderPlansController();
+	return($providerPlansController->getOne($request, $response, $args));
+});
+
+$app->put("/billings/api/providerplans/{providerPlanBillingUuid}/addpaymentmethod/{paymentMethodType}", function ($request, $response, $args) {
+	$providerPlansController = new ProviderPlansController();
+	return($providerPlansController->addPaymentMethod($request, $response, $args));
+});
+
+$app->put("/billings/api/providerplans/{providerPlanBillingUuid}/removepaymentmethod/{paymentMethodType}", function ($request, $response, $args) {
+	$providerPlansController = new ProviderPlansController();
+	return($providerPlansController->removePaymentMethod($request, $response, $args));
 });
 
 //WebHooks

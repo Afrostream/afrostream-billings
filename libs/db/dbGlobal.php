@@ -1138,7 +1138,7 @@ class InternalPlanOptsDAO {
 
 class PlanDAO {
 	
-	private static $sfields = "BP._id, BP.providerid, BP.plan_uuid, BP.name, BP.description, BP.is_visible, BP.internal_plan_id, BP.is_coupon_code_compatible";
+	private static $sfields = "BP._id, BP.providerid, BP.plan_uuid, BP.name, BP.description, BP.is_visible, BP.internal_plan_id, BP.providerplan_billing_uuid, BP.is_coupon_code_compatible";
 	
 	private static function getPlanFromRow($row) {
 		$out = new Plan();
@@ -1149,10 +1149,31 @@ class PlanDAO {
 		$out->setDescription($row["description"]);
 		$out->setIsVisible($row["is_visible"] == 't' ? true : false);
 		$out->setInternalPlanId($row["internal_plan_id"]);
+		$out->setProviderPlanBillingUuid($row["providerplan_billing_uuid"]);
 		$out->setIsCouponCodeCompatible($row["is_coupon_code_compatible"] == 't' ? true : false);
 		return($out);
 	}
+
+	public static function getPlanByProviderPlanBillingUuid($uuid, $platformId) {
+		$query = "SELECT ".self::$sfields." FROM billing_plans BP";
+		$query.= " INNER JOIN billing_internal_plans BIP ON (BP.internal_plan_id = BIP._id)";
+		$query.= " WHERE BP.providerplan_billing_uuid = $1 AND BIP.platformid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($uuid, $platformId));
 	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getPlanFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+		return($out);
+	}
+	
+	/*
+	 * /!\ uuid = uuid provider side /!\
+	 * 
+	 */
 	public static function getPlanByUuid($providerId, $plan_uuid) {
 		$query = "SELECT ".self::$sfields." FROM billing_plans BP WHERE BP.providerid = $1 AND BP.plan_uuid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $plan_uuid));
@@ -1221,10 +1242,11 @@ class PlanDAO {
 	}
 		
 	public static function addPlan(Plan $plan) {
-		$query = "INSERT INTO billing_plans (providerid, plan_uuid, name, description, internal_plan_id)";
-		$query.= " VALUES ($1, $2, $3, $4, $5) RETURNING _id";
+		$query = "INSERT INTO billing_plans (providerplan_billing_uuid, providerid, plan_uuid, name, description, internal_plan_id)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
-				array($plan->getProviderId(),
+				array($plan->getProviderPlanBillingUuid(),
+					$plan->getProviderId(),
 					$plan->getPlanUuid(),
 					$plan->getName(),
 					$plan->getDescription(),
@@ -1286,6 +1308,7 @@ class Plan implements JsonSerializable {
 	private $providerid;
 	private $isVisible;
 	private $internalPlanId;
+	private $providerPlanBillingUuid;
 	private $isCouponCodeCompatible;
 	
 	public function getId() {
@@ -1344,6 +1367,14 @@ class Plan implements JsonSerializable {
 		return($this->internalPlanId);
 	}
 	
+	public function setProviderPlanBillingUuid($uuid) {
+		$this->providerPlanBillingUuid = $uuid;
+	}
+	
+	public function getProviderPlanBillingUuid() {
+		return($this->providerPlanBillingUuid);
+	}
+	
 	public function setIsCouponCodeCompatible($isCouponCodeCompatible) {
 		$this->isCouponCodeCompatible = $isCouponCodeCompatible;
 	}
@@ -1355,6 +1386,7 @@ class Plan implements JsonSerializable {
 	public function jsonSerialize() {
 		$provider = ProviderDAO::getProviderById($this->providerid);
 		$return = [
+				'providerPlanBillingUuid' => $this->providerPlanBillingUuid,
 				'providerPlanUuid' => $this->plan_uuid,
 				'name' => $this->name,
 				'description' => $this->description,
@@ -5005,6 +5037,21 @@ class BillingProviderPlanPaymentMethodsDAO {
 		return($out);
 	}
 	
+	public static function getBillingProviderPlanPaymentMethodById($id) {
+		$query = "SELECT ".self::$sfields." FROM billing_provider_plans_payment_methods WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingProviderPlanPaymentMethodFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 	public static function getBillingProviderPlanPaymentMethodsByProviderPlanId($id) {
 		$query = "SELECT ".self::$sfields." FROM billing_provider_plans_payment_methods WHERE provider_plan_id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
@@ -5012,12 +5059,33 @@ class BillingProviderPlanPaymentMethodsDAO {
 		$out = array();
 		
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			array_push($out, self::getBillingProviderPlanPaymentMethodFromRow($row));
+			$out[] = self::getBillingProviderPlanPaymentMethodFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
 		
 		return($out);
+	}
+	
+	public static function addBillingProviderPlanPaymentMethod(BillingProviderPlanPaymentMethod $billingProviderPlanPaymentMethod) {
+		$query = "INSERT INTO billing_provider_plans_payment_methods (provider_plan_id, payment_method_id)";
+		$query.= " VALUES ($1, $2) RETURNING _id";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingProviderPlanPaymentMethod->getProviderPlanId(),
+						$billingProviderPlanPaymentMethod->getPaymentMethodId()
+				));
+		$row = pg_fetch_row($result);
+		// free result
+		pg_free_result($result);
+		return(self::getBillingProviderPlanPaymentMethodById($row[0]));
+	}
+	
+	public static function deleteBillingProviderPlanPaymentMethodById($id) {
+		$query = "DELETE FROM billing_provider_plans_payment_methods";
+		$query.= " WHERE _id = $1";
+		$result = pg_query_params(config::getDbConn(), $query, array($id));
+		// free result
+		pg_free_result($result);
 	}
 	
 }

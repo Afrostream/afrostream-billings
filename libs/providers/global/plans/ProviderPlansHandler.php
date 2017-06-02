@@ -17,7 +17,7 @@ class ProviderPlansHandler {
 		config::getLogger()->addError($msg);
 		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::REQUEST_UNSUPPORTED);
 	}
-	
+		
 }
 
 ?>
