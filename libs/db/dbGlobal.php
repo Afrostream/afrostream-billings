@@ -1138,7 +1138,7 @@ class InternalPlanOptsDAO {
 
 class PlanDAO {
 	
-	private static $sfields = "BP._id, BP.providerid, BP.plan_uuid, BP.name, BP.description, BP.is_visible, BP.internal_plan_id";
+	private static $sfields = "BP._id, BP.providerid, BP.plan_uuid, BP.name, BP.description, BP.is_visible, BP.internal_plan_id, BP.is_coupon_code_compatible";
 	
 	private static function getPlanFromRow($row) {
 		$out = new Plan();
@@ -1149,6 +1149,7 @@ class PlanDAO {
 		$out->setDescription($row["description"]);
 		$out->setIsVisible($row["is_visible"] == 't' ? true : false);
 		$out->setInternalPlanId($row["internal_plan_id"]);
+		$out->setIsCouponCodeCompatible($row["is_coupon_code_compatible"] == 't' ? true : false);
 		return($out);
 	}
 	
@@ -1285,6 +1286,7 @@ class Plan implements JsonSerializable {
 	private $providerid;
 	private $isVisible;
 	private $internalPlanId;
+	private $isCouponCodeCompatible;
 	
 	public function getId() {
 		return($this->_id);
@@ -1342,6 +1344,14 @@ class Plan implements JsonSerializable {
 		return($this->internalPlanId);
 	}
 	
+	public function setIsCouponCodeCompatible($isCouponCodeCompatible) {
+		$this->isCouponCodeCompatible = $isCouponCodeCompatible;
+	}
+	
+	public function getIsCouponCodeCompatible() {
+		return($this->isCouponCodeCompatible);
+	}
+ 	
 	public function jsonSerialize() {
 		$provider = ProviderDAO::getProviderById($this->providerid);
 		$return = [
@@ -1350,10 +1360,10 @@ class Plan implements JsonSerializable {
 				'description' => $this->description,
 				'provider' => $provider,
 				'paymentMethods' => BillingProviderPlanPaymentMethodsDAO::getBillingProviderPlanPaymentMethodsByProviderPlanId($this->_id),
-				'isVisible' => $this->isVisible
+				'isVisible' => $this->isVisible,
+				'isCouponCodeCompatible' => $this->isCouponCodeCompatible
+				
 		];
-		$providersCouponCodeCompatible = ['afr', 'cashway', 'recurly', 'stripe', 'braintree'];
-		$return['isCouponCodeCompatible'] = in_array($provider->getName(), $providersCouponCodeCompatible);
 		return($return);
 	}
 	
