@@ -86,7 +86,7 @@ class BillingsBachatWorkers extends BillingsWorkers {
 							ScriptsConfig::getLogger()->addError($msg);
 						}
 					}
-				} while ($idx < $$totalHits && count($endingBillingsSubscriptions['subscriptions']) > 0);
+				} while ($idx < $totalHits && count($endingBillingsSubscriptions['subscriptions']) > 0);
 				fclose($current_par_ren_file_res);
 				$current_par_ren_file_res = NULL;
 				if(($current_par_ren_file_res = fopen($current_par_ren_file_path, "r")) === false) {
