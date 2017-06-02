@@ -42,7 +42,7 @@ class PlansHandler {
 	 */
 	public function doAddPaymentMethod(Plan $plan, AddPaymentMethodToProviderPlanRequest $addPaymentMethodToProviderPlanRequest) {
 		try {
-			config::getLogger()->addInfo($this->provider->getName()." adding a PaymentMethod to a ProviderPlan...");
+			config::getLogger()->addInfo("adding a PaymentMethod to a ProviderPlan...");
 			$billingPaymentMethodTypeToAdd = new BillingPaymentMethodType($addPaymentMethodToProviderPlanRequest->getPaymentMethodType());
 			$DBBillingPaymentMethod = BillingPaymentMethodDAO::getBillingPaymentMethodByPaymentMethodType($billingPaymentMethodTypeToAdd->getValue());
 			if($DBBillingPaymentMethod == NULL) {
@@ -69,7 +69,7 @@ class PlansHandler {
 			$billingProviderPlanPaymentMethod = BillingProviderPlanPaymentMethodsDAO::addBillingProviderPlanPaymentMethod($billingProviderPlanPaymentMethod);
 			//done
 			$plan = PlanDAO::getPlanById($plan->getId());
-			config::getLogger()->addInfo($this->provider->getName()." adding a PaymentMethod to a ProviderPlan done successfully");
+			config::getLogger()->addInfo("adding a PaymentMethod to a ProviderPlan done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while adding a PaymentMethod to a ProviderPlan, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("adding a PaymentMethod to a ProviderPlan failed : ".$msg);
@@ -90,7 +90,7 @@ class PlansHandler {
 	 */
 	public function doRemovePaymentMethod(Plan $plan, RemovePaymentMethodFromProviderPlanRequest $removePaymentMethodFromProviderPlanRequest) {
 		try {
-			config::getLogger()->addInfo($this->provider->getName()." removing a PaymentMethod from a ProviderPlan...");
+			config::getLogger()->addInfo("removing a PaymentMethod from a ProviderPlan...");
 			$billingPaymentMethodTypeToRemove = new BillingPaymentMethodType($removePaymentMethodFromProviderPlanRequest->getPaymentMethodType());
 			$DBBillingPaymentMethod = BillingPaymentMethodDAO::getBillingPaymentMethodByPaymentMethodType($billingPaymentMethodTypeToRemove->getValue());
 			if($DBBillingPaymentMethod == NULL) {
@@ -118,7 +118,7 @@ class PlansHandler {
 			}
 			//done
 			$plan = PlanDAO::getPlanById($plan->getId());
-			config::getLogger()->addInfo($this->provider->getName()." removing a PaymentMethod from a ProviderPlan done successfully");
+			config::getLogger()->addInfo("removing a PaymentMethod from a ProviderPlan done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while removing a PaymentMethod from a ProviderPlan, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("removing a PaymentMethod from a ProviderPlan failed : ".$msg);
