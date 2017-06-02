@@ -153,6 +153,23 @@ class TransactionsController extends BillingsController {
 		}
 	}
 	
+	public function importTransactions(Request $request, Response $response, array $args) {
+		try {
+			$data = json_decode($request->getBody(), true);
+			if(!isset($data['providerName'])) {
+				//exception
+				$msg = "field 'providerName' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$providerName = $data['providerName'];
+			//FILE
+			//TODO
+		} catch(Exception $e) {
+			//TODO
+		}
+	}
+	
 }
 
 ?>

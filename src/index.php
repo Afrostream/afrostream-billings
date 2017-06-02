@@ -1425,6 +1425,11 @@ $app->get("/billings/api/transactions/", function ($request, $response, $args) {
 	return($transactionsController->getMulti($request, $response, $args));
 });
 
+$app->post("/billings/api/transactions/import", function ($request, $response, $args) {
+	$transactionsController = new TransactionsController();
+	return($transactionsController->importTransactions($request, $response, $args));
+});
+
 //providerPlans
 
 $app->get("/billings/api/providerplans/{providerPlanBillingUuid}", function ($request, $response, $args) {
