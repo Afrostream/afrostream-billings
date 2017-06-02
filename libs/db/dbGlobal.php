@@ -5037,7 +5037,7 @@ class BillingProviderPlanPaymentMethodsDAO {
 		return($out);
 	}
 	
-	public static function getBillingProviderPlanPaymentMethodsById($id) {
+	public static function getBillingProviderPlanPaymentMethodById($id) {
 		$query = "SELECT ".self::$sfields." FROM billing_provider_plans_payment_methods WHERE _id = $1";
 		$result = pg_query_params(config::getDbConn(), $query, array($id));
 	
@@ -5077,7 +5077,7 @@ class BillingProviderPlanPaymentMethodsDAO {
 		$row = pg_fetch_row($result);
 		// free result
 		pg_free_result($result);
-		return(self::getBillingProviderPlanPaymentMethodsById($row[0]));
+		return(self::getBillingProviderPlanPaymentMethodById($row[0]));
 	}
 	
 	public static function deleteBillingProviderPlanPaymentMethodById($id) {
