@@ -7,6 +7,7 @@ require_once __DIR__ . '/../providers/global/requests/RefundTransactionRequest.p
 require_once __DIR__ . '/../providers/global/requests/GetTransactionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetUserTransactionsRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetSubscriptionTransactionsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/ImportTransactionsRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -155,7 +156,9 @@ class TransactionsController extends BillingsController {
 	
 	public function importTransactions(Request $request, Response $response, array $args) {
 		try {
-			$data = json_decode($request->getBody(), true);
+			$data = $request->getParsedBody();
+			//config::getLogger()->addInfo("data=".var_export($data, true));
+			//$data = json_decode($request->getBody(), true);
 			if(!isset($data['providerName'])) {
 				//exception
 				$msg = "field 'providerName' is missing";
@@ -163,10 +166,32 @@ class TransactionsController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$providerName = $data['providerName'];
-			//FILE
-			//TODO
+			if(!isset($request->getUploadedFiles()['file'])) {
+				//exception
+				$msg = "field 'file' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$uploadedFile = $request->getUploadedFiles()['file'];
+			$transactionsHandler = new TransactionsHandler();
+			$importTransactionsRequest = new ImportTransactionsRequest();
+			$importTransactionsRequest->setOrigin('api');
+			$importTransactionsRequest->setProviderName($providerName);
+			$importTransactionsRequest->setUploadedFile($uploadedFile);
+			$transactionsHandler->doImportTransactions($importTransactionsRequest);
+			return($this->returnObjectAsJson($response, NULL, NULL));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while importing transactions, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
 		} catch(Exception $e) {
-			//TODO
+			$msg = "an unknown exception occurred while importing transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
 		}
 	}
 	

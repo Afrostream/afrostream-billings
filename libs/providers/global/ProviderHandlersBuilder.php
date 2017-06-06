@@ -23,6 +23,7 @@ require_once __DIR__ . '/../gocardless/transactions/GocardlessTransactionsHandle
 require_once __DIR__ . '/../stripe/transactions/StripeTransactionsHandler.php';
 require_once __DIR__ . '/../braintree/transactions/BraintreeTransactionsHandler.php';
 require_once __DIR__ . '/../wecashup/transactions/WecashupTransactionsHandler.php';
+require_once __DIR__ . '/../google/transactions/GoogleTransactionsHandler.php';
 //<-- users -->
 require_once __DIR__ . '/users/ProviderUsersHandler.php';
 require_once __DIR__ . '/../celery/users/CeleryUsersHandler.php';
@@ -142,6 +143,9 @@ class ProviderHandlersBuilder {
 				break;
 			case 'wecashup' :
 				$providerTransactionsHandlerInstance = new WecashupTransactionsHandler($provider);
+				break;
+			case 'google' :
+				$providerTransactionsHandlerInstance = new GoogleTransactionsHandler($provider);
 				break;
 			default:
 				$providerTransactionsHandlerInstance = new ProviderTransactionsHandler($provider);

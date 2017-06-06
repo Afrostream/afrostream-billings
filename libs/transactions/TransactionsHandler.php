@@ -8,6 +8,7 @@ require_once __DIR__ . '/../providers/global/requests/RefundTransactionRequest.p
 require_once __DIR__ . '/../providers/global/requests/GetTransactionRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetUserTransactionsRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GetSubscriptionTransactionsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/ImportTransactionsRequest.php';
 
 class TransactionsHandler {
 	
@@ -199,6 +200,27 @@ class TransactionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_transactions);
+	}
+	
+	public function doImportTransactions(ImportTransactionsRequest $importTransactionsRequest) {
+		try {
+			$provider = ProviderDAO::getProviderByName($importTransactionsRequest->getProviderName(), $importTransactionsRequest->getPlatform()->getId());
+			if($provider == NULL) {
+				$msg = "unknown provider named : ".$importTransactionsRequest->getProviderName();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($provider);
+			$providerTransactionsHandlerInstance->doImportTransactions($importTransactionsRequest);
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while importing transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("transactions importing failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while importing transactions, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("transactions importing failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
 	}
 	
 }
