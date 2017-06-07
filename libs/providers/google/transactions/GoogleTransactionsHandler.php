@@ -155,19 +155,19 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 		$transactionProviderUuid = $fields[0];
 		$transactionRefundProviderUuid = $transactionProviderUuid.".".$transactionType;
 		$transactionChargeProviderUuid = $transactionProviderUuid."."."Charge";
-		$dbChargeTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $transactionChargeProviderUuid);
-		if($dbChargeTransaction == NULL) {
+		$billingsChargeTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $transactionChargeProviderUuid);
+		if($billingsChargeTransaction == NULL) {
 			//EXCEPTION (CHARGE MUST EXIST BEFORE)
 			throw new Exception("no charge linked to this refund transaction with providerUuid=".$transactionRefundProviderUuid);
 		}
-		$dbRefundTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $transactionRefundProviderUuid);
-		if($dbRefundTransaction == NULL) {
+		$billingsRefundTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $transactionRefundProviderUuid);
+		if($billingsRefundTransaction == NULL) {
 			//CREATE
 			$billingsRefundTransaction = new BillingsTransaction();
-			$billingsRefundTransaction->setTransactionLinkId($dbChargeTransaction->getId());
+			$billingsRefundTransaction->setTransactionLinkId($billingsChargeTransaction->getId());
 			$billingsRefundTransaction->setProviderId($this->provider->getId());
-			$billingsRefundTransaction->setUserId($dbChargeTransaction->getUserId());
-			$billingsRefundTransaction->setSubId($dbChargeTransaction->getSubId());
+			$billingsRefundTransaction->setUserId($billingsChargeTransaction->getUserId());
+			$billingsRefundTransaction->setSubId($billingsChargeTransaction->getSubId());
 			$billingsRefundTransaction->setCouponId(NULL);
 			$billingsRefundTransaction->setInvoiceId(NULL);
 			$billingsRefundTransaction->setTransactionBillingUuid(guid());
@@ -186,10 +186,10 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
-			$billingsRefundTransaction->setTransactionLinkId($dbChargeTransaction->getId());
+			$billingsRefundTransaction->setTransactionLinkId($billingsChargeTransaction->getId());
 			$billingsRefundTransaction->setProviderId($this->provider->getId());
-			$billingsRefundTransaction->setUserId($dbChargeTransaction->getUserId());
-			$billingsRefundTransaction->setSubId($dbChargeTransaction->getSubId());
+			$billingsRefundTransaction->setUserId($billingsChargeTransaction->getUserId());
+			$billingsRefundTransaction->setSubId($billingsChargeTransaction->getSubId());
 			$billingsRefundTransaction->setCouponId(NULL);
 			$billingsRefundTransaction->setInvoiceId(NULL);
 			//NO !!! : $billingsTransaction->setTransactionBillingUuid(guid());
