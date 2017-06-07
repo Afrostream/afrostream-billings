@@ -89,36 +89,35 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 		}
 		$transactionProviderUuid = $fields[0];
 		$transactionChargeProviderUuid = $transactionProviderUuid.".".$transactionType;
+		$initialOrderId = $this->parseInitialOrderId($transactionProviderUuid);
+		$dbSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionByOptKeyValue($this->provider->getId(), 'orderId', $initialOrderId);
+		if($dbSubscription == NULL) {
+			//EXCEPTION
+			throw new Exception("no subscription linked to this charge transaction with providerUuid=".$transactionChargeProviderUuid);
+		}
 		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $transactionChargeProviderUuid);
 		if($billingsTransaction == NULL) {
-			$initialOrderId = $this->parseInitialOrderId($transactionProviderUuid);
-			$dbSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionByOptKeyValue($this->provider->getId(), 'orderId', $initialOrderId);
-			if($dbSubscription == NULL) {
-				//EXCEPTION
-				throw new Exception("no subscription linked to this charge transaction with providerUuid=".$transactionChargeProviderUuid);
-			} else {
-				//CREATE
-				$billingsTransaction = new BillingsTransaction();
-				$billingsTransaction->setProviderId($this->provider->getId());
-				$billingsTransaction->setUserId($dbSubscription->getUserId());
-				$billingsTransaction->setSubId($dbSubscription->getId());
-				$billingsTransaction->setCouponId(NULL);
-				$billingsTransaction->setInvoiceId(NULL);
-				$billingsTransaction->setTransactionBillingUuid(guid());
-				$billingsTransaction->setTransactionProviderUuid($transactionChargeProviderUuid);
-				$billingsTransaction->setTransactionCreationDate($this->parseDateTime($fields[1], $fields[2]));
-				$billingsTransaction->setAmountInCents(intval(floatval($fields[18]) * 100));
-				$billingsTransaction->setCurrency($fields[17]);
-				$billingsTransaction->setCountry($fields[11]);
-				$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
-				$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
-				$billingsTransaction->setInvoiceProviderUuid(NULL);
-				$billingsTransaction->setMessage('');
-				$billingsTransaction->setUpdateType('import');
-				$billingsTransaction->setPlatformId($this->provider->getPlatformId());
-				$billingsTransaction->setPaymentMethodType(new BillingPaymentMethodType(BillingPaymentMethodType::googleplay));
-				$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
-			}
+			//CREATE
+			$billingsTransaction = new BillingsTransaction();
+			$billingsTransaction->setProviderId($this->provider->getId());
+			$billingsTransaction->setUserId($dbSubscription->getUserId());
+			$billingsTransaction->setSubId($dbSubscription->getId());
+			$billingsTransaction->setCouponId(NULL);
+			$billingsTransaction->setInvoiceId(NULL);
+			$billingsTransaction->setTransactionBillingUuid(guid());
+			$billingsTransaction->setTransactionProviderUuid($transactionChargeProviderUuid);
+			$billingsTransaction->setTransactionCreationDate($this->parseDateTime($fields[1], $fields[2]));
+			$billingsTransaction->setAmountInCents(intval(floatval($fields[18]) * 100));
+			$billingsTransaction->setCurrency($fields[17]);
+			$billingsTransaction->setCountry($fields[11]);
+			$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
+			$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
+			$billingsTransaction->setInvoiceProviderUuid(NULL);
+			$billingsTransaction->setMessage('');
+			$billingsTransaction->setUpdateType('import');
+			$billingsTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsTransaction->setPaymentMethodType(new BillingPaymentMethodType(BillingPaymentMethodType::googleplay));
+			$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 		} else {
 			//UPDATE
 			$billingsTransaction->setProviderId($this->provider->getId());
