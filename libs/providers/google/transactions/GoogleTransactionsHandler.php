@@ -221,7 +221,7 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 	}
 	
 	protected function parseInitialOrderId($transactionProviderUuid) {
-		return(substr($transactionOrderId, 0, 24));
+		return(substr($transactionProviderUuid, 0, 24));
 	}
 	
 }
