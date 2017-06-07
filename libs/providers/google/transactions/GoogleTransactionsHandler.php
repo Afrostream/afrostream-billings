@@ -104,9 +104,9 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setTransactionBillingUuid(guid());
 			$billingsTransaction->setTransactionProviderUuid($transactionChargeProviderUuid);
 			$billingsTransaction->setTransactionCreationDate((new DateTime())->setTimestamp($fields[2]));
-			$billingsTransaction->setAmountInCents(intval(floatval($fields[13]) * 100));
+			$billingsTransaction->setAmountInCents(intval(floatval($fields[12]) * 100));
 			$billingsTransaction->setCurrency($fields[9]);
-			$billingsTransaction->setCountry($fields[17]);
+			$billingsTransaction->setCountry($fields[16]);
 			$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
 			$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
 			$billingsTransaction->setInvoiceProviderUuid(NULL);
@@ -125,9 +125,9 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 			//NO !!! : $billingsTransaction->setTransactionBillingUuid(guid());
 			$billingsTransaction->setTransactionProviderUuid($transactionChargeProviderUuid);
 			$billingsTransaction->setTransactionCreationDate((new DateTime())->setTimestamp($fields[2]));
-			$billingsTransaction->setAmountInCents(intval(floatval($fields[13]) * 100));
+			$billingsTransaction->setAmountInCents(intval(floatval($fields[12]) * 100));
 			$billingsTransaction->setCurrency($fields[9]);
-			$billingsTransaction->setCountry($fields[17]);
+			$billingsTransaction->setCountry($fields[16]);
 			$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
 			$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
 			$billingsTransaction->setInvoiceProviderUuid(NULL);
@@ -170,9 +170,9 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setTransactionBillingUuid(guid());
 			$billingsRefundTransaction->setTransactionProviderUuid($transactionRefundProviderUuid);
 			$billingsRefundTransaction->setTransactionCreationDate((new DateTime())->setTimestamp($fields[2]));
-			$billingsRefundTransaction->setAmountInCents(abs(intval(floatval($fields[13]) * 100)));
+			$billingsRefundTransaction->setAmountInCents(abs(intval(floatval($fields[12]) * 100)));
 			$billingsRefundTransaction->setCurrency($fields[9]);
-			$billingsRefundTransaction->setCountry($fields[17]);
+			$billingsRefundTransaction->setCountry($fields[16]);
 			$billingsRefundTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
 			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);
@@ -192,9 +192,9 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 			//NO !!! : $billingsTransaction->setTransactionBillingUuid(guid());
 			$billingsRefundTransaction->setTransactionProviderUuid($transactionRefundProviderUuid);
 			$billingsRefundTransaction->setTransactionCreationDate((new DateTime())->setTimestamp($fields[2]));
-			$billingsRefundTransaction->setAmountInCents(abs(intval(floatval($fields[13]) * 100)));
+			$billingsRefundTransaction->setAmountInCents(abs(intval(floatval($fields[12]) * 100)));
 			$billingsRefundTransaction->setCurrency($fields[9]);
-			$billingsRefundTransaction->setCountry($fields[17]);
+			$billingsRefundTransaction->setCountry($fields[16]);
 			$billingsRefundTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
 			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
 			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);
