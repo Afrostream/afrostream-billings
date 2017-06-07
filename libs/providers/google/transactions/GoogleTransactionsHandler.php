@@ -146,7 +146,7 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 	
 	protected function doImportRefundTransactionLine(array $fields) {
 		config::getLogger()->addInfo("importing refund transaction line...");
-		$dbRefundTransaction = NULL;
+		$billingsRefundTransaction = NULL;
 		$transactionType = $fields[4];
 		if($transactionType != 'Charge refund') {
 			$msg = "transactionType expected is Charge refund, but ".$transactionType;
