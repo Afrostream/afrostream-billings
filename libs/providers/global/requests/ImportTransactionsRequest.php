@@ -8,6 +8,7 @@ class ImportTransactionsRequest extends ActionRequest {
 	
 	protected $providerName = NULL;
 	protected $uploadedFile = NULL;
+	protected $fileType = 'salesreport';
 	
 	public function __construct() {
 		parent::__construct();
@@ -27,6 +28,14 @@ class ImportTransactionsRequest extends ActionRequest {
 	
 	public function getUploadedFile() {
 		return($this->uploadedFile);
+	}
+	
+	public function setFileType($fileType) {
+		$this->fileType = $fileType;
+	}
+	
+	public function getFileType() {
+		return($this->fileType);
 	}
 	
 }
