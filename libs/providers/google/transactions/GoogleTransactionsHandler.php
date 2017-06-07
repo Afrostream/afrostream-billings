@@ -53,22 +53,28 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 	*/
 	
 	protected function doImportTransactionLine(array $fields) {
-		if(count($fields) < 19) {
-			$msg = "line cannot be processed, it contains only ".count($fields)." fields, 19 minimum are expected";
-			config::getLogger()->addError($msg);
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		$transactionType = $fields[4];
-		switch($transactionType) {
-			case 'Charge' :
-				$this->doImportChargeTransactionLine($fields);
-				break;
-			case 'Charge refund' :
-				$this->doImportRefundTransactionLine($fields);
-				break;
-			default :
-				config::getLogger()->addInfo("transactionType=".$transactionType." ignored");
-				break;
+		try {
+			if(count($fields) < 19) {
+				$msg = "line cannot be processed, it contains only ".count($fields)." fields, 19 minimum are expected";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$transactionType = $fields[4];
+			switch($transactionType) {
+				case 'Charge' :
+					$this->doImportChargeTransactionLine($fields);
+					break;
+				case 'Charge refund' :
+					$this->doImportRefundTransactionLine($fields);
+					break;
+				default :
+					config::getLogger()->addInfo("transactionType=".$transactionType." ignored");
+					break;
+			}
+		} catch(Exception $e) {
+			$msg = "an error occurred while processing a transaction line, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("processing a transaction line failed : ".$msg);
+			/*throw $e;*/
 		}
 	}
 	
@@ -80,17 +86,58 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$transactionProviderUuid = $fields[0];
-		$dbTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $transactionProviderUuid);
+		$transactionChargeProviderUuid = $transactionProviderUuid.".".$transactionType;
+		$dbTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $transactionChargeProviderUuid);
 		if($dbTransaction == NULL) {
 			$initialOrderId = $this->parseInitialOrderId($transactionProviderUuid);
 			$dbSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionByOptKeyValue($this->provider->getId(), 'orderId', $initialOrderId);
 			if($dbSubscription == NULL) {
 				//EXCEPTION
+				throw new Exception("no subscription linked to this charge transaction with providerUuid=".$transactionChargeProviderUuid);
 			} else {
 				//CREATE
+				$billingsTransaction = new BillingsTransaction();
+				$billingsTransaction->setProviderId($this->provider->getId());
+				$billingsTransaction->setUserId($dbSubscription->getUserId());
+				$billingsTransaction->setSubId($dbSubscription->getId());
+				$billingsTransaction->setCouponId(NULL);
+				$billingsTransaction->setInvoiceId(NULL);
+				$billingsTransaction->setTransactionBillingUuid(guid());
+				$billingsTransaction->setTransactionProviderUuid($transactionChargeProviderUuid);
+				$billingsTransaction->setTransactionCreationDate($this->parseDateTime($fields[1], $fields[2]));
+				$billingsTransaction->setAmountInCents(intval(floatval($fields[18]) * 100));
+				$billingsTransaction->setCurrency($fields[17]);
+				$billingsTransaction->setCountry($fields[11]);
+				$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
+				$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
+				$billingsTransaction->setInvoiceProviderUuid(NULL);
+				$billingsTransaction->setMessage('');
+				$billingsTransaction->setUpdateType('import');
+				$billingsTransaction->setPlatformId($this->provider->getPlatformId());
+				$billingsTransaction->setPaymentMethodType(new BillingPaymentMethodType(BillingPaymentMethodType::googleplay));
+				$billingsTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsTransaction);
 			}
 		} else {
 			//UPDATE
+			$billingsTransaction->setProviderId($this->provider->getId());
+			$billingsTransaction->setUserId($dbSubscription->getUserId());
+			$billingsTransaction->setSubId($dbSubscription->getId());
+			$billingsTransaction->setCouponId(NULL);
+			$billingsTransaction->setInvoiceId(NULL);
+			//NO !!! : $billingsTransaction->setTransactionBillingUuid(guid());
+			$billingsTransaction->setTransactionProviderUuid($transactionChargeProviderUuid);
+			$billingsTransaction->setTransactionCreationDate($this->parseDateTime($fields[1], $fields[2]));
+			$billingsTransaction->setAmountInCents(intval(floatval($fields[18]) * 100));
+			$billingsTransaction->setCurrency($fields[17]);
+			$billingsTransaction->setCountry($fields[11]);
+			$billingsTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
+			$billingsTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::purchase));
+			$billingsTransaction->setInvoiceProviderUuid(NULL);
+			$billingsTransaction->setMessage('');
+			$billingsTransaction->setUpdateType('import');
+			//NO !!! : $billingsTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsTransaction->setPaymentMethodType(new BillingPaymentMethodType(BillingPaymentMethodType::googleplay));
+			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
 	}
 	
@@ -101,11 +148,59 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		$transactionProviderUuid = $fields[0];
-		$dbTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $transactionProviderUuid);
-		if($dbTransaction == NULL) {
+		$transactionRefundProviderUuid = $transactionProviderUuid.".".$transactionType;
+		$transactionChargeProviderUuid = $transactionProviderUuid."."."Charge";
+		$dbChargeTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $transactionChargeProviderUuid);
+		if($dbChargeTransaction == NULL) {
 			//EXCEPTION (CHARGE MUST EXIST BEFORE)
+			throw new Exception("no charge linked to this refund transaction with providerUuid=".$transactionRefundProviderUuid);
+		}
+		$dbRefundTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $transactionRefundProviderUuid);
+		if($dbRefundTransaction == NULL) {
+			//CREATE
+			$billingsRefundTransaction = new BillingsTransaction();
+			$billingsRefundTransaction->setTransactionLinkId($dbChargeTransaction->getId());
+			$billingsRefundTransaction->setProviderId($this->provider->getId());
+			$billingsRefundTransaction->setUserId($dbChargeTransaction->getUserId());
+			$billingsRefundTransaction->setSubId($dbChargeTransaction->getSubId());
+			$billingsRefundTransaction->setCouponId(NULL);
+			$billingsRefundTransaction->setInvoiceId(NULL);
+			$billingsRefundTransaction->setTransactionBillingUuid(guid());
+			$billingsRefundTransaction->setTransactionProviderUuid($transactionRefundProviderUuid);
+			$billingsRefundTransaction->setTransactionCreationDate($this->parseDateTime($fields[1], $fields[2]));
+			$billingsRefundTransaction->setAmountInCents(intval(floatval($fields[18]) * 100));
+			$billingsRefundTransaction->setCurrency($fields[17]);
+			$billingsRefundTransaction->setCountry($fields[11]);
+			$billingsRefundTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
+			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
+			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);
+			$billingsRefundTransaction->setMessage('');
+			$billingsRefundTransaction->setUpdateType('import');
+			$billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsRefundTransaction->setPaymentMethodType(new BillingPaymentMethodType(BillingPaymentMethodType::googleplay));
+			$billingsRefundTransaction = BillingsTransactionDAO::addBillingsTransaction($billingsRefundTransaction);
 		} else {
 			//UPDATE
+			$billingsRefundTransaction->setTransactionLinkId($dbChargeTransaction->getId());
+			$billingsRefundTransaction->setProviderId($this->provider->getId());
+			$billingsRefundTransaction->setUserId($dbChargeTransaction->getUserId());
+			$billingsRefundTransaction->setSubId($dbChargeTransaction->getSubId());
+			$billingsRefundTransaction->setCouponId(NULL);
+			$billingsRefundTransaction->setInvoiceId(NULL);
+			//NO !!! : $billingsTransaction->setTransactionBillingUuid(guid());
+			$billingsRefundTransaction->setTransactionProviderUuid($transactionRefundProviderUuid);
+			$billingsRefundTransaction->setTransactionCreationDate($this->parseDateTime($fields[1], $fields[2]));
+			$billingsRefundTransaction->setAmountInCents(intval(floatval($fields[18]) * 100));
+			$billingsRefundTransaction->setCurrency($fields[17]);
+			$billingsRefundTransaction->setCountry($fields[11]);
+			$billingsRefundTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
+			$billingsRefundTransaction->setTransactionType(new BillingsTransactionType(BillingsTransactionType::refund));
+			$billingsRefundTransaction->setInvoiceProviderUuid(NULL);
+			$billingsRefundTransaction->setMessage('');
+			$billingsRefundTransaction->setUpdateType('import');
+			//NO !!! : $billingsRefundTransaction->setPlatformId($this->provider->getPlatformId());
+			$billingsRefundTransaction->setPaymentMethodType(new BillingPaymentMethodType(BillingPaymentMethodType::googleplay));
+			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
 	}
 	
