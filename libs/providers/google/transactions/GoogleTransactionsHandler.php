@@ -79,6 +79,8 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 	}
 	
 	protected function doImportChargeTransactionLine(array $fields) {
+		config::getLogger()->addInfo("importing charge transaction line...");
+		$billingsTransaction = NULL;
 		$transactionType = $fields[4];
 		if($transactionType != 'Charge') {
 			$msg = "transactionType expected is Charge, but ".$transactionType;
@@ -87,8 +89,8 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 		}
 		$transactionProviderUuid = $fields[0];
 		$transactionChargeProviderUuid = $transactionProviderUuid.".".$transactionType;
-		$dbTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $transactionChargeProviderUuid);
-		if($dbTransaction == NULL) {
+		$billingsTransaction = BillingsTransactionDAO::getBillingsTransactionByTransactionProviderUuid($this->provider->getId(), $transactionChargeProviderUuid);
+		if($billingsTransaction == NULL) {
 			$initialOrderId = $this->parseInitialOrderId($transactionProviderUuid);
 			$dbSubscription = BillingsSubscriptionDAO::getBillingsSubscriptionByOptKeyValue($this->provider->getId(), 'orderId', $initialOrderId);
 			if($dbSubscription == NULL) {
@@ -139,9 +141,13 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsTransaction->setPaymentMethodType(new BillingPaymentMethodType(BillingPaymentMethodType::googleplay));
 			$billingsTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsTransaction);
 		}
+		config::getLogger()->addInfo("importing charge transaction line done successfully");
+		return($billingsTransaction);
 	}
 	
 	protected function doImportRefundTransactionLine(array $fields) {
+		config::getLogger()->addInfo("importing refund transaction line...");
+		$dbRefundTransaction = NULL;
 		$transactionType = $fields[4];
 		if($transactionType != 'Charge refund') {
 			$msg = "transactionType expected is Charge refund, but ".$transactionType;
@@ -202,6 +208,8 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setPaymentMethodType(new BillingPaymentMethodType(BillingPaymentMethodType::googleplay));
 			$billingsRefundTransaction = BillingsTransactionDAO::updateBillingsTransaction($billingsRefundTransaction);
 		}
+		config::getLogger()->addInfo("importing refund transaction line done successfully");
+		return($billingsRefundTransaction);
 	}
 	
 	//Sample Apr 1, 2017 1:12:32 AM PDT
