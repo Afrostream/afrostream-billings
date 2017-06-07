@@ -173,7 +173,7 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 			$billingsRefundTransaction->setTransactionBillingUuid(guid());
 			$billingsRefundTransaction->setTransactionProviderUuid($transactionRefundProviderUuid);
 			$billingsRefundTransaction->setTransactionCreationDate($this->parseDateTime($fields[1], $fields[2]));
-			$billingsRefundTransaction->setAmountInCents(intval(floatval($fields[18]) * 100));
+			$billingsRefundTransaction->setAmountInCents(abs(intval(floatval($fields[18]) * 100)));
 			$billingsRefundTransaction->setCurrency($fields[17]);
 			$billingsRefundTransaction->setCountry($fields[11]);
 			$billingsRefundTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
@@ -195,7 +195,7 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 			//NO !!! : $billingsTransaction->setTransactionBillingUuid(guid());
 			$billingsRefundTransaction->setTransactionProviderUuid($transactionRefundProviderUuid);
 			$billingsRefundTransaction->setTransactionCreationDate($this->parseDateTime($fields[1], $fields[2]));
-			$billingsRefundTransaction->setAmountInCents(intval(floatval($fields[18]) * 100));
+			$billingsRefundTransaction->setAmountInCents(abs(intval(floatval($fields[18]) * 100)));
 			$billingsRefundTransaction->setCurrency($fields[17]);
 			$billingsRefundTransaction->setCountry($fields[11]);
 			$billingsRefundTransaction->setTransactionStatus(new BillingsTransactionStatus(BillingsTransactionStatus::success));
