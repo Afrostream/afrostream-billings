@@ -2,8 +2,6 @@
 
 require_once __DIR__ . '/../../../global/requests/ActionRequest.php';
 
-use Slim\Http\UploadedFile;
-
 class ImportTransactionsRequest extends ActionRequest {
 	
 	protected $providerName = NULL;
@@ -22,8 +20,8 @@ class ImportTransactionsRequest extends ActionRequest {
 		return($this->providerName);
 	}
 	
-	public function setUploadedFile(UploadedFile $uploadFile) {
-		$this->uploadedFile = $uploadFile;
+	public function setUploadedFile($filepath) {
+		$this->uploadedFile = $filepath;
 	}
 	
 	public function getUploadedFile() {

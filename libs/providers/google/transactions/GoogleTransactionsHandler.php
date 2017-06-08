@@ -13,7 +13,7 @@ class GoogleTransactionsHandler extends ProviderTransactionsHandler {
 	public function doImportTransactions(ImportTransactionsRequest $importTransactionsRequest) {
 		config::getLogger()->addInfo("importing transactions...");
 		$transactionsFileRes = NULL;
-		if(($transactionsFileRes = fopen($importTransactionsRequest->getUploadedFile()->file, 'r')) === false) {
+		if(($transactionsFileRes = fopen($importTransactionsRequest->getUploadedFile(), 'r')) === false) {
 			throw new Exception("file cannot be opened for reading");
 		}
 		$lineNumber = 0;

@@ -177,7 +177,7 @@ class TransactionsController extends BillingsController {
 			$importTransactionsRequest = new ImportTransactionsRequest();
 			$importTransactionsRequest->setOrigin('api');
 			$importTransactionsRequest->setProviderName($providerName);
-			$importTransactionsRequest->setUploadedFile($uploadedFile);
+			$importTransactionsRequest->setUploadedFile($uploadedFile->file);
 			$transactionsHandler->doImportTransactions($importTransactionsRequest);
 			return($this->returnObjectAsJson($response, NULL, NULL));
 		} catch(BillingsException $e) {
