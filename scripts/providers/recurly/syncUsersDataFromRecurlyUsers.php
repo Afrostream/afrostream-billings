@@ -26,17 +26,17 @@ if(isset($_GET["-providerUuid"])) {
 	$providerUuid = $_GET["-providerUuid"];
 	$provider = ProviderDAO::getProviderByUuid($providerUuid);
 } else {
-	$msg = "-providerUuid field is missing";
+	$msg = "-providerUuid field is missing\n";
 	die($msg);
 }
 
 if($provider == NULL) {
-	$msg = "provider with uuid=".$providerUuid." not found";
+	$msg = "provider with uuid=".$providerUuid." not found\n";
 	die($msg);
 }
 
 if($provider->getName() != 'recurly') {
-	$msg = "provider with uuid=".$providerUuid." is not connected to recurly";
+	$msg = "provider with uuid=".$providerUuid." is not connected to recurly\n";
 	die($msg);
 }
 

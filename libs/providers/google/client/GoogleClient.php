@@ -36,6 +36,27 @@ class GoogleClient {
 		$androidPublisher = new Google_Service_AndroidPublisher($client);
 		return($androidPublisher->purchases_subscriptions->revoke($expireSubscriptionRequest->getPackageName(), $expireSubscriptionRequest->getSubscriptionId(), $expireSubscriptionRequest->getToken()));
 	}
+	
+	public function getContentFileFromZip($bucket, $fileZipPath, $filePathInZip) {
+		$client = new Google_Client();
+		$client->setAuthConfig($this->config);
+		$client->addScope(Google_Service_Storage::CLOUD_PLATFORM);
+		$storageService = new Google_Service_Storage($client);
+		$google_Service_Storage_StorageObject = $storageService->objects->get($bucket, $fileZipPath);
+		$httpClient = $client->authorize();
+		$current_file_path = NULL;
+		if(($current_file_path = tempnam('', 'tmp')) === false) {
+			throw new Exception('temporary file cannot be created');
+		}
+		$httpClient->request('GET', $google_Service_Storage_StorageObject->getMediaLink(), ['sink' => $current_file_path]);
+		$zip = new ZipArchive();
+		$zip->open($current_file_path);
+		$result = $zip->getFromName($filePathInZip);
+		$zip->close();
+		unlink($current_file_path);
+		$current_file_path = NULL;
+		return($result);
+	}
 }
 
 class GoogleClientRequest {

@@ -2186,7 +2186,24 @@ class BillingsSubscriptionDAO {
 		
 		return($out);
 	}
-		
+	
+	public static function getBillingsSubscriptionByOptKeyValue($providerId, $optsKey, $optsValue) {
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS";
+		$query.= " INNER JOIN billing_subscriptions_opts BSO ON (BS._id = BSO.subid)";
+		$query.= " WHERE BS.deleted = false AND BSO.deleted = false AND BS.providerid = $1 AND BSO.key = $2 AND BSO.value = $3";
+		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $optsKey, $optsValue));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingsSubscriptionFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 }
 
 BillingsSubscriptionDAO::init();
@@ -2633,6 +2650,7 @@ class BillingsSubscriptionOptsDAO {
 		// free result
 		pg_free_result($result);
 	}
+	
 }
 
 class BillingInfo implements JsonSerializable {
