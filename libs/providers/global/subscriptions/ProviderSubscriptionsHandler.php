@@ -605,9 +605,8 @@ class ProviderSubscriptionsHandler {
 						$substitutions['%amountWithPromo%'] = money_format('%!.2n', (float) ($amountInCentsWithPromo / 100));
 						break;
 					case 'percent':
-						$amountInCentsOfPromoExact = (float) ($internalPlan->getAmountInCents() * $internalCouponsCampaign->getPercent() / 100);
-						$amountInCentsWithPromo = floor((float) ($internalPlan->getAmountInCents() - $amountInCentsOfPromoExact));
-						$amountInCentsOfPromo = $internalPlan->getAmountInCents() - $amountInCentsWithPromo;
+						$amountInCentsOfPromo = floor((float) ($internalPlan->getAmountInCents() * $internalCouponsCampaign->getPercent() / 100));
+						$amountInCentsWithPromo = $internalPlan->getAmountInCents() - $amountInCentsOfPromo;
 						$substitutions['%amountInCentsOfPromo%'] = $amountInCentsOfPromo;
 						$substitutions['%amountInCentsWithPromo%'] = $amountInCentsWithPromo;
 						$substitutions['%amountOfPromo%'] = money_format('%!.2n', (float) ($amountInCentsOfPromo / 100));
