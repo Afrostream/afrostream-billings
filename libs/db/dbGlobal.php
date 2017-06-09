@@ -721,6 +721,46 @@ class InternalPlanDAO {
 		return(self::getInternalPlanById($internalPlan->getId()));
 	}
 	
+	public static function updateName(InternalPlan $internalPlan) {
+		$query = "UPDATE billing_internal_plans SET name = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$internalPlan->getName(),
+						$internalPlan->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getInternalPlanById($internalPlan->getId()));
+	}
+	
+	public static function updateDescription(InternalPlan $internalPlan) {
+		$query = "UPDATE billing_internal_plans SET description = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$internalPlan->getDescription(),
+						$internalPlan->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getInternalPlanById($internalPlan->getId()));
+	}
+	
+	public static function updateDetails(InternalPlan $internalPlan) {
+		$query = "UPDATE billing_internal_plans SET details = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	json_encode($internalPlan->getDetails()),
+						$internalPlan->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getInternalPlanById($internalPlan->getId()));
+	}
+	
+	public static function updateIsVisible(InternalPlan $internalPlan) {
+		$query = "UPDATE billing_internal_plans SET is_visible = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$internalPlan->getIsVisible() === true ? 'true' : 'false',
+						$internalPlan->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getInternalPlanById($internalPlan->getId()));
+	}
+	
 }
 
 InternalPlanDAO::init();

@@ -293,15 +293,15 @@ class InternalPlansController extends BillingsController {
 	public function update(Request $request, Response $response, array $args) {
 		try {
 			$data = json_decode($request->getBody(), true);
+			$updateInternalPlanRequest = new UpdateInternalPlanRequest();
+			$updateInternalPlanRequest->setOrigin('api');
 			if(!isset($args['internalPlanUuid'])) {
 				//exception
 				$msg = "field 'internalPlanUuid' is missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$internalPlanUuid = $args['internalPlanUuid'];
-			$internalPlansHandler = new InternalPlansFilteredHandler();
-			$internalPlan = NULL;
+			$updateInternalPlanRequest->setInternalPlanUuid($args['internalPlanUuid']);
 			if(isset($data['internalPlanOpts'])) {
 				if(!is_array($data['internalPlanOpts'])) {
 					//exception
@@ -309,20 +309,28 @@ class InternalPlansController extends BillingsController {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				$internalplanOptsArray = $data['internalPlanOpts'];
-				$updateInternalPlanRequest = new UpdateInternalPlanRequest();
-				$updateInternalPlanRequest->setInternalPlanUuid($internalPlanUuid);
-				$updateInternalPlanRequest->setInternalPlanOpts($internalplanOptsArray);
-				$updateInternalPlanRequest->setOrigin('api');
-				$internalPlan = $internalPlansHandler->doUpdateInternalPlanOpts($updateInternalPlanRequest);
+				$updateInternalPlanRequest->setInternalPlanOpts($data['internalPlanOpts']);
 			}
-			if($internalPlan == NULL) {
-				//NO UPDATE, JUST SEND BACK THE CURRENT INTERNAL_PLAN
-				$getInternalPlanRequest = new GetInternalPlanRequest();
-				$getInternalPlanRequest->setInternalPlanUuid($internalPlanUuid);
-				$getInternalPlanRequest->setOrigin('api');
-				$internalPlan = $internalPlansHandler->doGetInternalPlan($getInternalPlanRequest);
+			if(isset($data['name'])) {
+				$updateInternalPlanRequest->setName($data['name']);
 			}
+			if(isset($data['description'])) {
+				$updateInternalPlanRequest->setDescription($data['description']);
+			}
+			if(isset($data['isVisible'])) {
+				$updateInternalPlanRequest->setIsVisible($data['isVisible'] == 'true' ? true : false);
+			}
+			if(isset($data['details'])) {
+				if(!is_array($data['details'])) {
+					//exception
+					$msg = "field 'details' must be an array";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$updateInternalPlanRequest->setDetails($data['details']);
+			}
+			$internalPlansHandler = new InternalPlansFilteredHandler();
+			$internalPlan = $internalPlansHandler->doUpdateInternalPlan($updateInternalPlanRequest);
 			return($this->returnObjectAsJson($response, 'internalPlan', $internalPlan));
 		} catch(BillingsException $e) {
 			$msg = "an exception occurred while updating an internal plan, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
