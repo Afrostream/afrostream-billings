@@ -1312,6 +1312,13 @@ $app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillin
 	return($internalCouponsCampaignsController->generateInternalCoupons($request, $response, $args));
 });
 
+//actions to internalcouponscampaigns : update
+
+$app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->update($request, $response, $args));
+});
+
 //contexts
 
 //get one context

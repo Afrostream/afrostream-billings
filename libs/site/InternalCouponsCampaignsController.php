@@ -10,6 +10,7 @@ require_once __DIR__ . '/../providers/global/requests/CreateInternalCouponsCampa
 require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToInternalCouponsCampaignRequest.php';
 require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromInternalCouponsCampaignRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GenerateInternalCouponsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateInternalCouponsCampaignRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -357,6 +358,8 @@ class InternalCouponsCampaignsController extends BillingsController {
 			}
 			$couponsCampaignInternalBillingUuid = $args['couponsCampaignInternalBillingUuid'];
 			//
+			$timeframes = $data['couponsCampaignTimeframes'];
+			
 			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
 			$generateInternalCouponsRequest = new GenerateInternalCouponsRequest();
 			$generateInternalCouponsRequest->setCouponsCampaignInternalBillingUuid($couponsCampaignInternalBillingUuid);
@@ -378,6 +381,69 @@ class InternalCouponsCampaignsController extends BillingsController {
 		}
 	}
 	
+	public function update(Request $request, Response $response, array $args) {
+		try {
+			$data = json_decode($request->getBody(), true);
+			$updateInternalCouponsCampaignRequest = new UpdateInternalCouponsCampaignRequest();
+			$updateInternalCouponsCampaignRequest->setOrigin('api');
+			if(!isset($args['couponsCampaignInternalBillingUuid'])) {
+				//exception
+				$msg = "field 'couponsCampaignInternalBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$updateInternalCouponsCampaignRequest->setCouponsCampaignInternalBillingUuid($args['couponsCampaignInternalBillingUuid']);
+			if(isset($data['name'])) {
+				$updateInternalCouponsCampaignRequest->setName($data['name']);
+			}
+			if(isset($data['description'])) {
+				$updateInternalCouponsCampaignRequest->setDescription($data['description']);
+			}
+			if(isset($data['emailsEnabled'])) {
+				$updateInternalCouponsCampaignRequest->setEmailsEnabled($data['emailsEnabled'] === true ? true : false);
+			}
+			if(isset($data['couponsCampaignTimeframes'])) {
+				if(!is_array($data['couponsCampaignTimeframes'])) {
+					//Exception
+					$msg = "field 'couponsCampaignTimeframes' must be an array";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$timeframes = $data['couponsCampaignTimeframes'];
+				$timeframesSize = count($timeframes);
+				if($timeframesSize == 0) {
+					//exception
+					$msg = "at least one timeframe must be provided";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				foreach ($timeframes as $timeframe) {
+					$updateInternalCouponsCampaignRequest->addTimeframe(new CouponTimeframe($timeframe));
+				}
+			}
+			if(isset($data['maxRedemptionsByUser'])) {
+				$updateInternalCouponsCampaignRequest->setMaxRedemptionsByUser($data['maxRedemptionsByUser']);
+			}
+			if(isset($data['totalNumber'])) {
+				$updateInternalCouponsCampaignRequest->setTotalNumber($data['totalNumber']);
+			}
+			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
+			$couponsCampaign = $internalCouponsCampaignsHandler->doUpdateInternalCouponsCampaign($updateInternalCouponsCampaignRequest);
+			return($this->returnObjectAsJson($response, 'couponsCampaign', $couponsCampaign));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while updating an InternalCouponsCampaign, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while updating an InternalCouponsCampaign, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+		
 }
 
 ?>

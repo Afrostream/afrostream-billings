@@ -10,6 +10,7 @@ require_once __DIR__ . '/../providers/global/requests/CreateInternalCouponsCampa
 require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToInternalCouponsCampaignRequest.php';
 require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromInternalCouponsCampaignRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GenerateInternalCouponsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateInternalCouponsCampaignRequest.php';
 
 use Money\Currency;
 
@@ -322,6 +323,16 @@ class InternalCouponsCampaignsHandler {
 		}
 		switch($createInternalCouponsCampaignRequest->getGeneratedMode()) {
 			case 'single' :
+				if($createInternalCouponsCampaignRequest->getGeneratedCodeLength() != NULL) {
+					//exception
+					$msg = "generatedCodeLength parameter must be null when generatedMode is set to single";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($createInternalCouponsCampaignRequest->getTotalNumber() != NULL) {
+					//exception
+					$msg = "totalNumber parameter must be null when generatedMode is set to single";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
 				break;
 			case 'bulk' :
 				if($createInternalCouponsCampaignRequest->getGeneratedCodeLength() == NULL) {
@@ -375,6 +386,7 @@ class InternalCouponsCampaignsHandler {
 		$billingInternalCouponsCampaign->setCouponType($createInternalCouponsCampaignRequest->getCouponsCampaignType());
 		$billingInternalCouponsCampaign->setGeneratedMode($createInternalCouponsCampaignRequest->getGeneratedMode());
 		$billingInternalCouponsCampaign->setGeneratedCodeLength($createInternalCouponsCampaignRequest->getGeneratedCodeLength());
+		$billingInternalCouponsCampaign->setTotalNumber($createInternalCouponsCampaignRequest->getTotalNumber());
 		$billingInternalCouponsCampaign->setCouponTimeframes($createInternalCouponsCampaignRequest->getTimeframes());
 		$billingInternalCouponsCampaign->setEmailsEnabled($createInternalCouponsCampaignRequest->getEmailsEnabled());
 		$billingInternalCouponsCampaign->setMaxRedemptionsByUser($createInternalCouponsCampaignRequest->getMaxRedemptionsByUser());
@@ -463,6 +475,102 @@ class InternalCouponsCampaignsHandler {
 			}
 		}
 		return("-");
+	}
+	
+	public function doUpdateInternalCouponsCampaign(UpdateInternalCouponsCampaignRequest $updateInternalCouponsCampaignRequest) {
+		$couponsCampaignInternalBillingUuid = $updateInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid();
+		//
+		$db_internal_coupons_campaign = NULL;
+		try {
+			config::getLogger()->addInfo("internalCouponsCampaign updating...");
+			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid, $updateInternalCouponsCampaignRequest->getPlatform()->getId());
+			if($db_internal_coupons_campaign == NULL) {
+				$msg = "unknown couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				//name
+				if($updateInternalCouponsCampaignRequest->getName() != NULL) {
+					$db_internal_coupons_campaign->setName($updateInternalCouponsCampaignRequest->getName());
+					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateName($db_internal_coupons_campaign);
+				}
+				//description //allow empty => !==
+				if($updateInternalCouponsCampaignRequest->getDescription() !== NULL) {
+					$db_internal_coupons_campaign->setDescription($updateInternalCouponsCampaignRequest->getDescription());
+					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateDescription($db_internal_coupons_campaign);
+				}
+				//emailsEnabled
+				if($updateInternalCouponsCampaignRequest->getEmailsEnabled() !== NULL) {
+					$db_internal_coupons_campaign->setEmailsEnabled($updateInternalCouponsCampaignRequest->getEmailsEnabled());
+					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateEmailsEnabled($db_internal_coupons_campaign);
+				}
+				//timeframes
+				if($updateInternalCouponsCampaignRequest->getTimeframes() != NULL) {
+					$timeframesSize = count($updateInternalCouponsCampaignRequest->getTimeframes());
+					if($timeframesSize == 0) {
+						//exception
+						$msg = "at least one timeframe must be provided";
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					$db_internal_coupons_campaign->setCouponTimeframes($updateInternalCouponsCampaignRequest->getTimeframes());
+					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateTimeframes($db_internal_coupons_campaign);
+				}
+				if($updateInternalCouponsCampaignRequest->getMaxRedemptionsByUser() != NULL) {
+					$maxRedemptionsByUser = $updateInternalCouponsCampaignRequest->getMaxRedemptionsByUser();
+					if(!(is_numeric($maxRedemptionsByUser)) || !(is_int($maxRedemptionsByUser)) || !($maxRedemptionsByUser > 0)) {
+						$msg = "maxRedemptionsByUser parameter must be a positive integer";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					$db_internal_coupons_campaign->setMaxRedemptionsByUser($maxRedemptionsByUser);
+					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateMaxRedemptionsByUser($db_internal_coupons_campaign);
+				}
+				//TODO : totalNumber
+				if($updateInternalCouponsCampaignRequest->getTotalNumber() !== NULL) {
+					$totalNumber = $updateInternalCouponsCampaignRequest->getTotalNumber();
+					if(!(is_numeric($totalNumber)) || !(is_int($totalNumber)) || !($totalNumber > 0)) {
+						$msg = "totalNumber parameter must be a positive integer";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					switch($db_internal_coupons_campaign->getGeneratedMode()) {
+						case 'single' :
+							//exception
+							$msg = "totalNumber parameter must be null when generatedMode is set to single";
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+						case 'bulk' :
+							//nothing
+							break;
+						default :
+							$msg = "generatedMode parameter : ".$db_internal_coupons_campaign->getGeneratedMode()." is unknown";
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+					}
+					$db_internal_coupons_campaign->setTotalNumber($totalNumber);
+					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateTotalNumber($db_internal_coupons_campaign);
+				}
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
+			//done
+			config::getLogger()->addInfo("internalCouponsCampaign updating done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while updating internalCouponsCampaign, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("internalCouponsCampaign updating failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while updating internalCouponsCampaign, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("internalCouponsCampaign updating failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_internal_coupons_campaign);
 	}
 	
 }
