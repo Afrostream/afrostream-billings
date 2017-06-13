@@ -1322,6 +1322,16 @@ class PlanDAO {
 		return($out);
 	}
 	
+	public static function updateIsVisible(Plan $plan) {
+		$query = "UPDATE billing_plans SET is_visible = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$plan->getIsVisible() === true ? 'true' : 'false',
+						$plan->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getPlanById($plan->getId()));
+	}
+	
 }
 
 class Plan implements JsonSerializable {
@@ -1418,7 +1428,8 @@ class Plan implements JsonSerializable {
 				'provider' => $provider,
 				'paymentMethods' => BillingProviderPlanPaymentMethodsDAO::getBillingProviderPlanPaymentMethodsByProviderPlanId($this->_id),
 				'isVisible' => $this->isVisible,
-				'isCouponCodeCompatible' => $this->isCouponCodeCompatible
+				'isCouponCodeCompatible' => $this->isCouponCodeCompatible,
+				'providerPlanOpts' => (PlanOptsDAO::getPlanOptsByPlanId($this->_id)->jsonSerialize())
 				
 		];
 		return($return);
@@ -1426,7 +1437,7 @@ class Plan implements JsonSerializable {
 	
 }
 
-class PlanOpts {
+class PlanOpts implements JsonSerializable {
 
 	private $planid;
 	private $opts = array();
@@ -1450,6 +1461,10 @@ class PlanOpts {
 	public function getOpts() {
 		return($this->opts);
 	}
+	
+	public function jsonSerialize() {
+		return($this->opts);
+	}
 
 }
 
@@ -1469,7 +1484,36 @@ class PlanOptsDAO {
 
 		return($out);
 	}
-
+	
+	public static function updateProviderPlanOptsKey($providerPlanId, $key, $value) {
+		if(is_scalar($value)) {
+			$query = "UPDATE billing_plans_opts SET value = $3 WHERE planid = $1 AND key = $2 AND deleted = false";
+			$result = pg_query_params(config::getDbConn(), $query, array($providerPlanId, $key, trim($value)));
+			// free result
+			pg_free_result($result);
+		}
+	}
+	
+	public static function deleteProviderPlanOptsKey($providerPlanId, $key) {
+		$query = "UPDATE billing_plans_opts SET deleted = true WHERE planid = $1 AND key = $2 AND deleted = false";
+		$result = pg_query_params(config::getDbConn(), $query, array($providerPlanId, $key));
+		// free result
+		pg_free_result($result);
+	}
+	
+	public static function addProviderPlanOptsKey($providerPlanId, $key, $value) {
+		if(is_scalar($value)) {
+			$query = "INSERT INTO billing_plans_opts (planid, key, value)";
+			$query.= " VALUES ($1, $2, $3) RETURNING _id";
+			$result = pg_query_params(config::getDbConn(), $query,
+					array($providerPlanId,
+							trim($key),
+							trim($value)));
+			// free result
+			pg_free_result($result);
+		}
+	}
+	
 }
 
 class ProviderDAO {

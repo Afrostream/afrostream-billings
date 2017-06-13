@@ -23,7 +23,7 @@ class UpdateInternalPlanRequest extends ActionRequest {
 		return($this->internalPlanUuid);
 	}
 	
-	public function setInternalPlanOpts(array $internalplanOptsArray) {
+	public function setInternalPlanOptsArray(array $internalplanOptsArray) {
 		$this->internalplanOptsArray = $internalplanOptsArray;
 	}
 	

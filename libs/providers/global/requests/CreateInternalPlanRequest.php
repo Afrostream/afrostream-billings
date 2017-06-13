@@ -94,7 +94,7 @@ class CreateInternalPlanRequest extends ActionRequest {
 		return($this->vatRate);
 	}
 	
-	public function setInternalPlanOpts(array $internalplanOptsArray) {
+	public function setInternalPlanOptsArray(array $internalplanOptsArray) {
 		$this->internalplanOptsArray = $internalplanOptsArray;
 	}
 	

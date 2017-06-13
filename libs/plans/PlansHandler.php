@@ -5,6 +5,7 @@ require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/global/requests/GetProviderPlanRequest.php';
 require_once __DIR__ . '/../providers/global/requests/AddPaymentMethodToProviderPlanRequest.php';
 require_once __DIR__ . '/../providers/global/requests/RemovePaymentMethodFromProviderPlanRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateProviderPlanRequest.php';
 
 class PlansHandler {
 	
@@ -129,7 +130,66 @@ class PlansHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
 		}
 		return($plan);
-	}	
+	}
+	
+	public function doUpdateProviderPlan(UpdateProviderPlanRequest $updateProviderPlanRequest) {
+		$providerPlanBillingUuid = $updateProviderPlanRequest->getProviderPlanBillingUuid();
+		//
+		$db_provider_plan = NULL;
+		try {
+			config::getLogger()->addInfo("ProviderPlan updating...");
+			$db_provider_plan = PlanDAO::getPlanByProviderPlanBillingUuid($providerPlanBillingUuid, $updateProviderPlanRequest->getPlatform()->getId());
+			if($db_provider_plan == NULL) {
+				$msg = "unknown providerPlanBillingUuid : ".$providerPlanBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				//opts
+				if($updateProviderPlanRequest->getProviderPlanOptsArray() != NULL) {
+					$db_provider_plan_opts = PlanOptsDAO::getPlanOptsByPlanId($db_provider_plan->getId());
+					$current_provider_opts_array = $db_provider_plan_opts->getOpts();
+					foreach ($updateProviderPlanRequest->getProviderPlanOptsArray() as $key => $value) {
+						if(array_key_exists($key, $current_provider_opts_array)) {
+							//UPDATE OR DELETE
+							if(isset($value)) {
+								PlanOptsDAO::updateProviderPlanOptsKey($db_provider_plan->getId(), $key, $value);
+							} else {
+								PlanOptsDAO::deleteProviderPlanOptsKey($db_provider_plan->getId(), $key);
+							}
+						} else {
+							//ADD
+							PlanOptsDAO::addProviderPlanOptsKey($db_provider_plan->getId(), $key, $value);
+						}
+					}
+					$db_provider_plan = PlanDAO::getPlanById($db_provider_plan->getId());
+				}
+				//isVisible
+				if($updateProviderPlanRequest->getIsVisible() !== NULL) {
+					$db_provider_plan->setIsVisible($updateProviderPlanRequest->getIsVisible());
+					$db_provider_plan = PlanDAO::updateIsVisible($db_provider_plan);
+				}
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
+			//done
+			config::getLogger()->addInfo("ProviderPlan updating done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while updating ProviderPlan, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("ProviderPlan updating failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while updating ProviderPlan, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("ProviderPlan updating failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_provider_plan);
+	}
 		
 }
 

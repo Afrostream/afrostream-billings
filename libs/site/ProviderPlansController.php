@@ -6,6 +6,7 @@ require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../plans/PlansHandler.php';
 require_once __DIR__ . '/../providers/global/requests/AddPaymentMethodToProviderPlanRequest.php';
 require_once __DIR__ . '/../providers/global/requests/RemovePaymentMethodFromProviderPlanRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateProviderPlanRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -131,6 +132,48 @@ class ProviderPlansController extends BillingsController {
 			//
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while removing a paymentMethod from a ProviderPlan, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function update(Request $request, Response $response, array $args) {
+		try {
+			$data = json_decode($request->getBody(), true);
+			$updateProviderPlanRequest = new UpdateProviderPlanRequest();
+			$updateProviderPlanRequest->setOrigin('api');
+			if(!isset($args['providerPlanBillingUuid'])) {
+				//exception
+				$msg = "field 'providerPlanBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$updateProviderPlanRequest->setProviderPlanBillingUuid($args['providerPlanBillingUuid']);
+			if(isset($data['providerPlanOpts'])) {
+				if(!is_array($data['providerPlanOpts'])) {
+					//exception
+					$msg = "field 'providerPlanOpts' must be an array";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$updateProviderPlanRequest->setProviderPlanOptsArray($data['providerPlanOpts']);
+			}
+			if(isset($data['isVisible'])) {
+				$updateProviderPlanRequest->setIsVisible($data['isVisible'] === true ? true : false);
+			}
+			$plansHandler = new PlansHandler();
+			$providerPlan = $plansHandler->doUpdateProviderPlan($updateProviderPlanRequest);
+			return($this->returnObjectAsJson($response, 'providerPlan', $providerPlan));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while updating a ProviderPlan, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while updating a ProviderPlan, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));
