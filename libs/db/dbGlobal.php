@@ -989,7 +989,7 @@ class InternalPlan implements JsonSerializable {
 	}
 	
 	public function setDetails($details) {
-		$this->details =$details;
+		$this->details = $details;
 	}
 	
 	public function getDetails() {

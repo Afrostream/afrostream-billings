@@ -195,7 +195,7 @@ class InternalPlansController extends BillingsController {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
 			}
-
+			$internalplan_opts_array = $data['internalPlanOpts'];
 			$trialEnabled = (!empty($data['trialEnabled']));
 			$trialPeriodLength = null;
 			$trialPeriodUnit = null;
@@ -205,19 +205,15 @@ class InternalPlansController extends BillingsController {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-
 				if (empty($data['trialPeriodUnit']) || !in_array($data['trialPeriodUnit'], ['day', 'month'])) {
 					$msg = "field trialPeriodUnit can't be empty or must match day or month";
 					config::getLogger()->addError($msg);
 
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-
 				$trialPeriodLength = $data['trialPeriodLength'];
 				$trialPeriodUnit   = $data['trialPeriodUnit'];
 			}
-
-			$internalplan_opts_array = $data['internalPlanOpts'];
 			$internalPlansHandler = new InternalPlansFilteredHandler();
 			$createInternalPlanRequest = new CreateInternalPlanRequest();
 			$createInternalPlanRequest->setInternalPlanUuid($internalPlanUuid);
@@ -318,16 +314,18 @@ class InternalPlansController extends BillingsController {
 				$updateInternalPlanRequest->setDescription($data['description']);
 			}
 			if(isset($data['isVisible'])) {
-				$updateInternalPlanRequest->setIsVisible($data['isVisible'] == 'true' ? true : false);
+				$updateInternalPlanRequest->setIsVisible($data['isVisible'] === true ? true : false);
 			}
 			if(isset($data['details'])) {
-				if(!is_array($data['details'])) {
+				//Check is a json
+				$decodedDetails = json_decode($data['details'], true);
+				if($decodedDetails === NULL) {
 					//exception
-					$msg = "field 'details' must be an array";
+					$msg = "field 'details' must be a valid json";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				$updateInternalPlanRequest->setDetails($data['details']);
+				$updateInternalPlanRequest->setDetails($decodedDetails);
 			}
 			$internalPlansHandler = new InternalPlansFilteredHandler();
 			$internalPlan = $internalPlansHandler->doUpdateInternalPlan($updateInternalPlanRequest);

@@ -466,24 +466,25 @@ class InternalPlansHandler {
 							InternalPlanOptsDAO::addInternalPlanOptsKey($db_internal_plan->getId(), $key, $value);
 						}
 					}
+					$db_internal_plan = InternalPlanDAO::getInternalPlanById($db_internal_plan->getId());
 				}
 				//name
 				if($updateInternalPlanRequest->getName() != NULL) {
 					$db_internal_plan->setName($updateInternalPlanRequest->getName());
 					$db_internal_plan = InternalPlanDAO::updateName($db_internal_plan);
 				}
-				//description
-				if($updateInternalPlanRequest->getDescription() != NULL) {
+				//description //allow empty => !==
+				if($updateInternalPlanRequest->getDescription() !== NULL) {
 					$db_internal_plan->setDescription($updateInternalPlanRequest->getDescription());
 					$db_internal_plan = InternalPlanDAO::updateDescription($db_internal_plan);
 				}
 				//details
-				if($updateInternalPlanRequest->getDetails() != NULL) {
+				if($updateInternalPlanRequest->getDetails() !== NULL) {
 					$db_internal_plan->setDetails($updateInternalPlanRequest->getDetails());
 					$db_internal_plan = InternalPlanDAO::updateDetails($db_internal_plan);					
 				}
 				//isVisible
-				if($updateInternalPlanRequest->getIsVisible() != NULL) {
+				if($updateInternalPlanRequest->getIsVisible() !== NULL) {
 					$db_internal_plan->setIsVisible($updateInternalPlanRequest->getIsVisible());
 					$db_internal_plan = InternalPlanDAO::updateIsVisible($db_internal_plan);
 				}
@@ -494,7 +495,6 @@ class InternalPlansHandler {
 				throw $e;
 			}
 			//done
-			$db_internal_plan = InternalPlanDAO::getInternalPlanById($db_internal_plan->getId());
 			config::getLogger()->addInfo("InternalPlan updating done successfully");
 		} catch(BillingsException $e) {
 			$msg = "a billings exception occurred while updating InternalPlan, error_code=".$e->getCode().", error_message=".$e->getMessage();
