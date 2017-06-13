@@ -225,7 +225,7 @@ class InternalPlansController extends BillingsController {
 			$createInternalPlanRequest->setPeriodUnit($periodUnitStr);
 			$createInternalPlanRequest->setPeriodLength($periodLength);
 			$createInternalPlanRequest->setVatRate($vatRate);
-			$createInternalPlanRequest->setInternalPlanOpts($internalplan_opts_array);
+			$createInternalPlanRequest->setInternalPlanOptsArray($internalplan_opts_array);
 			$createInternalPlanRequest->setTrialEnabled($trialEnabled);
 			$createInternalPlanRequest->setTrialPeriodLength($trialPeriodLength);
 			$createInternalPlanRequest->setTrialPeriodUnit($trialPeriodUnit);
@@ -305,7 +305,7 @@ class InternalPlansController extends BillingsController {
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				$updateInternalPlanRequest->setInternalPlanOpts($data['internalPlanOpts']);
+				$updateInternalPlanRequest->setInternalPlanOptsArray($data['internalPlanOpts']);
 			}
 			if(isset($data['name'])) {
 				$updateInternalPlanRequest->setName($data['name']);

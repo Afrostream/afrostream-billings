@@ -1447,6 +1447,11 @@ $app->put("/billings/api/providerplans/{providerPlanBillingUuid}/removepaymentme
 	return($providerPlansController->removePaymentMethod($request, $response, $args));
 });
 
+$app->put("/billings/api/providerplans/{providerPlanBillingUuid}", function ($request, $response, $args) {
+	$providerPlansController = new ProviderPlansController();
+	return($providerPlansController->update($request, $response, $args));
+});
+
 //WebHooks
 
 //sort of 'static' URL for each provider - no parameter - in order to be compatible with most of providers
