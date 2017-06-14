@@ -5591,22 +5591,7 @@ EOL;
 		pg_free_result($result);
 		return(self::getBillingInternalCouponsCampaignById($row[0]));
 	}
-	
-	public static function getBillingInternalCouponsCampaignByName($name, $platformId) {
-		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns WHERE name = $1 AND platformid = $2";
-		$result = pg_query_params(config::getDbConn(), $query, array($name, $platformId));
-	
-		$out = null;
-	
-		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getBillingInternalCouponsCampaignFromRow($row);
-		}
-		// free result
-		pg_free_result($result);
-	
-		return($out);
-	}
-	
+		
 	public static function getBillingInternalCouponsCampaignByPrefix($prefix, $platformId) {
 		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns WHERE prefix = $1 AND platformid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($prefix, $platformId));
@@ -5620,6 +5605,76 @@ EOL;
 		pg_free_result($result);
 	
 		return($out);
+	}
+	
+	public static function updateName(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET name = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaign->getName(),
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateDescription(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET description = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaign->getDescription(),
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateEmailsEnabled(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET emails_enabled = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaign->getEmailsEnabled() === true ? 'true' : 'false',
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateTimeframes(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET coupon_timeframes = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	'{'.implode($billingInternalCouponsCampaign->getCouponTimeframes(), ',').'}',
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateMaxRedemptionsByUser(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET max_redemptions_by_user = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaign->getMaxRedemptionsByUser(),
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateTotalNumber(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET total_number = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaign->getTotalNumber(),
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateGeneratedCodeLength(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET generated_code_length = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaign->getGeneratedCodeLength(),
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
 	}
 	
 }
