@@ -12,8 +12,8 @@ class UpdateInternalCouponsCampaignRequest extends ActionRequest {
 	protected $maxRedemptionsByUser = NULL;
 	protected $totalNumber = NULL;
 	protected $generatedCodeLength = NULL;
+	protected $expiresDate = false;
 	//TODO : LATER
-	//expiresDate
 	//userNotificationsEnabled
 		
 	public function __construct() {
@@ -85,6 +85,14 @@ class UpdateInternalCouponsCampaignRequest extends ActionRequest {
 	
 	public function getGeneratedCodeLength() {
 		return($this->generatedCodeLength);
+	}
+	
+	public function setExpiresDate(DateTime $expiresDate = NULL) {
+		$this->expiresDate = $expiresDate;
+	}
+	
+	public function getExpiresDate() {
+		return($this->expiresDate);
 	}
 	
 }

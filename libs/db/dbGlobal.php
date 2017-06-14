@@ -5563,8 +5563,8 @@ EOL;
 		$query = "INSERT INTO billing_internal_coupons_campaigns";
 		$query.= " (internal_coupons_campaigns_uuid, name, description, prefix, discount_type, amount_in_cents, currency, percent,";
 		$query.= " discount_duration, discount_duration_unit, discount_duration_length, generated_mode, generated_code_length,";
-		$query.= " total_number, coupon_type, emails_enabled, platformid, coupon_timeframes, max_redemptions_by_user)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING _id";
+		$query.= " total_number, coupon_type, emails_enabled, platformid, coupon_timeframes, max_redemptions_by_user, expires_date)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 			array(	$billingInternalCouponsCampaign->getUuid(),
 					$billingInternalCouponsCampaign->getName(),
@@ -5584,7 +5584,8 @@ EOL;
 					$billingInternalCouponsCampaign->getEmailsEnabled() == true ? 't' : 'f',
 					$billingInternalCouponsCampaign->getPlatformId(),
 					'{'.implode($billingInternalCouponsCampaign->getCouponTimeframes(), ',').'}',
-					$billingInternalCouponsCampaign->getMaxRedemptionsByUser()
+					$billingInternalCouponsCampaign->getMaxRedemptionsByUser(),
+					dbGlobal::toISODate($billingInternalCouponsCampaign->getExpiresDate())
 				));
 		$row = pg_fetch_row($result);
 		// free result
@@ -5671,6 +5672,16 @@ EOL;
 		$query = "UPDATE billing_internal_coupons_campaigns SET generated_code_length = $1 WHERE _id = $2";
 		$result = pg_query_params(config::getDbConn(), $query,
 				array(	$billingInternalCouponsCampaign->getGeneratedCodeLength(),
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateExpiresDate(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET expires_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($billingInternalCouponsCampaign->getExpiresDate()),
 						$billingInternalCouponsCampaign->getId()));
 		// free result
 		pg_free_result($result);
