@@ -11,6 +11,7 @@ class UpdateInternalCouponsCampaignRequest extends ActionRequest {
 	protected $timeframes = NULL;// onSubCreation / onSubLifetime
 	protected $maxRedemptionsByUser = NULL;
 	protected $totalNumber = NULL;
+	protected $generatedCodeLength = NULL;
 	//TODO : LATER
 	//expiresDate
 	//userNotificationsEnabled
@@ -76,6 +77,14 @@ class UpdateInternalCouponsCampaignRequest extends ActionRequest {
 	
 	public function getTotalNumber() {
 		return($this->totalNumber);
+	}
+	
+	public function setGeneratedCodeLength($generatedCodeLength) {
+		$this->generatedCodeLength = $generatedCodeLength;
+	}
+	
+	public function getGeneratedCodeLength() {
+		return($this->generatedCodeLength);
 	}
 	
 }

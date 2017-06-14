@@ -225,7 +225,7 @@ class InternalCouponsCampaignsHandler {
 			$msg = "prefix parameter cannot be empty";
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		if($createInternalCouponsCampaignRequest->getPercent() != NULL) {
+		if($createInternalCouponsCampaignRequest->getPercent() !== NULL) {
 			$percent = $createInternalCouponsCampaignRequest->getPercent();
 			if(!(is_numeric($percent)) || !(is_int($percent)) || !($percent > 0) || !($percent <= 100)) {
 				$msg = "percent parameter must be an integer > 0 and <= 100";
@@ -233,7 +233,7 @@ class InternalCouponsCampaignsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 		}
-		if($createInternalCouponsCampaignRequest->getAmountInCents() != NULL) {
+		if($createInternalCouponsCampaignRequest->getAmountInCents() !== NULL) {
 			$amountInCents = $createInternalCouponsCampaignRequest->getAmountInCents();
 			if(!(is_numeric($amountInCents)) || !(is_int($amountInCents)) || !($amountInCents > 0)) {
 				$msg = "amountInCents parameter must be a positive integer";
@@ -241,7 +241,7 @@ class InternalCouponsCampaignsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 		}
-		if($createInternalCouponsCampaignRequest->getDiscountDurationLength() != NULL) {
+		if($createInternalCouponsCampaignRequest->getDiscountDurationLength() !== NULL) {
 			$discountDurationLength = $createInternalCouponsCampaignRequest->getDiscountDurationLength();
 			if(!(is_numeric($discountDurationLength)) || !(is_int($discountDurationLength)) || !($discountDurationLength > 0)) {
 				$msg = "discountDurationLength parameter must be a positive integer";
@@ -249,7 +249,7 @@ class InternalCouponsCampaignsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}			
 		}
-		if($createInternalCouponsCampaignRequest->getTotalNumber() != NULL) {
+		if($createInternalCouponsCampaignRequest->getTotalNumber() !== NULL) {
 			$totalNumber = $createInternalCouponsCampaignRequest->getTotalNumber();
 			if(!(is_numeric($totalNumber)) || !(is_int($totalNumber)) || !($totalNumber > 0)) {
 				$msg = "totalNumber parameter must be a positive integer";
@@ -257,7 +257,7 @@ class InternalCouponsCampaignsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}			
 		}
-		if($createInternalCouponsCampaignRequest->getMaxRedemptionsByUser() != NULL) {
+		if($createInternalCouponsCampaignRequest->getMaxRedemptionsByUser() !== NULL) {
 			$maxRedemptionsByUser = $createInternalCouponsCampaignRequest->getMaxRedemptionsByUser();
 			if(!(is_numeric($maxRedemptionsByUser)) || !(is_int($maxRedemptionsByUser)) || !($maxRedemptionsByUser > 0)) {
 				$msg = "maxRedemptionsByUser parameter must be a positive integer";
@@ -519,7 +519,7 @@ class InternalCouponsCampaignsHandler {
 					$db_internal_coupons_campaign->setCouponTimeframes($updateInternalCouponsCampaignRequest->getTimeframes());
 					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateTimeframes($db_internal_coupons_campaign);
 				}
-				if($updateInternalCouponsCampaignRequest->getMaxRedemptionsByUser() != NULL) {
+				if($updateInternalCouponsCampaignRequest->getMaxRedemptionsByUser() !== NULL) {
 					$maxRedemptionsByUser = $updateInternalCouponsCampaignRequest->getMaxRedemptionsByUser();
 					if(!(is_numeric($maxRedemptionsByUser)) || !(is_int($maxRedemptionsByUser)) || !($maxRedemptionsByUser > 0)) {
 						$msg = "maxRedemptionsByUser parameter must be a positive integer";
@@ -558,6 +558,30 @@ class InternalCouponsCampaignsHandler {
 					}
 					$db_internal_coupons_campaign->setTotalNumber($totalNumber);
 					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateTotalNumber($db_internal_coupons_campaign);
+				}
+				if($updateInternalCouponsCampaignRequest->getGeneratedCodeLength() !== NULL) {
+					$generatedCodeLength = $updateInternalCouponsCampaignRequest->getGeneratedCodeLength();
+					if(!(is_numeric($generatedCodeLength)) || !(is_int($generatedCodeLength)) || !($generatedCodeLength > 0)) {
+						$msg = "generatedCodeLength parameter must be a positive integer";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					switch($db_internal_coupons_campaign->getGeneratedMode()) {
+						case 'single' :
+							//exception
+							$msg = "generatedCodeLength parameter must be null when generatedMode is set to single";
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+						case 'bulk' :
+							//nothing to check
+							break;
+						default :
+							$msg = "generatedMode parameter : ".$db_internal_coupons_campaign->getGeneratedMode()." is unknown";
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+					}
+					$db_internal_coupons_campaign->setGeneratedCodeLength($generatedCodeLength);
+					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateGeneratedCodeLength($db_internal_coupons_campaign);
 				}
 				//COMMIT
 				pg_query("COMMIT");

@@ -426,6 +426,9 @@ class InternalCouponsCampaignsController extends BillingsController {
 			if(isset($data['totalNumber'])) {
 				$updateInternalCouponsCampaignRequest->setTotalNumber($data['totalNumber']);
 			}
+			if(isset($data['generatedCodeLength'])) {
+				$updateInternalCouponsCampaignRequest->setGeneratedCodeLength($data['generatedCodeLength']);
+			}
 			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
 			$couponsCampaign = $internalCouponsCampaignsHandler->doUpdateInternalCouponsCampaign($updateInternalCouponsCampaignRequest);
 			return($this->returnObjectAsJson($response, 'couponsCampaign', $couponsCampaign));

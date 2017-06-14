@@ -5667,6 +5667,16 @@ EOL;
 		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
 	}
 	
+	public static function updateGeneratedCodeLength(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET generated_code_length = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaign->getGeneratedCodeLength(),
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
 }
 
 class BillingInternalCouponsCampaignInternalPlan implements JsonSerializable {
