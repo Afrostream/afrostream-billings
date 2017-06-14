@@ -5591,22 +5591,7 @@ EOL;
 		pg_free_result($result);
 		return(self::getBillingInternalCouponsCampaignById($row[0]));
 	}
-	
-	public static function getBillingInternalCouponsCampaignByName($name, $platformId) {
-		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns WHERE name = $1 AND platformid = $2";
-		$result = pg_query_params(config::getDbConn(), $query, array($name, $platformId));
-	
-		$out = null;
-	
-		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getBillingInternalCouponsCampaignFromRow($row);
-		}
-		// free result
-		pg_free_result($result);
-	
-		return($out);
-	}
-	
+		
 	public static function getBillingInternalCouponsCampaignByPrefix($prefix, $platformId) {
 		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns WHERE prefix = $1 AND platformid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($prefix, $platformId));

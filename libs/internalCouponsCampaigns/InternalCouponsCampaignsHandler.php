@@ -340,6 +340,12 @@ class InternalCouponsCampaignsHandler {
 					$msg = "generatedCodeLength parameter cannot be null when generatedMode is set to bulk";
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
+				$generatedCodeLength = $createInternalCouponsCampaignRequest->getGeneratedCodeLength();
+				if(!(is_numeric($generatedCodeLength)) || !(is_int($generatedCodeLength)) || !($generatedCodeLength > 0)) {
+					$msg = "generatedCodeLength parameter must be a positive integer";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
 				if($createInternalCouponsCampaignRequest->getTotalNumber() == NULL) {
 					//exception
 					$msg = "totalNumber parameter cannot be null when generatedMode is set to bulk";
@@ -359,11 +365,6 @@ class InternalCouponsCampaignsHandler {
 		}
 		// Parameters Verifications OK
 		// Database Verifications...
-		if(BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByName($createInternalCouponsCampaignRequest->getName(), $createInternalCouponsCampaignRequest->getPlatform()->getId()) != NULL) {
-			//exception
-			$msg = "an internalCouponsCampaign with the same name=".$createInternalCouponsCampaignRequest->getName()." already exists";
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
 		if(BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByPrefix($createInternalCouponsCampaignRequest->getPrefix(), $createInternalCouponsCampaignRequest->getPlatform()->getId()) != NULL) {
 			//exception	
 			$msg = "an internalCouponsCampaign with the same prefix=".$createInternalCouponsCampaignRequest->getPrefix()." already exists";
@@ -528,7 +529,6 @@ class InternalCouponsCampaignsHandler {
 					$db_internal_coupons_campaign->setMaxRedemptionsByUser($maxRedemptionsByUser);
 					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateMaxRedemptionsByUser($db_internal_coupons_campaign);
 				}
-				//TODO : totalNumber
 				if($updateInternalCouponsCampaignRequest->getTotalNumber() !== NULL) {
 					$totalNumber = $updateInternalCouponsCampaignRequest->getTotalNumber();
 					if(!(is_numeric($totalNumber)) || !(is_int($totalNumber)) || !($totalNumber > 0)) {
@@ -543,12 +543,18 @@ class InternalCouponsCampaignsHandler {
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 							break;
 						case 'bulk' :
-							//nothing
+							//nothing to check
 							break;
 						default :
 							$msg = "generatedMode parameter : ".$db_internal_coupons_campaign->getGeneratedMode()." is unknown";
 							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 							break;
+					}
+					//totalNumber cannot be less than current number
+					$currentTotalNumber = BillingInternalCouponDAO::getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
+					if($totalNumber < $currentTotalNumber) {
+						$msg = "totalNumber parameter : ".$totalNumber." cannot be less than current totalNumber : ".$currentTotalNumber;
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					$db_internal_coupons_campaign->setTotalNumber($totalNumber);
 					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateTotalNumber($db_internal_coupons_campaign);
