@@ -230,6 +230,18 @@ class InternalCouponsCampaignsController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$maxRedemptionsByUser = $data['maxRedemptionsByUser'];
+			$expiresDate = NULL;
+			if(array_key_exists('expiresDate', $data)) {
+				$expiresDateStr = $data['expiresDate'];
+				if($expiresDateStr !== NULL) {
+					$expiresDate = DateTime::createFromFormat(DateTime::ISO8601, $expiresDateStr);
+					if($expiresDate === false) {
+						$msg = "expiresDate date : ".$expiresDateStr." cannot be parsed";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+				}
+			}
 			//
 			$createInternalCouponsCampaignRequest = new CreateInternalCouponsCampaignRequest();
 			$createInternalCouponsCampaignRequest->setOrigin('api');
@@ -253,6 +265,7 @@ class InternalCouponsCampaignsController extends BillingsController {
 			}
 			$createInternalCouponsCampaignRequest->setEmailsEnabled($emailsEnabled);
 			$createInternalCouponsCampaignRequest->setMaxRedemptionsByUser($maxRedemptionsByUser);
+			$createInternalCouponsCampaignRequest->setExpiresDate($expiresDate);
 			//
 			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
 			$couponsCampaign = $internalCouponsCampaignsHandler->create($createInternalCouponsCampaignRequest);
@@ -428,6 +441,19 @@ class InternalCouponsCampaignsController extends BillingsController {
 			}
 			if(isset($data['generatedCodeLength'])) {
 				$updateInternalCouponsCampaignRequest->setGeneratedCodeLength($data['generatedCodeLength']);
+			}
+			if(array_key_exists('expiresDate', $data)) {
+				$expiresDateStr = $data['expiresDate'];
+				$expiresDate = NULL;
+				if($expiresDateStr !== NULL) {
+					$expiresDate = DateTime::createFromFormat(DateTime::ISO8601, $expiresDateStr);
+					if($expiresDate === false) {
+						$msg = "expiresDate date : ".$expiresDateStr." cannot be parsed";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+				}
+				$updateInternalCouponsCampaignRequest->setExpiresDate($expiresDate);
 			}
 			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
 			$couponsCampaign = $internalCouponsCampaignsHandler->doUpdateInternalCouponsCampaign($updateInternalCouponsCampaignRequest);

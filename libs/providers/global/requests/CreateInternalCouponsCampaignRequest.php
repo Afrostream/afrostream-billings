@@ -33,6 +33,8 @@ class CreateInternalCouponsCampaignRequest extends ActionRequest {
 	
 	protected $maxRedemptionsByUser;
 	
+	protected $expiresDate = false;
+	
 	public function __construct() {
 		parent::__construct();
 	}
@@ -171,6 +173,14 @@ class CreateInternalCouponsCampaignRequest extends ActionRequest {
 	
 	public function getMaxRedemptionsByUser() {
 		return($this->maxRedemptionsByUser);
+	}
+	
+	public function setExpiresDate(DateTime $expiresDate = NULL) {
+		$this->expiresDate = $expiresDate;
+	}
+	
+	public function getExpiresDate() {
+		return($this->expiresDate);
 	}
 	
 }

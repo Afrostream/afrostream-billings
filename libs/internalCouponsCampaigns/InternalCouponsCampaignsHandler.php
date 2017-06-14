@@ -363,6 +363,14 @@ class InternalCouponsCampaignsHandler {
 			$msg = "at least one timeframe must be provided";
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
+		if($createInternalCouponsCampaignRequest->getExpiresDate() != NULL) {
+			//30 seconds in the past MAX
+			if((new DateTime())->getTimestamp() - ($createInternalCouponsCampaignRequest->getExpiresDate()->getTimestamp()) > 30) {
+				//exception
+				$msg = "expiresDate cannot be in the past";
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+		}
 		// Parameters Verifications OK
 		// Database Verifications...
 		if(BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByPrefix($createInternalCouponsCampaignRequest->getPrefix(), $createInternalCouponsCampaignRequest->getPlatform()->getId()) != NULL) {
@@ -391,6 +399,7 @@ class InternalCouponsCampaignsHandler {
 		$billingInternalCouponsCampaign->setCouponTimeframes($createInternalCouponsCampaignRequest->getTimeframes());
 		$billingInternalCouponsCampaign->setEmailsEnabled($createInternalCouponsCampaignRequest->getEmailsEnabled());
 		$billingInternalCouponsCampaign->setMaxRedemptionsByUser($createInternalCouponsCampaignRequest->getMaxRedemptionsByUser());
+		$billingInternalCouponsCampaign->setExpiresDate($createInternalCouponsCampaignRequest->getExpiresDate());
 		$billingInternalCouponsCampaign = BillingInternalCouponsCampaignDAO::addBillingInternalCouponsCampaign($billingInternalCouponsCampaign);
 		return($billingInternalCouponsCampaign);
 	}
@@ -519,6 +528,7 @@ class InternalCouponsCampaignsHandler {
 					$db_internal_coupons_campaign->setCouponTimeframes($updateInternalCouponsCampaignRequest->getTimeframes());
 					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateTimeframes($db_internal_coupons_campaign);
 				}
+				//maxRedemptionsByUser
 				if($updateInternalCouponsCampaignRequest->getMaxRedemptionsByUser() !== NULL) {
 					$maxRedemptionsByUser = $updateInternalCouponsCampaignRequest->getMaxRedemptionsByUser();
 					if(!(is_numeric($maxRedemptionsByUser)) || !(is_int($maxRedemptionsByUser)) || !($maxRedemptionsByUser > 0)) {
@@ -529,6 +539,7 @@ class InternalCouponsCampaignsHandler {
 					$db_internal_coupons_campaign->setMaxRedemptionsByUser($maxRedemptionsByUser);
 					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateMaxRedemptionsByUser($db_internal_coupons_campaign);
 				}
+				//totalNumber
 				if($updateInternalCouponsCampaignRequest->getTotalNumber() !== NULL) {
 					$totalNumber = $updateInternalCouponsCampaignRequest->getTotalNumber();
 					if(!(is_numeric($totalNumber)) || !(is_int($totalNumber)) || !($totalNumber > 0)) {
@@ -559,6 +570,7 @@ class InternalCouponsCampaignsHandler {
 					$db_internal_coupons_campaign->setTotalNumber($totalNumber);
 					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateTotalNumber($db_internal_coupons_campaign);
 				}
+				//generatedCodeLength
 				if($updateInternalCouponsCampaignRequest->getGeneratedCodeLength() !== NULL) {
 					$generatedCodeLength = $updateInternalCouponsCampaignRequest->getGeneratedCodeLength();
 					if(!(is_numeric($generatedCodeLength)) || !(is_int($generatedCodeLength)) || !($generatedCodeLength > 0)) {
@@ -582,6 +594,19 @@ class InternalCouponsCampaignsHandler {
 					}
 					$db_internal_coupons_campaign->setGeneratedCodeLength($generatedCodeLength);
 					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateGeneratedCodeLength($db_internal_coupons_campaign);
+				}
+				//expiresDate
+				if($updateInternalCouponsCampaignRequest->getExpiresDate() !== false) {
+					if($updateInternalCouponsCampaignRequest->getExpiresDate() !== NULL) {
+						//30 seconds in the past MAX
+						if((new DateTime())->getTimestamp() - ($updateInternalCouponsCampaignRequest->getExpiresDate()->getTimestamp()) > 30) {
+							//exception
+							$msg = "expiresDate cannot be in the past";
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						}
+					}
+					$db_internal_coupons_campaign->setExpiresDate($updateInternalCouponsCampaignRequest->getExpiresDate());
+					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateExpiresDate($db_internal_coupons_campaign);
 				}
 				//COMMIT
 				pg_query("COMMIT");
