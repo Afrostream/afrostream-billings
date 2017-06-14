@@ -213,6 +213,14 @@ class ProviderSubscriptionsHandler {
 			config::getLogger()->addInfo("max_redemptions_by_user is null, redemptions are unlimited");
 		}
 		//
+		if($internalCouponsCampaign->getExpiresDate() != NULL) {
+			if((new DateTime())->getTimestamp() - ($internalCouponsCampaign->getExpiresDate()->getTimestamp()) > 0) {
+				$msg = "coupon : code=".$couponCode." expired";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_EXPIRED);
+			}
+		}
+		//
 		$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCoupon->getId());
 		$userInternalCoupon = self::getFirstUserInternalCouponsWaitingStatus($userInternalCoupons);
 		if($userInternalCoupon == NULL) {
