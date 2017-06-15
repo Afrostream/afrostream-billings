@@ -5,6 +5,7 @@ require_once __DIR__ . '/../usersInternalCoupons/UsersInternalCouponsHandler.php
 require_once __DIR__ . '/BillingsController.php';
 require_once __DIR__ . '/../providers/global/requests/GetUsersInternalCouponsRequest.php';
 require_once __DIR__ . '/../providers/global/requests/CreateUsersInternalCouponRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetUsersInternalCouponRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -107,6 +108,40 @@ class UsersInternalCouponsController extends BillingsController {
 			//
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while creating a coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function get(Request $request, Response $response, array $args) {
+		try {
+			$data = $request->getQueryParams();
+			$getUsersInternalCouponRequest = new GetUsersInternalCouponRequest();
+			$getUsersInternalCouponRequest->setOrigin('api');
+			if(!isset($args['internalUserCouponBillingUuid'])) {
+				//exception
+				$msg = "field 'internalUserCouponBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$getUsersInternalCouponRequest->setInternalUserCouponBillingUuid($args['internalUserCouponBillingUuid']);
+			$usersInternalCouponsHandler = new UsersInternalCouponsHandler();
+			$coupon = $usersInternalCouponsHandler->doGetUserInternalCoupon($getUsersInternalCouponRequest);
+			if($coupon == NULL) {
+				return($this->returnNotFoundAsJson($response));
+			} else {
+				return($this->returnObjectAsJson($response, 'coupon', $coupon));
+			}
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while getting a coupon, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting a coupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));

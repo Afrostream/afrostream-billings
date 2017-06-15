@@ -5,6 +5,7 @@ require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/global/ProviderHandlersBuilder.php';
 require_once __DIR__ . '/../providers/global/requests/GetUsersInternalCouponsRequest.php';
 require_once __DIR__ . '/../providers/global/requests/CreateUsersInternalCouponRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetUsersInternalCouponRequest.php';
 
 class UsersInternalCouponsHandler {
 	
@@ -147,6 +148,24 @@ class UsersInternalCouponsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_coupon);
+	}
+	
+	public function doGetUserInternalCoupon(GetUsersInternalCouponRequest $getUsersInternalCouponRequest) {
+		$user_internal_coupon = NULL;
+		try {
+			config::getLogger()->addInfo("UserInternalCoupon getting....");
+			$user_internal_coupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($getUsersInternalCouponRequest->getInternalUserCouponBillingUuid(), $getUsersInternalCouponRequest->getPlatform()->getId());
+			config::getLogger()->addInfo("UserInternalCoupon getting done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while getting an UserInternalCoupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("UserInternalCoupon getting failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting an UserInternalCoupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("UserInternalCoupon getting failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($user_internal_coupon);
 	}
 	
 }
