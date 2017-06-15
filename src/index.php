@@ -1186,6 +1186,11 @@ $app->get("/billings/api/internalcoupons/{internalCouponBillingUuid}", function 
 	return($internalCouponsController->get($request, $response, $args));
 });
 
+$app->put("/billings/api/internalcoupons/{internalCouponBillingUuid}/expire", function ($request, $response, $args) {
+	$internalCouponsController = new InternalCouponsController();
+	return($internalCouponsController->expire($request, $response, $args));
+});
+
 //create coupon
 	
 /*
@@ -1241,10 +1246,10 @@ $app->get("/billings/api/users/coupons/{internalUserCouponBillingUuid}", functio
 	return($usersInternalCouponsController->get($request, $response, $args));
 });
 
-/*$app->put("/billings/api/subscriptions/users/coupons/{subscriptionBillingUuid}/expire", function ($request, $response, $args) {
+$app->put("/billings/api/users/coupons/{internalUserCouponBillingUuid}/expire", function ($request, $response, $args) {
 	$usersInternalCouponsController = new UsersInternalCouponsController();
 	return($usersInternalCouponsController->expire($request, $response, $args));
-});*/
+});
  
 //get couponscampaigns
 	

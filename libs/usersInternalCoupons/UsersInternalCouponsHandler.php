@@ -168,6 +168,66 @@ class UsersInternalCouponsHandler {
 		return($user_internal_coupon);
 	}
 	
+	public function doExpireUserInternalCoupon(ExpireUsersInternalCouponRequest $expireUsersInternalCouponRequest) {
+		$user_internal_coupon = NULL;
+		try {
+			config::getLogger()->addInfo("UserInternalCoupon expiring....");
+			$user_internal_coupon = BillingUserInternalCouponDAO::getBillingUserInternalCouponByCouponBillingUuid($expireUsersInternalCouponRequest->getInternalUserCouponBillingUuid(), $expireUsersInternalCouponRequest->getPlatform()->getId());
+			if($user_internal_coupon == NULL) {
+				//exception
+				$msg = "unknown coupon with internalUserCouponBillingUuid=".$expireUsersInternalCouponRequest->getInternalUserCouponBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//checking...
+			if($user_internal_coupon->getStatus() == 'redeemed') {
+				$msg = "coupon status is redeemed, it cannot be expired";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($user_internal_coupon->getStatus() == 'expired') {
+				$msg = "coupon has already been expired";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($user_internal_coupon->getStatus() == 'pending') {
+				$msg = "coupon status is pending, it cannot be expired";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if($user_internal_coupon->getStatus() != 'waiting') {
+				$msg = "ccoupon status is ".$user_internal_coupon->getStatus().", it cannot be expired";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//checking done
+			$now = new DateTime();
+			try {
+				//START TRANSACTION
+				pg_query("BEGIN");
+				$user_internal_coupon->setStatus('expired');
+				$user_internal_coupon = BillingUserInternalCouponDAO::updateStatus($user_internal_coupon);
+				$user_internal_coupon->setExpiresDate($now);
+				$user_internal_coupon = BillingUserInternalCouponDAO::updateExpiresDate($user_internal_coupon);
+				//COMMIT
+				pg_query("COMMIT");
+			} catch(Exception $e) {
+				pg_query("ROLLBACK");
+				throw $e;
+			}
+			config::getLogger()->addInfo("UserInternalCoupon expiring done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while expiring an UserInternalCoupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("UserInternalCoupon expiring failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while expiring an UserInternalCoupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("UserInternalCoupon expiring failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($user_internal_coupon);
+	}
+	
 }
 
 ?>
