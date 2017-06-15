@@ -10,20 +10,26 @@ class InternalCouponsHandler {
 	}
 	
 	public function doGetInternalCoupon(GetInternalCouponRequest $getInternalCouponRequest) {
-		$code = $getInternalCouponRequest->getCouponCode();
 		$internal_coupon = NULL;
 		try {
-			config::getLogger()->addInfo("internalCoupon getting, code=".$code."....");
+			config::getLogger()->addInfo("internalCoupon getting....");
 			//
-			$internal_coupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($code, $getInternalCouponRequest->getPlatform()->getId());
-			//
-			config::getLogger()->addInfo("internalCoupon getting code=".$code." done successfully");
+			if($getInternalCouponRequest->getInternalCouponBillingUuid() != NULL) {
+				$internal_coupon = BillingInternalCouponDAO::getBillingInternalCouponByInternalCouponBillingUuid($getInternalCouponRequest->getInternalCouponBillingUuid(), $getInternalCouponRequest->getPlatform()->getId());
+			} else if($getInternalCouponRequest->getCouponCode() != NULL) {
+				$internal_coupon = BillingInternalCouponDAO::getBillingInternalCouponByCode($getInternalCouponRequest->getCouponCode(), $getInternalCouponRequest->getPlatform()->getId());
+			} else {
+				//Exception
+				$msg = "internalCouponBillingUuid OR couponCode must be given";
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			config::getLogger()->addInfo("internalCoupon getting done successfully");
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while getting an internalCoupon for code=".$code.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "a billings exception occurred while getting an internalCoupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("internalCoupon getting failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while getting an internalCoupon for code=".code.", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while getting an internalCoupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError("internalCoupon getting failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
