@@ -274,6 +274,8 @@ class InternalCouponsCampaignsHandler {
 			}
 		}
 		switch($createInternalCouponsCampaignRequest->getDiscountType()) {
+			case 'none' :
+				break;
 			case 'percent' :
 				if($createInternalCouponsCampaignRequest->getPercent() == NULL) {
 					//exception
@@ -299,27 +301,29 @@ class InternalCouponsCampaignsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 		}
-		switch($createInternalCouponsCampaignRequest->getDiscountDuration()) {
-			case 'once' :
-				break;
-			case 'repeating' :
-				if($createInternalCouponsCampaignRequest->getDiscountDurationUnit() == NULL) {
-					//exception
-					$msg = "discountDurationUnit parameter cannot be null when discountDuration parameter is set to repeating";
+		if($createInternalCouponsCampaignRequest->getDiscountDuration() != NULL) {
+			switch($createInternalCouponsCampaignRequest->getDiscountDuration()) {
+				case 'once' :
+					break;
+				case 'repeating' :
+					if($createInternalCouponsCampaignRequest->getDiscountDurationUnit() == NULL) {
+						//exception
+						$msg = "discountDurationUnit parameter cannot be null when discountDuration parameter is set to repeating";
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					if($createInternalCouponsCampaignRequest->getDiscountDurationLength() == NULL) {
+						//exception
+						$msg = "discountDurationLength parameter cannot be null when discountDuration parameter is set to repeating";
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					break;
+				case 'forever' :
+					break;
+				default :
+					$msg = "discountDuration parameter : ".$createInternalCouponsCampaignRequest->getDiscountDuration()." is unknown";
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				if($createInternalCouponsCampaignRequest->getDiscountDurationLength() == NULL) {
-					//exception
-					$msg = "discountDurationLength parameter cannot be null when discountDuration parameter is set to repeating";
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				break;
-			case 'forever' :
-				break;
-			default :
-				$msg = "discountDuration parameter : ".$createInternalCouponsCampaignRequest->getDiscountDuration()." is unknown";
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
+					break;
+			}
 		}
 		switch($createInternalCouponsCampaignRequest->getGeneratedMode()) {
 			case 'single' :
