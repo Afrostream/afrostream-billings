@@ -6230,8 +6230,8 @@ EOL;
 		return($out);
 	}
 	
-	public static function getBillingInternalCouponsByInternalCouponsCampaignsId($internalcouponscampaignsid, $partnersordersinternalcouponscampaignslinkid = NULL) {
-		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons BIC";
+	public static function getBillingInternalCouponsByInternalCouponsCampaignsId($internalcouponscampaignsid, $partnersordersinternalcouponscampaignslinkid = NULL, $limit = 0, $offset = 0) {
+		$query = "SELECT count(*) OVER() as total_hits, ".self::$sfields." FROM billing_internal_coupons BIC";
 		$query.= " WHERE BIC.internalcouponscampaignsid = $1";
 		$params = array();
 		$params[] = $internalcouponscampaignsid;
@@ -6241,12 +6241,19 @@ EOL;
 			$query.= " AND partnersordersinternalcouponscampaignslinkid = $2";
 		}
 		$query.= " ORDER BY BIC._id ASC";
+		if($limit > 0) { $query.= " LIMIT ".$limit; }
+		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 	
 		$out = array();
+		$out['total_hits'] = 0;
+		$out['current_hits'] = 0;
+		$out['coupons'] = array();
 	
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out[] = self::getBillingInternalCouponFromRow($row);
+			$out['total_hits'] = $row['total_hits'];
+			$out['current_hits']++;
+			$out['coupons'][] = self::getBillingInternalCouponFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -7679,7 +7686,7 @@ class BillingPartnerOrderInternalCouponsCampaignLink implements JsonSerializable
 				'internalCouponsCampaign' => BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($this->internalCouponsCampaignsId),
 				'whishedCounter' => $this->wishedCounter,
 				'bookedCounter' => $this->bookedCounter,
-				'internalCoupons' => BillingInternalCouponDAO::getBillingInternalCouponsByInternalCouponsCampaignsId($this->internalCouponsCampaignsId, $this->_id)
+				'internalCoupons' => BillingInternalCouponDAO::getBillingInternalCouponsByInternalCouponsCampaignsId($this->internalCouponsCampaignsId, $this->_id)['coupons']
 		];
 	}
 	

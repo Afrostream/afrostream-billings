@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../db/dbGlobal.php';
 require_once __DIR__ . '/../providers/global/requests/GetInternalCouponRequest.php';
 require_once __DIR__ . '/../providers/global/requests/ExpireInternalCouponRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetInternalCouponsRequest.php';
 
 class InternalCouponsHandler {
 	
@@ -95,6 +96,20 @@ class InternalCouponsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($internal_coupon);
+	}
+	
+	public function doGetList(GetInternalCouponsRequest $getInternalCouponsRequest) {
+		$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($getInternalCouponsRequest->getInternalCouponsCampaignBillingUuid(), $getInternalCouponsRequest->getPlatform()->getId());
+		if($internalCouponsCampaign == NULL) {
+			$msg = "unknown internalCouponsCampaign with internalCouponsCampaignBillingUuid : ".$getInternalCouponsRequest->getInternalCouponsCampaignBillingUuid();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$list = BillingInternalCouponDAO::getBillingInternalCouponsByInternalCouponsCampaignsId($internalCouponsCampaign->getId(), 
+				NULL,
+				$getInternalCouponsRequest->getLimit() == NULL ? 0 : $getInternalCouponsRequest->getLimit(),
+				$getInternalCouponsRequest->getOffset() == NULL ? 0 : $getInternalCouponsRequest->getOffset());
+		return $list;
 	}
 	
 }

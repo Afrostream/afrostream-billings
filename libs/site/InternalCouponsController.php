@@ -5,6 +5,7 @@ require_once __DIR__ . '/../internalCoupons/InternalCouponsHandler.php';
 require_once __DIR__ . '/BillingsController.php';
 require_once __DIR__ . '/../providers/global/requests/GetInternalCouponRequest.php';
 require_once __DIR__ . '/../providers/global/requests/ExpireInternalCouponRequest.php';
+require_once __DIR__ . '/../providers/global/requests/GetInternalCouponsRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -70,6 +71,36 @@ class InternalCouponsController extends BillingsController {
 			//
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while expiring an InternalCoupon, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function getList(Request $request, Response $response, array $args) {
+		try {
+			$data = $request->getQueryParams();
+			$getInternalCouponsRequest = new GetInternalCouponsRequest();
+			$getInternalCouponsRequest->setOrigin('api');
+			if(!isset($data['internalCouponsCampaignBillingUuid'])) {
+				//exception
+				$msg = "field 'internalCouponsCampaignBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if(isset($data['offset'])) {
+				$getInternalCouponsRequest->setOffset($data['offset']);
+			}
+			if(isset($data['limit'])) {
+				$getInternalCouponsRequest->setLimit($data['limit']);
+			}
+			$getInternalCouponsRequest->setInternalCouponsCampaignBillingUuid($data['internalCouponsCampaignBillingUuid']);
+			$internalCouponsHandler = new InternalCouponsHandler();
+			$listCoupons = $internalCouponsHandler->doGetList($getInternalCouponsRequest);
+			return $this->returnObjectAsJson($response, NULL, $listCoupons);
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while getting internalCoupons, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));
