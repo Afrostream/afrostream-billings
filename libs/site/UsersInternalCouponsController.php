@@ -48,7 +48,7 @@ class UsersInternalCouponsController extends BillingsController {
 	
 			return $this->returnObjectAsJson($response, 'coupons', $listCoupons);
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while getting internal coupons, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			$msg = "an unknown exception occurred while getting userInternalCoupons, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));

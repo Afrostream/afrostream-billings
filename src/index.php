@@ -1191,6 +1191,11 @@ $app->put("/billings/api/internalcoupons/{internalCouponBillingUuid}/expire", fu
 	return($internalCouponsController->expire($request, $response, $args));
 });
 
+$app->get("/billings/api/internalcoupons/list/", function ($request, $response, $args) {
+	$internalCouponsController = new InternalCouponsController();
+	return($internalCouponsController->getList($request, $response, $args));
+});
+
 //create coupon
 	
 /*
