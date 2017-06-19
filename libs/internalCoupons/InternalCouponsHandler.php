@@ -169,7 +169,7 @@ class InternalCouponsHandler {
 		$current_csv_file_res = NULL;
 		$out = array();
 		$out['filepath'] = $getInternalCouponsRequest->getFilepath();
-		$out['filename'] = 'export.csv';
+		$out['filename'] = 'export_internalCoupons_'.$getInternalCouponsRequest->getInternalCouponsCampaignBillingUuid().'.csv';
 		$out['Content-Type'] = 'text/csv';
 		config::getLogger()->addInfo("internalCoupons list in file getting done successfully");
 		return($out);
