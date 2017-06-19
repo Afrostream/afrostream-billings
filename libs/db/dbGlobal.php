@@ -6084,6 +6084,32 @@ class BillingInternalCoupon implements JsonSerializable {
 		return($return);
 	}
 	
+	public static function exportFields() {
+		$out = array();
+		$out[] = 'code';
+		$out[] = 'internalCouponBillingUuid';
+		$out[] = 'status';
+		$out[] = 'creationDate';
+		$out[] = 'updatedDate';
+		$out[] = 'redeemedDate';
+		$out[] = 'expiresDate';
+		$out[] = 'couponTimeframe';
+		return($out);
+	}
+	
+	public function exportValues() {
+		$out = array();
+		$out[] = $this->code;
+		$out[] = $this->uuid;
+		$out[] = $this->status;
+		$out[] = dbGlobal::toISODate($this->creationDate);
+		$out[] = dbGlobal::toISODate($this->updatedDate);
+		$out[] = dbGlobal::toISODate($this->redeemedDate);
+		$out[] = dbGlobal::toISODate($this->expiresDate);
+		$out[] = $this->coupon_timeframe;
+		return($out);
+	}
+	
 }
 
 class BillingInternalCouponDAO {

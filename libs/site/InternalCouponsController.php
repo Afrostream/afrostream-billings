@@ -95,10 +95,21 @@ class InternalCouponsController extends BillingsController {
 			if(isset($data['limit'])) {
 				$getInternalCouponsRequest->setLimit($data['limit']);
 			}
+			if(isset($data['isExport'])) {
+				if($data['isExport'] == 'true') {
+					$getInternalCouponsRequest->setIsExport(true);
+					$getInternalCouponsRequest->setFilepath(tempnam('', 'tmp'));
+				}
+			}
 			$getInternalCouponsRequest->setInternalCouponsCampaignBillingUuid($data['internalCouponsCampaignBillingUuid']);
 			$internalCouponsHandler = new InternalCouponsHandler();
-			$listCoupons = $internalCouponsHandler->doGetList($getInternalCouponsRequest);
-			return $this->returnObjectAsJson($response, NULL, $listCoupons);
+			if($getInternalCouponsRequest->getIsExport()) {
+				$result = $internalCouponsHandler->doGetListInFile($getInternalCouponsRequest);
+				return($this->returnFile($response, $result['filepath'], $result['filename'], $result['Content-Type']));
+			} else {
+				$listCoupons = $internalCouponsHandler->doGetList($getInternalCouponsRequest);
+				return $this->returnObjectAsJson($response, NULL, $listCoupons);
+			}
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while getting internalCoupons, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);

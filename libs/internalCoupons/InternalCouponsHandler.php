@@ -8,6 +8,8 @@ require_once __DIR__ . '/../providers/global/requests/GetInternalCouponsRequest.
 
 class InternalCouponsHandler {
 	
+	const LIMIT_MAX = 10000;
+	
 	public function __construct() {
 	}
 	
@@ -99,6 +101,7 @@ class InternalCouponsHandler {
 	}
 	
 	public function doGetList(GetInternalCouponsRequest $getInternalCouponsRequest) {
+		config::getLogger()->addInfo("internalCoupons list getting....");
 		$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($getInternalCouponsRequest->getInternalCouponsCampaignBillingUuid(), $getInternalCouponsRequest->getPlatform()->getId());
 		if($internalCouponsCampaign == NULL) {
 			$msg = "unknown internalCouponsCampaign with internalCouponsCampaignBillingUuid : ".$getInternalCouponsRequest->getInternalCouponsCampaignBillingUuid();
@@ -109,7 +112,67 @@ class InternalCouponsHandler {
 				NULL,
 				$getInternalCouponsRequest->getLimit() == NULL ? 0 : $getInternalCouponsRequest->getLimit(),
 				$getInternalCouponsRequest->getOffset() == NULL ? 0 : $getInternalCouponsRequest->getOffset());
+		config::getLogger()->addInfo("internalCoupons list getting done successfully");
 		return $list;
+	}
+	
+	public function doGetListInFile(GetInternalCouponsRequest $getInternalCouponsRequest) {
+		config::getLogger()->addInfo("internalCoupons list in file getting....");
+		$internalCouponsCampaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($getInternalCouponsRequest->getInternalCouponsCampaignBillingUuid(), $getInternalCouponsRequest->getPlatform()->getId());
+		if($internalCouponsCampaign == NULL) {
+			$msg = "unknown internalCouponsCampaign with internalCouponsCampaignBillingUuid : ".$getInternalCouponsRequest->getInternalCouponsCampaignBillingUuid();
+			config::getLogger()->addError($msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//open file
+		$current_csv_file_res = NULL;
+		if(($current_csv_file_res = fopen($getInternalCouponsRequest->getFilepath(), 'w')) === false) {
+			throw new Exception('csv file cannot be opened');
+		}
+		//header
+		fputcsv($current_csv_file_res, BillingInternalCoupon::exportFields());
+		//
+		$limit = min(self::LIMIT_MAX, $getInternalCouponsRequest->getLimit() == NULL ? self::LIMIT_MAX : $getInternalCouponsRequest->getLimit());
+		$offset = $getInternalCouponsRequest->getOffset() == NULL ? 0 : $getInternalCouponsRequest->getOffset();
+		$index = 1;
+		
+		do {
+			$result = BillingInternalCouponDAO::getBillingInternalCouponsByInternalCouponsCampaignsId($internalCouponsCampaign->getId(), NULL, $limit, $offset);
+			$offset = $offset + $limit;
+			if(is_null($totalHits)) {
+				$totalHits = min($result['total_hits'], $getInternalCouponsRequest->getLimit() == NULL ? $result['total_hits'] : $getInternalCouponsRequest->getLimit());
+			}
+			$idx+= count($result['coupons']);
+			//
+			foreach($result['coupons'] as $coupon) {
+				/* from OBJECT : optimal but not complete */
+				$fields = $coupon->exportValues();
+				/* from JSON : not optimal */
+				/* 	
+				$fields = array();
+				$coupon_as_array = json_decode(json_encode($coupon, JSON_UNESCAPED_UNICODE), true);
+				foreach ($coupon_as_array as $val) {
+					if(is_scalar($val)) {
+						$fields[] = $val;
+					}
+				}
+				*/
+				fputcsv($current_csv_file_res, $fields);
+				//
+				if($index == $totalHits) { break; }
+				$index++;
+				//
+			}
+		} while ($idx < $totalHits && count($result['coupons']) > 0);
+		//close file
+		fclose($current_csv_file_res);
+		$current_csv_file_res = NULL;
+		$out = array();
+		$out['filepath'] = $getInternalCouponsRequest->getFilepath();
+		$out['filename'] = 'export.csv';
+		$out['Content-Type'] = 'text/csv';
+		config::getLogger()->addInfo("internalCoupons list in file getting done successfully");
+		return($out);
 	}
 	
 }

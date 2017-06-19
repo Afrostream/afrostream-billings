@@ -6,7 +6,6 @@ use \Slim\Http\Response;
 
 class BillingsController {
 	
-
 	protected function returnBillingsExceptionAsJson(Response $response, BillingsException $e, $statusCode = 200) {
 		$json_as_array = array();
 		$json_as_array['status'] = 'error';
@@ -73,6 +72,15 @@ class BillingsController {
 	protected function returnNotFoundAsJson(Response $response) {
 		$e = new BillingsException(new ExceptionType(ExceptionType::internal), 'NOT FOUND');
 		return($this->returnBillingsExceptionAsJson($response, $e, 404));
+	}
+	
+	protected function returnFile(Response $response, $filepath, $filename, $contentType, $statusCode = 200) {
+		$f = fopen($filepath, 'r');
+		$stream = new Slim\Http\Stream($f);
+		$response = $response->withBody($stream);
+		$response = $response->withHeader('Content-Disposition', 'attachement; filename='.$filename);
+		$response = $response->withHeader('Content-Type', $contentType);
+		return($response);
 	}
 	
 }
