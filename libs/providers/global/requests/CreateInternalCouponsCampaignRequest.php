@@ -7,7 +7,7 @@ class CreateInternalCouponsCampaignRequest extends ActionRequest {
 	protected $name;
 	protected $description;
 	protected $prefix;
-	protected $discountType;// percent / amount
+	protected $discountType;// percent / amount / none
 	
 	protected $amountInCents;// null OR > 0
 	protected $currency;// null OR currency (iso)

@@ -141,14 +141,7 @@ class InternalCouponsCampaignsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			//Verifications ...
-			//currency check
-			if($db_internal_coupons_campaign->getCurrency() != NULL) {
-				if($db_internal_coupons_campaign->getCurrency() != $db_internal_plan->getCurrency()) {
-					$msg = "internalPlan and internalCouponsCampaign must have the same currency";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-			}
+			$this->doCheckInternalPlanCompatibility($db_internal_coupons_campaign, $db_internal_plan);
 			//Verification OK
 			$billingInternalCouponsCampaignInternalPlan = new BillingInternalCouponsCampaignInternalPlan();
 			$billingInternalCouponsCampaignInternalPlan->setInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
@@ -210,171 +203,7 @@ class InternalCouponsCampaignsHandler {
 	
 	public function create(CreateInternalCouponsCampaignRequest $createInternalCouponsCampaignRequest) {
 		// Parameters Verifications...
-		if(strlen($createInternalCouponsCampaignRequest->getName()) == 0) {
-			//exception
-			$msg = "name parameter cannot be empty";
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		if(strlen($createInternalCouponsCampaignRequest->getDescription()) == 0) {
-			//exception
-			$msg = "description parameter cannot be empty";
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		if(strlen($createInternalCouponsCampaignRequest->getPrefix()) == 0) {
-			//exception
-			$msg = "prefix parameter cannot be empty";
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		if($createInternalCouponsCampaignRequest->getPercent() !== NULL) {
-			$percent = $createInternalCouponsCampaignRequest->getPercent();
-			if(!(is_numeric($percent)) || !(is_int($percent)) || !($percent > 0) || !($percent <= 100)) {
-				$msg = "percent parameter must be an integer > 0 and <= 100";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-		}
-		if($createInternalCouponsCampaignRequest->getAmountInCents() !== NULL) {
-			$amountInCents = $createInternalCouponsCampaignRequest->getAmountInCents();
-			if(!(is_numeric($amountInCents)) || !(is_int($amountInCents)) || !($amountInCents > 0)) {
-				$msg = "amountInCents parameter must be a positive integer";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-		}
-		if($createInternalCouponsCampaignRequest->getDiscountDurationLength() !== NULL) {
-			$discountDurationLength = $createInternalCouponsCampaignRequest->getDiscountDurationLength();
-			if(!(is_numeric($discountDurationLength)) || !(is_int($discountDurationLength)) || !($discountDurationLength > 0)) {
-				$msg = "discountDurationLength parameter must be a positive integer";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}			
-		}
-		if($createInternalCouponsCampaignRequest->getTotalNumber() !== NULL) {
-			$totalNumber = $createInternalCouponsCampaignRequest->getTotalNumber();
-			if(!(is_numeric($totalNumber)) || !(is_int($totalNumber)) || !($totalNumber > 0)) {
-				$msg = "totalNumber parameter must be a positive integer";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}			
-		}
-		if($createInternalCouponsCampaignRequest->getMaxRedemptionsByUser() !== NULL) {
-			$maxRedemptionsByUser = $createInternalCouponsCampaignRequest->getMaxRedemptionsByUser();
-			if(!(is_numeric($maxRedemptionsByUser)) || !(is_int($maxRedemptionsByUser)) || !($maxRedemptionsByUser > 0)) {
-				$msg = "maxRedemptionsByUser parameter must be a positive integer";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-		}
-		if($createInternalCouponsCampaignRequest->getCurrency() != NULL) {
-			$currency = $createInternalCouponsCampaignRequest->getCurrency();
-			if(!array_key_exists($currency, Currency::getCurrencies())) {
-				$msg = "currency parameter is not valid";
-				config::getLogger()->addError($msg);
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-		}
-		switch($createInternalCouponsCampaignRequest->getDiscountType()) {
-			case 'none' :
-				break;
-			case 'percent' :
-				if($createInternalCouponsCampaignRequest->getPercent() == NULL) {
-					//exception
-					$msg = "percent parameter cannot be null when discountType parameter is set to percent";
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				break;
-			case 'amount' :
-				if($createInternalCouponsCampaignRequest->getAmountInCents() == NULL) {
-					//exception
-					$msg = "amount parameter cannot be null when discountType parameter is set to amount";
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				if($createInternalCouponsCampaignRequest->getCurrency() == NULL) {
-					//exception
-					$msg = "currency parameter cannot be null when discountType parameter is set to amount";
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				break;
-			default :
-				//exception
-				$msg = "discountType parameter : ".$createInternalCouponsCampaignRequest->getDiscountType()." is unknown";
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
-		}
-		if($createInternalCouponsCampaignRequest->getDiscountDuration() != NULL) {
-			switch($createInternalCouponsCampaignRequest->getDiscountDuration()) {
-				case 'once' :
-					break;
-				case 'repeating' :
-					if($createInternalCouponsCampaignRequest->getDiscountDurationUnit() == NULL) {
-						//exception
-						$msg = "discountDurationUnit parameter cannot be null when discountDuration parameter is set to repeating";
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					}
-					if($createInternalCouponsCampaignRequest->getDiscountDurationLength() == NULL) {
-						//exception
-						$msg = "discountDurationLength parameter cannot be null when discountDuration parameter is set to repeating";
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					}
-					break;
-				case 'forever' :
-					break;
-				default :
-					$msg = "discountDuration parameter : ".$createInternalCouponsCampaignRequest->getDiscountDuration()." is unknown";
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-					break;
-			}
-		}
-		switch($createInternalCouponsCampaignRequest->getGeneratedMode()) {
-			case 'single' :
-				if($createInternalCouponsCampaignRequest->getGeneratedCodeLength() != NULL) {
-					//exception
-					$msg = "generatedCodeLength parameter must be null when generatedMode is set to single";
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				if($createInternalCouponsCampaignRequest->getTotalNumber() != NULL) {
-					//exception
-					$msg = "totalNumber parameter must be null when generatedMode is set to single";
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				break;
-			case 'bulk' :
-				if($createInternalCouponsCampaignRequest->getGeneratedCodeLength() == NULL) {
-					//exception
-					$msg = "generatedCodeLength parameter cannot be null when generatedMode is set to bulk";
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				$generatedCodeLength = $createInternalCouponsCampaignRequest->getGeneratedCodeLength();
-				if(!(is_numeric($generatedCodeLength)) || !(is_int($generatedCodeLength)) || !($generatedCodeLength > 0)) {
-					$msg = "generatedCodeLength parameter must be a positive integer";
-					config::getLogger()->addError($msg);
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				if($createInternalCouponsCampaignRequest->getTotalNumber() == NULL) {
-					//exception
-					$msg = "totalNumber parameter cannot be null when generatedMode is set to bulk";
-					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				}
-				break;
-			default :
-				$msg = "generatedMode parameter : ".$createInternalCouponsCampaignRequest->getGeneratedMode()." is unknown";
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-				break;
-		}
-		$timeframesSize = count($createInternalCouponsCampaignRequest->getTimeframes());
-		if($timeframesSize == 0) {
-			//exception
-			$msg = "at least one timeframe must be provided";
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
-		if($createInternalCouponsCampaignRequest->getExpiresDate() != NULL) {
-			//30 seconds in the past MAX
-			if((new DateTime())->getTimestamp() - ($createInternalCouponsCampaignRequest->getExpiresDate()->getTimestamp()) > 30) {
-				//exception
-				$msg = "expiresDate cannot be in the past";
-				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-			}
-		}
+		$this->doCheckInternalCouponsCampaignCreation($createInternalCouponsCampaignRequest);
 		// Parameters Verifications OK
 		// Database Verifications...
 		if(BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByPrefix($createInternalCouponsCampaignRequest->getPrefix(), $createInternalCouponsCampaignRequest->getPlatform()->getId()) != NULL) {
@@ -630,6 +459,417 @@ class InternalCouponsCampaignsHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_internal_coupons_campaign);
+	}
+	
+	protected function doCheckInternalPlanCompatibility(BillingInternalCouponsCampaign $db_internal_coupons_campaign, InternalPlan $db_internal_plan) {
+		//provider check
+		$billingProviderCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
+		foreach ($billingProviderCouponsCampaigns as $billingProviderCouponsCampaign) {
+			$providerPlan = PlanDAO::getPlanByInternalPlanId($db_internal_plan->getId(), $billingProviderCouponsCampaign->getProviderId());
+			if($providerPlan == NULL) {
+				$msg = "internalPlan is not linked to the provider named : '".ProviderDAO::getProviderById($billingProviderCouponsCampaign->getProviderId())->getName()."'";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+		}
+		//currency check
+		if($db_internal_coupons_campaign->getCurrency() != NULL) {
+			if($db_internal_coupons_campaign->getCurrency() != $db_internal_plan->getCurrency()) {
+				$msg = "internalPlan and internalCouponsCampaign must have the same currency";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+		}
+		//amount check
+		switch($db_internal_coupons_campaign->getCouponType()) {
+			case CouponCampaignType::standard :
+				if($db_internal_plan->getAmountInCents() == 0) {
+					//Exception
+					$msg = "couponCampaignType : ".$db_internal_coupons_campaign->getCouponType()." not compatible with amountInCents=".$db_internal_plan->getAmountInCents();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				break;
+			case CouponCampaignType::prepaid :
+				//nothing to do
+				break;
+			case CouponCampaignType::sponsorship :
+				if($db_internal_plan->getAmountInCents() > 0) {
+					//Exception
+					$msg = "couponCampaignType : ".$db_internal_coupons_campaign->getCouponType()." not compatible with amountInCents=".$db_internal_plan->getAmountInCents();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						
+				}
+				break;
+			case CouponCampaignType::promo :
+				if($db_internal_plan->getAmountInCents() == 0) {
+					//Exception
+					$msg = "couponCampaignType : ".$db_internal_coupons_campaign->getCouponType()." not compatible with amountInCents=".$db_internal_plan->getAmountInCents();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				break;
+			default :
+				$msg = "unknown couponCampaignType : ".$db_internal_coupons_campaign->getCouponType();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				break;
+		}
+	}
+	
+	protected function doCheckInternalCouponsCampaignCreation(CreateInternalCouponsCampaignRequest $createInternalCouponsCampaignRequest) {
+		//GLOBAL
+		if(strlen($createInternalCouponsCampaignRequest->getName()) == 0) {
+			//exception
+			$msg = "name parameter cannot be empty";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if(strlen($createInternalCouponsCampaignRequest->getDescription()) == 0) {
+			//exception
+			$msg = "description parameter cannot be empty";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if(strlen($createInternalCouponsCampaignRequest->getPrefix()) == 0) {
+			//exception
+			$msg = "prefix parameter cannot be empty";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		switch($createInternalCouponsCampaignRequest->getGeneratedMode()) {
+			case 'single' :
+				//must be null : generated_code_length, total_number
+				if($createInternalCouponsCampaignRequest->getGeneratedCodeLength() !== NULL) {
+					//exception
+					$msg = "generatedCodeLength parameter must be null when generatedMode is set to single";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($createInternalCouponsCampaignRequest->getTotalNumber() !== NULL) {
+					//exception
+					$msg = "totalNumber parameter must be null when generatedMode is set to single";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				break;
+			case 'bulk' :
+				//must not to be null : generated_code_length, total_number
+				if($createInternalCouponsCampaignRequest->getGeneratedCodeLength() === NULL) {
+					//exception
+					$msg = "generatedCodeLength parameter must not null when generatedMode is set to bulk";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				} else {
+					$generatedCodeLength = $createInternalCouponsCampaignRequest->getGeneratedCodeLength();
+					if(!(is_numeric($generatedCodeLength)) || !(is_int($generatedCodeLength)) || !($generatedCodeLength > 0)) {
+						$msg = "generatedCodeLength parameter must be a positive integer";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+				}
+				if($createInternalCouponsCampaignRequest->getTotalNumber() === NULL) {
+					//exception
+					$msg = "totalNumber parameter must be not null when generatedMode is set to bulk";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				} else {
+					$totalNumber = $createInternalCouponsCampaignRequest->getTotalNumber();
+					if(!(is_numeric($totalNumber)) || !(is_int($totalNumber)) || !($totalNumber > 0)) {
+						$msg = "totalNumber parameter must be a positive integer";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+				}
+				break;
+			default :
+				$msg = "generatedMode parameter : ".$createInternalCouponsCampaignRequest->getGeneratedMode()." is unknown";
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				break;
+		}
+		$timeframesSize = count($createInternalCouponsCampaignRequest->getTimeframes());
+		if($timeframesSize == 0) {
+			//exception
+			$msg = "at least one timeframe must be provided";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getExpiresDate() != NULL) {
+			//30 seconds in the past MAX
+			if((new DateTime())->getTimestamp() - ($createInternalCouponsCampaignRequest->getExpiresDate()->getTimestamp()) > 30) {
+				//exception
+				$msg = "expiresDate cannot be in the past";
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+		}
+		if($createInternalCouponsCampaignRequest->getMaxRedemptionsByUser() !== NULL) {
+			$maxRedemptionsByUser = $createInternalCouponsCampaignRequest->getMaxRedemptionsByUser();
+			if(!(is_numeric($maxRedemptionsByUser)) || !(is_int($maxRedemptionsByUser)) || !($maxRedemptionsByUser > 0)) {
+				$msg = "maxRedemptionsByUser parameter must be a positive integer";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+		}
+		//SPECIFIC
+		switch($createInternalCouponsCampaignRequest->getCouponsCampaignType()) {
+			case CouponCampaignType::standard :
+				$this->doCheckStandardInternalCouponsCampaignCreation($createInternalCouponsCampaignRequest);
+				break;
+			case CouponCampaignType::prepaid :
+				$this->doCheckPrepaidInternalCouponsCampaignCreation($createInternalCouponsCampaignRequest);
+				break;
+			case CouponCampaignType::sponsorship :
+				$this->doCheckSponsorshipInternalCouponsCampaignCreation($createInternalCouponsCampaignRequest);
+				break;
+			case CouponCampaignType::promo :
+				$this->doCheckPromoInternalCouponsCampaignCreation($createInternalCouponsCampaignRequest);
+				break;
+			default :
+				$msg = "unknown couponCampaignType : ".$createInternalCouponsCampaignRequest->getCouponsCampaignType();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				break;
+		}
+	}
+	
+	protected function doCheckStandardInternalCouponsCampaignCreation(CreateInternalCouponsCampaignRequest $createInternalCouponsCampaignRequest) {
+		//TODO
+	}
+	
+	protected function doCheckPrepaidInternalCouponsCampaignCreation(CreateInternalCouponsCampaignRequest $createInternalCouponsCampaignRequest) {
+		if($createInternalCouponsCampaignRequest->getDiscountType() != 'none') {
+			//exception
+			$msg = "discountType parameter must be set to 'none' when couponsCampaignType is set to prepaid";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//must be NULL : amountInCents, currency, percent, discount_duration, discount_duration_unit, discount_duration_length
+		if($createInternalCouponsCampaignRequest->getAmountInCents() !== NULL) {
+			//exception
+			$msg = "amountInCents parameter must be null when couponsCampaignType is set to prepaid";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getCurrency() !== NULL) {
+			//exception
+			$msg = "currency parameter must be null when couponsCampaignType is set to prepaid";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getPercent() !== NULL) {
+			//exception
+			$msg = "percent parameter must be null when couponsCampaignType is set to prepaid";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getDiscountDuration() !== NULL) {
+			//exception
+			$msg = "discountDuration parameter must be null when couponsCampaignType is set to prepaid";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getDiscountDurationUnit() !== NULL) {
+			//exception
+			$msg = "discountDurationUnit parameter must be null when couponsCampaignType is set to prepaid";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getDiscountDurationLength() !== NULL) {
+			//exception
+			$msg = "discountDurationLength parameter must be null when couponsCampaignType is set to prepaid";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$timeframesSize = count($createInternalCouponsCampaignRequest->getTimeframes());
+		if($timeframesSize != 1) {
+			//exception
+			$msg = "only one couponsCampaignTimeframe is supported when couponsCampaignType is set to prepaid";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getTimeframes()[0] != CouponTimeframe::onSubCreation) {
+			//exception
+			$msg = "only couponsCampaignTimeframe=".CouponTimeframe::onSubCreation." is supported when couponsCampaignType is set to prepaid";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+	}
+	
+	protected function doCheckSponsorshipInternalCouponsCampaignCreation(CreateInternalCouponsCampaignRequest $createInternalCouponsCampaignRequest) {
+		if($createInternalCouponsCampaignRequest->getDiscountType() != 'none') {
+			//exception
+			$msg = "discountType parameter must be set to 'none' when couponsCampaignType is set to sponsorship";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//must be NULL : amountInCents, currency, percent, discount_duration, discount_duration_unit, discount_duration_length
+		if($createInternalCouponsCampaignRequest->getAmountInCents() !== NULL) {
+			//exception
+			$msg = "amountInCents parameter must be null when couponsCampaignType is set to sponsorship";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getCurrency() !== NULL) {
+			//exception
+			$msg = "currency parameter must be null when couponsCampaignType is set to sponsorship";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getPercent() !== NULL) {
+			//exception
+			$msg = "percent parameter must be null when couponsCampaignType is set to sponsorship";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getDiscountDuration() !== NULL) {
+			//exception
+			$msg = "discountDuration parameter must be null when couponsCampaignType is set to sponsorship";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getDiscountDurationUnit() !== NULL) {
+			//exception
+			$msg = "discountDurationUnit parameter must be null when couponsCampaignType is set to sponsorship";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getDiscountDurationLength() !== NULL) {
+			//exception
+			$msg = "discountDurationLength parameter must be null when couponsCampaignType is set to sponsorship";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$timeframesSize = count($createInternalCouponsCampaignRequest->getTimeframes());
+		if($timeframesSize != 1) {
+			//exception
+			$msg = "only one couponsCampaignTimeframe is supported when couponsCampaignType is set to sponsorship";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getTimeframes()[0] != CouponTimeframe::onSubCreation) {
+			//exception
+			$msg = "only couponsCampaignTimeframe=".CouponTimeframe::onSubCreation." is supported when couponsCampaignType is set to sponsorship";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+	}
+	
+	protected function doCheckPromoInternalCouponsCampaignCreation(CreateInternalCouponsCampaignRequest $createInternalCouponsCampaignRequest) {
+		$possible_discountTypes = ['percent', 'amount'];
+		if(!in_array($createInternalCouponsCampaignRequest->getDiscountType(), $possible_discountTypes)) {
+			//exception
+			$msg = "discountType must be one of follows : ".implode(', ', $possible_discountTypes);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		switch ($createInternalCouponsCampaignRequest->getDiscountType()) {
+			case 'percent' :
+				//percent must be not null
+				if($createInternalCouponsCampaignRequest->getPercent() === NULL) {
+					//exception
+					$msg = "percent parameter cannot be null when discountType is set to percent";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				} else {
+					$percent = $createInternalCouponsCampaignRequest->getPercent();
+					if(!(is_numeric($percent)) || !(is_int($percent)) || !($percent > 0) || !($percent <= 100)) {
+						$msg = "percent parameter must be an integer > 0 and <= 100";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+				}
+				//amountInCents, currency must be null
+				if($createInternalCouponsCampaignRequest->getAmountInCents() !== NULL) {
+					//exception
+					$msg = "amountInCents parameter must be null when discountType is set to percent";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($createInternalCouponsCampaignRequest->getCurrency() !== NULL) {
+					//exception
+					$msg = "currency parameter must be null when discountType is set to percent";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				break;
+			case 'amount' :
+				//amountInCents, currency must be not null
+				if($createInternalCouponsCampaignRequest->getAmountInCents() === NULL) {
+					//exception
+					$msg = "amountInCents parameter cannot be null when discountType is set to amount";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				} else {
+					$amountInCents = $createInternalCouponsCampaignRequest->getAmountInCents();
+					if(!(is_numeric($amountInCents)) || !(is_int($amountInCents)) || !($amountInCents > 0)) {
+						$msg = "amountInCents parameter must be a positive integer";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+				}
+				if($createInternalCouponsCampaignRequest->getCurrency() === NULL) {
+					//exception
+					$msg = "currency parameter cannot be null when discountType is set to amount";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				} else {
+					$currency = $createInternalCouponsCampaignRequest->getCurrency();
+					if(!array_key_exists($currency, Currency::getCurrencies())) {
+						$msg = "currency parameter is not valid";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+				}
+				//percent must be null
+				if($createInternalCouponsCampaignRequest->getPercent() !== NULL) {
+					//exception
+					$msg = "percent parameter must be null when discountType is set to amount";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				break;
+			default : 
+				//should not happen
+				$msg = "unknown discountType : ".$createInternalCouponsCampaignRequest->getDiscountType();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				break;
+		}
+		$possible_discountDurations = ['once', 'repeating', 'forever'];
+		if(!in_array($createInternalCouponsCampaignRequest->getDiscountDuration(), $possible_discountDurations)) {
+			//exception
+			$msg = "discountDuration must be one of follows : ".implode(', ', $possible_discountDurations);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		switch($createInternalCouponsCampaignRequest->getDiscountDuration()) {
+			case 'once' :
+				//must be null : discount_duration_unit, discount_duration_length
+				if($createInternalCouponsCampaignRequest->getDiscountDurationUnit() !== NULL) {
+					//exception
+					$msg = "discountDurationUnit parameter must be null when discountDuration is set to once";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($createInternalCouponsCampaignRequest->getDiscountDurationLength() !== NULL) {
+					//exception
+					$msg = "discountDurationLength parameter must be null when discountDuration is set to once";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				break;
+			case 'repeating' :
+				//must be not null : discount_duration_unit, discount_duration_length
+				if($createInternalCouponsCampaignRequest->getDiscountDurationUnit() === NULL) {
+					//exception
+					$msg = "discountDurationUnit parameter cannot be null when discountDuration parameter is set to repeating";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				} else {
+					$possible_discountDurationUnits = ['month', 'year'];
+					if(!in_array($createInternalCouponsCampaignRequest->getDiscountDurationUnit(), $possible_discountDurationUnits)) {
+						//exception
+						$msg = "discountDurationUnit must be one of follows : ".implode(', ', $possible_discountDurationUnits);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+				}
+				if($createInternalCouponsCampaignRequest->getDiscountDurationLength() === NULL) {
+					//exception
+					$msg = "discountDurationLength parameter cannot be null when discountDuration parameter is set to repeating";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				} else {
+					$discountDurationLength = $createInternalCouponsCampaignRequest->getDiscountDurationLength();
+					if(!(is_numeric($discountDurationLength)) || !(is_int($discountDurationLength)) || !($discountDurationLength > 0)) {
+						$msg = "discountDurationLength parameter must be a positive integer";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+				}
+				break;
+			case 'forever' :
+				//must be null : discount_duration_unit, discount_duration_length
+				if($createInternalCouponsCampaignRequest->getDiscountDurationUnit() !== NULL) {
+					//exception
+					$msg = "discountDurationUnit parameter must be null when discountDuration is set to forever";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				if($createInternalCouponsCampaignRequest->getDiscountDurationLength() !== NULL) {
+					//exception
+					$msg = "discountDurationLength parameter must be null when discountDuration is set to forever";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				break;
+			default :
+				//should not happen
+				$msg = "unknown discountDuration : ".$createInternalCouponsCampaignRequest->getDiscountDuration();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				break;
+		}
 	}
 	
 }
