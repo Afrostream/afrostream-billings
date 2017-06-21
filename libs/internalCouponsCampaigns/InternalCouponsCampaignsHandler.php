@@ -337,6 +337,11 @@ class InternalCouponsCampaignsHandler {
 				pg_query("BEGIN");
 				//name
 				if($updateInternalCouponsCampaignRequest->getName() != NULL) {
+					if(strlen($updateInternalCouponsCampaignRequest->getName()) == 0) {
+						//exception
+						$msg = "name parameter cannot be empty";
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
 					$db_internal_coupons_campaign->setName($updateInternalCouponsCampaignRequest->getName());
 					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateName($db_internal_coupons_campaign);
 				}
@@ -357,6 +362,30 @@ class InternalCouponsCampaignsHandler {
 						//exception
 						$msg = "at least one timeframe must be provided";
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					switch($db_internal_coupons_campaign->getCouponType()) {
+						case CouponCampaignType::standard :
+						case CouponCampaignType::prepaid :
+						case CouponCampaignType::sponsorship :
+							if($timeframesSize != 1) {
+								//exception
+								$msg = "only one couponsCampaignTimeframe is supported when couponsCampaignType is set to ".$db_internal_coupons_campaign->getCouponType();
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							}
+							if($updateInternalCouponsCampaignRequest->getTimeframes()[0] != CouponTimeframe::onSubCreation) {
+								//exception
+								$msg = "only couponsCampaignTimeframe=".CouponTimeframe::onSubCreation." is supported when couponsCampaignType is set to ".$db_internal_coupons_campaign->getCouponType();
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							}
+							break;
+						case CouponCampaignType::promo :
+							//nothing more to check
+							break;
+						default :
+							$msg = "unknown couponCampaignType : ".$db_internal_coupons_campaign->getCouponType();
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
 					}
 					$db_internal_coupons_campaign->setCouponTimeframes($updateInternalCouponsCampaignRequest->getTimeframes());
 					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateTimeframes($db_internal_coupons_campaign);
@@ -396,9 +425,11 @@ class InternalCouponsCampaignsHandler {
 					}
 					//totalNumber cannot be less than current number
 					$currentTotalNumber = BillingInternalCouponDAO::getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
-					if($totalNumber < $currentTotalNumber) {
-						$msg = "totalNumber parameter : ".$totalNumber." cannot be less than current totalNumber : ".$currentTotalNumber;
-						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					if(isset($currentTotalNumber)) {
+						if($totalNumber < $currentTotalNumber) {
+							$msg = "totalNumber parameter : ".$totalNumber." cannot be less than current totalNumber : ".$currentTotalNumber;
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						}
 					}
 					$db_internal_coupons_campaign->setTotalNumber($totalNumber);
 					$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::updateTotalNumber($db_internal_coupons_campaign);
@@ -525,11 +556,6 @@ class InternalCouponsCampaignsHandler {
 			$msg = "name parameter cannot be empty";
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
-		if(strlen($createInternalCouponsCampaignRequest->getDescription()) == 0) {
-			//exception
-			$msg = "description parameter cannot be empty";
-			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
-		}
 		if(strlen($createInternalCouponsCampaignRequest->getPrefix()) == 0) {
 			//exception
 			$msg = "prefix parameter cannot be empty";
@@ -550,7 +576,7 @@ class InternalCouponsCampaignsHandler {
 				}
 				break;
 			case 'bulk' :
-				//must not to be null : generated_code_length, total_number
+				//must not to be null : RAS, in some case, code is generated outside (cashway), totalNumber can be null as coupon is generated when asked
 				if($createInternalCouponsCampaignRequest->getGeneratedCodeLength() === NULL) {
 					//exception
 					$msg = "generatedCodeLength parameter must not null when generatedMode is set to bulk";
@@ -626,7 +652,53 @@ class InternalCouponsCampaignsHandler {
 	}
 	
 	protected function doCheckStandardInternalCouponsCampaignCreation(CreateInternalCouponsCampaignRequest $createInternalCouponsCampaignRequest) {
-		//TODO
+		if($createInternalCouponsCampaignRequest->getDiscountType() != 'none') {
+			//exception
+			$msg = "discountType parameter must be set to 'none' when couponsCampaignType is set to standard";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		//must be NULL : amountInCents, currency, percent, discount_duration, discount_duration_unit, discount_duration_length
+		if($createInternalCouponsCampaignRequest->getAmountInCents() !== NULL) {
+			//exception
+			$msg = "amountInCents parameter must be null when couponsCampaignType is set to standard";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getCurrency() !== NULL) {
+			//exception
+			$msg = "currency parameter must be null when couponsCampaignType is set to standard";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getPercent() !== NULL) {
+			//exception
+			$msg = "percent parameter must be null when couponsCampaignType is set to standard";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getDiscountDuration() !== NULL) {
+			//exception
+			$msg = "discountDuration parameter must be null when couponsCampaignType is set to standard";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getDiscountDurationUnit() !== NULL) {
+			//exception
+			$msg = "discountDurationUnit parameter must be null when couponsCampaignType is set to standard";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getDiscountDurationLength() !== NULL) {
+			//exception
+			$msg = "discountDurationLength parameter must be null when couponsCampaignType is set to standard";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		$timeframesSize = count($createInternalCouponsCampaignRequest->getTimeframes());
+		if($timeframesSize != 1) {
+			//exception
+			$msg = "only one couponsCampaignTimeframe is supported when couponsCampaignType is set to standard";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		if($createInternalCouponsCampaignRequest->getTimeframes()[0] != CouponTimeframe::onSubCreation) {
+			//exception
+			$msg = "only couponsCampaignTimeframe=".CouponTimeframe::onSubCreation." is supported when couponsCampaignType is set to standard";
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
 	}
 	
 	protected function doCheckPrepaidInternalCouponsCampaignCreation(CreateInternalCouponsCampaignRequest $createInternalCouponsCampaignRequest) {
