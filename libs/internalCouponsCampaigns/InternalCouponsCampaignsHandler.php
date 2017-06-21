@@ -140,6 +140,26 @@ class InternalCouponsCampaignsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
+			switch ($db_internal_coupons_campaign->getCouponType()) {
+				case CouponCampaignType::standard :
+				case CouponCampaignType::prepaid :
+				case CouponCampaignType::sponsorship :
+					if(count($billingInternalCouponsCampaignInternalPlans) == 1) {
+						$msg = "no more than one internalPlan can be linked to the internalCouponsCampaign when couponCampaignType=".$db_internal_coupons_campaign->getCouponType();
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					break;
+				case CouponCampaignType::promo :
+					//nothing more to check
+					break;
+				default :
+					$msg = "unknown couponCampaignType : ".$db_internal_coupons_campaign->getCouponType();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
 			//Verifications ...
 			$this->doCheckInternalPlanCompatibility($db_internal_coupons_campaign, $db_internal_plan);
 			//Verification OK
