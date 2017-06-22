@@ -11,6 +11,7 @@ require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToInternalC
 require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromInternalCouponsCampaignRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GenerateInternalCouponsRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateInternalCouponsCampaignRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CheckInternalCouponsCampaignRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -466,6 +467,36 @@ class InternalCouponsCampaignsController extends BillingsController {
 			//
 		} catch(Exception $e) {
 			$msg = "an unknown exception occurred while updating an InternalCouponsCampaign, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function check(Request $request, Response $response, array $args) {
+		try {
+			$data = json_decode($request->getBody(), true);
+			$checkInternalCouponsCampaignRequest = new CheckInternalCouponsCampaignRequest();
+			$checkInternalCouponsCampaignRequest->setOrigin('api');
+			if(!isset($args['couponsCampaignInternalBillingUuid'])) {
+				//exception
+				$msg = "field 'couponsCampaignInternalBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$checkInternalCouponsCampaignRequest->setCouponsCampaignInternalBillingUuid($args['couponsCampaignInternalBillingUuid']);
+			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
+			$couponsCampaign = $internalCouponsCampaignsHandler->doCheckInternalCouponsCampaign($checkInternalCouponsCampaignRequest);
+			return($this->returnObjectAsJson($response, 'couponsCampaign', $couponsCampaign));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while checking an InternalCouponsCampaign, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while checking an InternalCouponsCampaign, error_code=".$e->getCode().", error_message=".$e->getMessage();
 			config::getLogger()->addError($msg);
 			//
 			return($this->returnExceptionAsJson($response, $e));

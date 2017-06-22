@@ -11,6 +11,7 @@ require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToInternalC
 require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromInternalCouponsCampaignRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GenerateInternalCouponsRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateInternalCouponsCampaignRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CheckInternalCouponsCampaignRequest.php';
 
 use Money\Currency;
 
@@ -962,6 +963,52 @@ class InternalCouponsCampaignsHandler {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				break;
 		}
+	}
+	
+	public function doCheckInternalCouponsCampaign(CheckInternalCouponsCampaignRequest $checkInternalCouponsCampaignRequest) {
+		$couponsCampaignInternalBillingUuid = $checkInternalCouponsCampaignRequest->getCouponsCampaignInternalBillingUuid();
+		//
+		$db_internal_coupons_campaign = NULL;
+		try {
+			config::getLogger()->addInfo("internalCouponsCampaign checking...");
+			$db_internal_coupons_campaign = BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignByUuid($couponsCampaignInternalBillingUuid, $checkInternalCouponsCampaignRequest->getPlatform()->getId());
+			if($db_internal_coupons_campaign == NULL) {
+				$msg = "unknown couponsCampaignInternalBillingUuid : ".$couponsCampaignInternalBillingUuid;
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//TODO : connected to one (or more internalPlans) / connected to one (or more providers) 
+			$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
+			//has as many coupons as given
+			$coupon_counter = BillingInternalCouponDAO::getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
+			switch ($db_internal_coupons_campaign->getGeneratedMode()) {
+				case 'single' :
+					if($coupon_counter != 1) {
+						//TODO
+					}
+					break;
+				case 'bulk';
+					if($db_internal_coupons_campaign->getTotalNumber() != NULL) {
+						//TODO
+					}
+					break;
+				default :
+					$msg = "generatedMode parameter : ".$db_internal_coupons_campaign->getGeneratedMode()." is unknown";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
+			//done
+			config::getLogger()->addInfo("internalCouponsCampaign checking done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while checking internalCouponsCampaign, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("internalCouponsCampaign checking failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while checking internalCouponsCampaign, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("internalCouponsCampaign checking failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($db_internal_coupons_campaign);
 	}
 	
 }
