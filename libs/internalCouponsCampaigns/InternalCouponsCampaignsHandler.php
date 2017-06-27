@@ -977,19 +977,55 @@ class InternalCouponsCampaignsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			//TODO : connected to one (or more internalPlans) / connected to one (or more providers) 
+			//internalPlans links check
 			$billingInternalCouponsCampaignInternalPlans = BillingInternalCouponsCampaignInternalPlansDAO::getBillingInternalCouponsCampaignInternalPlansByInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
-			//has as many coupons as given
+			switch ($db_internal_coupons_campaign->getCouponType()) {
+				case CouponCampaignType::standard :
+				case CouponCampaignType::prepaid :
+				case CouponCampaignType::sponsorship :
+					if(count($billingInternalCouponsCampaignInternalPlans) != 1) {
+						$msg = "1 internalPlan expected, counting=".count($billingInternalCouponsCampaignInternalPlans);
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					break;
+				case CouponCampaignType::promo :
+					if(count($billingInternalCouponsCampaignInternalPlans) == 0) {
+						$msg ="at least 1 internalPlan expected, none found";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					break;
+				default :
+					$msg = "unknown couponCampaignType : ".$db_internal_coupons_campaign->getCouponType();
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
+			//providers links check
+			$billingProviderCouponsCampaigns = BillingProviderCouponsCampaignDAO::getBillingProviderCouponsCampaignsByInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
+			if(count($billingProviderCouponsCampaigns) == 0) {
+				$msg ="at least 1 provider expected, none found";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			//has as many coupons as given check
 			$coupon_counter = BillingInternalCouponDAO::getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
 			switch ($db_internal_coupons_campaign->getGeneratedMode()) {
 				case 'single' :
 					if($coupon_counter != 1) {
-						//TODO
+						$msg = "1 internalCoupon expected, counting=".$coupon_counter;
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					}
 					break;
 				case 'bulk';
 					if($db_internal_coupons_campaign->getTotalNumber() != NULL) {
-						//TODO
+						if($db_internal_coupons_campaign->getTotalNumber() != $coupon_counter) {
+							$msg = $db_internal_coupons_campaign->getTotalNumber()." internalCoupons expected, counting=".$coupon_counter;
+							config::getLogger()->addError($msg);
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+						}
 					}
 					break;
 				default :
