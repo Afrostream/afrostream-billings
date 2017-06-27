@@ -371,9 +371,6 @@ class InternalCouponsCampaignsController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$couponsCampaignInternalBillingUuid = $args['couponsCampaignInternalBillingUuid'];
-			//
-			$timeframes = $data['couponsCampaignTimeframes'];
-			
 			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
 			$generateInternalCouponsRequest = new GenerateInternalCouponsRequest();
 			$generateInternalCouponsRequest->setCouponsCampaignInternalBillingUuid($couponsCampaignInternalBillingUuid);

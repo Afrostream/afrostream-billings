@@ -268,7 +268,29 @@ class InternalCouponsCampaignsHandler {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			//
+			//check ...
+			switch($db_internal_coupons_campaign->getGeneratedMode()) {
+				case 'single' :
+					//nothing to check
+					break;
+				case 'bulk' :
+					if($db_internal_coupons_campaign->getTotalNumber() == NULL) {
+						//exception
+						$msg = "totalNumber parameter cannot be null when generatedMode is set to bulk";
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					if($db_internal_coupons_campaign->getGeneratedCodeLength() == NULL) {
+						//exception
+						$msg = "generatedCodeLength parameter cannot be null when generatedMode is set to bulk";
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+					break;
+				default :
+					$msg = "generatedMode parameter : ".$db_internal_coupons_campaign->getGeneratedMode()." is unknown";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					break;
+			}
+			//check done
 			$separator = $this->getSeparator($db_internal_coupons_campaign);
 			//
 			$coupon_counter = BillingInternalCouponDAO::getBillingInternalCouponsTotalNumberByInternalCouponsCampaignsId($db_internal_coupons_campaign->getId());
