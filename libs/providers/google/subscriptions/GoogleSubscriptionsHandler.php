@@ -296,6 +296,11 @@ class GoogleSubscriptionsHandler extends ProviderSubscriptionsHandler {
 						config::getLogger()->addError($msg);
 						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_MANDATORY);
 					}
+					if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+						$msg = "cannot expire and refund partially a ".$this->provider->getName()." subscription";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::SUBS_EXP_REFUND_FULL_MANDATORY);
+					}
 					$plan = PlanDAO::getPlanById($subscription->getPlanId());
 					$subOpts = BillingsSubscriptionOptsDAO::getBillingsSubscriptionOptsBySubId($subscription->getId());
 					$googleClient = new GoogleClient(json_decode($this->provider->getConfigFile(), true));
