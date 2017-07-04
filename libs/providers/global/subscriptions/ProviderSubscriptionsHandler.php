@@ -213,6 +213,14 @@ class ProviderSubscriptionsHandler {
 			config::getLogger()->addInfo("max_redemptions_by_user is null, redemptions are unlimited");
 		}
 		//
+		if($internalCouponsCampaign->getExpiresDate() != NULL) {
+			if((new DateTime())->getTimestamp() - ($internalCouponsCampaign->getExpiresDate()->getTimestamp()) > 0) {
+				$msg = "coupon : code=".$couponCode." expired";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg, ExceptionError::COUPON_EXPIRED);
+			}
+		}
+		//
 		$userInternalCoupons = BillingUserInternalCouponDAO::getBillingUserInternalCouponsByUserId($user->getId(), $internalCoupon->getId());
 		$userInternalCoupon = self::getFirstUserInternalCouponsWaitingStatus($userInternalCoupons);
 		if($userInternalCoupon == NULL) {
@@ -569,24 +577,51 @@ class ProviderSubscriptionsHandler {
 			$substitutions['%couponAmountForDisplay%'] = '';
 			$substitutions['%couponDetails%'] = '';
 			$substitutions['%couponAppliedSentence%'] = '';
-			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() == 'promo' && $internalCouponsCampaign->getUserNotificationsEnabled() == true) {
-				$couponAmountForDisplay = '';
+			//Promo amounts
+			$substitutions['%amountOfPromo%'] = '0';
+			$substitutions['%amountInCentsOfPromo%'] = '0';
+			$substitutions['%amountWithPromo%'] = $substitutions['%amount'];
+			$substitutions['%amountInCentsWithPromo%'] = $substitutions['%amountInCents%'];
+			if(isset($internalCouponsCampaign) && $internalCouponsCampaign->getCouponType() == 'promo') {
+				if($internalCouponsCampaign->getUserNotificationsEnabled() == true) {
+					$couponAmountForDisplay = '';
+					switch($internalCouponsCampaign->getDiscountType()) {
+						case 'percent' :
+							$couponAmountForDisplay = $internalCouponsCampaign->getPercent().'%';
+							break;
+						case 'amount' :
+							$couponAmountForDisplay = new Money((integer) $internalCouponsCampaign->getAmountInCents(), new Currency($internalCouponsCampaign->getCurrency()));
+							$couponAmountForDisplay = money_format('%!.2n', (float) ($couponAmountForDisplay->getAmount() / 100));
+							$couponAmountForDisplay = $couponAmountForDisplay.' '.dbGlobal::getCurrencyForDisplay($internalCouponsCampaign->getCurrency());
+							break;
+					}
+					$substitutions['%couponCode%'] = $userInternalCoupon->getCode();
+					$substitutions['%couponAmountForDisplay%'] = $couponAmountForDisplay;
+					$substitutions['%couponDetails%'] = $internalCouponsCampaign->getDescription();
+					$couponAppliedSentence = getEnv('SENDGRID_VAR_couponAppliedSentence');
+					$couponAppliedSentence = str_replace(array_keys($substitutions), array_values($substitutions), $couponAppliedSentence);
+					$substitutions['%couponAppliedSentence%'] = $couponAppliedSentence;
+				}
+				//<-- Promo amounts
 				switch($internalCouponsCampaign->getDiscountType()) {
-					case 'percent' :
-						$couponAmountForDisplay = $internalCouponsCampaign->getPercent().'%';
-						break;
 					case 'amount' :
-						$couponAmountForDisplay = new Money((integer) $internalCouponsCampaign->getAmountInCents(), new Currency($internalCouponsCampaign->getCurrency()));
-						$couponAmountForDisplay = money_format('%!.2n', (float) ($couponAmountForDisplay->getAmount() / 100));
-						$couponAmountForDisplay = $couponAmountForDisplay.' '.dbGlobal::getCurrencyForDisplay($internalCouponsCampaign->getCurrency());
+						$amountInCentsOfPromo = $internalCouponsCampaign->getAmountInCents();
+						$amountInCentsWithPromo = max(0, $internalPlan->getAmountInCents() - $internalCouponsCampaign->getAmountInCents());
+						$substitutions['%amountInCentsOfPromo%'] = $amountInCentsOfPromo;
+						$substitutions['%amountInCentsWithPromo%'] = $amountInCentsWithPromo;
+						$substitutions['%amountOfPromo%'] = money_format('%!.2n', (float) ($amountInCentsOfPromo / 100));
+						$substitutions['%amountWithPromo%'] = money_format('%!.2n', (float) ($amountInCentsWithPromo / 100));
+						break;
+					case 'percent':
+						$amountInCentsOfPromo = round((float) ($internalPlan->getAmountInCents() * $internalCouponsCampaign->getPercent() / 100));
+						$amountInCentsWithPromo = $internalPlan->getAmountInCents() - $amountInCentsOfPromo;
+						$substitutions['%amountInCentsOfPromo%'] = $amountInCentsOfPromo;
+						$substitutions['%amountInCentsWithPromo%'] = $amountInCentsWithPromo;
+						$substitutions['%amountOfPromo%'] = money_format('%!.2n', (float) ($amountInCentsOfPromo / 100));
+						$substitutions['%amountWithPromo%'] = money_format('%!.2n', (float) ($amountInCentsWithPromo / 100));
 						break;
 				}
-				$substitutions['%couponCode%'] = $userInternalCoupon->getCode();
-				$substitutions['%couponAmountForDisplay%'] = $couponAmountForDisplay;
-				$substitutions['%couponDetails%'] = $internalCouponsCampaign->getDescription();
-				$couponAppliedSentence = getEnv('SENDGRID_VAR_couponAppliedSentence');
-				$couponAppliedSentence = str_replace(array_keys($substitutions), array_values($substitutions), $couponAppliedSentence);
-				$substitutions['%couponAppliedSentence%'] = $couponAppliedSentence;
+				//--> Promo amounts
 			}
 			//DATA SUBSTITUTION <--
 			$sendgrid = new SendGrid(getEnv('SENDGRID_API_KEY'));

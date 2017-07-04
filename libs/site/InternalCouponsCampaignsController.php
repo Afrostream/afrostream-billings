@@ -10,6 +10,8 @@ require_once __DIR__ . '/../providers/global/requests/CreateInternalCouponsCampa
 require_once __DIR__ . '/../providers/global/requests/AddInternalPlanToInternalCouponsCampaignRequest.php';
 require_once __DIR__ . '/../providers/global/requests/RemoveInternalPlanFromInternalCouponsCampaignRequest.php';
 require_once __DIR__ . '/../providers/global/requests/GenerateInternalCouponsRequest.php';
+require_once __DIR__ . '/../providers/global/requests/UpdateInternalCouponsCampaignRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CheckInternalCouponsCampaignRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -229,6 +231,18 @@ class InternalCouponsCampaignsController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$maxRedemptionsByUser = $data['maxRedemptionsByUser'];
+			$expiresDate = NULL;
+			if(array_key_exists('expiresDate', $data)) {
+				$expiresDateStr = $data['expiresDate'];
+				if($expiresDateStr !== NULL) {
+					$expiresDate = DateTime::createFromFormat(DateTime::ISO8601, $expiresDateStr);
+					if($expiresDate === false) {
+						$msg = "expiresDate date : ".$expiresDateStr." cannot be parsed";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+				}
+			}
 			//
 			$createInternalCouponsCampaignRequest = new CreateInternalCouponsCampaignRequest();
 			$createInternalCouponsCampaignRequest->setOrigin('api');
@@ -252,6 +266,7 @@ class InternalCouponsCampaignsController extends BillingsController {
 			}
 			$createInternalCouponsCampaignRequest->setEmailsEnabled($emailsEnabled);
 			$createInternalCouponsCampaignRequest->setMaxRedemptionsByUser($maxRedemptionsByUser);
+			$createInternalCouponsCampaignRequest->setExpiresDate($expiresDate);
 			//
 			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
 			$couponsCampaign = $internalCouponsCampaignsHandler->create($createInternalCouponsCampaignRequest);
@@ -356,7 +371,6 @@ class InternalCouponsCampaignsController extends BillingsController {
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
 			$couponsCampaignInternalBillingUuid = $args['couponsCampaignInternalBillingUuid'];
-			//
 			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
 			$generateInternalCouponsRequest = new GenerateInternalCouponsRequest();
 			$generateInternalCouponsRequest->setCouponsCampaignInternalBillingUuid($couponsCampaignInternalBillingUuid);
@@ -378,6 +392,115 @@ class InternalCouponsCampaignsController extends BillingsController {
 		}
 	}
 	
+	public function update(Request $request, Response $response, array $args) {
+		try {
+			$data = json_decode($request->getBody(), true);
+			$updateInternalCouponsCampaignRequest = new UpdateInternalCouponsCampaignRequest();
+			$updateInternalCouponsCampaignRequest->setOrigin('api');
+			if(!isset($args['couponsCampaignInternalBillingUuid'])) {
+				//exception
+				$msg = "field 'couponsCampaignInternalBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$updateInternalCouponsCampaignRequest->setCouponsCampaignInternalBillingUuid($args['couponsCampaignInternalBillingUuid']);
+			if(isset($data['name'])) {
+				$updateInternalCouponsCampaignRequest->setName($data['name']);
+			}
+			if(isset($data['description'])) {
+				$updateInternalCouponsCampaignRequest->setDescription($data['description']);
+			}
+			if(isset($data['emailsEnabled'])) {
+				$updateInternalCouponsCampaignRequest->setEmailsEnabled($data['emailsEnabled'] === true ? true : false);
+			}
+			if(isset($data['couponsCampaignTimeframes'])) {
+				if(!is_array($data['couponsCampaignTimeframes'])) {
+					//Exception
+					$msg = "field 'couponsCampaignTimeframes' must be an array";
+					config::getLogger()->addError($msg);
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				$timeframes = $data['couponsCampaignTimeframes'];
+				$timeframesSize = count($timeframes);
+				if($timeframesSize == 0) {
+					//exception
+					$msg = "at least one timeframe must be provided";
+					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+				}
+				foreach ($timeframes as $timeframe) {
+					$updateInternalCouponsCampaignRequest->addTimeframe(new CouponTimeframe($timeframe));
+				}
+			}
+			if(isset($data['maxRedemptionsByUser'])) {
+				$updateInternalCouponsCampaignRequest->setMaxRedemptionsByUser($data['maxRedemptionsByUser']);
+			}
+			if(isset($data['totalNumber'])) {
+				$updateInternalCouponsCampaignRequest->setTotalNumber($data['totalNumber']);
+			}
+			if(isset($data['generatedCodeLength'])) {
+				$updateInternalCouponsCampaignRequest->setGeneratedCodeLength($data['generatedCodeLength']);
+			}
+			if(array_key_exists('expiresDate', $data)) {
+				$expiresDateStr = $data['expiresDate'];
+				$expiresDate = NULL;
+				if($expiresDateStr !== NULL) {
+					$expiresDate = DateTime::createFromFormat(DateTime::ISO8601, $expiresDateStr);
+					if($expiresDate === false) {
+						$msg = "expiresDate date : ".$expiresDateStr." cannot be parsed";
+						config::getLogger()->addError($msg);
+						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+					}
+				}
+				$updateInternalCouponsCampaignRequest->setExpiresDate($expiresDate);
+			}
+			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
+			$couponsCampaign = $internalCouponsCampaignsHandler->doUpdateInternalCouponsCampaign($updateInternalCouponsCampaignRequest);
+			return($this->returnObjectAsJson($response, 'couponsCampaign', $couponsCampaign));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while updating an InternalCouponsCampaign, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while updating an InternalCouponsCampaign, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+	
+	public function check(Request $request, Response $response, array $args) {
+		try {
+			$data = json_decode($request->getBody(), true);
+			$checkInternalCouponsCampaignRequest = new CheckInternalCouponsCampaignRequest();
+			$checkInternalCouponsCampaignRequest->setOrigin('api');
+			if(!isset($args['couponsCampaignInternalBillingUuid'])) {
+				//exception
+				$msg = "field 'couponsCampaignInternalBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$checkInternalCouponsCampaignRequest->setCouponsCampaignInternalBillingUuid($args['couponsCampaignInternalBillingUuid']);
+			$internalCouponsCampaignsHandler = new InternalCouponsCampaignsHandler();
+			$couponsCampaign = $internalCouponsCampaignsHandler->doCheckInternalCouponsCampaign($checkInternalCouponsCampaignRequest);
+			return($this->returnObjectAsJson($response, 'couponsCampaign', $couponsCampaign));
+		} catch(BillingsException $e) {
+			$msg = "an exception occurred while checking an InternalCouponsCampaign, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnBillingsExceptionAsJson($response, $e));
+			//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while checking an InternalCouponsCampaign, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError($msg);
+			//
+			return($this->returnExceptionAsJson($response, $e));
+			//
+		}
+	}
+		
 }
 
 ?>

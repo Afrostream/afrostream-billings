@@ -314,7 +314,7 @@ class BachatSubscriptionsHandler extends ProviderSubscriptionsHandler {
 		}
 		if($doIt == true) {
 			$subscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
-			if($is_a_request == true) {
+			if($cancelSubscriptionRequest->getOrigin() == 'api') {
 				$subscription->setSubStatus('requesting_canceled');
 			} else {
 				$subscription->setSubStatus('canceled');

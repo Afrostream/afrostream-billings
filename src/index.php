@@ -1181,6 +1181,21 @@ $app->get("/billings/api/internalcoupons/", function ($request, $response, $args
 	return($internalCouponsController->get($request, $response, $args));
 });
 
+$app->get("/billings/api/internalcoupons/{internalCouponBillingUuid}", function ($request, $response, $args) {
+	$internalCouponsController = new InternalCouponsController();
+	return($internalCouponsController->get($request, $response, $args));
+});
+
+$app->put("/billings/api/internalcoupons/{internalCouponBillingUuid}/expire", function ($request, $response, $args) {
+	$internalCouponsController = new InternalCouponsController();
+	return($internalCouponsController->expire($request, $response, $args));
+});
+
+$app->get("/billings/api/internalcoupons/list/", function ($request, $response, $args) {
+	$internalCouponsController = new InternalCouponsController();
+	return($internalCouponsController->getList($request, $response, $args));
+});
+
 //create coupon
 	
 /*
@@ -1231,6 +1246,16 @@ $app->get("/billings/api/users/coupons/list/", function ($request, $response, $a
 	return($usersInternalCouponsController->getList($request, $response, $args));
 });
 
+$app->get("/billings/api/users/coupons/{internalUserCouponBillingUuid}", function ($request, $response, $args) {
+	$usersInternalCouponsController = new UsersInternalCouponsController();
+	return($usersInternalCouponsController->get($request, $response, $args));
+});
+
+$app->put("/billings/api/users/coupons/{internalUserCouponBillingUuid}/expire", function ($request, $response, $args) {
+	$usersInternalCouponsController = new UsersInternalCouponsController();
+	return($usersInternalCouponsController->expire($request, $response, $args));
+});
+ 
 //get couponscampaigns
 	
 /*
@@ -1310,6 +1335,20 @@ $app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillin
 $app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}/generate", function ($request, $response, $args) {
 	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
 	return($internalCouponsCampaignsController->generateInternalCoupons($request, $response, $args));
+});
+
+//actions to internalcouponscampaigns : update
+
+$app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->update($request, $response, $args));
+});
+
+//actions to internalcouponscampaigns : check
+	
+$app->put("/billings/api/internalcouponscampaigns/{couponsCampaignInternalBillingUuid}/check", function ($request, $response, $args) {
+	$internalCouponsCampaignsController = new InternalCouponsCampaignsController();
+	return($internalCouponsCampaignsController->check($request, $response, $args));
 });
 
 //contexts
@@ -1425,6 +1464,11 @@ $app->get("/billings/api/transactions/", function ($request, $response, $args) {
 	return($transactionsController->getMulti($request, $response, $args));
 });
 
+$app->post("/billings/api/transactions/import", function ($request, $response, $args) {
+	$transactionsController = new TransactionsController();
+	return($transactionsController->importTransactions($request, $response, $args));
+});
+
 //providerPlans
 
 $app->get("/billings/api/providerplans/{providerPlanBillingUuid}", function ($request, $response, $args) {
@@ -1440,6 +1484,11 @@ $app->put("/billings/api/providerplans/{providerPlanBillingUuid}/addpaymentmetho
 $app->put("/billings/api/providerplans/{providerPlanBillingUuid}/removepaymentmethod/{paymentMethodType}", function ($request, $response, $args) {
 	$providerPlansController = new ProviderPlansController();
 	return($providerPlansController->removePaymentMethod($request, $response, $args));
+});
+
+$app->put("/billings/api/providerplans/{providerPlanBillingUuid}", function ($request, $response, $args) {
+	$providerPlansController = new ProviderPlansController();
+	return($providerPlansController->update($request, $response, $args));
 });
 
 //WebHooks

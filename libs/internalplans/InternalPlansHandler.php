@@ -434,36 +434,59 @@ class InternalPlansHandler {
 		return($db_internal_plan);
 	}
 	
-	public function doUpdateInternalPlanOpts(UpdateInternalPlanRequest $updateInternalPlanRequest) {
+	public function doUpdateInternalPlan(UpdateInternalPlanRequest $updateInternalPlanRequest) {
 		$internalPlanUuid = $updateInternalPlanRequest->getInternalPlanUuid();
-		$internalplan_opts_array = $updateInternalPlanRequest->getInternalplanOptsArray();
 		//
 		$db_internal_plan = NULL;
 		try {
-			config::getLogger()->addInfo("internal plan opts updating...");
+			config::getLogger()->addInfo("InternalPlan updating...");
 			$db_internal_plan = InternalPlanDAO::getInternalPlanByUuid($internalPlanUuid, $updateInternalPlanRequest->getPlatform()->getId());
 			if($db_internal_plan == NULL) {
 				$msg = "unknown internalPlanUuid : ".$internalPlanUuid;
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$db_internal_plan_opts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($db_internal_plan->getId());
-			$current_internalplan_opts_array = $db_internal_plan_opts->getOpts();
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
-				foreach ($internalplan_opts_array as $key => $value) {
-					if(array_key_exists($key, $current_internalplan_opts_array)) {
-						//UPDATE OR DELETE
-						if(isset($value)) {
-							InternalPlanOptsDAO::updateInternalPlanOptsKey($db_internal_plan->getId(), $key, $value);
+				//opts
+				if($updateInternalPlanRequest->getInternalplanOptsArray() != NULL) {
+					$db_internal_plan_opts = InternalPlanOptsDAO::getInternalPlanOptsByInternalPlanId($db_internal_plan->getId());
+					$current_internalplan_opts_array = $db_internal_plan_opts->getOpts();
+					foreach ($updateInternalPlanRequest->getInternalplanOptsArray() as $key => $value) {
+						if(array_key_exists($key, $current_internalplan_opts_array)) {
+							//UPDATE OR DELETE
+							if(isset($value)) {
+								InternalPlanOptsDAO::updateInternalPlanOptsKey($db_internal_plan->getId(), $key, $value);
+							} else {
+								InternalPlanOptsDAO::deleteInternalPlanOptsKey($db_internal_plan->getId(), $key);
+							}
 						} else {
-							InternalPlanOptsDAO::deleteInternalPlanOptsKey($db_internal_plan->getId(), $key);
+							//ADD
+							InternalPlanOptsDAO::addInternalPlanOptsKey($db_internal_plan->getId(), $key, $value);
 						}
-					} else {
-						//ADD
-						InternalPlanOptsDAO::addInternalPlanOptsKey($db_internal_plan->getId(), $key, $value);
 					}
+					$db_internal_plan = InternalPlanDAO::getInternalPlanById($db_internal_plan->getId());
+				}
+				//name
+				if($updateInternalPlanRequest->getName() != NULL) {
+					$db_internal_plan->setName($updateInternalPlanRequest->getName());
+					$db_internal_plan = InternalPlanDAO::updateName($db_internal_plan);
+				}
+				//description //allow empty => !==
+				if($updateInternalPlanRequest->getDescription() !== NULL) {
+					$db_internal_plan->setDescription($updateInternalPlanRequest->getDescription());
+					$db_internal_plan = InternalPlanDAO::updateDescription($db_internal_plan);
+				}
+				//details
+				if($updateInternalPlanRequest->getDetails() !== NULL) {
+					$db_internal_plan->setDetails($updateInternalPlanRequest->getDetails());
+					$db_internal_plan = InternalPlanDAO::updateDetails($db_internal_plan);					
+				}
+				//isVisible
+				if($updateInternalPlanRequest->getIsVisible() !== NULL) {
+					$db_internal_plan->setIsVisible($updateInternalPlanRequest->getIsVisible());
+					$db_internal_plan = InternalPlanDAO::updateIsVisible($db_internal_plan);
 				}
 				//COMMIT
 				pg_query("COMMIT");
@@ -472,15 +495,14 @@ class InternalPlansHandler {
 				throw $e;
 			}
 			//done
-			$db_internal_plan = InternalPlanDAO::getInternalPlanById($db_internal_plan->getId());
-			config::getLogger()->addInfo("internal plan opts updating done successfully");
+			config::getLogger()->addInfo("InternalPlan updating done successfully");
 		} catch(BillingsException $e) {
-			$msg = "a billings exception occurred while updating Internal Plan Opts, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("internal plan opts updating failed : ".$msg);
+			$msg = "a billings exception occurred while updating InternalPlan, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("InternalPlan updating failed : ".$msg);
 			throw $e;
 		} catch(Exception $e) {
-			$msg = "an unknown exception occurred while updating Internal Plan Opts, error_code=".$e->getCode().", error_message=".$e->getMessage();
-			config::getLogger()->addError("internal plan opts updating failed : ".$msg);
+			$msg = "an unknown exception occurred while updating InternalPlan, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("InternalPlan updating failed : ".$msg);
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_internal_plan);

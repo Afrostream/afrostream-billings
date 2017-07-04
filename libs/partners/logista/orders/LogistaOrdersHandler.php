@@ -108,7 +108,7 @@ class LogistaOrdersHandler extends PartnerOrdersHandler {
 			//Exception
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), "no internalEAN opts key associated with internalCouponsCampaign with uuid : ".$internalCouponsCampaign->getUuid());			
 		}
-		$internalCoupons = BillingInternalCouponDAO::getBillingInternalCouponsByInternalCouponsCampaignsId($billingPartnerOrderInternalCouponsCampaignLink->getInternalCouponsCampaignsId(), $billingPartnerOrderInternalCouponsCampaignLink->getId());
+		$internalCoupons = BillingInternalCouponDAO::getBillingInternalCouponsByInternalCouponsCampaignsId($billingPartnerOrderInternalCouponsCampaignLink->getInternalCouponsCampaignsId(), $billingPartnerOrderInternalCouponsCampaignLink->getId())['coupons'];
 		$totalCounter = count($internalCoupons);
 		if($totalCounter == 0) {
 			//Exception

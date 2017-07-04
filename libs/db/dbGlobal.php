@@ -721,6 +721,46 @@ class InternalPlanDAO {
 		return(self::getInternalPlanById($internalPlan->getId()));
 	}
 	
+	public static function updateName(InternalPlan $internalPlan) {
+		$query = "UPDATE billing_internal_plans SET name = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$internalPlan->getName(),
+						$internalPlan->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getInternalPlanById($internalPlan->getId()));
+	}
+	
+	public static function updateDescription(InternalPlan $internalPlan) {
+		$query = "UPDATE billing_internal_plans SET description = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$internalPlan->getDescription(),
+						$internalPlan->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getInternalPlanById($internalPlan->getId()));
+	}
+	
+	public static function updateDetails(InternalPlan $internalPlan) {
+		$query = "UPDATE billing_internal_plans SET details = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	json_encode($internalPlan->getDetails()),
+						$internalPlan->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getInternalPlanById($internalPlan->getId()));
+	}
+	
+	public static function updateIsVisible(InternalPlan $internalPlan) {
+		$query = "UPDATE billing_internal_plans SET is_visible = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$internalPlan->getIsVisible() === true ? 'true' : 'false',
+						$internalPlan->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getInternalPlanById($internalPlan->getId()));
+	}
+	
 }
 
 InternalPlanDAO::init();
@@ -949,7 +989,7 @@ class InternalPlan implements JsonSerializable {
 	}
 	
 	public function setDetails($details) {
-		$this->details =$details;
+		$this->details = $details;
 	}
 	
 	public function getDetails() {
@@ -1282,6 +1322,16 @@ class PlanDAO {
 		return($out);
 	}
 	
+	public static function updateIsVisible(Plan $plan) {
+		$query = "UPDATE billing_plans SET is_visible = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$plan->getIsVisible() === true ? 'true' : 'false',
+						$plan->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getPlanById($plan->getId()));
+	}
+	
 }
 
 class Plan implements JsonSerializable {
@@ -1378,7 +1428,8 @@ class Plan implements JsonSerializable {
 				'provider' => $provider,
 				'paymentMethods' => BillingProviderPlanPaymentMethodsDAO::getBillingProviderPlanPaymentMethodsByProviderPlanId($this->_id),
 				'isVisible' => $this->isVisible,
-				'isCouponCodeCompatible' => $this->isCouponCodeCompatible
+				'isCouponCodeCompatible' => $this->isCouponCodeCompatible,
+				'providerPlanOpts' => (PlanOptsDAO::getPlanOptsByPlanId($this->_id)->jsonSerialize())
 				
 		];
 		return($return);
@@ -1386,7 +1437,7 @@ class Plan implements JsonSerializable {
 	
 }
 
-class PlanOpts {
+class PlanOpts implements JsonSerializable {
 
 	private $planid;
 	private $opts = array();
@@ -1410,6 +1461,10 @@ class PlanOpts {
 	public function getOpts() {
 		return($this->opts);
 	}
+	
+	public function jsonSerialize() {
+		return($this->opts);
+	}
 
 }
 
@@ -1429,7 +1484,36 @@ class PlanOptsDAO {
 
 		return($out);
 	}
-
+	
+	public static function updateProviderPlanOptsKey($providerPlanId, $key, $value) {
+		if(is_scalar($value)) {
+			$query = "UPDATE billing_plans_opts SET value = $3 WHERE planid = $1 AND key = $2 AND deleted = false";
+			$result = pg_query_params(config::getDbConn(), $query, array($providerPlanId, $key, trim($value)));
+			// free result
+			pg_free_result($result);
+		}
+	}
+	
+	public static function deleteProviderPlanOptsKey($providerPlanId, $key) {
+		$query = "UPDATE billing_plans_opts SET deleted = true WHERE planid = $1 AND key = $2 AND deleted = false";
+		$result = pg_query_params(config::getDbConn(), $query, array($providerPlanId, $key));
+		// free result
+		pg_free_result($result);
+	}
+	
+	public static function addProviderPlanOptsKey($providerPlanId, $key, $value) {
+		if(is_scalar($value)) {
+			$query = "INSERT INTO billing_plans_opts (planid, key, value)";
+			$query.= " VALUES ($1, $2, $3) RETURNING _id";
+			$result = pg_query_params(config::getDbConn(), $query,
+					array($providerPlanId,
+							trim($key),
+							trim($value)));
+			// free result
+			pg_free_result($result);
+		}
+	}
+	
 }
 
 class ProviderDAO {
@@ -2186,7 +2270,24 @@ class BillingsSubscriptionDAO {
 		
 		return($out);
 	}
-		
+	
+	public static function getBillingsSubscriptionByOptKeyValue($providerId, $optsKey, $optsValue) {
+		$query = "SELECT ".self::$sfields." FROM billing_subscriptions BS";
+		$query.= " INNER JOIN billing_subscriptions_opts BSO ON (BS._id = BSO.subid)";
+		$query.= " WHERE BS.deleted = false AND BSO.deleted = false AND BS.providerid = $1 AND BSO.key = $2 AND BSO.value = $3";
+		$result = pg_query_params(config::getDbConn(), $query, array($providerId, $optsKey, $optsValue));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingsSubscriptionFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
 }
 
 BillingsSubscriptionDAO::init();
@@ -2633,6 +2734,7 @@ class BillingsSubscriptionOptsDAO {
 		// free result
 		pg_free_result($result);
 	}
+	
 }
 
 class BillingInfo implements JsonSerializable {
@@ -5461,8 +5563,8 @@ EOL;
 		$query = "INSERT INTO billing_internal_coupons_campaigns";
 		$query.= " (internal_coupons_campaigns_uuid, name, description, prefix, discount_type, amount_in_cents, currency, percent,";
 		$query.= " discount_duration, discount_duration_unit, discount_duration_length, generated_mode, generated_code_length,";
-		$query.= " total_number, coupon_type, emails_enabled, platformid, coupon_timeframes, max_redemptions_by_user)";
-		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING _id";
+		$query.= " total_number, coupon_type, emails_enabled, platformid, coupon_timeframes, max_redemptions_by_user, expires_date)";
+		$query.= " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING _id";
 		$result = pg_query_params(config::getDbConn(), $query,
 			array(	$billingInternalCouponsCampaign->getUuid(),
 					$billingInternalCouponsCampaign->getName(),
@@ -5482,29 +5584,15 @@ EOL;
 					$billingInternalCouponsCampaign->getEmailsEnabled() == true ? 't' : 'f',
 					$billingInternalCouponsCampaign->getPlatformId(),
 					'{'.implode($billingInternalCouponsCampaign->getCouponTimeframes(), ',').'}',
-					$billingInternalCouponsCampaign->getMaxRedemptionsByUser()
+					$billingInternalCouponsCampaign->getMaxRedemptionsByUser(),
+					dbGlobal::toISODate($billingInternalCouponsCampaign->getExpiresDate())
 				));
 		$row = pg_fetch_row($result);
 		// free result
 		pg_free_result($result);
 		return(self::getBillingInternalCouponsCampaignById($row[0]));
 	}
-	
-	public static function getBillingInternalCouponsCampaignByName($name, $platformId) {
-		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns WHERE name = $1 AND platformid = $2";
-		$result = pg_query_params(config::getDbConn(), $query, array($name, $platformId));
-	
-		$out = null;
-	
-		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out = self::getBillingInternalCouponsCampaignFromRow($row);
-		}
-		// free result
-		pg_free_result($result);
-	
-		return($out);
-	}
-	
+		
 	public static function getBillingInternalCouponsCampaignByPrefix($prefix, $platformId) {
 		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons_campaigns WHERE prefix = $1 AND platformid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($prefix, $platformId));
@@ -5518,6 +5606,86 @@ EOL;
 		pg_free_result($result);
 	
 		return($out);
+	}
+	
+	public static function updateName(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET name = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaign->getName(),
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateDescription(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET description = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaign->getDescription(),
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateEmailsEnabled(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET emails_enabled = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaign->getEmailsEnabled() === true ? 'true' : 'false',
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateTimeframes(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET coupon_timeframes = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	'{'.implode($billingInternalCouponsCampaign->getCouponTimeframes(), ',').'}',
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateMaxRedemptionsByUser(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET max_redemptions_by_user = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaign->getMaxRedemptionsByUser(),
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateTotalNumber(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET total_number = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaign->getTotalNumber(),
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateGeneratedCodeLength(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET generated_code_length = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	$billingInternalCouponsCampaign->getGeneratedCodeLength(),
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
+	}
+	
+	public static function updateExpiresDate(BillingInternalCouponsCampaign $billingInternalCouponsCampaign) {
+		$query = "UPDATE billing_internal_coupons_campaigns SET expires_date = $1 WHERE _id = $2";
+		$result = pg_query_params(config::getDbConn(), $query,
+				array(	dbGlobal::toISODate($billingInternalCouponsCampaign->getExpiresDate()),
+						$billingInternalCouponsCampaign->getId()));
+		// free result
+		pg_free_result($result);
+		return(self::getBillingInternalCouponsCampaignById($billingInternalCouponsCampaign->getId()));
 	}
 	
 }
@@ -5916,6 +6084,32 @@ class BillingInternalCoupon implements JsonSerializable {
 		return($return);
 	}
 	
+	public static function exportFields() {
+		$out = array();
+		$out[] = 'code';
+		$out[] = 'internalCouponBillingUuid';
+		$out[] = 'status';
+		$out[] = 'creationDate';
+		$out[] = 'updatedDate';
+		$out[] = 'redeemedDate';
+		$out[] = 'expiresDate';
+		$out[] = 'couponTimeframe';
+		return($out);
+	}
+	
+	public function exportValues() {
+		$out = array();
+		$out[] = $this->code;
+		$out[] = $this->uuid;
+		$out[] = $this->status;
+		$out[] = dbGlobal::toISODate($this->creationDate);
+		$out[] = dbGlobal::toISODate($this->updatedDate);
+		$out[] = dbGlobal::toISODate($this->redeemedDate);
+		$out[] = dbGlobal::toISODate($this->expiresDate);
+		$out[] = $this->coupon_timeframe;
+		return($out);
+	}
+	
 }
 
 class BillingInternalCouponDAO {
@@ -5965,6 +6159,21 @@ EOL;
 	public static function getBillingInternalCouponByCode($code, $platformId) {
 		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons WHERE upper(code) = upper($1) AND platformid = $2";
 		$result = pg_query_params(config::getDbConn(), $query, array($code, $platformId));
+	
+		$out = null;
+	
+		if ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
+			$out = self::getBillingInternalCouponFromRow($row);
+		}
+		// free result
+		pg_free_result($result);
+	
+		return($out);
+	}
+	
+	public static function getBillingInternalCouponByInternalCouponBillingUuid($internalCouponBillingUuid, $platformId) {
+		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons WHERE coupon_billing_uuid = $1 AND platformid = $2";
+		$result = pg_query_params(config::getDbConn(), $query, array($internalCouponBillingUuid, $platformId));
 	
 		$out = null;
 	
@@ -6047,8 +6256,8 @@ EOL;
 		return($out);
 	}
 	
-	public static function getBillingInternalCouponsByInternalCouponsCampaignsId($internalcouponscampaignsid, $partnersordersinternalcouponscampaignslinkid = NULL) {
-		$query = "SELECT ".self::$sfields." FROM billing_internal_coupons BIC";
+	public static function getBillingInternalCouponsByInternalCouponsCampaignsId($internalcouponscampaignsid, $partnersordersinternalcouponscampaignslinkid = NULL, $limit = 0, $offset = 0) {
+		$query = "SELECT count(*) OVER() as total_hits, ".self::$sfields." FROM billing_internal_coupons BIC";
 		$query.= " WHERE BIC.internalcouponscampaignsid = $1";
 		$params = array();
 		$params[] = $internalcouponscampaignsid;
@@ -6058,12 +6267,19 @@ EOL;
 			$query.= " AND partnersordersinternalcouponscampaignslinkid = $2";
 		}
 		$query.= " ORDER BY BIC._id ASC";
+		if($limit > 0) { $query.= " LIMIT ".$limit; }
+		if($offset > 0) { $query.= " OFFSET ".$offset; }
 		$result = pg_query_params(config::getDbConn(), $query, $params);
 	
 		$out = array();
+		$out['total_hits'] = 0;
+		$out['current_hits'] = 0;
+		$out['coupons'] = array();
 	
 		while ($row = pg_fetch_array($result, null, PGSQL_ASSOC)) {
-			$out[] = self::getBillingInternalCouponFromRow($row);
+			$out['total_hits'] = $row['total_hits'];
+			$out['current_hits']++;
+			$out['coupons'][] = self::getBillingInternalCouponFromRow($row);
 		}
 		// free result
 		pg_free_result($result);
@@ -7496,7 +7712,7 @@ class BillingPartnerOrderInternalCouponsCampaignLink implements JsonSerializable
 				'internalCouponsCampaign' => BillingInternalCouponsCampaignDAO::getBillingInternalCouponsCampaignById($this->internalCouponsCampaignsId),
 				'whishedCounter' => $this->wishedCounter,
 				'bookedCounter' => $this->bookedCounter,
-				'internalCoupons' => BillingInternalCouponDAO::getBillingInternalCouponsByInternalCouponsCampaignsId($this->internalCouponsCampaignsId, $this->_id)
+				'internalCoupons' => BillingInternalCouponDAO::getBillingInternalCouponsByInternalCouponsCampaignsId($this->internalCouponsCampaignsId, $this->_id)['coupons']
 		];
 	}
 	
