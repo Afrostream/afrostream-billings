@@ -52,6 +52,7 @@ class ExceptionError extends Enum {
 	const SUBS_EXP_REFUND_UNSUPPORTED					=	423;
 	const SUBS_EXP_BEFORE_ENDS_DATE_UNSUPPORTED			=	424;
 	const SUBS_EXP_REFUND_MANDATORY						=	425;
+	const SUBS_EXP_REFUND_FULL_MANDATORY				=	426;
 	//COUPONS
 	const COUPON_REDEEMED								=	450;
 	const COUPON_EXPIRED								=	451;
