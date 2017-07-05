@@ -326,12 +326,40 @@ class WecashupSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, NULL, $subscription->getId(), ['purchase'], 'descending', $this->provider->getPlatformId());
 				if(count($transactionsResult['transactions']) == 1) {
 					$transaction = $transactionsResult['transactions'][0];
-					$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
-					$refundTransactionRequest = new RefundTransactionRequest();
-					$refundTransactionRequest->setPlatform($this->platform);
-					$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
-					$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
-					$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
+					//check status
+					switch($transaction->getTransactionStatus()) {
+						case BillingsTransactionStatus::success :	
+							$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
+							$refundTransactionRequest = new RefundTransactionRequest();
+							$refundTransactionRequest->setPlatform($this->platform);
+							$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
+							$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+							$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
+							break;
+						case BillingsTransactionStatus::waiting :
+							$msg = "cannot refund a transaction in status=".$transaction->getTransactionStatus();
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+						case BillingsTransactionStatus::declined :
+							$msg = "cannot refund a transaction in status=".$transaction->getTransactionStatus();
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+						case BillingsTransactionStatus::failed :
+							$msg = "cannot refund a transaction in status=".$transaction->getTransactionStatus();
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+						case BillingsTransactionStatus::canceled :
+							$msg = "cannot refund a transaction in status=".$transaction->getTransactionStatus();
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+						case BillingsTransactionStatus::void :
+							//nothing to do
+							break;
+						default :
+							$msg = "unknown transaction status=".$transaction->getTransactionStatus();
+							throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+							break;
+					}
 				}
 			}
 			//
