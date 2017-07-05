@@ -389,7 +389,7 @@ class User implements JsonSerializable {
 	
 }
 
-class UserOpts {
+class UserOpts implements JsonSerializable {
 
 	private $userid;
 	private $opts = array();
@@ -434,6 +434,19 @@ class UserOpts {
 	}
 	
 	public function jsonSerialize() {
+		/* 
+			::: Known keys :::
+			>>> = to be removed from array
+				"countryCode"
+				"customerBankAccountToken"
+				"email"
+				"firstName"
+				"languageCode"
+				"lastName"
+				"name"
+				"OrangeApiToken"
+				"transactionId"
+		 */
 		return $this->opts;
 	}
 }
@@ -2661,6 +2674,35 @@ class BillingsSubscriptionOpts implements JsonSerializable {
 	}
 
 	public function jsonSerialize() {
+		/*
+		 	::: Known keys :::
+		 	>>> = to be removed from array
+		 	>>>"chargeId"
+			>>>"chargeTransactionId"
+			"couponCode"
+			"couponCodeUrl"
+			>>>"customerBankAccountToken"
+			"gift"
+			>>>"iban"
+			>>>"idSession"
+			"orderId"
+			>>>"otpCode"
+			"promoCurrency"
+			"promoDuration"
+			"promoEnabled"
+			"promoItemBasePrice"
+			"promoItemTaxAmount"
+			"promoItemTotal"
+			"promoPeriod"
+			>>>"requestId"
+			"startsAt"
+			"subscriptionBillingUuid"
+			>>>"transaction_confirmation_code"
+			>>>"transaction_provider_name"
+			>>>"transaction_token"
+			>>>"transaction_uid"
+			"utm_medium"
+		 */
 		return($this->opts);
 	}
 
@@ -7218,6 +7260,11 @@ class BillingsTransactionOpts implements JsonSerializable {
 	}
 	
 	public function jsonSerialize() {
+		/*
+		 	::: Known keys ::: 
+			>>> = to be removed from array
+			>>>"transaction_token" 
+		 */
 		return($this->opts);
 	}
 	
