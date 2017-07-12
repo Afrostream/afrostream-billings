@@ -4,8 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "209215cc3c2f64d7b14e7bb60b62caee",
-    "content-hash": "80e30a71b22885b1174644fe1575938f",
+    "content-hash": "c9639bfa01415584bf1a7b1503f02988",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -85,7 +84,7 @@
                 "s3",
                 "sdk"
             ],
-            "time": "2017-05-22 22:26:55"
+            "time": "2017-05-22T22:26:55+00:00"
         },
         {
             "name": "braintree/braintree_php",
@@ -132,7 +131,7 @@
                 }
             ],
             "description": "Braintree PHP Client Library",
-            "time": "2017-05-05 21:51:18"
+            "time": "2017-05-05T21:51:18+00:00"
         },
         {
             "name": "cache/adapter-common",
@@ -187,7 +186,7 @@
                 "psr-6",
                 "tag"
             ],
-            "time": "2016-07-31 18:10:41"
+            "time": "2016-07-31T18:10:41+00:00"
         },
         {
             "name": "cache/apcu-adapter",
@@ -251,7 +250,7 @@
                 "cache",
                 "psr-6"
             ],
-            "time": "2016-08-07 14:49:33"
+            "time": "2016-08-07T14:49:33+00:00"
         },
         {
             "name": "cache/filesystem-adapter",
@@ -314,7 +313,7 @@
                 "psr-6",
                 "tag"
             ],
-            "time": "2016-12-25 09:15:25"
+            "time": "2016-12-25T09:15:25+00:00"
         },
         {
             "name": "cache/taggable-cache",
@@ -372,7 +371,7 @@
                 "psr6",
                 "tag"
             ],
-            "time": "2016-08-08 17:20:09"
+            "time": "2016-08-08T17:20:09+00:00"
         },
         {
             "name": "chartmogul/chartmogul-php",
@@ -423,7 +422,7 @@
                 }
             ],
             "description": "ChartMogul API PHP Client",
-            "time": "2017-05-03 11:59:31"
+            "time": "2017-05-03T11:59:31+00:00"
         },
         {
             "name": "clue/stream-filter",
@@ -472,7 +471,7 @@
                 "stream_filter_append",
                 "stream_filter_register"
             ],
-            "time": "2015-11-08 23:41:30"
+            "time": "2015-11-08T23:41:30+00:00"
         },
         {
             "name": "container-interop/container-interop",
@@ -503,7 +502,7 @@
             ],
             "description": "Promoting the interoperability of container objects (DIC, SL, etc.)",
             "homepage": "https://github.com/container-interop/container-interop",
-            "time": "2017-02-14 19:40:03"
+            "time": "2017-02-14T19:40:03+00:00"
         },
         {
             "name": "doctrine/collections",
@@ -570,7 +569,7 @@
                 "collections",
                 "iterator"
             ],
-            "time": "2017-01-03 10:49:41"
+            "time": "2017-01-03T10:49:41+00:00"
         },
         {
             "name": "domnikl/statsd",
@@ -617,7 +616,7 @@
                 "statsd",
                 "udp"
             ],
-            "time": "2017-04-10 07:05:42"
+            "time": "2017-04-10T07:05:42+00:00"
         },
         {
             "name": "firebase/php-jwt",
@@ -660,7 +659,7 @@
             ],
             "description": "A simple library to encode and decode JSON Web Tokens (JWT) in PHP. Should conform to the current spec.",
             "homepage": "https://github.com/firebase/php-jwt",
-            "time": "2016-07-18 04:51:16"
+            "time": "2016-07-18T04:51:16+00:00"
         },
         {
             "name": "florianv/exchanger",
@@ -725,7 +724,7 @@
                 "exchange rates",
                 "money"
             ],
-            "time": "2017-02-06 11:10:24"
+            "time": "2017-02-06T11:10:24+00:00"
         },
         {
             "name": "florianv/swap",
@@ -781,7 +780,7 @@
                 "exchange rates",
                 "money"
             ],
-            "time": "2017-03-27 05:29:16"
+            "time": "2017-03-27T05:29:16+00:00"
         },
         {
             "name": "gocardless/gocardless-pro",
@@ -833,7 +832,7 @@
                 "direct debit",
                 "gocardless"
             ],
-            "time": "2016-08-02 11:32:07"
+            "time": "2016-08-02T11:32:07+00:00"
         },
         {
             "name": "google/apiclient",
@@ -892,7 +891,7 @@
             "keywords": [
                 "google"
             ],
-            "time": "2017-03-22 18:32:04"
+            "time": "2017-03-22T18:32:04+00:00"
         },
         {
             "name": "google/apiclient-services",
@@ -929,7 +928,7 @@
             "keywords": [
                 "google"
             ],
-            "time": "2017-03-13 17:40:44"
+            "time": "2017-03-13T17:40:44+00:00"
         },
         {
             "name": "google/auth",
@@ -977,7 +976,7 @@
                 "google",
                 "oauth2"
             ],
-            "time": "2016-11-02 14:59:14"
+            "time": "2016-11-02T14:59:14+00:00"
         },
         {
             "name": "guzzlehttp/guzzle",
@@ -1039,7 +1038,7 @@
                 "rest",
                 "web service"
             ],
-            "time": "2017-02-28 22:50:30"
+            "time": "2017-02-28T22:50:30+00:00"
         },
         {
             "name": "guzzlehttp/promises",
@@ -1090,7 +1089,7 @@
             "keywords": [
                 "promise"
             ],
-            "time": "2016-12-20 10:07:11"
+            "time": "2016-12-20T10:07:11+00:00"
         },
         {
             "name": "guzzlehttp/psr7",
@@ -1155,7 +1154,7 @@
                 "uri",
                 "url"
             ],
-            "time": "2017-03-20 17:10:46"
+            "time": "2017-03-20T17:10:46+00:00"
         },
         {
             "name": "jasonhinkle/php-gpg",
@@ -1193,7 +1192,7 @@
             "keywords": [
                 "gpg"
             ],
-            "time": "2016-02-19 09:29:57"
+            "time": "2016-02-19T09:29:57+00:00"
         },
         {
             "name": "julien-c/iso3166",
@@ -1226,7 +1225,7 @@
                 }
             ],
             "description": "ISO 3166-1 alpha-2 mapping",
-            "time": "2015-12-15 15:40:03"
+            "time": "2015-12-15T15:40:03+00:00"
         },
         {
             "name": "league/flysystem",
@@ -1309,7 +1308,7 @@
                 "sftp",
                 "storage"
             ],
-            "time": "2017-04-28 10:15:08"
+            "time": "2017-04-28T10:15:08+00:00"
         },
         {
             "name": "league/flysystem-sftp",
@@ -1356,7 +1355,7 @@
                 }
             ],
             "description": "Flysystem adapter for SFTP",
-            "time": "2015-09-20 13:14:14"
+            "time": "2015-09-20T13:14:14+00:00"
         },
         {
             "name": "mathiasverraes/money",
@@ -1412,7 +1411,7 @@
                 "money"
             ],
             "abandoned": "moneyphp/money",
-            "time": "2016-01-16 22:03:46"
+            "time": "2016-01-16T22:03:46+00:00"
         },
         {
             "name": "mobiledetect/mobiledetectlib",
@@ -1464,7 +1463,7 @@
                 "mobile detector",
                 "php mobile detect"
             ],
-            "time": "2017-03-29 13:59:30"
+            "time": "2017-03-29T13:59:30+00:00"
         },
         {
             "name": "monolog/monolog",
@@ -1542,7 +1541,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2017-03-13 07:08:03"
+            "time": "2017-03-13T07:08:03+00:00"
         },
         {
             "name": "mtdowling/jmespath.php",
@@ -1597,7 +1596,7 @@
                 "json",
                 "jsonpath"
             ],
-            "time": "2016-12-03 22:08:25"
+            "time": "2016-12-03T22:08:25+00:00"
         },
         {
             "name": "myclabs/php-enum",
@@ -1641,7 +1640,7 @@
             "keywords": [
                 "enum"
             ],
-            "time": "2017-03-26 10:24:21"
+            "time": "2017-03-26T10:24:21+00:00"
         },
         {
             "name": "nikic/fast-route",
@@ -1684,7 +1683,7 @@
                 "router",
                 "routing"
             ],
-            "time": "2017-01-19 11:35:12"
+            "time": "2017-01-19T11:35:12+00:00"
         },
         {
             "name": "paragonie/random_compat",
@@ -1732,7 +1731,7 @@
                 "pseudorandom",
                 "random"
             ],
-            "time": "2016-01-29 16:19:52"
+            "time": "2016-01-29T16:19:52+00:00"
         },
         {
             "name": "paypal/rest-api-sdk-php",
@@ -1781,7 +1780,7 @@
                 "rest",
                 "sdk"
             ],
-            "time": "2016-12-14 21:59:21"
+            "time": "2016-12-14T21:59:21+00:00"
         },
         {
             "name": "php-amqplib/php-amqplib",
@@ -1851,7 +1850,7 @@
                 "queue",
                 "rabbitmq"
             ],
-            "time": "2016-04-11 14:30:01"
+            "time": "2016-04-11T14:30:01+00:00"
         },
         {
             "name": "php-http/discovery",
@@ -1913,7 +1912,7 @@
                 "message",
                 "psr7"
             ],
-            "time": "2017-03-02 06:56:00"
+            "time": "2017-03-02T06:56:00+00:00"
         },
         {
             "name": "php-http/guzzle6-adapter",
@@ -1973,7 +1972,7 @@
                 "Guzzle",
                 "http"
             ],
-            "time": "2016-05-10 06:13:32"
+            "time": "2016-05-10T06:13:32+00:00"
         },
         {
             "name": "php-http/httplug",
@@ -2029,7 +2028,7 @@
                 "client",
                 "http"
             ],
-            "time": "2016-08-31 08:30:17"
+            "time": "2016-08-31T08:30:17+00:00"
         },
         {
             "name": "php-http/message",
@@ -2098,7 +2097,7 @@
                 "message",
                 "psr-7"
             ],
-            "time": "2017-02-14 08:58:37"
+            "time": "2017-02-14T08:58:37+00:00"
         },
         {
             "name": "php-http/message-factory",
@@ -2148,7 +2147,7 @@
                 "stream",
                 "uri"
             ],
-            "time": "2015-12-19 14:08:53"
+            "time": "2015-12-19T14:08:53+00:00"
         },
         {
             "name": "php-http/promise",
@@ -2198,7 +2197,7 @@
             "keywords": [
                 "promise"
             ],
-            "time": "2016-01-26 13:27:02"
+            "time": "2016-01-26T13:27:02+00:00"
         },
         {
             "name": "phpseclib/phpseclib",
@@ -2296,7 +2295,7 @@
                 "x.509",
                 "x509"
             ],
-            "time": "2015-01-28 21:50:33"
+            "time": "2015-01-28T21:50:33+00:00"
         },
         {
             "name": "pimple/pimple",
@@ -2342,7 +2341,7 @@
                 "container",
                 "dependency injection"
             ],
-            "time": "2015-09-11 15:10:35"
+            "time": "2015-09-11T15:10:35+00:00"
         },
         {
             "name": "psr/cache",
@@ -2388,7 +2387,7 @@
                 "psr",
                 "psr-6"
             ],
-            "time": "2016-08-06 20:24:11"
+            "time": "2016-08-06T20:24:11+00:00"
         },
         {
             "name": "psr/container",
@@ -2437,7 +2436,7 @@
                 "container-interop",
                 "psr"
             ],
-            "time": "2017-02-14 16:28:37"
+            "time": "2017-02-14T16:28:37+00:00"
         },
         {
             "name": "psr/http-message",
@@ -2487,7 +2486,7 @@
                 "request",
                 "response"
             ],
-            "time": "2016-08-06 14:39:51"
+            "time": "2016-08-06T14:39:51+00:00"
         },
         {
             "name": "psr/log",
@@ -2534,7 +2533,7 @@
                 "psr",
                 "psr-3"
             ],
-            "time": "2016-10-10 12:19:37"
+            "time": "2016-10-10T12:19:37+00:00"
         },
         {
             "name": "recurly/recurly-client",
@@ -2579,7 +2578,7 @@
                 "payments",
                 "recurly"
             ],
-            "time": "2017-03-21 18:42:46"
+            "time": "2017-03-21T18:42:46+00:00"
         },
         {
             "name": "sendgrid/php-http-client",
@@ -2631,7 +2630,7 @@
                 "rest",
                 "sendgrid"
             ],
-            "time": "2017-05-05 06:15:41"
+            "time": "2017-05-05T06:15:41+00:00"
         },
         {
             "name": "sendgrid/sendgrid",
@@ -2677,7 +2676,7 @@
                 "send",
                 "sendgrid"
             ],
-            "time": "2017-05-18 16:36:05"
+            "time": "2017-05-18T16:36:05+00:00"
         },
         {
             "name": "singpolyma/openpgp-php",
@@ -2720,7 +2719,7 @@
                 }
             ],
             "description": "Pure-PHP implementation of the OpenPGP Message Format (RFC 4880)",
-            "time": "2015-08-14 18:15:15"
+            "time": "2015-08-14T18:15:15+00:00"
         },
         {
             "name": "slim/slim",
@@ -2791,20 +2790,20 @@
                 "micro",
                 "router"
             ],
-            "time": "2017-03-19 17:55:20"
+            "time": "2017-03-19T17:55:20+00:00"
         },
         {
             "name": "stripe/stripe-php",
-            "version": "v4.9.1",
+            "version": "v5.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/stripe/stripe-php.git",
-                "reference": "1ce201a9fb8bda96e87789f4cd952518f37b88e0"
+                "reference": "b2998cf8a495a03d541f274a077277afcf662a12"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/stripe/stripe-php/zipball/1ce201a9fb8bda96e87789f4cd952518f37b88e0",
-                "reference": "1ce201a9fb8bda96e87789f4cd952518f37b88e0",
+                "url": "https://api.github.com/repos/stripe/stripe-php/zipball/b2998cf8a495a03d541f274a077277afcf662a12",
+                "reference": "b2998cf8a495a03d541f274a077277afcf662a12",
                 "shasum": ""
             },
             "require": {
@@ -2846,7 +2845,7 @@
                 "payment processing",
                 "stripe"
             ],
-            "time": "2017-05-10 18:53:00"
+            "time": "2017-07-03T17:51:56+00:00"
         },
         {
             "name": "tuupola/slim-basic-auth",
@@ -2895,7 +2894,7 @@
                 "middleware",
                 "psr-7"
             ],
-            "time": "2017-02-27 10:39:37"
+            "time": "2017-02-27T10:39:37+00:00"
         },
         {
             "name": "zendframework/zend-diactoros",
@@ -2947,7 +2946,7 @@
                 "psr",
                 "psr-7"
             ],
-            "time": "2017-04-06 16:18:34"
+            "time": "2017-04-06T16:18:34+00:00"
         }
     ],
     "packages-dev": [],

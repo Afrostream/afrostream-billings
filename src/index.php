@@ -7,6 +7,7 @@ require_once __DIR__ . '/../libs/site/SubscriptionsController.php';
 require_once __DIR__ . '/../libs/site/InternalPlansFilteredController.php';
 require_once __DIR__ . '/../libs/site/InternalCouponsController.php';
 require_once __DIR__ . '/../libs/site/UsersInternalCouponsController.php';
+require_once __DIR__ . '/../libs/site/ProviderStripeController.php';
 require_once __DIR__ . '/../libs/site/WebHooksController.php';
 require_once __DIR__ . '/../libs/site/InternalCouponsCampaignsController.php';
 require_once __DIR__ . '/../libs/site/ContextsController.php';
@@ -1505,6 +1506,12 @@ $app->post("/billings/providers/{providerName}/webhooks/{providerBillingUuid}/",
 $app->post("/billings/providers/{providerName}/webhooks/", function ($request, $response, $args) {
 	$webHooksController = new WebHooksController();
 	return($webHooksController->providerWebHooksPosting($request, $response, $args));
+});
+
+// Hack - strip ephemeral key generator
+$app->post("/billings/providers/stripe/customerKey", function ($request, $response, $args) {
+  $providerStripeController = new ProviderStripeController();
+	return($providerStripeController->createEphemeralKey($request, $response, $args));
 });
 
 //alive
