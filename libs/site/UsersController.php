@@ -259,13 +259,23 @@ class UsersController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
+			$raw = true;
+			if(isset($data['raw'])) {
+				$raw = ($data['raw'] == 'true') ? true : false;
+			}
 			$usersHandler = new UsersHandler();
 			$createUserEphemeralKeyRequest = new CreateUserEphemeralKeyRequest();
 			$createUserEphemeralKeyRequest->setOrigin('api');
 			$createUserEphemeralKeyRequest->setUserBillingUuid($args['userBillingUuid']);
 			$createUserEphemeralKeyRequest->setApiVersion($data['api_version']);
 		    $key = $usersHandler->doCreateEphemeralKey($createUserEphemeralKeyRequest);
-		    return($this->returnObjectAsJson($response, NULL, $key));
+		    if($raw) {
+		    	//STRIPE FORMAT
+		    	return($this->returnObjectAsRawJson($response, $key));
+		    } else {
+		    	//API FORMAT
+		    	return($this->returnObjectAsJson($response, 'ephemeralKey', $key));
+		    }
 		} catch(BillingsException $e) {
 		   	$msg = "an exception occurred while creating an ephemeralKey, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
 		   	config::getLogger()->addError($msg);
