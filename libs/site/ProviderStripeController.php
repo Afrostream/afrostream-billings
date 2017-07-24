@@ -27,12 +27,12 @@ class ProviderStripeController extends BillingsController {
       }
       $userReferenceUuid = $data['userReferenceUuid'];
       $data = $request->getQueryParams();
-      if (!isset($data['apiVersion'])) {
-        $msg = "query string 'apiVersion' is missing";
+      if (!isset($data['api_version'])) {
+      			$msg = "query string 'api_version' is missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
       }
-      $apiVersion = $data['apiVersion'];
+      $apiVersion = $data['api_version'];
       // searching user
       $getUserRequest = new GetUserRequest();
       $getUserRequest->setOrigin('api');

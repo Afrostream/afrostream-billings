@@ -238,6 +238,13 @@ class UsersController extends BillingsController {
 		}
 	}
 	
+	/**
+	 * @see https://stripe.com/docs/mobile/ios/standard
+	 * @param Request $request
+	 * @param Response $response
+	 * @param array $args
+	 * @throws BillingsException
+	 */
 	public function createEphemeralKey(Request $request, Response $response, array $args) {
 		try {
 			$data = $request->getQueryParams();
@@ -247,8 +254,8 @@ class UsersController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if (!isset($data['apiVersion'])) {
-				$msg = "query string 'apiVersion' is missing";
+			if (!isset($data['api_version'])) {
+				$msg = "query string 'api_version' is missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
@@ -256,7 +263,7 @@ class UsersController extends BillingsController {
 			$createUserEphemeralKeyRequest = new CreateUserEphemeralKeyRequest();
 			$createUserEphemeralKeyRequest->setOrigin('api');
 			$createUserEphemeralKeyRequest->setUserBillingUuid($args['userBillingUuid']);
-			$createUserEphemeralKeyRequest->setApiVersion($data['apiVersion']);
+			$createUserEphemeralKeyRequest->setApiVersion($data['api_version']);
 		    $key = $usersHandler->doCreateEphemeralKey($createUserEphemeralKeyRequest);
 		    return($this->returnObjectAsJson($response, NULL, $key));
 		} catch(BillingsException $e) {
