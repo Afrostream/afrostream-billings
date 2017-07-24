@@ -8,6 +8,7 @@ require_once __DIR__ . '/../providers/global/requests/GetUsersRequest.php';
 require_once __DIR__ . '/../providers/global/requests/CreateUserRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateUserRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateUsersRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CreateUserEphemeralKeyRequest.php';
 
 use \Slim\Http\Request;
 use \Slim\Http\Response;
@@ -234,6 +235,42 @@ class UsersController extends BillingsController {
 			//
 			return($this->returnExceptionAsJson($response, $e));
 			//
+		}
+	}
+	
+	public function createEphemeralKey(Request $request, Response $response, array $args) {
+		try {
+			$data = $request->getQueryParams();
+			if(!isset($args['userBillingUuid'])) {
+				//exception
+				$msg = "field 'userBillingUuid' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			if (!isset($data['apiVersion'])) {
+				$msg = "query string 'apiVersion' is missing";
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$usersHandler = new UsersHandler();
+			$createUserEphemeralKeyRequest = new CreateUserEphemeralKeyRequest();
+			$createUserEphemeralKeyRequest->setOrigin('api');
+			$createUserEphemeralKeyRequest->setUserBillingUuid($args['userBillingUuid']);
+			$createUserEphemeralKeyRequest->setApiVersion($data['apiVersion']);
+		    $key = $usersHandler->doCreateEphemeralKey($createUserEphemeralKeyRequest);
+		    return($this->returnObjectAsJson($response, NULL, $key));
+		} catch(BillingsException $e) {
+		   	$msg = "an exception occurred while creating an ephemeralKey, error_type=".$e->getExceptionType().", error_code=".$e->getCode().", error_message=".$e->getMessage();
+		   	config::getLogger()->addError($msg);
+		   	//
+		   	return($this->returnBillingsExceptionAsJson($response, $e));
+		   	//
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while creating an ephemeralKey, error_code=".$e->getCode().", error_message=".$e->getMessage();
+		    config::getLogger()->addError($msg);
+		    //
+		    return($this->returnExceptionAsJson($response, $e));
+		    //
 		}
 	}
 	

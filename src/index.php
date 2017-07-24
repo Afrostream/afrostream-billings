@@ -1514,6 +1514,11 @@ $app->post("/billings/providers/stripe/customerKey", function ($request, $respon
 	return($providerStripeController->createEphemeralKey($request, $response, $args));
 });
 
+$app->post("/billings/api/users/{userBillingUuid}/createEphemeralKey", function ($request, $response, $args) {
+	$usersController = new UsersController();
+	return($usersController->createEphemeralKey($request, $response, $args));
+});
+
 //alive
 
 $app->get("/alive", function ($request, $response, $args) {

@@ -92,7 +92,19 @@ class StripeUsersHandler extends ProviderUsersHandler
           throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
       }
     }
-
+    
+    public function doCreateEphemeralKey(User $user, CreateUserEphemeralKeyRequest $createUserEphemeralKeyRequest) {
+    	try {
+          	$key = \Stripe\EphemeralKey::create(
+            	array("customer" => $user->getUserProviderUuid()),
+            	array("stripe_version" => $createUserEphemeralKeyRequest->getApiVersion())
+          	);
+          	return $key;
+      	} catch (Exception $e) {
+         	throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
+      	}
+    }
+    
     protected function log($message, array $values =  [])
     {
         $message = vsprintf($message, $values);

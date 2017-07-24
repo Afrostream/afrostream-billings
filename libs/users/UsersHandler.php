@@ -9,6 +9,7 @@ require_once __DIR__ . '/../providers/global/requests/GetUsersRequest.php';
 require_once __DIR__ . '/../providers/global/requests/CreateUserRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateUserRequest.php';
 require_once __DIR__ . '/../providers/global/requests/UpdateUsersRequest.php';
+require_once __DIR__ . '/../providers/global/requests/CreateUserEphemeralKeyRequest.php';
 
 class UsersHandler {
 	
@@ -306,6 +307,37 @@ class UsersHandler {
 			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 		}
 		return($db_user);
+	}
+	
+	public function doCreateEphemeralKey(CreateUserEphemeralKeyRequest $createUserEphemeralKeyRequest) {
+		$result = NULL;
+		try {
+			config::getLogger()->addInfo("creating an ephemeralKey...");
+			$user = UserDAO::getUserByUserBillingUuid($createUserEphemeralKeyRequest->getUserBillingUuid(), $createUserEphemeralKeyRequest->getPlatform()->getId());
+			if($user == NULL) {
+				$msg = "unknown userBillingUuid : ".$createUserEphemeralKeyRequest->getUserBillingUuid();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$provider = ProviderDAO::getProviderById($user->getProviderId());
+			if($provider == NULL) {
+				$msg = "unknown provider with id : ".$user->getProviderId();
+				config::getLogger()->addError($msg);
+				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+			}
+			$providerUsersHandler = ProviderHandlersBuilder::getProviderUsersHandlerInstance($provider);
+			$result = $providerUsersHandler->doCreateEphemeralKey($user, $createUserEphemeralKeyRequest);
+			config::getLogger()->addInfo("creating an ephemeralKey done successfully");
+		} catch(BillingsException $e) {
+			$msg = "a billings exception occurred while creating an ephemeralKey, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("creating an ephemeralKey failed : ".$msg);
+			throw $e;
+		} catch(Exception $e) {
+			$msg = "an unknown exception occurred while creating an ephemeralKey, error_code=".$e->getCode().", error_message=".$e->getMessage();
+			config::getLogger()->addError("creating an ephemeralKey failed : ".$msg);
+			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+		}
+		return($result);
 	}
 	
 }
