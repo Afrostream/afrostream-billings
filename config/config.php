@@ -546,7 +546,7 @@ if(getEnv('AFROSTREAM_ANDROID_APP_CLIENT_IDS') === false) {
 }
 
 if(getEnv('AFROSTREAM_IOS_APP_CLIENT_IDS') === false) {
-	putEnv('AFROSTREAM_IOS_APP_CLIENT_IDS=');
+	putEnv('AFROSTREAM_IOS_APP_CLIENT_IDS=989796ec-5d63-4ef2-89b0-7d3923d6484f');
 }
 
 #Google
