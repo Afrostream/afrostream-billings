@@ -254,12 +254,23 @@ class UsersController extends BillingsController {
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			if (!isset($data['api_version'])) {
-				$msg = "query string 'api_version' is missing";
+			$apiVersion = NULL;
+			if (isset($data['apiVersion'])) {
+				/* BILLING API parameter format  : camel case*/
+				$apiVersion = $data['apiVersion'];
+			} else if(isset($data['api_version'])) {
+				/*  STRIPE API parameter format  : snake case*/
+				$apiVersion = $data['api_version'];
+			} else {
+				$msg = "query string 'apiVersion' is missing";
 				config::getLogger()->addError($msg);
 				throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 			}
-			$raw = true;
+			/*
+			 * raw = false = BILLING API FORMAT RETURN -- DEFAULT --
+			 * raw = true =  STRIPE API FORMAT RETURN
+			 */
+			$raw = false;
 			if(isset($data['raw'])) {
 				$raw = ($data['raw'] == 'true') ? true : false;
 			}
@@ -267,13 +278,13 @@ class UsersController extends BillingsController {
 			$createUserEphemeralKeyRequest = new CreateUserEphemeralKeyRequest();
 			$createUserEphemeralKeyRequest->setOrigin('api');
 			$createUserEphemeralKeyRequest->setUserBillingUuid($args['userBillingUuid']);
-			$createUserEphemeralKeyRequest->setApiVersion($data['api_version']);
+			$createUserEphemeralKeyRequest->setApiVersion($apiVersion);
 		    $key = $usersHandler->doCreateEphemeralKey($createUserEphemeralKeyRequest);
 		    if($raw) {
-		    	//STRIPE FORMAT
+		    	//STRIPE API FORMAT RETURN
 		    	return($this->returnObjectAsRawJson($response, $key));
 		    } else {
-		    	//API FORMAT
+		    	//BILLING API FORMAT RETURN
 		    	return($this->returnObjectAsJson($response, 'ephemeralKey', $key));
 		    }
 		} catch(BillingsException $e) {
