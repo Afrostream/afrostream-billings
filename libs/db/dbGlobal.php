@@ -438,16 +438,20 @@ class UserOpts implements JsonSerializable {
 			::: Known keys :::
 			>>> = to be removed from array
 				"countryCode"
-				"customerBankAccountToken"
+			>>>	"customerBankAccountToken"
 				"email"
 				"firstName"
 				"languageCode"
 				"lastName"
 				"name"
-				"OrangeApiToken"
-				"transactionId"
+			>>>	"OrangeApiToken"
+			>>>	"transactionId"
 		 */
-		return $this->opts;
+		$result = $this->opts;//copy array
+		unset($result["customerBankAccountToken"]);
+		unset($result["OrangeApiToken"]);
+		unset($result["transactionId"]);
+		return $result;
 	}
 }
 
@@ -2677,33 +2681,45 @@ class BillingsSubscriptionOpts implements JsonSerializable {
 		/*
 		 	::: Known keys :::
 		 	>>> = to be removed from array
-		 	>>>"chargeId"
-			>>>"chargeTransactionId"
-			"couponCode"
-			"couponCodeUrl"
-			>>>"customerBankAccountToken"
-			"gift"
-			>>>"iban"
-			>>>"idSession"
-			"orderId"
-			>>>"otpCode"
-			"promoCurrency"
-			"promoDuration"
-			"promoEnabled"
-			"promoItemBasePrice"
-			"promoItemTaxAmount"
-			"promoItemTotal"
-			"promoPeriod"
-			>>>"requestId"
-			"startsAt"
-			"subscriptionBillingUuid"
-			>>>"transaction_confirmation_code"
-			>>>"transaction_provider_name"
-			>>>"transaction_token"
-			>>>"transaction_uid"
-			"utm_medium"
+		 	>>> "chargeId"
+			>>> "chargeTransactionId"
+				"couponCode"
+				"couponCodeUrl"
+			>>> "customerBankAccountToken"
+				"gift"
+			>>> "iban"
+			>>> "idSession"
+				"orderId"
+			>>> "otpCode"
+				"promoCurrency"
+				"promoDuration"
+				"promoEnabled"
+				"promoItemBasePrice"
+				"promoItemTaxAmount"
+				"promoItemTotal"
+				"promoPeriod"
+			>>> "requestId"
+				"startsAt"
+				"subscriptionBillingUuid"
+			>>> "transaction_confirmation_code"
+			>>> "transaction_provider_name"
+			>>> "transaction_token"
+			>>> "transaction_uid"
+				"utm_medium"
 		 */
-		return($this->opts);
+		$result = $this->opts;//copy array
+		unset($result["chargeId"]);
+		unset($result["chargeTransactionId"]);
+		unset($result["customerBankAccountToken"]);
+		unset($result["iban"]);
+		unset($result["idSession"]);
+		unset($result["otpCode"]);
+		unset($result["requestId"]);
+		unset($result["transaction_confirmation_code"]);
+		unset($result["transaction_provider_name"]);
+		unset($result["transaction_token"]);
+		unset($result["transaction_uid"]);
+		return($result);
 	}
 
 }
@@ -7263,9 +7279,11 @@ class BillingsTransactionOpts implements JsonSerializable {
 		/*
 		 	::: Known keys ::: 
 			>>> = to be removed from array
-			>>>"transaction_token" 
+			>>> "transaction_token" 
 		 */
-		return($this->opts);
+		$result = $this->opts;//copy array
+		unset($result["transaction_token"]);
+		return($result);
 	}
 	
 }
