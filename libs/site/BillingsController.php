@@ -68,6 +68,12 @@ class BillingsController {
 		$response->getBody()->write($json);
 		return($response);
 	}
+	protected function returnObjectAsRawJson(Response $response, $object, $statusCode = 200) {
+		$response = $response->withStatus($statusCode);
+		$response = $response->withHeader('Content-Type', 'application/json');
+		$response->getBody()->write(json_encode($object, JSON_UNESCAPED_UNICODE));
+		return($response);
+	}
 					   
 	protected function returnNotFoundAsJson(Response $response) {
 		$e = new BillingsException(new ExceptionType(ExceptionType::internal), 'NOT FOUND');

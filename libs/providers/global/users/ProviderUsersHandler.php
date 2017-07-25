@@ -6,7 +6,8 @@ require_once __DIR__ . '/../../../utils/BillingsException.php';
 require_once __DIR__ . '/../requests/CreateUserRequest.php';
 require_once __DIR__ . '/../requests/UpdateUserRequest.php';
 require_once __DIR__ . '/../requests/UpdateUsersRequest.php';
-
+require_once __DIR__ . '/../requests/CreateUserEphemeralKeyRequest.php';
+		
 class ProviderUsersHandler {
 	
 	protected $provider = NULL;
@@ -25,6 +26,12 @@ class ProviderUsersHandler {
 		$msg = "unsupported feature for provider named ".$this->provider->getName();
 		config::getLogger()->addWarning($msg);//Just warn for the moment
 		//throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+	}
+	
+	public function doCreateEphemeralKey(User $user, CreateUserEphemeralKeyRequest $createUserEphemeralKeyRequest) {
+		$msg = "unsupported feature for provider named ".$this->provider->getName();
+		config::getLogger()->addError($msg);
+		throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 	}
 	
 }

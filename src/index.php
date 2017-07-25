@@ -1507,6 +1507,13 @@ $app->post("/billings/providers/{providerName}/webhooks/", function ($request, $
 	return($webHooksController->providerWebHooksPosting($request, $response, $args));
 });
 
+//specific for applepay by stripe (for the moment)
+
+$app->post("/billings/api/users/{userBillingUuid}/createEphemeralKey", function ($request, $response, $args) {
+	$usersController = new UsersController();
+	return($usersController->createEphemeralKey($request, $response, $args));
+});
+
 //alive
 
 $app->get("/alive", function ($request, $response, $args) {
