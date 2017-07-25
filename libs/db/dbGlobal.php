@@ -389,7 +389,7 @@ class User implements JsonSerializable {
 	
 }
 
-class UserOpts {
+class UserOpts implements JsonSerializable {
 
 	private $userid;
 	private $opts = array();
@@ -434,7 +434,24 @@ class UserOpts {
 	}
 	
 	public function jsonSerialize() {
-		return $this->opts;
+		/* 
+			::: Known keys :::
+			>>> = to be removed from array
+				"countryCode"
+			>>>	"customerBankAccountToken"
+				"email"
+				"firstName"
+				"languageCode"
+				"lastName"
+				"name"
+			>>>	"OrangeApiToken"
+			>>>	"transactionId"
+		 */
+		$result = $this->opts;//copy array
+		unset($result["customerBankAccountToken"]);
+		unset($result["OrangeApiToken"]);
+		unset($result["transactionId"]);
+		return $result;
 	}
 }
 
@@ -2661,7 +2678,48 @@ class BillingsSubscriptionOpts implements JsonSerializable {
 	}
 
 	public function jsonSerialize() {
-		return($this->opts);
+		/*
+		 	::: Known keys :::
+		 	>>> = to be removed from array
+		 	>>> "chargeId"
+			>>> "chargeTransactionId"
+				"couponCode"
+				"couponCodeUrl"
+			>>> "customerBankAccountToken"
+				"gift"
+			>>> "iban"
+			>>> "idSession"
+				"orderId"
+			>>> "otpCode"
+				"promoCurrency"
+				"promoDuration"
+				"promoEnabled"
+				"promoItemBasePrice"
+				"promoItemTaxAmount"
+				"promoItemTotal"
+				"promoPeriod"
+			>>> "requestId"
+				"startsAt"
+				"subscriptionBillingUuid"
+			>>> "transaction_confirmation_code"
+			>>> "transaction_provider_name"
+			>>> "transaction_token"
+			>>> "transaction_uid"
+				"utm_medium"
+		 */
+		$result = $this->opts;//copy array
+		unset($result["chargeId"]);
+		unset($result["chargeTransactionId"]);
+		unset($result["customerBankAccountToken"]);
+		unset($result["iban"]);
+		unset($result["idSession"]);
+		unset($result["otpCode"]);
+		unset($result["requestId"]);
+		unset($result["transaction_confirmation_code"]);
+		unset($result["transaction_provider_name"]);
+		unset($result["transaction_token"]);
+		unset($result["transaction_uid"]);
+		return($result);
 	}
 
 }
@@ -7218,7 +7276,14 @@ class BillingsTransactionOpts implements JsonSerializable {
 	}
 	
 	public function jsonSerialize() {
-		return($this->opts);
+		/*
+		 	::: Known keys ::: 
+			>>> = to be removed from array
+			>>> "transaction_token" 
+		 */
+		$result = $this->opts;//copy array
+		unset($result["transaction_token"]);
+		return($result);
 	}
 	
 }

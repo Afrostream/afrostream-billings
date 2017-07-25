@@ -607,10 +607,45 @@ class RecurlySubscriptionsHandler extends ProviderSubscriptionsHandler {
 				$api_subscription = Recurly_Subscription::get($subscription->getSubUid());
 				//
 				if($expireSubscriptionRequest->getIsRefundEnabled() == true) {
-					if($expireSubscriptionRequest->getIsRefundProrated() == true) {
-						$api_subscription->terminateAndPartialRefund();
-					} else {
-						$api_subscription->terminateAndRefund();
+					$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, NULL, $subscription->getId(), ['purchase'], 'descending', $this->provider->getPlatformId());
+					if(count($transactionsResult['transactions']) == 1) {
+						$transaction = $transactionsResult['transactions'][0];
+						//check status
+						switch($transaction->getTransactionStatus()) {
+							case BillingsTransactionStatus::success :
+								if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+									$api_subscription->terminateAndPartialRefund();
+								} else {
+									$api_subscription->terminateAndRefund();
+								}
+								break;
+							case BillingsTransactionStatus::waiting :
+								/* waiting status should never happens with recurly */
+								$msg = "cannot refund a transaction in status=".$transaction->getTransactionStatus();
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+								break;
+							case BillingsTransactionStatus::declined :
+								$msg = "cannot refund a transaction in status=".$transaction->getTransactionStatus();
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+								break;
+							case BillingsTransactionStatus::failed :
+								/* failed status should never happens with recurly */
+								$msg = "cannot refund a transaction in status=".$transaction->getTransactionStatus();
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+								break;
+							case BillingsTransactionStatus::canceled :
+								/* canceled status should never happens with recurly */
+								$msg = "cannot refund a transaction in status=".$transaction->getTransactionStatus();
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+								break;
+							case BillingsTransactionStatus::void :
+								//nothing to do
+								break;
+							default :
+								$msg = "unknown transaction status=".$transaction->getTransactionStatus();
+								throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+								break;
+						}
 					}
 				} else {
 					$api_subscription->terminateWithoutRefund();

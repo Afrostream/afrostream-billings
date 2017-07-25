@@ -893,22 +893,52 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     			$transactionsResult = BillingsTransactionDAO::getBillingsTransactions(1, 0, NULL, NULL, $subscription->getId(), ['purchase'], 'descending', $this->provider->getPlatformId());
     			if(count($transactionsResult['transactions']) == 1) {
     				$transaction = $transactionsResult['transactions'][0];
-    				//
-    				$amountInCents = NULL; //NULL = Refund ALL
-    				if($expireSubscriptionRequest->getIsRefundProrated() == true) {
-    					$amountInCents = ceil($transaction->getAmountInCents() * ($subscription->getSubPeriodEndsDate()->getTimestamp() - (new DateTime())->getTimestamp())
-    					/
-    					($subscription->getSubPeriodEndsDate()->getTimestamp() - $subscription->getSubPeriodStartedDate()->getTimestamp()));
-    					
+    				//check status
+    				switch($transaction->getTransactionStatus()) {
+    					case BillingsTransactionStatus::success :
+		    				$amountInCents = NULL; //NULL = Refund ALL
+		    				if($expireSubscriptionRequest->getIsRefundProrated() == true) {
+		    					$amountInCents = ceil($transaction->getAmountInCents() * ($subscription->getSubPeriodEndsDate()->getTimestamp() - (new DateTime())->getTimestamp())
+		    					/
+		    					($subscription->getSubPeriodEndsDate()->getTimestamp() - $subscription->getSubPeriodStartedDate()->getTimestamp()));
+		    					
+		    				}
+		    				//
+							$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
+							$refundTransactionRequest = new RefundTransactionRequest();
+							$refundTransactionRequest->setPlatform($this->platform);
+							$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
+							$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
+							$refundTransactionRequest->setAmountInCents($amountInCents);
+							$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
+							break;
+    					case BillingsTransactionStatus::waiting :
+    						$msg = "cannot refund a transaction in status=".$transaction->getTransactionStatus();
+    						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    						break;
+    					case BillingsTransactionStatus::declined :
+    						/* declined status should never happens with stripe */
+    						$msg = "cannot refund a transaction in status=".$transaction->getTransactionStatus();
+    						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    						break;
+    					case BillingsTransactionStatus::failed :
+    						$msg = "cannot refund a transaction in status=".$transaction->getTransactionStatus();
+    						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    						break;
+    					case BillingsTransactionStatus::canceled :
+							/* canceled status should never happens with stripe */
+    						$msg = "cannot refund a transaction in status=".$transaction->getTransactionStatus();
+    						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    						break;
+    					case BillingsTransactionStatus::void :
+    						/* void status should never happens with stripe, BUT ignore it because there is nothing to refund here */
+    						//nothing to do
+    						break;
+    					default :
+    						$msg = "unknown transaction status=".$transaction->getTransactionStatus();
+    						throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
+    						break;
     				}
-    				//
-					$providerTransactionsHandlerInstance = ProviderHandlersBuilder::getProviderTransactionsHandlerInstance($this->provider);
-					$refundTransactionRequest = new RefundTransactionRequest();
-					$refundTransactionRequest->setPlatform($this->platform);
-					$refundTransactionRequest->setOrigin($expireSubscriptionRequest->getOrigin());
-					$refundTransactionRequest->setTransactionBillingUuid($transaction->getTransactionBillingUuid());
-					$refundTransactionRequest->setAmountInCents($amountInCents);
-					$transaction = $providerTransactionsHandlerInstance->doRefundTransaction($transaction, $refundTransactionRequest);
     			}
     		}
     		//
