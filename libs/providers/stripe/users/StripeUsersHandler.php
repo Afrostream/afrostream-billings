@@ -78,20 +78,6 @@ class StripeUsersHandler extends ProviderUsersHandler
 
         return $customer;
     }
-
-    public function createEphemeralKey($userProviderUuid, $apiVersion) {
-      $customer = $this->getUser($userProviderUuid);
-
-      try {
-          $key = \Stripe\EphemeralKey::create(
-            array("customer" => $customer['id']),
-            array("stripe_version" => $apiVersion)
-          );
-          return $key;
-      } catch (Exception $e) {
-          throw new BillingsException(new ExceptionType(ExceptionType::internal), $e->getMessage(), $e->getCode(), $e);
-      }
-    }
     
     public function doCreateEphemeralKey(User $user, CreateUserEphemeralKeyRequest $createUserEphemeralKeyRequest) {
     	try {
