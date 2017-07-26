@@ -35,6 +35,7 @@ class StripePlansHandler extends ProviderPlansHandler {
         				'amount' => $internalPlan->getAmountInCents(),
         				'currency' => $internalPlan->getCurrency(),
         				'interval' => $internalPlan->getPeriodUnit(),
+        				'interval_count' => $internalPlan->getPeriodLength(),
         				'name' => $internalPlan->getName()
         		];
         		if ($internalPlan->getTrialEnabled()) {
