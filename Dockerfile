@@ -1,69 +1,52 @@
-FROM php:5.6-fpm-alpine
+FROM php:7.1-fpm
 
-# Packages
-RUN apk --update add \
-    autoconf \
-    build-base \
-    curl \
-    git \
-    subversion \
-    freetype-dev \
-    libjpeg-turbo-dev \
-    libmcrypt-dev \
-    libpng-dev \
-    libbz2 \
-    libstdc++ \
-    libxslt-dev \
-    openldap-dev \
-    nginx \
-    make \
-    unzip \
-    postgresql-dev \
-    wget && \
-    docker-php-ext-install bcmath mcrypt zip bz2 mbstring pcntl xsl && \
-    docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ && \
-    docker-php-ext-install gd && \
-    docker-php-ext-install soap && \
-    docker-php-ext-install pgsql && \
-    apk del build-base && \
-    rm -rf /var/cache/apk/*
+RUN apt-get update \
+  && apt-get install -y \
+      libmcrypt-dev \
+      zlib1g-dev \
+      libbz2-dev \
+      libxslt-dev \
+      libjpeg-dev \
+      libpng-dev \
+      libfreetype6-dev \
+      postgresql-server-dev-all \
+      nginx \
+  && docker-php-ext-install bcmath mcrypt zip bz2 mbstring pcntl xsl \
+  && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
+  && docker-php-ext-install gd  \
+  && docker-php-ext-install soap  \
+  && docker-php-ext-install pgsql
 
-# PEAR tmp fix
-RUN echo "@testing http://dl-4.alpinelinux.org/alpine/edge/testing/" >> /etc/apk/repositories && \
-    apk add --update php5-pear@testing && \
-    rm -rf /var/cache/apk/*
-
-# Memory Limit
-RUN echo "memory_limit=-1" > $PHP_INI_DIR/conf.d/memory-limit.ini
-RUN echo "always_populate_raw_post_data=-1" > $PHP_INI_DIR/conf.d/custom.ini
+#
+RUN pecl install apcu
+RUN echo "extension=apcu.so" > /usr/local/etc/php/conf.d/apcu.ini
 
 # Time Zone
 RUN echo "date.timezone=${PHP_TIMEZONE:-UTC}" > $PHP_INI_DIR/conf.d/date_timezone.ini
 
-# Register the COMPOSER_HOME environment variable
-ENV COMPOSER_HOME /composer
-
-# Add global binary directory to PATH and make sure to re-export it
-ENV PATH /composer/vendor/bin:$PATH
-
-# Allow Composer to be run as root
-ENV COMPOSER_ALLOW_SUPERUSER 1
-
-# Set up the volumes and working directory
-VOLUME ["/app"]
-WORKDIR /app
-
-# Setup the Composer installer
-RUN curl -o /tmp/composer-setup.php https://getcomposer.org/installer \
-  && curl -o /tmp/composer-setup.sig https://composer.github.io/installer.sig \
-  && php -r "if (hash('SHA384', file_get_contents('/tmp/composer-setup.php')) !== trim(file_get_contents('/tmp/composer-setup.sig'))) { unlink('/tmp/composer-setup.php'); echo 'Invalid installer' . PHP_EOL; exit(1); }"
-
+# nginx
 COPY nginx.conf /etc/nginx/
-COPY entrypoint.sh /
 
 RUN ln -sf /dev/stderr /var/log/php-fpm.log
-RUN ln -sf /dev/stderr /var/log/nginx/access.log
+RUN ln -sf /dev/stdout /var/log/nginx/access.log
 RUN ln -sf /dev/stderr /var/log/nginx/error.log
 
-# Set up the command arguments
-ENTRYPOINT [ "/entrypoint.sh" ]
+# create workdir
+RUN mkdir -p /opt/billings
+WORKDIR /opt/billings
+
+# Install composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/tmp --filename=composer
+COPY composer.json .
+COPY composer.lock .
+ENV COMPOSER_ALLOW_SUPERUSER 1
+RUN /tmp/composer install
+
+# COPY
+COPY . .
+
+#
+EXPOSE 80
+
+#
+ENTRYPOINT [ "/opt/billings/entrypoint.sh" ]
