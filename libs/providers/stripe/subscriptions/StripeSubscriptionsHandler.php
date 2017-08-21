@@ -210,7 +210,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
     		}
     		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
-    		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+    		$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($plan->getId());
     		if($internalPlan == NULL) {
     			$msg = "plan with uuid=".$plan->getPlanUuid()." for provider ".$this->provider->getName()." is not linked to an internal plan";
     			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
@@ -228,7 +228,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     	//DELETE UNUSED SUBSCRIPTIONS (DELETED FROM THIRD PARTY) (ONLY RECURRENT ONES)
     	foreach ($db_subscriptions as $db_subscription) {
     		$plan = $db_subscription->getPlanId();
-    		$internalPlan = InternalPlanDAO::getInternalPlanById(InternalPlanLinksDAO::getInternalPlanIdFromProviderPlanId($plan->getId()));
+    		$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($plan->getId());
     		if ($internalPlan->getCycle()->getValue() === PlanCycle::auto) {
     			$api_subscription = $this->getApiSubscriptionByUuid($api_subscriptions, $db_subscription->getSubUid());
     			if($api_subscription == NULL) {
