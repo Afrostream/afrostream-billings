@@ -227,8 +227,7 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     	}
     	//DELETE UNUSED SUBSCRIPTIONS (DELETED FROM THIRD PARTY) (ONLY RECURRENT ONES)
     	foreach ($db_subscriptions as $db_subscription) {
-    		$plan = $db_subscription->getPlanId();
-    		$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($plan->getId());
+    		$internalPlan = InternalPlanDAO::getInternalPlanByProviderPlanId($db_subscription->getPlanId());
     		if ($internalPlan->getCycle()->getValue() === PlanCycle::auto) {
     			$api_subscription = $this->getApiSubscriptionByUuid($api_subscriptions, $db_subscription->getSubUid());
     			if($api_subscription == NULL) {
