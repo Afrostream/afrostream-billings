@@ -204,9 +204,9 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
     	$api_subscriptions = $customer['subscriptions']['data'];
     	$db_subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByUserId($user->getId());
     	foreach ($api_subscriptions as $api_subscription) {
-    		$plan = PlanDAO::getPlanByUuid($this->provider->getId(), $subscription['plan']['id']);
+    	    $plan = PlanDAO::getPlanByUuid($this->provider->getId(), $api_subscription['plan']['id']);
     		if($plan == NULL) {
-    			$msg = "plan with uuid=".$subscription['plan']['id']." not found";
+    		    $msg = "plan with uuid=".$api_subscription['plan']['id']." not found";
     			throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
     		}
     		$planOpts = PlanOptsDAO::getPlanOptsByPlanId($plan->getId());
