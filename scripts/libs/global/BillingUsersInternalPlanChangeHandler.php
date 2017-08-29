@@ -37,18 +37,18 @@ class BillingUsersInternalPlanChangeHandler {
 			foreach($supportedProviderNames as $supportedProviderName) {
 				$provider = ProviderDAO::getProviderByName($supportedProviderName, $this->platform->getId());
 				if($provider == NULL) {
-					ScriptsConfig::getLogger()->addError("no provider found named : ".$supportedProviderName);
-					break;
+					ScriptsConfig::getLogger()->addWarning("no provider found named : ".$supportedProviderName.", continuing...");
+					continue;
 				}
 				$fromProviderPlan = PlanDAO::getPlanByInternalPlanId($fromInternalPlan->getId(), $provider->getId());
 				if($fromProviderPlan == NULL) {
-					ScriptsConfig::getLogger()->addError("no plan associated to internalPlan with uuid : ".$fromInternalPlan->getInternalPlanUuid()." with provider name : ".$supportedProviderName);
-					break;					
+				    ScriptsConfig::getLogger()->addWarning("no plan associated to internalPlan with uuid : ".$fromInternalPlan->getInternalPlanUuid()." with provider name : ".$supportedProviderName.", continuing...");
+					continue;					
 				}
 				$toProviderPlan = PlanDAO::getPlanByInternalPlanId($toInternalPlan->getId(), $provider->getId());
 				if($toProviderPlan == NULL) {
-					ScriptsConfig::getLogger()->addError("no plan associated to internalPlan with uuid : ".$toInternalPlan->getInternalPlanUuid()." with provider name : ".$supportedProviderName);
-					break;
+					ScriptsConfig::getLogger()->addError("no plan associated to internalPlan with uuid : ".$toInternalPlan->getInternalPlanUuid()." with provider name : ".$supportedProviderName.", !!! FIXME !!!");
+					continue;
 				}
 				$subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByPlanId($fromProviderPlan->getId());
 				foreach ($subscriptions as $subscription) {
@@ -234,13 +234,13 @@ class BillingUsersInternalPlanChangeHandler {
 			foreach($supportedProviderNames as $supportedProviderName) {
 				$provider = ProviderDAO::getProviderByName($supportedProviderName, $this->platform->getId());
 				if($provider == NULL) {
-					ScriptsConfig::getLogger()->addError("no provider found named : ".$supportedProviderName);
-					break;
+				    ScriptsConfig::getLogger()->addWarning("no provider found named : ".$supportedProviderName.", continuing...");
+					continue;
 				}
 				$fromProviderPlan = PlanDAO::getPlanByInternalPlanId($fromInternalPlan->getId(), $provider->getId());
 				if($fromProviderPlan == NULL) {
-					ScriptsConfig::getLogger()->addError("no plan associated to internalPlan with uuid : ".$fromInternalPlan->getInternalPlanUuid()." with provider name : ".$supportedProviderName);
-					break;
+				    ScriptsConfig::getLogger()->addWarning("no plan associated to internalPlan with uuid : ".$fromInternalPlan->getInternalPlanUuid()." with provider name : ".$supportedProviderName.", continuing...");
+					continue;
 				}
 				$subscriptions = BillingsSubscriptionDAO::getBillingsSubscriptionsByPlanId($fromProviderPlan->getId());
 				foreach ($subscriptions as $subscription) {
