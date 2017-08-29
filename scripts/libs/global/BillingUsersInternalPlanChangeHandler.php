@@ -33,7 +33,7 @@ class BillingUsersInternalPlanChangeHandler {
 				ScriptsConfig::getLogger()->addError("no internalPlan with uuid : ".$toInternalPlanUuid);
 				return;
 			}
-			$supportedProviderNames = ['recurly', 'braintree', 'stripe'];
+			$supportedProviderNames = ['recurly', 'stripe'];
 			foreach($supportedProviderNames as $supportedProviderName) {
 				$provider = ProviderDAO::getProviderByName($supportedProviderName, $this->platform->getId());
 				if($provider == NULL) {
@@ -230,7 +230,7 @@ class BillingUsersInternalPlanChangeHandler {
 				ScriptsConfig::getLogger()->addError("no internalPlan with uuid : ".$fromInternalPlanUuid);
 				return;
 			}
-			$supportedProviderNames = ['recurly', 'braintree', 'stripe'];
+			$supportedProviderNames = ['recurly', 'stripe'];
 			foreach($supportedProviderNames as $supportedProviderName) {
 				$provider = ProviderDAO::getProviderByName($supportedProviderName, $this->platform->getId());
 				if($provider == NULL) {
