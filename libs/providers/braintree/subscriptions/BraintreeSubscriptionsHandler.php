@@ -556,12 +556,21 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 					break;
 			}
-			Braintree\Subscription::update($subscription->getSubUid(), 
+			$result = Braintree\Subscription::update($subscription->getSubUid(), 
 					[
 							'planId' => $providerPlan->getPlanUuid(),
 							'price' => $internalPlan->getAmount(),	//Braintree does not change the price !!!
 							'options' => $options,
 					]);
+			if (!$result->success) {
+            {
+			    $msg = 'a braintree api error occurred : ';
+			    $errorString = $result->message;
+			    foreach($result->errors->deepAll() as $error) {
+			        $errorString.= '; Code=' . $error->code . ", msg=" . $error->message;
+			    }
+			    throw new Exception($msg.$errorString);
+			}
 			try {
 				//START TRANSACTION
 				pg_query("BEGIN");
