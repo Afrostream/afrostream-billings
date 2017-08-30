@@ -33,7 +33,7 @@ class BillingUsersInternalPlanChangeHandler {
 				ScriptsConfig::getLogger()->addError("no internalPlan with uuid : ".$toInternalPlanUuid);
 				return;
 			}
-			$supportedProviderNames = ['recurly', 'stripe'];
+			$supportedProviderNames = ['recurly', 'braintree', 'stripe'];
 			foreach($supportedProviderNames as $supportedProviderName) {
 				$provider = ProviderDAO::getProviderByName($supportedProviderName, $this->platform->getId());
 				if($provider == NULL) {
@@ -230,7 +230,7 @@ class BillingUsersInternalPlanChangeHandler {
 				ScriptsConfig::getLogger()->addError("no internalPlan with uuid : ".$fromInternalPlanUuid);
 				return;
 			}
-			$supportedProviderNames = ['recurly', 'stripe'];
+			$supportedProviderNames = ['recurly', 'braintree', 'stripe'];
 			foreach($supportedProviderNames as $supportedProviderName) {
 				$provider = ProviderDAO::getProviderByName($supportedProviderName, $this->platform->getId());
 				if($provider == NULL) {
@@ -296,20 +296,44 @@ class BillingUsersInternalPlanChangeHandler {
 				$msg = "no internalPlan found with id=".$toProviderPlan->getInternalPlanId();
 				throw new Exception($msg);
 			}
-			//
-			$subscriptionsHandler = new SubscriptionsHandler();
-			$updateInternalPlanSubscriptionRequest = new UpdateInternalPlanSubscriptionRequest();
-			$updateInternalPlanSubscriptionRequest->setOrigin('script');
-			$updateInternalPlanSubscriptionRequest->setPlatform($this->platform);
-			$updateInternalPlanSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
-			$updateInternalPlanSubscriptionRequest->setInternalPlanUuid($toInternalPlan->getInternalPlanUuid());
-			//Only recurly supports change atRenewal
-			if($provider->getName() == 'recurly') {
-				$updateInternalPlanSubscriptionRequest->setTimeframe('atRenewal');
-			} else {
-				$updateInternalPlanSubscriptionRequest->setTimeframe('now');
+			switch($provider->getName()) {
+			    case 'braintree' :
+			        //Braintree does not support changing between plans with different cycling billing, solution : create new one and then cancel old one
+			        ScriptsConfig::getLogger()->addInfo("[BRAINTREE] subscription creation...");
+			        $user = UserDAO::getUserById($subscription->getUserId());
+			        $subscriptionsHandler = new SubscriptionsHandler();
+			        $getOrCreateSubscriptionRequest = new GetOrCreateSubscriptionRequest();
+			        $getOrCreateSubscriptionRequest->setOrigin('script');
+			        $getOrCreateSubscriptionRequest->setPlatform($this->platform);
+			        $getOrCreateSubscriptionRequest->setUserBillingUuid($user->getUserBillingUuid());
+			        $getOrCreateSubscriptionRequest->setInternalPlanUuid($toInternalPlan->getInternalPlanUuid());
+			        $getOrCreateSubscriptionRequest->setSubOptsArray(["customerBankAccountToken" => $this->getBraintreeDefaultPaymentMethodToken($user->getUserProviderUuid())]);
+			        $subscriptionCreated = $subscriptionsHandler->doGetOrCreateSubscription($getOrCreateSubscriptionRequest);
+			        ScriptsConfig::getLogger()->addInfo("[BRAINTREE] subscription creation done successfully, uuid=".$subscriptionCreated->getSubscriptionBillingUuid());
+			        ScriptsConfig::getLogger()->addInfo("[BRAINTREE] subscription with uuid=".$subscription->getSubscriptionBillingUuid()." canceling...");
+			        $cancelSubscriptionRequest = new CancelSubscriptionRequest();
+			        $cancelSubscriptionRequest->setOrigin('script');
+			        $cancelSubscriptionRequest->setPlatform($this->platform);
+			        $cancelSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+			        $cancelSubscriptionRequest->setCancelDate(new DateTime());
+			        $subscriptionUpdated = $subscriptionsHandler->doCancelSubscription($cancelSubscriptionRequest);
+			        ScriptsConfig::getLogger()->addInfo("[BRAINTREE] subscription with uuid=".$subscription->getSubscriptionBillingUuid()." canceling done successfully");
+			        break;
+			    default :
+            			$subscriptionsHandler = new SubscriptionsHandler();
+            			$updateInternalPlanSubscriptionRequest = new UpdateInternalPlanSubscriptionRequest();
+            			$updateInternalPlanSubscriptionRequest->setOrigin('script');
+            			$updateInternalPlanSubscriptionRequest->setPlatform($this->platform);
+            			$updateInternalPlanSubscriptionRequest->setSubscriptionBillingUuid($subscription->getSubscriptionBillingUuid());
+            			$updateInternalPlanSubscriptionRequest->setInternalPlanUuid($toInternalPlan->getInternalPlanUuid());
+            			//Only recurly supports change atRenewal
+            			if($provider->getName() == 'recurly') {
+            				$updateInternalPlanSubscriptionRequest->setTimeframe('atRenewal');
+            			} else {
+            				$updateInternalPlanSubscriptionRequest->setTimeframe('now');
+            			}
+            			$subscription = $subscriptionsHandler->doUpdateInternalPlanSubscription($updateInternalPlanSubscriptionRequest);
 			}
-			$subscription = $subscriptionsHandler->doUpdateInternalPlanSubscription($updateInternalPlanSubscriptionRequest);
 			//done
 			ScriptsConfig::getLogger()->addInfo("subscription with uuid=".$subscription->getSubscriptionBillingUuid()." processing plan change done successfully");
 		} catch(Exception $e) {
@@ -317,7 +341,29 @@ class BillingUsersInternalPlanChangeHandler {
 			throw $e;
 		}
 	}
-
+    
+	private function getBraintreeDefaultPaymentMethodToken($userProviderUuid) {
+	    Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
+	    Braintree_Configuration::merchantId($provider->getMerchantId());
+	    Braintree_Configuration::publicKey($provider->getApiKey());
+	    Braintree_Configuration::privateKey($provider->getApiSecret());
+	    
+	    $customer = Braintree\Customer::find($userProviderUuid);
+	    $currentPaymentMethod = NULL;
+	    foreach ($customer->paymentMethods as $paymentMethod) {
+	        if($paymentMethod->isDefault()) {
+	            $currentPaymentMethod = $paymentMethod;
+	            break;
+	        }
+	    }
+	    if($currentPaymentMethod == NULL) {
+	        //Exception
+	        $msg = "no default payment method found for customer with userProviderUuid=".$userProviderUuid;
+	        throw new Exception($msg);
+	    }
+	    return($currentPaymentMethod->token);
+	}
+	
 }
 
 ?>
