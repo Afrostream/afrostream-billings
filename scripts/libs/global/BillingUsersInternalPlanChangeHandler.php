@@ -307,7 +307,7 @@ class BillingUsersInternalPlanChangeHandler {
 			        $getOrCreateSubscriptionRequest->setPlatform($this->platform);
 			        $getOrCreateSubscriptionRequest->setUserBillingUuid($user->getUserBillingUuid());
 			        $getOrCreateSubscriptionRequest->setInternalPlanUuid($toInternalPlan->getInternalPlanUuid());
-			        $getOrCreateSubscriptionRequest->setSubOptsArray(["customerBankAccountToken" => $this->getBraintreeDefaultPaymentMethodToken($user->getUserProviderUuid())]);
+			        $getOrCreateSubscriptionRequest->setSubOptsArray(["customerBankAccountToken" => $this->getBraintreeDefaultPaymentMethodToken($provider, $user->getUserProviderUuid())]);
 			        $subscriptionCreated = $subscriptionsHandler->doGetOrCreateSubscription($getOrCreateSubscriptionRequest);
 			        ScriptsConfig::getLogger()->addInfo("[BRAINTREE] subscription creation done successfully, uuid=".$subscriptionCreated->getSubscriptionBillingUuid());
 			        ScriptsConfig::getLogger()->addInfo("[BRAINTREE] subscription with uuid=".$subscription->getSubscriptionBillingUuid()." canceling...");
@@ -342,7 +342,7 @@ class BillingUsersInternalPlanChangeHandler {
 		}
 	}
     
-	private function getBraintreeDefaultPaymentMethodToken($userProviderUuid) {
+	private function getBraintreeDefaultPaymentMethodToken(Provider $provider, $userProviderUuid) {
 	    Braintree_Configuration::environment(getenv('BRAINTREE_ENVIRONMENT'));
 	    Braintree_Configuration::merchantId($provider->getMerchantId());
 	    Braintree_Configuration::publicKey($provider->getApiKey());
