@@ -563,7 +563,6 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 							'options' => $options,
 					]);
 			if (!$result->success) {
-            {
 			    $msg = 'a braintree api error occurred : ';
 			    $errorString = $result->message;
 			    foreach($result->errors->deepAll() as $error) {
