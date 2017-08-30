@@ -45,28 +45,46 @@ class BraintreeSubscriptionsHandler extends ProviderSubscriptionsHandler {
 				Braintree_Configuration::publicKey($this->provider->getApiKey());
 				Braintree_Configuration::privateKey($this->provider->getApiSecret());
 				//
-				$paymentMethod_attribs = array();
-				$paymentMethod_attribs['customerId'] = $user->getUserProviderUuid();
 				if(!array_key_exists('customerBankAccountToken', $subOpts->getOpts())) {
 					$msg = "subOpts field 'customerBankAccountToken' field is missing";
 					config::getLogger()->addError($msg);
 					throw new BillingsException(new ExceptionType(ExceptionType::internal), $msg);
 				}
-				$paymentMethod_attribs['paymentMethodNonce'] = $subOpts->getOpts()['customerBankAccountToken'];
-				$paymentMethod_attribs['options'] = [
-						'makeDefault' => true
-				];
-				$result = Braintree\PaymentMethod::create($paymentMethod_attribs);
 				$paymentMethod = NULL;
-				if ($result->success) {
-					$paymentMethod = $result->paymentMethod;
+				if($subOpts->getOpts()['customerBankAccountToken'] == 'DEFAULT') {
+				    //USE DEFAULT PAYMENT METHOD
+				    $customer = Braintree\Customer::find($user->getUserProviderUuid());
+				    $currentPaymentMethod = NULL;
+				    foreach ($customer->paymentMethods as $loopingPaymentMethod) {
+				        if($loopingPaymentMethod->isDefault()) {
+				            $paymentMethod = $loopingPaymentMethod;
+				            break;
+				        }
+				    }
+				    if($paymentMethod == NULL) {
+				        //Exception
+				        $msg = "no default payment method found for user with provider_user_uuid=".$user->getUserProviderUuid();
+				        throw new Exception($msg);
+				    }
 				} else {
-					$msg = 'a braintree api error occurred : ';
-					$errorString = $result->message;
-					foreach($result->errors->deepAll() as $error) {
-						$errorString.= '; Code=' . $error->code . ", msg=" . $error->message;
-					}
-					throw new Exception($msg.$errorString);					
+				    //CREATE NEW PAYMENT METHOD
+        				$paymentMethod_attribs = array();
+        				$paymentMethod_attribs['customerId'] = $user->getUserProviderUuid();
+        				$paymentMethod_attribs['paymentMethodNonce'] = $subOpts->getOpts()['customerBankAccountToken'];
+        				$paymentMethod_attribs['options'] = [
+        						'makeDefault' => true
+        				];
+        				$result = Braintree\PaymentMethod::create($paymentMethod_attribs);
+        				if ($result->success) {
+        					$paymentMethod = $result->paymentMethod;
+        				} else {
+        					$msg = 'a braintree api error occurred : ';
+        					$errorString = $result->message;
+        					foreach($result->errors->deepAll() as $error) {
+        						$errorString.= '; Code=' . $error->code . ", msg=" . $error->message;
+        					}
+        					throw new Exception($msg.$errorString);					
+        				}
 				}
 				//
 				$attribs = array();
