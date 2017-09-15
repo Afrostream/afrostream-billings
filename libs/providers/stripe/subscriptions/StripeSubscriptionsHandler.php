@@ -356,8 +356,10 @@ class StripeSubscriptionsHandler extends ProviderSubscriptionsHandler
              	$this->log('Cancel subscription id %s ', [$subscription['id']]);
                 $subscription->cancel(['at_period_end' => true]);
             	$subscription->save();
+            } else if ($internalPlan->getCycle() == PlanCycle::once) {
+                //nothing to do
             } else {
-            	throw new BillingsException(new ExceptionType(ExceptionType::internal), "Subscription with cycle=".$internalPlan->getCycle()." cannot be canceled");
+            	   throw new BillingsException(new ExceptionType(ExceptionType::internal), "Subscription with cycle=".$internalPlan->getCycle()." cannot be canceled");
             }
             $billingSubscription->setSubCanceledDate($cancelSubscriptionRequest->getCancelDate());
             $billingSubscription->setSubStatus('canceled');
